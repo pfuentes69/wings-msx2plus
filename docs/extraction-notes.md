@@ -135,3 +135,17 @@ and VBlank publication. Interactive redraws measured 10.55 ms; observed input
 latencies were 21.42–22.19 ms NTSC and 27.93–30.35 ms PAL. The ROM occupies
 4,496 bytes before padding to 32 KiB, with 48 bytes static RAM plus stack and
 BIOS state, and reserves two 32 KiB VRAM pages. No flight engine was added.
+
+## 2026-11-10 — Reference emulator configuration
+
+The user identified `Panasonic_FS-A1WX-512K` as their usual reference machine.
+Made it the default in the emulator checker and manual launch commands.
+The check isolates generated writes while retaining read access to the user's
+machine definitions/firmware; no personal machine files were copied here.
+
+Ran `python tools/verify_screen5.py --output tools/.build/screen5-panasonic`
+with the project's Python environment. All five snapshots, VRAM/palette
+checks, keyboard/held-key behavior and VBlank publications passed. Interactive
+redraws measured 11.07 ms and observed selection latency was 23.55–24.32 ms.
+The ROM binary is unchanged. Captured the verification report and level-flight
+screenshot under `docs/prototype/`. Physical hardware checks remain pending.

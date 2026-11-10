@@ -48,14 +48,14 @@ underline identifies the selection. Each complete frame is drawn to a hidden
 page and published at VBlank. For a manual run with openMSX installed:
 
 ```sh
-openmsx -machine C-BIOS_MSX2+ -cart out/wings.rom
+openmsx -machine Panasonic_FS-A1WX-512K -cart out/wings.rom
 ```
 
 The first graphics milestone is complete: 52 Hellcat aircraft PNGs are in
 `assets_src/hellcat/`, with a contact sheet and provenance manifest. Read
 [the observed shape format](docs/format-shp.md) for established fields,
 remaining uncertainties and visual comparisons. The SCREEN 5 conversion and
-viewer are validated on C-BIOS MSX2+ in openMSX; see
+viewer are validated on the Panasonic reference configuration and C-BIOS MSX2+ in openMSX; see
 [prototype results](docs/screen5-prototype.md) for captures and measurements.
 Flight physics and scrolling remain future increments.
 
@@ -68,6 +68,11 @@ python tools/convert_hellcat.py --check  # Detect stale generated artifacts
 ./build.sh
 python tools/verify_screen5.py          # Requires openMSX 21 and graphics access
 ```
+
+The reference emulator configuration is `Panasonic_FS-A1WX-512K`, matching
+the development machine. The checker uses it by default and retains access
+to personal openMSX machine definitions and ROMs while isolating test writes.
+Use `--machine C-BIOS_MSX2+` for the firmware-free fallback.
 
 The emulator check boots the ROM, presses selection keys and verifies VRAM,
 palette, page switching and timing. Captures and results go under

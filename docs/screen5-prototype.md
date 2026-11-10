@@ -51,6 +51,7 @@ pages occupy 64 KiB of the machine's 128 KiB.
 | --- | --- | --- |
 | C-BIOS MSX2+, NTSC | 10.55 ms | 21.42–22.19 ms |
 | C-BIOS MSX2+, PAL | 10.55 ms | 27.93–30.35 ms |
+| Panasonic FS-A1WX, 512 KiB RAM | 11.07 ms | 23.55–24.32 ms |
 
 Redraw timing includes the 768-byte transfer and selection underline updates;
 it excludes keyboard polling and waiting to publish. Key-to-publication
@@ -74,10 +75,14 @@ The emulator script waits for startup readiness, captures five states
 
 Results are preserved in [NTSC verification](prototype/ntsc-verification.json)
 and [PAL verification](prototype/pal-verification.json), including the tested
-ROM's SHA-256. Native screenshots were visually inspected. The test uses
+ROM's SHA-256. The user's reference configuration is also validated:
+[Panasonic verification](prototype/panasonic-verification.json) and
+[Panasonic capture](prototype/panasonic-frame-2.png). Native screenshots were visually inspected. The test uses
 openMSX's [documented debugger and screenshot commands](https://openmsx.org/manual/commands.html).
-No original Panasonic firmware was required; physical FS-A1WX validation
-remains pending. Windows and Linux build execution also remains unverified.
+The reference check uses the user's installed custom `Panasonic_FS-A1WX-512K`
+definition and firmware. These personal files are not copied into the project.
+C-BIOS remains the firmware-free fallback. Physical FS-A1WX validation remains
+pending. Windows and Linux build execution also remains unverified.
 
 ## Reproduce
 
@@ -89,18 +94,22 @@ python tools/convert_hellcat.py --check
 python -m unittest discover -s tests -v
 ./build.sh
 python tools/verify_screen5.py
+python tools/verify_screen5.py --machine C-BIOS_MSX2+ --output tools/.build/screen5-ntsc
 python tools/verify_screen5.py --machine C-BIOS_MSX2+_EU --output tools/.build/screen5-pal
 ```
 
 The emulator check needs graphics access and opens/closes an emulator window.
-It stores its own settings under the output directory, leaving personal
-openMSX settings alone. Runtime captures, VRAM dumps and timing reports go
+It defaults to `Panasonic_FS-A1WX-512K` and stores its own settings under the
+output directory, leaving personal openMSX settings alone. It retains read
+access to personal machine definitions and firmware through `OPENMSX_USER_DATA`
+(honoring an existing override, otherwise the original openMSX home/share).
+Runtime captures, VRAM dumps and timing reports go
 under `tools/.build/`; selected captures and reports are retained here.
 
 Manual launch:
 
 ```sh
-openmsx -machine C-BIOS_MSX2+ -cart out/wings.rom
+openmsx -machine Panasonic_FS-A1WX-512K -cart out/wings.rom
 ```
 
 Next: a small portable fixed-point flight state with directional input over

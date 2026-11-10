@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--emulator', default=shutil.which('openmsx'))
-    parser.add_argument('--machine', default='C-BIOS_MSX2+')
+    parser.add_argument('--machine', default='Panasonic_FS-A1WX-512K')
     parser.add_argument('--output', type=Path, default=ROOT / 'tools/.build/screen5-smoke')
     args = parser.parse_args()
     if not args.emulator:
@@ -24,6 +24,9 @@ def main():
     report.unlink(missing_ok=True)
     env = dict(os.environ, OPENMSX_HOME=str(output / 'openmsx-home'),
                WINGS_ROOT=str(ROOT), WINGS_TEST_OUT=str(output), SDL_AUDIODRIVER='dummy')
+    # Isolate writes while retaining the user's custom machine definitions/ROMs.
+    personal_home = Path(os.environ.get('OPENMSX_HOME', Path.home() / '.openMSX'))
+    env.setdefault('OPENMSX_USER_DATA', str(personal_home / 'share'))
     command = [args.emulator, '-machine', args.machine, '-cart', str(ROOT / 'out/wings.rom'),
                '-script', str(ROOT / 'tools/screen5_smoke.tcl')]
     with (output / 'openmsx.log').open('w') as log:
