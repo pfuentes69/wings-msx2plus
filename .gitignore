@@ -1,0 +1,9 @@
+.DS_Store
+__pycache__/
+*.pyc
+/out/
+/emul/
+/package/
+/tools/.build/
+/.venv/
+/MSXgl/projects/default_config.js
