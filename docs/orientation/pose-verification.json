@@ -1,0 +1,23 @@
+{
+  "machine": "Panasonic_FS-A1WX-512K",
+  "rom_sha256": "4017234904d98d09fa874a8ab89a4224fe7caa707dae55b374e059ff6f301f5e",
+  "verified_snapshots": 5,
+  "render_ms": [
+    10.213867963665635,
+    12.331455534153157,
+    7.305956483295795
+  ],
+  "selection_latency_ms": [
+    40.03441778214878,
+    40.54928768879851,
+    40.805744864221616
+  ],
+  "checks": [
+    "keyboard selections and held key",
+    "VRAM rows",
+    "palette bytes",
+    "SCREEN 5 / 212 lines",
+    "page flips during VBlank",
+    "no stale pixels outside drawing areas"
+  ]
+}

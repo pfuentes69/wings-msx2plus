@@ -1,14 +1,22 @@
 # Deterministic input and display validation, invoked by verify_flight.py.
 set save_settings_on_exit false
 set mute true
+set throttle false
 set maxframeskip 0
 set root $env(WINGS_ROOT)
 set output $env(WINGS_TEST_OUT)
 set report [open [file join $output emulator-report.txt] w]
+proc bgerror {message} {
+    puts $::report "FAIL $message"
+    puts $::report $::errorInfo
+    flush $::report
+    close $::report
+    exit
+}
 set f [open [file join $root out wings.noi] r]
 set symbols [read $f]
 close $f
-foreach name {g_Ready g_SelectedFrame g_DisplayPage g_DisplayX g_DisplayY g_FacingLeft g_Rendering g_RenderCount g_MissedFrames g_FramePublished} {
+foreach name {g_Ready g_SelectedFrame g_DisplayPage g_DisplayX g_DisplayY g_FacingLeft g_Rendering g_RenderCount g_MissedFrames g_FramePublished g_Turning g_TurnStep} {
     if {![regexp "DEF _$name (0x\[0-9A-Fa-f\]+)" $symbols -> address]} { error "Missing $name" }
     set addr($name) $address
 }
@@ -48,7 +56,7 @@ proc snapshot {name} {
     dump $name.palette [debug read_block {VDP palette} 0 32]
     dump $name.regs [debug read_block {VDP regs} 0 32]
     screenshot -raw [file join $::output $name.png]
-    puts $::report "snapshot $name $x $y $frame $left $page [word g_RenderCount]"
+    puts $::report "snapshot $name $x $y $frame $left $page [word g_RenderCount] [value g_Turning] [value g_TurnStep]"
     flush $::report
 }
 proc keys {mask} {
@@ -57,7 +65,8 @@ proc keys {mask} {
 }
 proc stage1 {} { snapshot up_right; keys 0; after time 0.6 stage2 }
 proc stage2 {} { snapshot coast; keys 80; after time 0.4 stage3 }
-proc stage3 {} { snapshot down_left; keys 1; after time 0.12 stage4 }
+proc stage3 {} { snapshot down_left; after time 0.8 stage3b }
+proc stage3b {} { snapshot left_settled; keys 1; after time 0.12 stage4 }
 proc stage4 {} { snapshot reset; keys 128; after time 3 stage5 }
 proc stage5 {} { snapshot right_bound; keys 32; after time 3 stage6 }
 proc stage6 {} { snapshot top_bound; keys 16; after time 3 stage7 }

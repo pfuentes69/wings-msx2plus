@@ -1,5 +1,10 @@
 # First controllable flight increment
 
+This records the first movement milestone. The current ROM adds recovered
+orientation frames, applied drawing origins and banked turns; see
+[aircraft orientation](aircraft-orientation.md). Earlier measurements below
+are retained as historical evidence for their recorded ROM hash.
+
 Implemented and validated 2026-11-10. The ROM now supports directional,
 inertial movement over a static sky using three aircraft poses. This is an
 arcade movement baseline, not a reconstruction of the Amiga game's flight

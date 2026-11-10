@@ -14,6 +14,7 @@ wings-msx2plus/
   msxgl_config.h        MSXgl compile-time configuration
   src/main.c            MSX input, frame timing and SCREEN 5 rendering
   src/core/flight.c     Portable fixed-point movement simulation
+  src/core/aircraft.c   Pitch selection and banked turn playback
   src/generated/        Converted aircraft arrays included in the ROM
   MSXgl/                Copied engine and tools
   docs/                 Port strategy and development notes
@@ -45,7 +46,9 @@ files in one output directory, so module basenames must be unique.
 
 The ROM now lets you move the Hellcat over a static sky using **cursor keys**
 or **joystick port 1**. Motion has acceleration and a short coast after release.
-The aircraft faces its movement direction and uses climb/level/dive views.
+The aircraft selects pitch from velocity and plays a banked transition when
+reversing direction. **T while stationary** requests a turn for inspection;
+holding T starts only one turn.
 **Space or joystick fire** resets it to the center. While resting, **1/2/3**
 retain manual pose selection for graphics checks. Movement takes priority.
 The renderer clears and draws on the hidden page, then publishes at VBlank.
@@ -61,10 +64,13 @@ The first graphics milestone is complete: 52 Hellcat aircraft PNGs are in
 remaining uncertainties and visual comparisons. The SCREEN 5 conversion and
 viewer are validated on the Panasonic reference configuration and C-BIOS MSX2+ in openMSX; see
 [prototype results](docs/screen5-prototype.md) for captures and measurements.
-The first movement increment targets 30 fps on the Panasonic reference
+The movement and animation increment targets 30 fps on the Panasonic reference
 machine and 25 fps on PAL. See [flight prototype results](docs/flight-prototype.md)
-for controls, measured cadence and current limits. Authentic flight physics,
-full turning animation and scrolling remain future increments.
+for the initial movement milestone. The current
+[orientation results](docs/aircraft-orientation.md) cover 49 cropped shapes,
+recovered drawing pivots, clipping and both turn sequences. Authentic flight
+physics and scrolling remain future increments; animation playback timing
+is currently authored for this prototype.
 
 To regenerate converted assets or run the emulator check, use the Python
 environment with `requirements.txt` installed:
@@ -75,6 +81,7 @@ python tools/convert_hellcat.py --check  # Detect stale generated artifacts
 ./build.sh
 python tools/verify_screen5.py          # Requires openMSX 21 and graphics access
 python tools/verify_flight.py           # Motion, bounds, trails and frame deadlines
+python tools/verify_turns.py            # Original bank-frame order, pivots and held T
 ```
 
 The reference emulator configuration is `Panasonic_FS-A1WX-512K`, matching
@@ -85,9 +92,10 @@ Use `--machine C-BIOS_MSX2+` for the firmware-free fallback.
 The emulator checks boot the ROM and verify controls, VRAM, palette, page
 switching and timing. Captures and results go under
 `tools/.build/screen5-smoke/` and `tools/.build/flight-smoke/`.
-The renderer currently flattens transparent pixels
-to solid sky and centers each padded source frame; it does not apply the
-unconfirmed original hotspots.
+The renderer currently flattens transparent pixels to solid sky. It now
+applies the signed source drawing origins and clips cropped shapes at the
+viewport edges. Most left-facing pitch poses are explicit reflections;
+banking uses recovered original frames.
 
 The research tools now accept explicit input and output paths and refuse to
 overwrite output directories. Install `requirements.txt` in a Python virtual

@@ -1,10 +1,18 @@
 # Invoked by verify_screen5.py; uses the generated linker symbols, never fixed RAM addresses.
 set save_settings_on_exit false
 set mute true
+set throttle false
 set maxframeskip 0
 set root $env(WINGS_ROOT)
 set output $env(WINGS_TEST_OUT)
 set report [open [file join $output emulator-report.txt] w]
+proc bgerror {message} {
+    puts $::report "FAIL $message"
+    puts $::report $::errorInfo
+    flush $::report
+    close $::report
+    exit
+}
 set f [open [file join $root out wings.noi] r]
 set symbols [read $f]
 close $f
@@ -70,12 +78,12 @@ proc stage_hold {} {
     after time 0.2 {stage_three}
 }
 proc stage_three {} {
-    snapshot key3 2 0 3
+    snapshot key3 8 0 3
     press_key 4
     after time 0.2 {stage_one}
 }
 proc stage_one {} {
-    snapshot return2 1 1 4
+    snapshot return2 4 1 4
     keymatrixup 0 14
     puts $::report PASS
     close $::report
@@ -98,7 +106,7 @@ proc await_ready {} {
     if {[count_renders] == 1 && ![debug read memory $::addr(g_Rendering)] && ([debug read {VDP regs} 1] & 64)} {
         # Give the renderer a complete visible frame after startup.
         after time 0.1 {
-            snapshot initial 1 0 1
+            snapshot initial 4 0 1
             set ::measure_ready 1
             press_key 2
             after time 0.2 {stage_two}

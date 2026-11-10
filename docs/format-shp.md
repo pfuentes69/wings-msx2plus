@@ -2,7 +2,8 @@
 
 Status: pixel layout validated for the supplied Hellcat archive, 2026-11-10.
 This is a description inferred from the supplied files, not a vendor spec.
-Game runtime origins, masks and several header semantics remain unconfirmed.
+Drawing-origin subtraction has since been established by executable inspection
+(see `aircraft-orientation.md`); masks and several other header semantics remain unconfirmed.
 
 ## Containers
 
@@ -38,8 +39,8 @@ record_bytes = 20 + row_stride_bytes * height * nonzero_plane_map_count
 | --- | ---: | --- | --- |
 | `0x00` | 2 | Big-endian row stride in bytes, word aligned; padded width = stride × 8 | Established for decoded records |
 | `0x02` | 2 | Big-endian image height | Established for decoded records |
-| `0x04` | 2 | Signed candidate horizontal origin/hotspot | Provisional |
-| `0x06` | 2 | Signed candidate vertical origin/hotspot | Provisional |
+| `0x04` | 2 | Signed horizontal drawing origin, subtracted from object X | Observed in executable drawing calls |
+| `0x06` | 2 | Signed vertical drawing origin, subtracted from object Y | Observed in executable drawing calls |
 | `0x08` | 2 | Candidate source horizontal position | Provisional |
 | `0x0a` | 2 | Candidate source vertical position | Provisional |
 | `0x0c` | 1 | Candidate constant color bits; zero throughout Hellcat | Provisional outside Hellcat |
@@ -93,7 +94,9 @@ Width includes padding to a whole 16-pixel word. No exact visible-width field
 has been established. PNGs retain this padding rather than guessing a crop.
 No independent mask plane has been established. Palette index 0 is treated
 as transparent for previews; this is a documented assumption. The origins
-and placement fields are exported to JSON without applying them.
+and placement fields are exported to the original PNG manifest without applying
+them. The current orientation converter applies the established drawing origins;
+the decoder's legacy `origin_candidate` JSON key is retained for compatibility.
 
 ## Palette and visual evidence
 

@@ -209,3 +209,37 @@ ROM occupancy is 7,942 bytes before padding to 32 KiB. Static globals use
 reservation remains two 32 KiB pages. Physical Panasonic/joystick checks and
 Windows/Linux execution remain pending. Next: authentic orientation-frame
 mapping and stable pivots before scrolling work.
+
+## 2026-11-10 — Source-backed orientation and turn playback
+
+Recovered executable frame-name tables at 15d00, 15d68 and 15dd0, and established
+that header offsets 4/6 are signed drawing origins subtracted from object
+coordinates. Twenty stored fa/fb pairs validate the horizontal reflection and
+origin transform. Added `tools/map_aircraft.py` with bounded table checks and
+instruction-evidence guards. Data facts and source hashes are retained in the
+converted asset manifest; no original executable code was ported.
+
+The ROM now uses 49 cropped shapes (40 original, nine reflected pitch views),
+ten pitch choices per facing, original drawing origins and two MSX-authored
+22-step banked transitions. Reversal requests finish the current turn before
+servicing a queued direction. T requests a stationary review turn; held T does
+not repeat. Timing is authored (110 core ticks), not claimed original-game
+behavior. Safe viewport clipping preserves source offsets even at screen edges.
+Movement physics and audio integration remain unchanged.
+
+Validation: native ROM build and generated-asset check pass; all 45 tests pass.
+Panasonic movement verification passes 11 snapshots and 430 intervals at the
+30 fps target, maximum redraw 13.77 ms, zero missed deadlines. PAL passes 11
+snapshots and 360 intervals at 25 fps, maximum redraw 13.35 ms, zero missed
+deadlines. Stationary turns validate 31 distinct original shapes on Panasonic
+and 28 on PAL, including full-page pixels and a fixed logical pivot. Idle
+1/2/3 regression passes five snapshots. Reports/captures are under
+`docs/orientation/`; `docs/aircraft-orientation.md` documents reproduction,
+source facts versus authored behavior, clipping limits and remaining work.
+
+Occupied ROM size is 26,813 bytes before 32 KiB padding. Static globals use
+101 bytes plus the existing 452-byte IM2 reservation and stack/BIOS workspace.
+The next rendering increment should benchmark scenery restoration/scrolling
+and consider mapper/storage capacity. Additional native corner-turn checks
+pass 22 clipped-frame cases on Panasonic and 19 on PAL, including two/one
+fully off-screen cases respectively, with no stale pixels.
