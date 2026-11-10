@@ -12,11 +12,13 @@ wings-msx2plus/
   build.sh / build.bat   Build entry points; run from any directory
   project_config.js     Project modules, machine and toolchain settings
   msxgl_config.h        MSXgl compile-time configuration
-  src/main.c            Minimal SCREEN 5 build scaffold
+  src/main.c            Three-frame SCREEN 5 viewer
+  src/generated/        Converted aircraft arrays included in the ROM
   MSXgl/                Copied engine and tools
   docs/                 Port strategy and development notes
   tools/                Original asset research scripts
   reference_assets/     Preserved original resources and extraction manifest
+  assets_msx/           Packed SCREEN 5 artwork, palette and conversion manifest
   out/                  Generated ROM and intermediate files
 ```
 
@@ -40,8 +42,10 @@ overrides in `project_config.js`. Add new C/assembly modules to `ProjModules`
 using paths without extensions, e.g. `src/core/flight`. MSXgl places intermediate
 files in one output directory, so module basenames must be unique.
 
-The scaffold switches to SCREEN 5 and waits; it contains no gameplay or
-decoded aircraft art. For a manual emulator check with openMSX installed:
+The ROM displays three decoded Hellcat views in SCREEN 5. Press **1**, **2**
+or **3** to switch between pitched, level and opposite-pitch frames. An
+underline identifies the selection. Each complete frame is drawn to a hidden
+page and published at VBlank. For a manual run with openMSX installed:
 
 ```sh
 openmsx -machine C-BIOS_MSX2+ -cart out/wings.rom
@@ -50,8 +54,26 @@ openmsx -machine C-BIOS_MSX2+ -cart out/wings.rom
 The first graphics milestone is complete: 52 Hellcat aircraft PNGs are in
 `assets_src/hellcat/`, with a contact sheet and provenance manifest. Read
 [the observed shape format](docs/format-shp.md) for established fields,
-remaining uncertainties and visual comparisons. The next increment is a
-three-frame SCREEN 5 conversion and emulator display test.
+remaining uncertainties and visual comparisons. The SCREEN 5 conversion and
+viewer are validated on C-BIOS MSX2+ in openMSX; see
+[prototype results](docs/screen5-prototype.md) for captures and measurements.
+Flight physics and scrolling remain future increments.
+
+To regenerate converted assets or run the emulator check, use the Python
+environment with `requirements.txt` installed:
+
+```sh
+python tools/convert_hellcat.py          # Regenerate committed data and C arrays
+python tools/convert_hellcat.py --check  # Detect stale generated artifacts
+./build.sh
+python tools/verify_screen5.py          # Requires openMSX 21 and graphics access
+```
+
+The emulator check boots the ROM, presses selection keys and verifies VRAM,
+palette, page switching and timing. Captures and results go under
+`tools/.build/screen5-smoke/`. The viewer currently flattens transparent pixels
+to solid sky and centers each padded source frame; it does not apply the
+unconfirmed original hotspots.
 
 The research tools now accept explicit input and output paths and refuse to
 overwrite output directories. Install `requirements.txt` in a Python virtual

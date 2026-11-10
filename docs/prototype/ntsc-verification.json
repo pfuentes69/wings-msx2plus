@@ -1,0 +1,23 @@
+{
+  "machine": "C-BIOS_MSX2+",
+  "rom_sha256": "55fe66c14bdfa8e9bc2abd4e33244dcebba2bfd40821852592408057c8e55a7d",
+  "verified_snapshots": 5,
+  "render_ms": [
+    10.549385466588568,
+    10.549385466588568,
+    10.549385466588568
+  ],
+  "selection_latency_ms": [
+    21.420599545472818,
+    21.93463135677831,
+    22.191647262431502
+  ],
+  "checks": [
+    "keyboard selections and held key",
+    "VRAM rows",
+    "palette bytes",
+    "SCREEN 5 / 212 lines",
+    "page flips during VBlank",
+    "no stale pixels outside drawing areas"
+  ]
+}

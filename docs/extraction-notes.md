@@ -114,3 +114,24 @@ records, and the ten existing PNGs. A separate byte comparison found all
 No blocker remains for exporting the first aircraft frames. Next: convert
 three to SCREEN 5 bitmap/palette data and display them in openMSX, measuring
 and validating actual VRAM rendering before choosing a flight/scrolling design.
+
+## 2026-11-10 — Three-frame MSX graphics prototype
+
+Converted `hc01`, `hc05`, `hc09` to shared-palette SCREEN 5 data and committed
+reproducible generated C arrays under `src/generated/`. The game source now
+shows the three views, selected by keys 1/2/3, over a sky background. Hidden
+page redraws are published during VBlank. All work remains under `src/` for
+game code; the copied MSXgl engine is unchanged.
+
+Added `tools/convert_hellcat.py`, `tools/verify_screen5.py` and its openMSX Tcl
+script. Source transparency is flattened to sky; origins/hotspots remain
+unapplied. See `screen5-prototype.md` for captures, provenance, exact commands,
+VRAM layout, measured limits and remaining platform-validation gaps.
+
+Validation: native ROM build succeeded; generated-asset check and all 23 tests
+passed. Both NTSC and PAL openMSX checks passed five snapshots each, including
+keyboard input, held-key behavior, palette/VRAM comparisons, stale-pixel checks
+and VBlank publication. Interactive redraws measured 10.55 ms; observed input
+latencies were 21.42–22.19 ms NTSC and 27.93–30.35 ms PAL. The ROM occupies
+4,496 bytes before padding to 32 KiB, with 48 bytes static RAM plus stack and
+BIOS state, and reserves two 32 KiB VRAM pages. No flight engine was added.

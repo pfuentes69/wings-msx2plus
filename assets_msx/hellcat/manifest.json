@@ -1,0 +1,153 @@
+{
+  "format": "raw SCREEN 5 packed pixels, no BSAVE header",
+  "canvas": [
+    48,
+    32
+  ],
+  "frames": [
+    {
+      "name": "hc01",
+      "source": "assets_src/hellcat/hc01.png",
+      "source_sha256": "cdf1f226c2ae05dac38659cb306f50b5824f94ca386fff90d4b2d8c322c0969f",
+      "source_size": [
+        48,
+        29
+      ],
+      "canvas_offset": [
+        0,
+        1
+      ],
+      "bytes": 768,
+      "packed_sha256": "9fa6ddea690f1b58116ac26d4847d13da2101f84eef4f5730e3f41f72aa478b6"
+    },
+    {
+      "name": "hc05",
+      "source": "assets_src/hellcat/hc05.png",
+      "source_sha256": "9096a24f87fa1f804e6141f330a2a1d35ecd662c007d25ad15a76bf9e5604d38",
+      "source_size": [
+        48,
+        13
+      ],
+      "canvas_offset": [
+        0,
+        9
+      ],
+      "bytes": 768,
+      "packed_sha256": "a3eb593f99accfb3d3e92d0a40ea86f7b4f9ef08d5eb3204683bcf5dce104712"
+    },
+    {
+      "name": "hc09",
+      "source": "assets_src/hellcat/hc09.png",
+      "source_sha256": "a4a2574cc72b2095ad08097fa8c405c0c9cd4f0ff18b5c9e2d0b9b7ea80efa84",
+      "source_size": [
+        48,
+        32
+      ],
+      "canvas_offset": [
+        0,
+        0
+      ],
+      "bytes": 768,
+      "packed_sha256": "a3897932b113520a84eaa2abcba55cfc953b347319767bed33fdc7bae0b7e03f"
+    }
+  ],
+  "source_index_to_msx_index": {
+    "0": 0,
+    "19": 1,
+    "20": 2,
+    "21": 3,
+    "22": 4,
+    "23": 5,
+    "26": 6,
+    "27": 7,
+    "28": 8,
+    "29": 9,
+    "30": 10,
+    "31": 11
+  },
+  "palette_rgb3": [
+    [
+      0,
+      5,
+      7
+    ],
+    [
+      0,
+      1,
+      2
+    ],
+    [
+      0,
+      2,
+      3
+    ],
+    [
+      2,
+      3,
+      5
+    ],
+    [
+      3,
+      5,
+      6
+    ],
+    [
+      5,
+      6,
+      7
+    ],
+    [
+      2,
+      2,
+      2
+    ],
+    [
+      3,
+      3,
+      3
+    ],
+    [
+      4,
+      4,
+      4
+    ],
+    [
+      5,
+      5,
+      5
+    ],
+    [
+      6,
+      6,
+      6
+    ],
+    [
+      7,
+      7,
+      7
+    ],
+    [
+      7,
+      6,
+      2
+    ],
+    [
+      1,
+      1,
+      2
+    ],
+    [
+      7,
+      7,
+      7
+    ],
+    [
+      0,
+      0,
+      0
+    ]
+  ],
+  "quantization": "round(component * 7 / 255); MSX bytes: red<<4|blue, green",
+  "transparency": "index 0 flattened to sky; no mask/terrain compositing",
+  "placement": "vertically centered padded canvas; original hotspots not applied"
+}

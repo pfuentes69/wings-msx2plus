@@ -4,8 +4,8 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 
 ProjName = "wings";
-ProjModules = ["src/main"];
-LibModules = ["bios"];
+ProjModules = ["src/main", "src/generated/hellcat_frames"];
+LibModules = ["bios", "vdp"];
 Machine = "2P";
 Target = "ROM_32K";
 CustomISR = "NONE";
