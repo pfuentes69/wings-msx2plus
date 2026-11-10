@@ -1,0 +1,241 @@
+{
+  "source_directory": "reference_assets/original_files/Wings_of_Fury",
+  "music": {
+    "format": "Kris Hatlelid two-file module",
+    "module_sha256": "e7662e8e2ff1cfd4ff6219fe1f6935841140424227bc688758cf722c73bcaf86",
+    "player_sha256": "0a4187cdff0bd14e11f184e116a2b29804019d778a702757714b34422e01b0ed",
+    "slots": [
+      {
+        "subsong": 0,
+        "data_offset": 20,
+        "symbol": "song1"
+      },
+      {
+        "subsong": 1,
+        "data_offset": 64,
+        "symbol": "song2"
+      },
+      {
+        "subsong": 2,
+        "data_offset": 108,
+        "symbol": "song3"
+      },
+      {
+        "subsong": 3,
+        "data_offset": 64,
+        "symbol": "song2"
+      },
+      {
+        "subsong": 4,
+        "data_offset": 156,
+        "symbol": "song4"
+      }
+    ],
+    "unique_song_definitions": 4,
+    "data_segment_file_offset": 452
+  },
+  "effects": [
+    {
+      "name": "boom",
+      "source_sha256": "ab32756387cadde199b4137fa79174658f20e86af46da5da1540001f6824b9fe",
+      "bytes": 5466,
+      "sample_min": -126,
+      "sample_max": 126,
+      "wav": "effects/boom.wav",
+      "wav_sha256": "83d1cfeab2d903d270ca73944ec2dcd189a9189d33d5b8f62309109e4824ff1c",
+      "preview_rate_hz": 8363,
+      "rate_status": "assumed preview rate; original playback is period-dependent",
+      "duration_at_preview_rate": 0.6535932081788832,
+      "encoding": "raw signed 8-bit mono candidate; WAV bytes XOR 0x80"
+    },
+    {
+      "name": "engine",
+      "source_sha256": "302921457c438d0d18578c21dc6fa3973c62990001525273e1ef176f37b75d15",
+      "bytes": 13919,
+      "sample_min": -124,
+      "sample_max": 127,
+      "wav": "effects/engine.wav",
+      "wav_sha256": "2d42033c53346099ecbdb954a22840890afd2ab6dd509441570e396e82d021de",
+      "preview_rate_hz": 8363,
+      "rate_status": "assumed preview rate; original playback is period-dependent",
+      "duration_at_preview_rate": 1.6643548965682171,
+      "encoding": "raw signed 8-bit mono candidate; WAV bytes XOR 0x80"
+    },
+    {
+      "name": "grind.1",
+      "source_sha256": "e87f27fa600c0bb69f836727b8ee5c07549e8a4222639f5615f088cd12721d2f",
+      "bytes": 4788,
+      "sample_min": -128,
+      "sample_max": 127,
+      "wav": "effects/grind.1.wav",
+      "wav_sha256": "eedd2555efc2dfa8631ac7baae94fa27710d51eab696f6f3b253c0ba5b2219df",
+      "preview_rate_hz": 8363,
+      "rate_status": "assumed preview rate; original playback is period-dependent",
+      "duration_at_preview_rate": 0.5725218223125672,
+      "encoding": "raw signed 8-bit mono candidate; WAV bytes XOR 0x80"
+    },
+    {
+      "name": "machinegun",
+      "source_sha256": "ed1b8a0f1eff3b9204cf796b7246fd3b9584d7ddfc7c92d43e35f595ba3281fb",
+      "bytes": 1886,
+      "sample_min": -127,
+      "sample_max": 127,
+      "wav": "effects/machinegun.wav",
+      "wav_sha256": "a9e6ee76c983be6a6413852166034955f96036bd9cfdf60fb878b72bcd0fa09f",
+      "preview_rate_hz": 8363,
+      "rate_status": "assumed preview rate; original playback is period-dependent",
+      "duration_at_preview_rate": 0.22551715891426521,
+      "encoding": "raw signed 8-bit mono candidate; WAV bytes XOR 0x80"
+    },
+    {
+      "name": "metal.clang.1",
+      "source_sha256": "8b3724318efe6e33b462af49660d2594f81aba3d0de643056e4283ee898968c6",
+      "bytes": 5703,
+      "sample_min": -128,
+      "sample_max": 127,
+      "wav": "effects/metal.clang.1.wav",
+      "wav_sha256": "eddcf926a756ffe52916a66f97f9c74d0851b40c12d4ca6955f23a03127557d3",
+      "preview_rate_hz": 8363,
+      "rate_status": "assumed preview rate; original playback is period-dependent",
+      "duration_at_preview_rate": 0.6819323209374626,
+      "encoding": "raw signed 8-bit mono candidate; WAV bytes XOR 0x80"
+    },
+    {
+      "name": "scream",
+      "source_sha256": "b23f599401858f50b4395301b34b753e9a7e148faaa13263e0883578dc56c6ed",
+      "bytes": 6572,
+      "sample_min": -128,
+      "sample_max": 127,
+      "wav": "effects/scream.wav",
+      "wav_sha256": "cdd168d4d4aeaeaa444aa6647de265a14dea65fbf0e4b0708c3a1015eb1bee54",
+      "preview_rate_hz": 8363,
+      "rate_status": "assumed preview rate; original playback is period-dependent",
+      "duration_at_preview_rate": 0.785842401052254,
+      "encoding": "raw signed 8-bit mono candidate; WAV bytes XOR 0x80"
+    },
+    {
+      "name": "screech",
+      "source_sha256": "7889b9b6543fbd0784a40562fab91db2a8e75857a45e8d8c781975e351c3744f",
+      "bytes": 6746,
+      "sample_min": -127,
+      "sample_max": 125,
+      "wav": "effects/screech.wav",
+      "wav_sha256": "c17502abdfdc71d90f1deff51027c4d9fd62d6975dea118420978d154a0a5d1f",
+      "preview_rate_hz": 8363,
+      "rate_status": "assumed preview rate; original playback is period-dependent",
+      "duration_at_preview_rate": 0.8066483319382997,
+      "encoding": "raw signed 8-bit mono candidate; WAV bytes XOR 0x80"
+    },
+    {
+      "name": "splash",
+      "source_sha256": "f71e6218b4bd586c91053bc0ae5d8a6592ecb9ab89a256e36bbe3c1bebefe3f2",
+      "bytes": 6752,
+      "sample_min": -92,
+      "sample_max": 80,
+      "wav": "effects/splash.wav",
+      "wav_sha256": "72129774002559bb24e0c99e71da0f8fe00ac616aa14faca3c2c7cc42f640581",
+      "preview_rate_hz": 8363,
+      "rate_status": "assumed preview rate; original playback is period-dependent",
+      "duration_at_preview_rate": 0.8073657778309219,
+      "encoding": "raw signed 8-bit mono candidate; WAV bytes XOR 0x80"
+    }
+  ],
+  "instruments": [
+    {
+      "file_offset": 3548,
+      "bytes": 3504,
+      "form_sha256": "748755683d2d183ef72fc5b53bf1de3a5b532f6751827c2947d7ddd7dd123712",
+      "wav": "instruments/BassDrum3.wav",
+      "wav_sha256": "b3318b806a95e5b3c26f0891d71382bf8f7412c7bd62c90d9e4df9ac2ea05c48",
+      "name": "BassDrum3",
+      "rate_hz": 8363,
+      "one_shot_samples": 3400,
+      "repeat_samples": 0,
+      "samples_per_hi_cycle": 32,
+      "octaves": 1,
+      "compression": 0,
+      "volume_fixed16": 65536,
+      "signed_pcm_sha256": "6efa27b6f3fec307d3a2dda8cbc84da23e470a3fe3085238847410199c01fa81"
+    },
+    {
+      "file_offset": 7052,
+      "bytes": 1746,
+      "form_sha256": "30a3c5101bac33fe35bda46d37f696b384a505e071325d4a458299193aee9cd3",
+      "wav": "instruments/sdrum1.iff.wav",
+      "wav_sha256": "43f5621dd5e7bf4ce73e57e69a01f3f70589a5571d77c3dade110abb4b52210d",
+      "name": "sdrum1.iff",
+      "rate_hz": 8363,
+      "one_shot_samples": 1642,
+      "repeat_samples": 0,
+      "samples_per_hi_cycle": 32,
+      "octaves": 1,
+      "compression": 0,
+      "volume_fixed16": 65536,
+      "signed_pcm_sha256": "bbe54683662573387b230ed13507374a8b2ca9f6aecd7e0e54007f3cd1611453"
+    },
+    {
+      "file_offset": 8798,
+      "bytes": 8420,
+      "form_sha256": "6dd54905c4c835c7e020d3740bb319c03ac7bb22db421d0b217a4f780c59aa2a",
+      "wav": "instruments/RoomBrass2.iff.wav",
+      "wav_sha256": "6d420757d813e3e9a5d366b30835a277e469453030eb8b0cbf028cfd964fbe09",
+      "name": "RoomBrass2.iff",
+      "rate_hz": 8363,
+      "one_shot_samples": 1768,
+      "repeat_samples": 6548,
+      "samples_per_hi_cycle": 8,
+      "octaves": 1,
+      "compression": 0,
+      "volume_fixed16": 65536,
+      "signed_pcm_sha256": "9ec1835656fa65abb9150d3f5076f5ac3fdc194e96d1648c8c2e36a45e669abe"
+    },
+    {
+      "file_offset": 17218,
+      "bytes": 8132,
+      "form_sha256": "c695986d2bb066c5543a75a1a75d82e41116e80d29a47a6fde8549fac06e21a4",
+      "wav": "instruments/SyntheBass.iff.wav",
+      "wav_sha256": "23b721af4ef181735c9a654f469fec7934c19c7ad6988e29a8fe9972071c5a4e",
+      "name": "SyntheBass.iff",
+      "rate_hz": 8363,
+      "one_shot_samples": 7644,
+      "repeat_samples": 384,
+      "samples_per_hi_cycle": 8,
+      "octaves": 1,
+      "compression": 0,
+      "volume_fixed16": 65536,
+      "signed_pcm_sha256": "0e34f31aa303443f8ff88ccd194a88302a476d8e2f70d0596b761c15625c9127"
+    },
+    {
+      "file_offset": 25350,
+      "bytes": 6580,
+      "form_sha256": "fea7d6d3ebc8b656589ffdbe182792b268142fc27dee3f4740ca42a4d72d4821",
+      "wav": "instruments/omlead.iff.wav",
+      "wav_sha256": "ae0d5621418958c9438f58486f98887245469a7dc8bef99bd8e3a01488a643a0",
+      "name": "omlead.iff",
+      "rate_hz": 4181,
+      "one_shot_samples": 3434,
+      "repeat_samples": 3042,
+      "samples_per_hi_cycle": 16,
+      "octaves": 1,
+      "compression": 0,
+      "volume_fixed16": 65536,
+      "signed_pcm_sha256": "78d31d51e372743cd673aac20c011f10e1324090d9b6189a95c64c0e79284fcd"
+    },
+    {
+      "file_offset": 31930,
+      "bytes": 7542,
+      "form_sha256": "42304833fb2721023b611d162e45141fe3039d2f4d6c175b42a8e4649416e9ae",
+      "wav": "instruments/Mechanic1.iff.wav",
+      "wav_sha256": "4d778a5381571bdd07792212818b894d68fee2f95b9b4fafd40b2fe13d3d89b7",
+      "name": "Mechanic1.iff",
+      "rate_hz": 8363,
+      "one_shot_samples": 7374,
+      "repeat_samples": 64,
+      "samples_per_hi_cycle": 32,
+      "octaves": 1,
+      "compression": 0,
+      "volume_fixed16": 65536,
+      "signed_pcm_sha256": "fd2e023a5c5e3e6510db99822c7620569ba7e5b646143264e970718e03dd4373"
+    }
+  ]
+}

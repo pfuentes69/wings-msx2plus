@@ -1,0 +1,54 @@
+{
+  "renderer": "UADE 3.05 / Kris Hatlelid replay, tools/render_music.c",
+  "duration_limit_seconds": 10,
+  "complete_tracks": false,
+  "song_slot_3": "same source definition as slot 1; preview 1 is shared",
+  "module_sha256": "e7662e8e2ff1cfd4ff6219fe1f6935841140424227bc688758cf722c73bcaf86",
+  "player_sha256": "0a4187cdff0bd14e11f184e116a2b29804019d778a702757714b34422e01b0ed",
+  "previews": [
+    {
+      "file": "subsong-0.wav",
+      "sha256": "4ed65ec537a5c6022bf600a1cfad01323d587af33bca46e41b34f49670f31bfd",
+      "seconds": 10.0,
+      "rate_hz": 44100,
+      "channels": 2,
+      "bits": 16,
+      "peak": 26223,
+      "rms": 6476.95,
+      "subsong": 0
+    },
+    {
+      "file": "subsong-1.wav",
+      "sha256": "2706c48951633d51a28556d1f557eb28aa4b4afed60d6e89a770741c8c8f38db",
+      "seconds": 10.0,
+      "rate_hz": 44100,
+      "channels": 2,
+      "bits": 16,
+      "peak": 27492,
+      "rms": 6663.587,
+      "subsong": 1
+    },
+    {
+      "file": "subsong-2.wav",
+      "sha256": "1dfcf74db1a40d7a420e3c4fc0c69cd30ff798a62c6a7596704c0c29d6cc38cb",
+      "seconds": 10.0,
+      "rate_hz": 44100,
+      "channels": 2,
+      "bits": 16,
+      "peak": 16701,
+      "rms": 4262.865,
+      "subsong": 2
+    },
+    {
+      "file": "subsong-4.wav",
+      "sha256": "7cf4131020b800e182a3f7092fc628398f992b2c8f194e4628b0b1a6e533679a",
+      "seconds": 10.0,
+      "rate_hz": 44100,
+      "channels": 2,
+      "bits": 16,
+      "peak": 20276,
+      "rms": 4885.495,
+      "subsong": 4
+    }
+  ]
+}

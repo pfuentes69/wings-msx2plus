@@ -99,3 +99,15 @@ its output to 12 images; all ten original previews reproduce exactly in RGB.
 Original exploratory scripts are preserved under `tools/legacy/`.
 See `reference_assets/README.md` and `reference_assets/MANIFEST.json` for
 the unchanged source inventory and provenance.
+
+Audio extraction is also working: `assets_src/audio/` contains eight effect
+WAV previews, six recovered 8SVX instruments and four 10-second music previews
+rendered through the original music replay format. Effect audition rates are
+assumed; music previews are bounded clips. See
+[audio extraction notes](docs/audio-extraction.md) for evidence and remaining
+work before PSG/MSX-MUSIC adaptation.
+
+```sh
+python tools/extract_audio.py reference_assets/original_files/Wings_of_Fury NEW_AUDIO_OUTPUT
+afplay assets_src/audio/music/previews/subsong-0.wav   # macOS audition
+```

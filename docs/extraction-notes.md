@@ -149,3 +149,30 @@ checks, keyboard/held-key behavior and VBlank publications passed. Interactive
 redraws measured 11.07 ms and observed selection latency was 23.55–24.32 ms.
 The ROM binary is unchanged. Captured the verification report and level-flight
 screenshot under `docs/prototype/`. Physical hardware checks remain pending.
+
+## 2026-11-10 — Audio extraction assessment before flight work
+
+Inspected all eight raw effects, `wofsongs`, `songplay` and limited relevant
+sound setup/interrupt logic in the original executable. The source ADF is
+absent, but these files are already recovered from it and remain unchanged.
+
+Added a bounded HUNK/8SVX extractor and an optional libuade WAV front end.
+Exports in `assets_src/audio/`: eight byte-preserving raw-effect WAV previews,
+six exact embedded 8SVX instruments and six instrument WAVs, the unmodified
+music/player pair, four ten-second music WAVs and hash/provenance manifests.
+The music is the supported Kris Hatlelid two-file format. UADE independently
+reports five subsongs; the recovered symbol/pointer table identifies four
+unique definitions, with slots 1 and 3 shared.
+
+Effect audition rates remain assumed (8,363 Hz); actual gameplay uses varying
+Paula periods and dynamic engine pitch. Instrument rate/loop metadata is
+recovered from VHDR. Music WAVs are bounded, not asserted complete or
+listening-validated against a game recording. Event transcription and MSX
+arrangement remain separate future work. No game code or ROM was changed.
+
+UADE 3.05, libzakalwe and bencodetools were built under ignored tools/.build
+with source hashes verified; no system-wide packages were installed. Capstone
+was installed only in the ignored project environment for limited analysis.
+All 29 tests passed, including new audio container, signed PCM round-trip,
+exact instrument, song-table and rendered-preview checks. See
+`docs/audio-extraction.md` for commands, primary references and limitations.
