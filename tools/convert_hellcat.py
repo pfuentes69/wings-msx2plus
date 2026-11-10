@@ -122,6 +122,18 @@ def animation_assets(source, destination, base_manifest):
             file=filename, packed_sha256=hashlib.sha256(packed).hexdigest()))
         pixels.extend(packed)
     pitch_right = [index[f'hc{n:02x}'] for n in range(1, 11)]
+    # Pages 2/3: reserve rows 180..211 for the clean scenery strip.
+    ax, ay, shelf, page = 0, 0, 0, 2
+    for record in records:
+        if ax + record['width'] > 256:
+            ax, ay, shelf = 0, ay + shelf, 0
+        if ay + record['height'] > 180:
+            page, ax, ay, shelf = page + 1, 0, 0, 0
+        if page > 3:
+            raise ValueError('aircraft atlas exceeds reserved VRAM')
+        record['atlas_x'], record['atlas_y'] = ax, page * 256 + ay
+        ax += record['width']
+        shelf = max(shelf, record['height'])
     pitch_left = [index['hc28' if n == 5 else f'hc{n:02x}-left'] for n in range(1, 11)]
     ltr = [index[name] for name in facts['msx_transitions']['left_to_right']]
     rtl = [index[name] for name in facts['msx_transitions']['right_to_left']]
@@ -135,6 +147,8 @@ typedef struct AircraftShape {{
     const unsigned char* data;
     signed char dx, dy;
     unsigned char width, height;
+    unsigned char atlas_x;
+    unsigned short atlas_y;
 }} AircraftShape;
 extern const unsigned char g_HellcatPalette[32];
 extern const AircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT];
@@ -149,7 +163,7 @@ extern const unsigned char g_TurnRightToLeft[AIRCRAFT_TURN_STEPS];
     code += c_array('g_HellcatPalette', palette, '[32]') + '\n'
     code += c_array('g_AircraftPixels', pixels, f'[{len(pixels)}]') + '\n'
     code += 'const AircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT] = {\n'
-    code += ',\n'.join(f"    {{g_AircraftPixels + {r['data_offset']}, {r['dx']}, {r['dy']}, {r['width']}, {r['height']}}} /* {r['name']} */" for r in records) + '\n};\n'
+    code += ',\n'.join(f"    {{g_AircraftPixels + {r['data_offset']}, {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in records) + '\n};\n'
     for symbol, table in [('g_PitchRight', pitch_right), ('g_PitchLeft', pitch_left),
                           ('g_TurnLeftToRight', ltr), ('g_TurnRightToLeft', rtl)]:
         code += '\n' + c_array(symbol, table, f'[{len(table)}]')

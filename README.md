@@ -15,6 +15,7 @@ wings-msx2plus/
   src/main.c            MSX input, frame timing and SCREEN 5 rendering
   src/core/flight.c     Portable fixed-point movement simulation
   src/core/aircraft.c   Pitch selection and banked turn playback
+  src/core/scenery.c    Synthetic scrolling benchmark strip
   src/generated/        Converted aircraft arrays included in the ROM
   MSXgl/                Copied engine and tools
   docs/                 Port strategy and development notes
@@ -33,6 +34,7 @@ Linux uses host Node if available and the bundled SDCC/MSXhex; Windows uses
 the bundled executables.
 
 ```sh
+./launch.sh           # Build and run on Panasonic_FS-A1WX-512K
 ./build.sh            # Build out/wings.rom (32 KiB); no emulator auto-launch
 ./build.sh clean      # Remove generated out/ files
 ./build.sh rebuild    # Clean, compile, package and deploy to emul/rom/
@@ -51,7 +53,11 @@ reversing direction. **T while stationary** requests a turn for inspection;
 holding T starts only one turn.
 **Space or joystick fire** resets it to the center. While resting, **1/2/3**
 retain manual pose selection for graphics checks. Movement takes priority.
-The renderer clears and draws on the hidden page, then publishes at VBlank.
+**S** toggles a synthetic scrolling terrain strip; **P** pauses it and **R**
+reverses its camera. This is an independent rendering benchmark. See
+[scenery benchmark results](docs/scrolling-benchmark.md) for its measured limits.
+The renderer restores scenery and transparently draws on the hidden page,
+then publishes at VBlank.
 For a manual run with openMSX installed:
 
 ```sh
@@ -69,7 +75,7 @@ machine and 25 fps on PAL. See [flight prototype results](docs/flight-prototype.
 for the initial movement milestone. The current
 [orientation results](docs/aircraft-orientation.md) cover 49 cropped shapes,
 recovered drawing pivots, clipping and both turn sequences. Authentic flight
-physics and scrolling remain future increments; animation playback timing
+physics and a scrolling world remain future increments; animation playback timing
 is currently authored for this prototype.
 
 To regenerate converted assets or run the emulator check, use the Python
@@ -82,6 +88,7 @@ python tools/convert_hellcat.py --check  # Detect stale generated artifacts
 python tools/verify_screen5.py          # Requires openMSX 21 and graphics access
 python tools/verify_flight.py           # Motion, bounds, trails and frame deadlines
 python tools/verify_turns.py            # Original bank-frame order, pivots and held T
+python tools/verify_scrolling.py        # Terrain seams, transparency and frame deadlines
 ```
 
 The reference emulator configuration is `Panasonic_FS-A1WX-512K`, matching
@@ -92,7 +99,7 @@ Use `--machine C-BIOS_MSX2+` for the firmware-free fallback.
 The emulator checks boot the ROM and verify controls, VRAM, palette, page
 switching and timing. Captures and results go under
 `tools/.build/screen5-smoke/` and `tools/.build/flight-smoke/`.
-The renderer currently flattens transparent pixels to solid sky. It now
+The renderer caches aircraft in VRAM and preserves transparent pixels. It
 applies the signed source drawing origins and clips cropped shapes at the
 viewport edges. Most left-facing pitch poses are explicit reflections;
 banking uses recovered original frames.

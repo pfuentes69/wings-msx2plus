@@ -1,0 +1,141 @@
+{
+  "machine": "C-BIOS_MSX2+_EU",
+  "rom_sha256": "5bb2c05a555b4289f7be9aeb015e3851d1473f8c41682132eb737f27387ba7b3",
+  "target_fps": 25,
+  "publication_samples": 359,
+  "publication_ms": {
+    "min": 39.74555425340398,
+    "median": 39.87322411088634,
+    "max": 40.00033523813684
+  },
+  "redraw_samples": 199,
+  "redraw_ms": {
+    "min": 5.510476890218996,
+    "median": 9.346718647201158,
+    "max": 10.236775903084805
+  },
+  "missed_deadlines": 0,
+  "snapshots": {
+    "initial": {
+      "x": 104,
+      "y": 88,
+      "frame": 4,
+      "left": 0,
+      "page": 0,
+      "renders": 1,
+      "turning": 0,
+      "turn_step": 0
+    },
+    "up_right": {
+      "x": 120,
+      "y": 71,
+      "frame": 1,
+      "left": 0,
+      "page": 1,
+      "renders": 9,
+      "turning": 0,
+      "turn_step": 0
+    },
+    "coast": {
+      "x": 152,
+      "y": 52,
+      "frame": 4,
+      "left": 0,
+      "page": 1,
+      "renders": 18,
+      "turning": 0,
+      "turn_step": 0
+    },
+    "down_left": {
+      "x": 126,
+      "y": 76,
+      "frame": 34,
+      "left": 0,
+      "page": 0,
+      "renders": 28,
+      "turning": 1,
+      "turn_step": 10
+    },
+    "left_settled": {
+      "x": 30,
+      "y": 148,
+      "frame": 46,
+      "left": 1,
+      "page": 0,
+      "renders": 48,
+      "turning": 0,
+      "turn_step": 22
+    },
+    "reset": {
+      "x": 104,
+      "y": 88,
+      "frame": 4,
+      "left": 0,
+      "page": 0,
+      "renders": 49,
+      "turning": 0,
+      "turn_step": 0
+    },
+    "right_bound": {
+      "x": 208,
+      "y": 88,
+      "frame": 4,
+      "left": 0,
+      "page": 1,
+      "renders": 72,
+      "turning": 0,
+      "turn_step": 0
+    },
+    "top_bound": {
+      "x": 208,
+      "y": 0,
+      "frame": 4,
+      "left": 0,
+      "page": 0,
+      "renders": 99,
+      "turning": 0,
+      "turn_step": 0
+    },
+    "left_bound": {
+      "x": 0,
+      "y": 0,
+      "frame": 16,
+      "left": 1,
+      "page": 1,
+      "renders": 146,
+      "turning": 0,
+      "turn_step": 22
+    },
+    "bottom_bound": {
+      "x": 0,
+      "y": 180,
+      "frame": 16,
+      "left": 1,
+      "page": 0,
+      "renders": 199,
+      "turning": 0,
+      "turn_step": 22
+    },
+    "final_reset": {
+      "x": 104,
+      "y": 88,
+      "frame": 4,
+      "left": 0,
+      "page": 1,
+      "renders": 200,
+      "turning": 0,
+      "turn_step": 0
+    }
+  },
+  "checks": [
+    "accelerating directional movement",
+    "coasting and stop",
+    "original-frame turning transition",
+    "reset",
+    "four screen bounds",
+    "full-page pixel comparisons without trails",
+    "palette and mode",
+    "VBlank publication",
+    "25/30 Hz frame deadlines"
+  ]
+}

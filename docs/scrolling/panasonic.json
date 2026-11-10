@@ -1,0 +1,170 @@
+{
+  "machine": "Panasonic_FS-A1WX-512K",
+  "rom_sha256": "5bb2c05a555b4289f7be9aeb015e3851d1473f8c41682132eb737f27387ba7b3",
+  "target_fps": 30,
+  "publication_samples": 490,
+  "publication_ms": {
+    "min": 33.24808041245575,
+    "median": 33.37658836527879,
+    "max": 33.50509631810894
+  },
+  "redraw_samples": 398,
+  "redraw_ms": {
+    "min": 6.499429396754408,
+    "median": 15.359494013903685,
+    "max": 20.11875811031949
+  },
+  "missed_deadlines": 0,
+  "forced_overrun_recovery": true,
+  "snapshots": {
+    "baseline": {
+      "x": 104,
+      "y": 88,
+      "frame": 4,
+      "page": 0,
+      "camera": 0,
+      "enabled": 0,
+      "paused": 0,
+      "reverse": 0
+    },
+    "enabled": {
+      "x": 104,
+      "y": 88,
+      "frame": 4,
+      "page": 1,
+      "camera": 18,
+      "enabled": 1,
+      "paused": 0,
+      "reverse": 0
+    },
+    "overlap": {
+      "x": 104,
+      "y": 180,
+      "frame": 4,
+      "page": 1,
+      "camera": 210,
+      "enabled": 1,
+      "paused": 0,
+      "reverse": 0
+    },
+    "seam_before": {
+      "x": 104,
+      "y": 180,
+      "frame": 32,
+      "page": 1,
+      "camera": 250,
+      "enabled": 1,
+      "paused": 0,
+      "reverse": 0
+    },
+    "seam_after": {
+      "x": 104,
+      "y": 180,
+      "frame": 35,
+      "page": 0,
+      "camera": 256,
+      "enabled": 1,
+      "paused": 0,
+      "reverse": 0
+    },
+    "turned": {
+      "x": 104,
+      "y": 180,
+      "frame": 16,
+      "page": 0,
+      "camera": 280,
+      "enabled": 1,
+      "paused": 0,
+      "reverse": 0
+    },
+    "wrap_before": {
+      "x": 104,
+      "y": 180,
+      "frame": 16,
+      "page": 1,
+      "camera": 506,
+      "enabled": 1,
+      "paused": 0,
+      "reverse": 0
+    },
+    "wrapped": {
+      "x": 104,
+      "y": 180,
+      "frame": 16,
+      "page": 0,
+      "camera": 0,
+      "enabled": 1,
+      "paused": 0,
+      "reverse": 0
+    },
+    "paused": {
+      "x": 104,
+      "y": 180,
+      "frame": 16,
+      "page": 0,
+      "camera": 32,
+      "enabled": 1,
+      "paused": 1,
+      "reverse": 0
+    },
+    "still_paused": {
+      "x": 104,
+      "y": 180,
+      "frame": 16,
+      "page": 0,
+      "camera": 32,
+      "enabled": 1,
+      "paused": 1,
+      "reverse": 0
+    },
+    "reversed": {
+      "x": 104,
+      "y": 180,
+      "frame": 16,
+      "page": 1,
+      "camera": 2,
+      "enabled": 1,
+      "paused": 0,
+      "reverse": 1
+    },
+    "disabled": {
+      "x": 104,
+      "y": 180,
+      "frame": 16,
+      "page": 0,
+      "camera": 454,
+      "enabled": 0,
+      "paused": 0,
+      "reverse": 1
+    },
+    "sky_restored": {
+      "x": 104,
+      "y": 0,
+      "frame": 16,
+      "page": 1,
+      "camera": 454,
+      "enabled": 0,
+      "paused": 0,
+      "reverse": 1
+    },
+    "reenabled": {
+      "x": 104,
+      "y": 0,
+      "frame": 16,
+      "page": 0,
+      "camera": 436,
+      "enabled": 1,
+      "paused": 0,
+      "reverse": 1
+    }
+  },
+  "checks": [
+    "full-page transparent compositing",
+    "512-pixel strip seams and wrap",
+    "pause and reverse",
+    "toggle restoration",
+    "immutable VRAM atlas and strip caches",
+    "VBlank publication",
+    "25/30 Hz deadlines"
+  ]
+}

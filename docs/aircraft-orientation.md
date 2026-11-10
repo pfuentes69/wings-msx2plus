@@ -1,5 +1,9 @@
 # Aircraft orientation and drawing-origin milestone
 
+This records the animation milestone. The current renderer adds VRAM caching
+and transparent scenery composition; see the [scrolling benchmark](scrolling-benchmark.md).
+Measurements below are retained for their recorded ROM hash.
+
 Implemented and validated 2026-11-10. The current ROM uses ten pitch choices
 per facing and plays banking transitions when horizontal velocity reverses.
 The fixed-point movement model remains unchanged. Press **T while stationary**

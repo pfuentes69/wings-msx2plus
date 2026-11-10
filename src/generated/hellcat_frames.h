@@ -8,6 +8,8 @@ typedef struct AircraftShape {
     const unsigned char* data;
     signed char dx, dy;
     unsigned char width, height;
+    unsigned char atlas_x;
+    unsigned short atlas_y;
 } AircraftShape;
 extern const unsigned char g_HellcatPalette[32];
 extern const AircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT];

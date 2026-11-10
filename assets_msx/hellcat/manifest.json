@@ -193,7 +193,9 @@
         "data_offset": 0,
         "bytes": 580,
         "file": "animation/hc01.sc5",
-        "packed_sha256": "14a828e07dd15ebd5c80cf1e280ed4a4ef73f9718907009a2531911fec87c7d8"
+        "packed_sha256": "14a828e07dd15ebd5c80cf1e280ed4a4ef73f9718907009a2531911fec87c7d8",
+        "atlas_x": 0,
+        "atlas_y": 512
       },
       {
         "id": 1,
@@ -216,7 +218,9 @@
         "data_offset": 580,
         "bytes": 546,
         "file": "animation/hc02.sc5",
-        "packed_sha256": "4f95de31d337be0af60684022d31eb7dad1c85e18561fe8d0bf7681569cf4658"
+        "packed_sha256": "4f95de31d337be0af60684022d31eb7dad1c85e18561fe8d0bf7681569cf4658",
+        "atlas_x": 40,
+        "atlas_y": 512
       },
       {
         "id": 2,
@@ -239,7 +243,9 @@
         "data_offset": 1126,
         "bytes": 441,
         "file": "animation/hc03.sc5",
-        "packed_sha256": "d38185f97a64076584751803c3d67f6a2667e25927df5c02d88ef41440ec9f4a"
+        "packed_sha256": "d38185f97a64076584751803c3d67f6a2667e25927df5c02d88ef41440ec9f4a",
+        "atlas_x": 82,
+        "atlas_y": 512
       },
       {
         "id": 3,
@@ -262,7 +268,9 @@
         "data_offset": 1567,
         "bytes": 336,
         "file": "animation/hc04.sc5",
-        "packed_sha256": "194b8f9b1b9bdfd2b535c02f0d55e77c630d944117ba71c5ce849f22ca6968c5"
+        "packed_sha256": "194b8f9b1b9bdfd2b535c02f0d55e77c630d944117ba71c5ce849f22ca6968c5",
+        "atlas_x": 124,
+        "atlas_y": 512
       },
       {
         "id": 4,
@@ -285,7 +293,9 @@
         "data_offset": 1903,
         "bytes": 273,
         "file": "animation/hc05.sc5",
-        "packed_sha256": "9d061b46f590e321d2a8958b10283a31d69dcbb5e0c7020f461e1e90e357f667"
+        "packed_sha256": "9d061b46f590e321d2a8958b10283a31d69dcbb5e0c7020f461e1e90e357f667",
+        "atlas_x": 166,
+        "atlas_y": 512
       },
       {
         "id": 5,
@@ -308,7 +318,9 @@
         "data_offset": 2176,
         "bytes": 357,
         "file": "animation/hc06.sc5",
-        "packed_sha256": "496bf0c78e9f644816432c8b0d4740beadfc59847d5ea5f9f2b41b6b50a81ed3"
+        "packed_sha256": "496bf0c78e9f644816432c8b0d4740beadfc59847d5ea5f9f2b41b6b50a81ed3",
+        "atlas_x": 208,
+        "atlas_y": 512
       },
       {
         "id": 6,
@@ -331,7 +343,9 @@
         "data_offset": 2533,
         "bytes": 483,
         "file": "animation/hc07.sc5",
-        "packed_sha256": "3b23cecff48392d984dd1abbf780b22c1e02d14cbd39535b1ad288106b914b21"
+        "packed_sha256": "3b23cecff48392d984dd1abbf780b22c1e02d14cbd39535b1ad288106b914b21",
+        "atlas_x": 0,
+        "atlas_y": 541
       },
       {
         "id": 7,
@@ -354,7 +368,9 @@
         "data_offset": 3016,
         "bytes": 540,
         "file": "animation/hc08.sc5",
-        "packed_sha256": "6ea1daa35cfae307e9c950f70a0ec998f09c251adf541f381e72a7dd6acc5e45"
+        "packed_sha256": "6ea1daa35cfae307e9c950f70a0ec998f09c251adf541f381e72a7dd6acc5e45",
+        "atlas_x": 42,
+        "atlas_y": 541
       },
       {
         "id": 8,
@@ -377,7 +393,9 @@
         "data_offset": 3556,
         "bytes": 608,
         "file": "animation/hc09.sc5",
-        "packed_sha256": "c2c9254d24f60a79945a7a1e8b19977437f8dea1e0e421ddf130ed4291b92e88"
+        "packed_sha256": "c2c9254d24f60a79945a7a1e8b19977437f8dea1e0e421ddf130ed4291b92e88",
+        "atlas_x": 82,
+        "atlas_y": 541
       },
       {
         "id": 9,
@@ -400,7 +418,9 @@
         "data_offset": 4164,
         "bytes": 576,
         "file": "animation/hc0a.sc5",
-        "packed_sha256": "51a8256694baf06f3b90c5e6e324dcd7d8b86679f77ef1e3f234b0646c090e5b"
+        "packed_sha256": "51a8256694baf06f3b90c5e6e324dcd7d8b86679f77ef1e3f234b0646c090e5b",
+        "atlas_x": 120,
+        "atlas_y": 541
       },
       {
         "id": 10,
@@ -423,7 +443,9 @@
         "data_offset": 4740,
         "bytes": 273,
         "file": "animation/hc22.sc5",
-        "packed_sha256": "9d061b46f590e321d2a8958b10283a31d69dcbb5e0c7020f461e1e90e357f667"
+        "packed_sha256": "9d061b46f590e321d2a8958b10283a31d69dcbb5e0c7020f461e1e90e357f667",
+        "atlas_x": 152,
+        "atlas_y": 541
       },
       {
         "id": 11,
@@ -446,7 +468,9 @@
         "data_offset": 5013,
         "bytes": 273,
         "file": "animation/hc23.sc5",
-        "packed_sha256": "db56889bb542ab482947a04e7ea8b977c5651df08dd5926309d7fa48c7946674"
+        "packed_sha256": "db56889bb542ab482947a04e7ea8b977c5651df08dd5926309d7fa48c7946674",
+        "atlas_x": 194,
+        "atlas_y": 541
       },
       {
         "id": 12,
@@ -469,7 +493,9 @@
         "data_offset": 5286,
         "bytes": 273,
         "file": "animation/hc24.sc5",
-        "packed_sha256": "672735abb4a5344d87e4732e0282627268581ad6da69494c17f2b78d98c91673"
+        "packed_sha256": "672735abb4a5344d87e4732e0282627268581ad6da69494c17f2b78d98c91673",
+        "atlas_x": 0,
+        "atlas_y": 577
       },
       {
         "id": 13,
@@ -492,7 +518,9 @@
         "data_offset": 5559,
         "bytes": 315,
         "file": "animation/hc25.sc5",
-        "packed_sha256": "4e568e606d1e83d5e3b30490eaf45d5718b0c0f7e2b82bb963f9de586bab31ce"
+        "packed_sha256": "4e568e606d1e83d5e3b30490eaf45d5718b0c0f7e2b82bb963f9de586bab31ce",
+        "atlas_x": 42,
+        "atlas_y": 577
       },
       {
         "id": 14,
@@ -515,7 +543,9 @@
         "data_offset": 5874,
         "bytes": 462,
         "file": "animation/hc26.sc5",
-        "packed_sha256": "f16984d61fb9d79abb60af3e96f7b87e5139fe411f72192a0ba723f98d588f1e"
+        "packed_sha256": "f16984d61fb9d79abb60af3e96f7b87e5139fe411f72192a0ba723f98d588f1e",
+        "atlas_x": 84,
+        "atlas_y": 577
       },
       {
         "id": 15,
@@ -538,7 +568,9 @@
         "data_offset": 6336,
         "bytes": 567,
         "file": "animation/hc27.sc5",
-        "packed_sha256": "7eedea672390bb239eaea11d6e0deb0453e97b8ff87aa3cd951cad3dbb946eba"
+        "packed_sha256": "7eedea672390bb239eaea11d6e0deb0453e97b8ff87aa3cd951cad3dbb946eba",
+        "atlas_x": 126,
+        "atlas_y": 577
       },
       {
         "id": 16,
@@ -561,7 +593,9 @@
         "data_offset": 6903,
         "bytes": 273,
         "file": "animation/hc28.sc5",
-        "packed_sha256": "e9d0d388f5912ac8a88fad3d1a201165ae615bef916ad5198a7b6499c4ef9fb4"
+        "packed_sha256": "e9d0d388f5912ac8a88fad3d1a201165ae615bef916ad5198a7b6499c4ef9fb4",
+        "atlas_x": 168,
+        "atlas_y": 577
       },
       {
         "id": 17,
@@ -584,7 +618,9 @@
         "data_offset": 7176,
         "bytes": 273,
         "file": "animation/hc29.sc5",
-        "packed_sha256": "ee5c4704a454fe6f5fb5a11ec9d1404fe27ebd99fcdbc980cc5724b8e06b4ea5"
+        "packed_sha256": "ee5c4704a454fe6f5fb5a11ec9d1404fe27ebd99fcdbc980cc5724b8e06b4ea5",
+        "atlas_x": 210,
+        "atlas_y": 577
       },
       {
         "id": 18,
@@ -607,7 +643,9 @@
         "data_offset": 7449,
         "bytes": 273,
         "file": "animation/hc2a.sc5",
-        "packed_sha256": "7a0332733e4dd076d982c4ccd57fa56be950a66aa297f1c824483a728a76601e"
+        "packed_sha256": "7a0332733e4dd076d982c4ccd57fa56be950a66aa297f1c824483a728a76601e",
+        "atlas_x": 0,
+        "atlas_y": 604
       },
       {
         "id": 19,
@@ -630,7 +668,9 @@
         "data_offset": 7722,
         "bytes": 315,
         "file": "animation/hc2b.sc5",
-        "packed_sha256": "32e40a8886ef88fb1b11a3b6be8c007a381f9403672cdec865ccf9a65c2ba08f"
+        "packed_sha256": "32e40a8886ef88fb1b11a3b6be8c007a381f9403672cdec865ccf9a65c2ba08f",
+        "atlas_x": 42,
+        "atlas_y": 604
       },
       {
         "id": 20,
@@ -653,7 +693,9 @@
         "data_offset": 8037,
         "bytes": 462,
         "file": "animation/hc2c.sc5",
-        "packed_sha256": "0c43560a962e00bd2f0651394ad6b343245cd4a0430f311650297ec10356b65d"
+        "packed_sha256": "0c43560a962e00bd2f0651394ad6b343245cd4a0430f311650297ec10356b65d",
+        "atlas_x": 84,
+        "atlas_y": 604
       },
       {
         "id": 21,
@@ -676,7 +718,9 @@
         "data_offset": 8499,
         "bytes": 567,
         "file": "animation/hc2d.sc5",
-        "packed_sha256": "8074e73b7f8d7bdc1ae1120c7cc40aab0e298240eb728d06e9807f83dcc06a11"
+        "packed_sha256": "8074e73b7f8d7bdc1ae1120c7cc40aab0e298240eb728d06e9807f83dcc06a11",
+        "atlas_x": 126,
+        "atlas_y": 604
       },
       {
         "id": 22,
@@ -699,7 +743,9 @@
         "data_offset": 9066,
         "bytes": 540,
         "file": "animation/hc2e.sc5",
-        "packed_sha256": "7ced6b54f689fe01e21138c7d36a875fcf22d7e3c8e44a4da91b4dc16f043c39"
+        "packed_sha256": "7ced6b54f689fe01e21138c7d36a875fcf22d7e3c8e44a4da91b4dc16f043c39",
+        "atlas_x": 168,
+        "atlas_y": 604
       },
       {
         "id": 23,
@@ -722,7 +768,9 @@
         "data_offset": 9606,
         "bytes": 476,
         "file": "animation/hc2f.sc5",
-        "packed_sha256": "a4d7bc15388c44ecff43720c7464486ea2873791faa284f8d85ee5583dd28532"
+        "packed_sha256": "a4d7bc15388c44ecff43720c7464486ea2873791faa284f8d85ee5583dd28532",
+        "atlas_x": 208,
+        "atlas_y": 604
       },
       {
         "id": 24,
@@ -745,7 +793,9 @@
         "data_offset": 10082,
         "bytes": 392,
         "file": "animation/hc30.sc5",
-        "packed_sha256": "9b8566304f36bc393c4023d7fb1e6742c4325674fc10706271d29d721259d67e"
+        "packed_sha256": "9b8566304f36bc393c4023d7fb1e6742c4325674fc10706271d29d721259d67e",
+        "atlas_x": 0,
+        "atlas_y": 632
       },
       {
         "id": 25,
@@ -768,7 +818,9 @@
         "data_offset": 10474,
         "bytes": 392,
         "file": "animation/hc31.sc5",
-        "packed_sha256": "b715bc273360040b9d7f92793167ea346a73285bcd601727bb354a7d76ccf01c"
+        "packed_sha256": "b715bc273360040b9d7f92793167ea346a73285bcd601727bb354a7d76ccf01c",
+        "atlas_x": 28,
+        "atlas_y": 632
       },
       {
         "id": 26,
@@ -791,7 +843,9 @@
         "data_offset": 10866,
         "bytes": 448,
         "file": "animation/hc32.sc5",
-        "packed_sha256": "3753d936e4181073cd8fa9e2b711647e8c515cd78fffbf8217f444b7b021a7eb"
+        "packed_sha256": "3753d936e4181073cd8fa9e2b711647e8c515cd78fffbf8217f444b7b021a7eb",
+        "atlas_x": 56,
+        "atlas_y": 632
       },
       {
         "id": 27,
@@ -814,7 +868,9 @@
         "data_offset": 11314,
         "bytes": 364,
         "file": "animation/hc33.sc5",
-        "packed_sha256": "a3a93f9d1bcd0dbed856a172b2bfb5f7ea2744ec13433b8a05eb6e75e38e281f"
+        "packed_sha256": "a3a93f9d1bcd0dbed856a172b2bfb5f7ea2744ec13433b8a05eb6e75e38e281f",
+        "atlas_x": 88,
+        "atlas_y": 632
       },
       {
         "id": 28,
@@ -837,7 +893,9 @@
         "data_offset": 11678,
         "bytes": 364,
         "file": "animation/hc34.sc5",
-        "packed_sha256": "2adea2ac18181931245c8eafa34e26156537c42708f4eb24ad2036ce81d09e16"
+        "packed_sha256": "2adea2ac18181931245c8eafa34e26156537c42708f4eb24ad2036ce81d09e16",
+        "atlas_x": 114,
+        "atlas_y": 632
       },
       {
         "id": 29,
@@ -860,7 +918,9 @@
         "data_offset": 12042,
         "bytes": 405,
         "file": "animation/hc35.sc5",
-        "packed_sha256": "a3f16f2d9d5e7dc8cbbb154432aa9078606c86c63d7f78b8c3301d664362fede"
+        "packed_sha256": "a3f16f2d9d5e7dc8cbbb154432aa9078606c86c63d7f78b8c3301d664362fede",
+        "atlas_x": 140,
+        "atlas_y": 632
       },
       {
         "id": 30,
@@ -883,7 +943,9 @@
         "data_offset": 12447,
         "bytes": 459,
         "file": "animation/hc36.sc5",
-        "packed_sha256": "102e4cd016a969286073aeb3fb4c45a9d9761d53784c66a83cd54db55c3adae9"
+        "packed_sha256": "102e4cd016a969286073aeb3fb4c45a9d9761d53784c66a83cd54db55c3adae9",
+        "atlas_x": 170,
+        "atlas_y": 632
       },
       {
         "id": 31,
@@ -906,7 +968,9 @@
         "data_offset": 12906,
         "bytes": 540,
         "file": "animation/hc37.sc5",
-        "packed_sha256": "876f65f58306079863645bf29657978e396503d5cb99e8820332d40b8739a156"
+        "packed_sha256": "876f65f58306079863645bf29657978e396503d5cb99e8820332d40b8739a156",
+        "atlas_x": 204,
+        "atlas_y": 632
       },
       {
         "id": 32,
@@ -929,7 +993,9 @@
         "data_offset": 13446,
         "bytes": 486,
         "file": "animation/hc38.sc5",
-        "packed_sha256": "100d929118be9acb089d099595fe3b7ec2629cd3434c78dc1f6c1b9b8cc7e8a5"
+        "packed_sha256": "100d929118be9acb089d099595fe3b7ec2629cd3434c78dc1f6c1b9b8cc7e8a5",
+        "atlas_x": 0,
+        "atlas_y": 660
       },
       {
         "id": 33,
@@ -952,7 +1018,9 @@
         "data_offset": 13932,
         "bytes": 405,
         "file": "animation/hc39.sc5",
-        "packed_sha256": "e4b79668956fce64eedb5c4fb9d84e4b130829f56a33872c63d86a90f8ab17fe"
+        "packed_sha256": "e4b79668956fce64eedb5c4fb9d84e4b130829f56a33872c63d86a90f8ab17fe",
+        "atlas_x": 36,
+        "atlas_y": 660
       },
       {
         "id": 34,
@@ -975,7 +1043,9 @@
         "data_offset": 14337,
         "bytes": 364,
         "file": "animation/hc3a.sc5",
-        "packed_sha256": "16a0e63499f234ab72d6dad26b317dea9e95c819fa3e6df702b88b9cc249597a"
+        "packed_sha256": "16a0e63499f234ab72d6dad26b317dea9e95c819fa3e6df702b88b9cc249597a",
+        "atlas_x": 66,
+        "atlas_y": 660
       },
       {
         "id": 35,
@@ -998,7 +1068,9 @@
         "data_offset": 14701,
         "bytes": 420,
         "file": "animation/hc3b.sc5",
-        "packed_sha256": "68618e4631cb8273bb4fd3363b49bba32a562fb6fb3cdab7ad1330e1ef40fada"
+        "packed_sha256": "68618e4631cb8273bb4fd3363b49bba32a562fb6fb3cdab7ad1330e1ef40fada",
+        "atlas_x": 92,
+        "atlas_y": 660
       },
       {
         "id": 36,
@@ -1021,7 +1093,9 @@
         "data_offset": 15121,
         "bytes": 364,
         "file": "animation/hc3c.sc5",
-        "packed_sha256": "02096afd3651a865948b28878c1a1346e58db0c4ee7b7cbe4ef5c06c57959eae"
+        "packed_sha256": "02096afd3651a865948b28878c1a1346e58db0c4ee7b7cbe4ef5c06c57959eae",
+        "atlas_x": 122,
+        "atlas_y": 660
       },
       {
         "id": 37,
@@ -1044,7 +1118,9 @@
         "data_offset": 15485,
         "bytes": 392,
         "file": "animation/hc3d.sc5",
-        "packed_sha256": "021f79e51294e5eeea0f657e56f431273a5951ce2e92f44817acc85ae6621bdd"
+        "packed_sha256": "021f79e51294e5eeea0f657e56f431273a5951ce2e92f44817acc85ae6621bdd",
+        "atlas_x": 148,
+        "atlas_y": 660
       },
       {
         "id": 38,
@@ -1067,7 +1143,9 @@
         "data_offset": 15877,
         "bytes": 459,
         "file": "animation/hc3e.sc5",
-        "packed_sha256": "a42170ebb88d2b81f8a6287955a8a1b493424228793cb24c7636beb544a5b4b5"
+        "packed_sha256": "a42170ebb88d2b81f8a6287955a8a1b493424228793cb24c7636beb544a5b4b5",
+        "atlas_x": 176,
+        "atlas_y": 660
       },
       {
         "id": 39,
@@ -1090,7 +1168,9 @@
         "data_offset": 16336,
         "bytes": 567,
         "file": "animation/hc3f.sc5",
-        "packed_sha256": "999d979373493e8c4757cbacde13f864c22bb6f806c364d3c46326f26ee4bf5c"
+        "packed_sha256": "999d979373493e8c4757cbacde13f864c22bb6f806c364d3c46326f26ee4bf5c",
+        "atlas_x": 210,
+        "atlas_y": 660
       },
       {
         "id": 40,
@@ -1113,7 +1193,9 @@
         "data_offset": 16903,
         "bytes": 580,
         "file": "animation/hc01-left.sc5",
-        "packed_sha256": "a6271fc5b4dd03fef956875e06668fa697f477f6c6959cae6c0c92bea40f19bf"
+        "packed_sha256": "a6271fc5b4dd03fef956875e06668fa697f477f6c6959cae6c0c92bea40f19bf",
+        "atlas_x": 0,
+        "atlas_y": 768
       },
       {
         "id": 41,
@@ -1136,7 +1218,9 @@
         "data_offset": 17483,
         "bytes": 546,
         "file": "animation/hc02-left.sc5",
-        "packed_sha256": "fab49fde124546850e4c6aa7484a374d19f8d7571166f4508f9982c8ed8fa25c"
+        "packed_sha256": "fab49fde124546850e4c6aa7484a374d19f8d7571166f4508f9982c8ed8fa25c",
+        "atlas_x": 40,
+        "atlas_y": 768
       },
       {
         "id": 42,
@@ -1159,7 +1243,9 @@
         "data_offset": 18029,
         "bytes": 441,
         "file": "animation/hc03-left.sc5",
-        "packed_sha256": "a3bd68437d0574e90140cab63e498acaed4205ef511e220040f6b77b64772bb9"
+        "packed_sha256": "a3bd68437d0574e90140cab63e498acaed4205ef511e220040f6b77b64772bb9",
+        "atlas_x": 82,
+        "atlas_y": 768
       },
       {
         "id": 43,
@@ -1182,7 +1268,9 @@
         "data_offset": 18470,
         "bytes": 336,
         "file": "animation/hc04-left.sc5",
-        "packed_sha256": "f0e808c392d598490266bb7986f39b0c7e2bc60fe7121b1670d9a97711e3e5e7"
+        "packed_sha256": "f0e808c392d598490266bb7986f39b0c7e2bc60fe7121b1670d9a97711e3e5e7",
+        "atlas_x": 124,
+        "atlas_y": 768
       },
       {
         "id": 44,
@@ -1205,7 +1293,9 @@
         "data_offset": 18806,
         "bytes": 357,
         "file": "animation/hc06-left.sc5",
-        "packed_sha256": "58bf96280350c5af8cb4d8b1845d73a6f8e4c2beeca8c91612045e9c5803aba4"
+        "packed_sha256": "58bf96280350c5af8cb4d8b1845d73a6f8e4c2beeca8c91612045e9c5803aba4",
+        "atlas_x": 166,
+        "atlas_y": 768
       },
       {
         "id": 45,
@@ -1228,7 +1318,9 @@
         "data_offset": 19163,
         "bytes": 483,
         "file": "animation/hc07-left.sc5",
-        "packed_sha256": "ae58879d4dfb78fd54213361c909060491d9aea54ad59203b33b27403dced21b"
+        "packed_sha256": "ae58879d4dfb78fd54213361c909060491d9aea54ad59203b33b27403dced21b",
+        "atlas_x": 208,
+        "atlas_y": 768
       },
       {
         "id": 46,
@@ -1251,7 +1343,9 @@
         "data_offset": 19646,
         "bytes": 540,
         "file": "animation/hc08-left.sc5",
-        "packed_sha256": "5662309b77a0a944352c1c478061d0cc05e2ee9af3fea9b4a34ce45ee2cc4a2d"
+        "packed_sha256": "5662309b77a0a944352c1c478061d0cc05e2ee9af3fea9b4a34ce45ee2cc4a2d",
+        "atlas_x": 0,
+        "atlas_y": 797
       },
       {
         "id": 47,
@@ -1274,7 +1368,9 @@
         "data_offset": 20186,
         "bytes": 608,
         "file": "animation/hc09-left.sc5",
-        "packed_sha256": "5fbd78348ec1fdd7427e14165a36f083125fddba100f5c37a5ac61a200dd73cb"
+        "packed_sha256": "5fbd78348ec1fdd7427e14165a36f083125fddba100f5c37a5ac61a200dd73cb",
+        "atlas_x": 40,
+        "atlas_y": 797
       },
       {
         "id": 48,
@@ -1297,7 +1393,9 @@
         "data_offset": 20794,
         "bytes": 576,
         "file": "animation/hc0a-left.sc5",
-        "packed_sha256": "08d29aad3bab7141b8d8a7718fe869cef9c5c79b7347dcabfeb6061918a9c6ad"
+        "packed_sha256": "08d29aad3bab7141b8d8a7718fe869cef9c5c79b7347dcabfeb6061918a9c6ad",
+        "atlas_x": 78,
+        "atlas_y": 797
       }
     ],
     "pixel_bytes": 21370,
