@@ -7,3 +7,4 @@
 #define HELLCAT_FRAME_COUNT 3
 extern const unsigned char g_HellcatPalette[32];
 extern const unsigned char g_HellcatFrames[3][768];
+extern const unsigned char g_HellcatFramesLeft[3][768];

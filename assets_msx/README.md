@@ -7,6 +7,11 @@ V9958 palette entries as red/blue, green byte pairs. The last four entries are
 reserved for the prototype UI. `manifest.json` records source PNG hashes,
 index mapping, padding, palette quantization and output hashes.
 
+`hc01-left.sc5`, `hc05-left.sc5`, and `hc09-left.sc5` are exact horizontal
+pixel reflections of those canvases, also exported as generated C arrays.
+They provide temporary left-facing flight artwork; authentic turning frames
+and pivots still need to be mapped from the decoded source animation.
+
 Regenerate from the repository root with:
 
 ```sh

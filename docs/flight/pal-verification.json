@@ -1,0 +1,111 @@
+{
+  "machine": "C-BIOS_MSX2+_EU",
+  "rom_sha256": "ea78d27b2a672a5e3e8ac6ae7d6dcbb4ee045b5683d8750875519699c0a2f0d6",
+  "target_fps": 25,
+  "publication_samples": 340,
+  "publication_ms": {
+    "min": 39.770697113741704,
+    "median": 39.87322411088545,
+    "max": 39.975751108031865
+  },
+  "redraw_samples": 180,
+  "redraw_ms": {
+    "min": 10.446579104328002,
+    "median": 13.149157225290864,
+    "max": 13.182122308842636
+  },
+  "missed_deadlines": 0,
+  "snapshots": {
+    "initial": {
+      "x": 104,
+      "y": 88,
+      "frame": 1,
+      "left": 0,
+      "page": 0,
+      "renders": 1
+    },
+    "up_right": {
+      "x": 126,
+      "y": 68,
+      "frame": 0,
+      "left": 0,
+      "page": 0,
+      "renders": 10
+    },
+    "coast": {
+      "x": 158,
+      "y": 49,
+      "frame": 1,
+      "left": 0,
+      "page": 1,
+      "renders": 20
+    },
+    "down_left": {
+      "x": 130,
+      "y": 72,
+      "frame": 2,
+      "left": 1,
+      "page": 0,
+      "renders": 30
+    },
+    "reset": {
+      "x": 104,
+      "y": 88,
+      "frame": 1,
+      "left": 0,
+      "page": 0,
+      "renders": 31
+    },
+    "right_bound": {
+      "x": 208,
+      "y": 88,
+      "frame": 1,
+      "left": 0,
+      "page": 1,
+      "renders": 54
+    },
+    "top_bound": {
+      "x": 208,
+      "y": 0,
+      "frame": 1,
+      "left": 0,
+      "page": 0,
+      "renders": 81
+    },
+    "left_bound": {
+      "x": 0,
+      "y": 0,
+      "frame": 1,
+      "left": 1,
+      "page": 0,
+      "renders": 127
+    },
+    "bottom_bound": {
+      "x": 0,
+      "y": 180,
+      "frame": 1,
+      "left": 1,
+      "page": 1,
+      "renders": 180
+    },
+    "final_reset": {
+      "x": 104,
+      "y": 88,
+      "frame": 1,
+      "left": 0,
+      "page": 0,
+      "renders": 181
+    }
+  },
+  "checks": [
+    "accelerating directional movement",
+    "coasting and stop",
+    "left-facing reflection",
+    "reset",
+    "four screen bounds",
+    "full-page pixel comparisons without trails",
+    "palette and mode",
+    "VBlank publication",
+    "25/30 Hz frame deadlines"
+  ]
+}

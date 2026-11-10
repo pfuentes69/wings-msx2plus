@@ -1,5 +1,9 @@
 # Three-frame SCREEN 5 prototype
 
+This records the initial graphics milestone. The current ROM also supports
+movement; see [flight prototype](flight-prototype.md). The original selection
+labels were removed for the moving scene, while idle 1/2/3 pose checks remain.
+
 Validated 2026-11-10 with native macOS SDCC 4.6.0 and openMSX 21.
 The ROM displays recovered Hellcat artwork and accepts real keyboard matrix
 input. Keys **1**, **2**, **3** select `hc01`, `hc05`, `hc09`; an underline

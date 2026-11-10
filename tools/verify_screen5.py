@@ -35,8 +35,8 @@ def main():
     if not text.rstrip().endswith('PASS'):
         raise RuntimeError(f'emulator checks did not finish; inspect {output}')
     palette = (ROOT / 'assets_msx/hellcat/palette.bin').read_bytes()
-    states = [('initial', 'hc01', 0), ('key2', 'hc05', 1), ('held2', 'hc05', 1),
-              ('key3', 'hc09', 0), ('return1', 'hc01', 1)]
+    states = [('initial', 'hc05', 0), ('key1', 'hc01', 1), ('held1', 'hc01', 1),
+              ('key3', 'hc09', 0), ('return2', 'hc05', 1)]
     for name, frame, page in states:
         packed = (ROOT / f'assets_msx/hellcat/{frame}.sc5').read_bytes()
         vram = (output / (name + '.vram')).read_bytes()
@@ -48,17 +48,11 @@ def main():
         for y in range(32):
             address = base + (88 + y) * 128 + 52
             assert vram[address:address + 24] == packed[y * 24:(y + 1) * 24], f'{name}: row {y} differs'
-        # The surrounding scene must remain entirely sky except the small labels/underlines.
+        # The surrounding scene must remain entirely sky.
         for y in range(212):
             row = bytearray(vram[base + y * 128:base + (y + 1) * 128])
             if 88 <= y < 120:
                 row[52:76] = bytes(24)
-            if 144 <= y < 154:
-                for x in (45, 61, 77):
-                    row[x:x + 3] = bytes(3)
-            if y == 160:
-                for x in (43, 59, 75):
-                    row[x:x + 7] = bytes(7)
             assert not any(row), f'{name}: unexpected pixels in scene row {y}'
     timings = [float(line.split()[1]) for line in text.splitlines() if line.startswith('render_ms ')]
     latencies = [float(line.split()[1]) for line in text.splitlines() if line.startswith('selection_latency_ms ')]

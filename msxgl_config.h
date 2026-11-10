@@ -7,10 +7,10 @@
 #define BIOS_CALL_DISKROM BIOS_CALL_INTERSLOT
 #define BIOS_USE_VDP TRUE
 
-// SCREEN 5 only; use the BIOS VBlank ISR and its register mirrors.
+// SCREEN 5 only; MSXgl's VBlank ISR drives the frame clock.
 #define VDP_USE_MODE_G4 TRUE
 #define VDP_USE_PALETTE16 TRUE
 #define VDP_USE_SPRITE FALSE
-#define VDP_USE_COMMAND FALSE
+#define VDP_USE_COMMAND TRUE
 #define VDP_VRAM_ADDR VDP_VRAM_ADDR_17
 #define VDP_INIT_50HZ VDP_INIT_AUTO

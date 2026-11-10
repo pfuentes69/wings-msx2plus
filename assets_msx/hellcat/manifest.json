@@ -149,5 +149,25 @@
   ],
   "quantization": "round(component * 7 / 255); MSX bytes: red<<4|blue, green",
   "transparency": "index 0 flattened to sky; no mask/terrain compositing",
-  "placement": "vertically centered padded canvas; original hotspots not applied"
+  "placement": "vertically centered padded canvas; original hotspots not applied",
+  "left_facing": {
+    "method": "horizontal reflection of padded source frames; temporary until authentic turning frames are mapped",
+    "frames": [
+      {
+        "name": "hc01",
+        "file": "hc01-left.sc5",
+        "packed_sha256": "10569df1b2150b5f2dee0d3304db811de9166753b6f983dc1df74916ca6e0705"
+      },
+      {
+        "name": "hc05",
+        "file": "hc05-left.sc5",
+        "packed_sha256": "6bdc7e6e4ae9cbe8a56ac9e8a8dffab632fa64d2a2d7ec835906195a03e76dbd"
+      },
+      {
+        "name": "hc09",
+        "file": "hc09-left.sc5",
+        "packed_sha256": "2192ae816f7a0a6ab4a22e209e1c269127d4dd0f6dccfdd0c4fe2a782232b014"
+      }
+    ]
+  }
 }

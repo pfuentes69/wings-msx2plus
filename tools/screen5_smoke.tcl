@@ -61,21 +61,21 @@ proc press_key {mask} {
 }
 
 proc stage_two {} {
-    snapshot key2 1 1 2
+    snapshot key1 0 1 2
     after time 0.2 {stage_hold}
 }
 proc stage_hold {} {
-    snapshot held2 1 1 2
+    snapshot held1 0 1 2
     press_key 8
     after time 0.2 {stage_three}
 }
 proc stage_three {} {
     snapshot key3 2 0 3
-    press_key 2
+    press_key 4
     after time 0.2 {stage_one}
 }
 proc stage_one {} {
-    snapshot return1 0 1 4
+    snapshot return2 1 1 4
     keymatrixup 0 14
     puts $::report PASS
     close $::report
@@ -98,9 +98,9 @@ proc await_ready {} {
     if {[count_renders] == 1 && ![debug read memory $::addr(g_Rendering)] && ([debug read {VDP regs} 1] & 64)} {
         # Give the renderer a complete visible frame after startup.
         after time 0.1 {
-            snapshot initial 0 0 1
+            snapshot initial 1 0 1
             set ::measure_ready 1
-            press_key 4
+            press_key 2
             after time 0.2 {stage_two}
         }
     } elseif {[machine_info time] > 15} {

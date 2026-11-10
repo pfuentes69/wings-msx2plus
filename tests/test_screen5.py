@@ -8,7 +8,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
-from convert_hellcat import FRAMES, artifacts, convert, pack_pixels, rgb3
+from convert_hellcat import FRAMES, artifacts, convert, pack_pixels, rgb3, mirror_frame
 
 
 class Screen5Tests(unittest.TestCase):
@@ -20,6 +20,16 @@ class Screen5Tests(unittest.TestCase):
 
     def test_rgb_precision(self):
         self.assertEqual([rgb3(v) for v in (0, 17, 128, 170, 240, 255)], [0, 0, 4, 5, 7, 7])
+
+    def test_left_facing_is_exact_pixel_reflection(self):
+        for name in FRAMES:
+            original = (ROOT / f'assets_msx/hellcat/{name}.sc5').read_bytes()
+            mirrored = mirror_frame(original)
+            self.assertEqual(mirror_frame(mirrored), original)
+            for y in range(32):
+                before = [v for byte in original[y * 24:(y + 1) * 24] for v in (byte >> 4, byte & 15)]
+                after = [v for byte in mirrored[y * 24:(y + 1) * 24] for v in (byte >> 4, byte & 15)]
+                self.assertEqual(after, before[::-1])
 
     def test_committed_artifacts_are_current(self):
         # Use relative paths so provenance stays host-independent.

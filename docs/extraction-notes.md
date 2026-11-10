@@ -176,3 +176,36 @@ was installed only in the ignored project environment for limited analysis.
 All 29 tests passed, including new audio container, signed PCM round-trip,
 exact instrument, song-table and rendered-preview checks. See
 `docs/audio-extraction.md` for commands, primary references and limitations.
+
+## 2026-11-10 — Controllable movement over static sky
+
+Completed the first motion increment: portable fixed-point C core under
+`src/core/`, cursor-key/port-1 joystick input, acceleration/coasting, screen
+bounds and Space/fire reset. The three poses follow vertical velocity;
+horizontal facing uses generated reflected artwork. This is an arcade
+movement baseline, not established Amiga flight physics. No audio integration
+or scrolling was added.
+
+The renderer now clears each hidden page's previous aircraft rectangle with
+HMMV, redraws at the new position and publishes at VBlank. A dedicated MSXgl
+IM2 VBlank clock drives 30 Hz NTSC / 25 Hz PAL presentation, with equivalent
+150 Hz simulation tick grouping. Globals start at C1C4 after the SDK's ISR
+reservation. The initial BIOS-clock experiment showed an isolated long
+publication interval; the dedicated clock passes the cadence checks on both
+configurations. See `docs/flight-prototype.md` for implementation details,
+controls, exact commands and known limits.
+
+Validation: native ROM build and generated-asset check succeeded; all 36
+tests pass. Panasonic flight verification passes ten snapshots and 406
+publication intervals, with maximum redraw 13.68 ms and zero missed deadlines.
+PAL passes ten snapshots and 340 intervals, maximum redraw 13.18 ms, zero
+missed deadlines. Full displayed-page comparisons show no trails; reset,
+coasting, facing, all four bounds, palettes and VBlank publication pass.
+The retained manual-pose regression passes five snapshots. Selected captures
+and hash-linked reports are under `docs/flight/`.
+
+ROM occupancy is 7,942 bytes before padding to 32 KiB. Static globals use
+89 bytes plus a 452-byte IM2 reservation, stack and BIOS workspace. VRAM
+reservation remains two 32 KiB pages. Physical Panasonic/joystick checks and
+Windows/Linux execution remain pending. Next: authentic orientation-frame
+mapping and stable pivots before scrolling work.

@@ -4,11 +4,13 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 
 ProjName = "wings";
-ProjModules = ["src/main", "src/generated/hellcat_frames"];
+ProjModules = ["src/main", "src/core/flight", "src/generated/hellcat_frames"];
 LibModules = ["bios", "vdp"];
 Machine = "2P";
 Target = "ROM_32K";
-CustomISR = "NONE";
+CustomISR = "VBLANK";
+InstallRAMISR = "RAMISR_PAGE3";
+// MSXgl reserves C000-C1C3 for the IM2 vector table and ISR automatically.
 CheckVersion = true;
 DoRun = false;
 DoDeploy = false;
