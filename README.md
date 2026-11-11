@@ -35,6 +35,9 @@ the bundled executables.
 
 ```sh
 ./launch.sh           # Build and run on Panasonic_FS-A1WX-512K
+./launch.sh world-flight # Fly over scrolling terrain with a following camera
+./launch.sh tile-flight  # Original-art terrain tiles; 64 KiB ASCII8 prototype
+./launch.sh mission-flight # Source-backed a.map layout and carrier; slower baseline
 ./build.sh            # Build out/wings.rom (32 KiB); no emulator auto-launch
 ./build.sh clean      # Remove generated out/ files
 ./build.sh rebuild    # Clean, compile, package and deploy to emul/rom/
@@ -58,6 +61,30 @@ reverses its camera. This is an independent rendering benchmark. See
 [scenery benchmark results](docs/scrolling-benchmark.md) for its measured limits.
 The renderer restores scenery and transparently draws on the hidden page,
 then publishes at VBlank.
+An independent [V9958 hardware-scroll benchmark](docs/hardware-scrolling.md)
+now streams a full-height, 4,096-pixel synthetic landscape through a two-page
+ring, with verified PAL/NTSC timing and pixel comparisons. Build it with
+`./build.sh projname=hardware-scroll`; its ROM is
+`out/hardware-scroll/hardware-scroll.rom`. P pauses and R reverses it.
+The integrated [world-flight prototype](docs/world-flight.md) adds a bounded
+4,096-pixel world, following camera, transparent aircraft and trail restoration
+using two alternating single-page rings. Run `./launch.sh world-flight`;
+arrows/joystick fly, stationary T turns, and Space/fire resets altitude and
+velocity while retaining horizontal world position. PAL/NTSC checks pass.
+The [original-art tile prototype](docs/tile-terrain.md) replaces its test
+graphics with palms, huts and shoreline pieces in an authored island scene.
+It uses 16×16 SCREEN 5 bitmap tiles, a shared reduced palette and a 64 KiB
+ASCII8 ROM. Run `./launch.sh tile-flight`; this is not an original mission-map
+decode. Both PAL and NTSC pass pixel, cache, mapper and timing checks.
+The [a.map mission prototype](docs/mission-map.md) recovers original object
+positions, depth offsets, carrier layout and reset X. Run
+`./launch.sh mission-flight`. The [scenery fidelity pass](docs/scenery-fidelity.md)
+lowers the carrier/land strip, animates the original wave frames, replaces the
+central overview with a forward pilot view, and switches to original 1:8
+scenery at altitude. It uses a 128 KiB ASCII8 ROM and currently targets
+7.5/6.25 fps with nominal 150 Hz simulation; scale changes briefly rebuild the
+hidden pages. Collision, original flight dynamics and instrument behavior are
+still pending.
 For a manual run with openMSX installed:
 
 ```sh
@@ -75,7 +102,7 @@ machine and 25 fps on PAL. See [flight prototype results](docs/flight-prototype.
 for the initial movement milestone. The current
 [orientation results](docs/aircraft-orientation.md) cover 49 cropped shapes,
 recovered drawing pivots, clipping and both turn sequences. Authentic flight
-physics and a scrolling world remain future increments; animation playback timing
+physics and original-map integration remain future increments; animation playback timing
 is currently authored for this prototype.
 
 To regenerate converted assets or run the emulator check, use the Python

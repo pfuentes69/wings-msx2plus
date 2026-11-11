@@ -1,0 +1,619 @@
+{
+  "machine": "C-BIOS_MSX2+_EU",
+  "project": "mission-flight",
+  "raster_checked": false,
+  "rom_sha256": "b0d7ed7cfa72d9c4962818eb8761baf4e15eb5a7fe176bc6401f8fdbbf00bcd3",
+  "target_fps": 12.5,
+  "presentation_vblanks": 4,
+  "publication_samples": 1868,
+  "publication_ms": {
+    "min": 79.7453307612983,
+    "median": 79.74644822176913,
+    "max": 79.74756568225416
+  },
+  "redraw_samples": 1538,
+  "redraw_ms": {
+    "min": 1.5110859061451265,
+    "median": 15.824916295230196,
+    "max": 51.98956850659897
+  },
+  "missed_deadlines": 0,
+  "hidden_page_checks": 1538,
+  "snapshots": {
+    "sample_1": {
+      "camera": 6904,
+      "world": 7032,
+      "x": 128,
+      "y": 88,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "fine_0": {
+      "camera": 6904,
+      "world": 7032,
+      "x": 128,
+      "y": 88,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "initial": {
+      "camera": 6904,
+      "world": 7032,
+      "x": 128,
+      "y": 88,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "fine_6": {
+      "camera": 6902,
+      "world": 7030,
+      "x": 128,
+      "y": 89,
+      "frame": 10,
+      "pair": 1,
+      "turning": 1
+    },
+    "turn_10": {
+      "camera": 6902,
+      "world": 7030,
+      "x": 128,
+      "y": 89,
+      "frame": 10,
+      "pair": 1,
+      "turning": 1
+    },
+    "fine_2": {
+      "camera": 6898,
+      "world": 7026,
+      "x": 128,
+      "y": 93,
+      "frame": 13,
+      "pair": 0,
+      "turning": 1
+    },
+    "turn_13": {
+      "camera": 6898,
+      "world": 7026,
+      "x": 128,
+      "y": 93,
+      "frame": 13,
+      "pair": 0,
+      "turning": 1
+    },
+    "turn_15": {
+      "camera": 6890,
+      "world": 7018,
+      "x": 128,
+      "y": 100,
+      "frame": 15,
+      "pair": 1,
+      "turning": 1
+    },
+    "fine_1": {
+      "camera": 6881,
+      "world": 7009,
+      "x": 128,
+      "y": 107,
+      "frame": 32,
+      "pair": 0,
+      "turning": 1
+    },
+    "turn_32": {
+      "camera": 6881,
+      "world": 7009,
+      "x": 128,
+      "y": 107,
+      "frame": 32,
+      "pair": 0,
+      "turning": 1
+    },
+    "fine_7": {
+      "camera": 6871,
+      "world": 6999,
+      "x": 128,
+      "y": 115,
+      "frame": 35,
+      "pair": 1,
+      "turning": 1
+    },
+    "turn_35": {
+      "camera": 6871,
+      "world": 6999,
+      "x": 128,
+      "y": 115,
+      "frame": 35,
+      "pair": 1,
+      "turning": 1
+    },
+    "turn_37": {
+      "camera": 6862,
+      "world": 6990,
+      "x": 128,
+      "y": 122,
+      "frame": 37,
+      "pair": 0,
+      "turning": 1
+    },
+    "fine_4": {
+      "camera": 6852,
+      "world": 6980,
+      "x": 128,
+      "y": 129,
+      "frame": 21,
+      "pair": 1,
+      "turning": 1
+    },
+    "turn_21": {
+      "camera": 6852,
+      "world": 6980,
+      "x": 128,
+      "y": 129,
+      "frame": 21,
+      "pair": 1,
+      "turning": 1
+    },
+    "fine_3": {
+      "camera": 6843,
+      "world": 6971,
+      "x": 128,
+      "y": 136,
+      "frame": 19,
+      "pair": 0,
+      "turning": 1
+    },
+    "turn_19": {
+      "camera": 6843,
+      "world": 6971,
+      "x": 128,
+      "y": 136,
+      "frame": 19,
+      "pair": 0,
+      "turning": 1
+    },
+    "turn_17": {
+      "camera": 6833,
+      "world": 6961,
+      "x": 128,
+      "y": 144,
+      "frame": 17,
+      "pair": 1,
+      "turning": 1
+    },
+    "carrier_tower": {
+      "camera": 6795,
+      "world": 6923,
+      "x": 128,
+      "y": 172,
+      "frame": 46,
+      "pair": 1,
+      "turning": 0
+    },
+    "fine_5": {
+      "camera": 6477,
+      "world": 6605,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "terrain_flight": {
+      "camera": 6458,
+      "world": 6586,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_101": {
+      "camera": 6362,
+      "world": 6490,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_201": {
+      "camera": 5420,
+      "world": 5548,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_301": {
+      "camera": 4479,
+      "world": 4607,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "island_coast": {
+      "camera": 3825,
+      "world": 3953,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_401": {
+      "camera": 3556,
+      "world": 3684,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "dugout_2": {
+      "camera": 3105,
+      "world": 3233,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 1,
+      "turning": 0
+    },
+    "sample_501": {
+      "camera": 2634,
+      "world": 2762,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "hut_2": {
+      "camera": 2595,
+      "world": 2723,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "hut_1": {
+      "camera": 2269,
+      "world": 2397,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_601": {
+      "camera": 1730,
+      "world": 1858,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "dugout_1": {
+      "camera": 1615,
+      "world": 1743,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_701": {
+      "camera": 808,
+      "world": 936,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "aircraft_ring_seam": {
+      "camera": 376,
+      "world": 504,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 1,
+      "turning": 0
+    },
+    "aircraft_page_seam": {
+      "camera": 126,
+      "world": 254,
+      "x": 128,
+      "y": 180,
+      "frame": 16,
+      "pair": 1,
+      "turning": 0
+    },
+    "sample_801": {
+      "camera": 0,
+      "world": 33,
+      "x": 33,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "left_bound": {
+      "camera": 0,
+      "world": 0,
+      "x": 0,
+      "y": 180,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    },
+    "turn_20": {
+      "camera": 0,
+      "world": 5,
+      "x": 5,
+      "y": 174,
+      "frame": 20,
+      "pair": 0,
+      "turning": 1
+    },
+    "turn_22": {
+      "camera": 0,
+      "world": 13,
+      "x": 13,
+      "y": 167,
+      "frame": 22,
+      "pair": 1,
+      "turning": 1
+    },
+    "turn_24": {
+      "camera": 0,
+      "world": 22,
+      "x": 22,
+      "y": 160,
+      "frame": 24,
+      "pair": 0,
+      "turning": 1
+    },
+    "sample_901": {
+      "camera": 0,
+      "world": 22,
+      "x": 22,
+      "y": 160,
+      "frame": 24,
+      "pair": 0,
+      "turning": 1
+    },
+    "turn_27": {
+      "camera": 0,
+      "world": 32,
+      "x": 32,
+      "y": 152,
+      "frame": 27,
+      "pair": 1,
+      "turning": 1
+    },
+    "turn_29": {
+      "camera": 0,
+      "world": 41,
+      "x": 41,
+      "y": 145,
+      "frame": 29,
+      "pair": 0,
+      "turning": 1
+    },
+    "turn_14": {
+      "camera": 0,
+      "world": 51,
+      "x": 51,
+      "y": 138,
+      "frame": 14,
+      "pair": 1,
+      "turning": 1
+    },
+    "turn_12": {
+      "camera": 0,
+      "world": 60,
+      "x": 60,
+      "y": 131,
+      "frame": 12,
+      "pair": 0,
+      "turning": 1
+    },
+    "sample_1001": {
+      "camera": 759,
+      "world": 887,
+      "x": 128,
+      "y": 0,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "top_clipped": {
+      "camera": 768,
+      "world": 896,
+      "x": 128,
+      "y": 0,
+      "frame": 4,
+      "pair": 1,
+      "turning": 0
+    },
+    "left_climb": {
+      "camera": 864,
+      "world": 992,
+      "x": 128,
+      "y": 0,
+      "frame": 4,
+      "pair": 1,
+      "turning": 0
+    },
+    "sample_1101": {
+      "camera": 1662,
+      "world": 1790,
+      "x": 128,
+      "y": 0,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_1201": {
+      "camera": 2604,
+      "world": 2732,
+      "x": 128,
+      "y": 0,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_1301": {
+      "camera": 3545,
+      "world": 3673,
+      "x": 128,
+      "y": 0,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_1401": {
+      "camera": 4487,
+      "world": 4615,
+      "x": 128,
+      "y": 0,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_1501": {
+      "camera": 5429,
+      "world": 5557,
+      "x": 128,
+      "y": 0,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_1601": {
+      "camera": 6371,
+      "world": 6499,
+      "x": 128,
+      "y": 0,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_1701": {
+      "camera": 7312,
+      "world": 7440,
+      "x": 128,
+      "y": 0,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "right_bound": {
+      "camera": 7352,
+      "world": 7607,
+      "x": 255,
+      "y": 0,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "sample_1801": {
+      "camera": 7352,
+      "world": 7607,
+      "x": 255,
+      "y": 0,
+      "frame": 4,
+      "pair": 0,
+      "turning": 0
+    },
+    "reset": {
+      "camera": 7352,
+      "world": 7607,
+      "x": 255,
+      "y": 88,
+      "frame": 4,
+      "pair": 1,
+      "turning": 0
+    },
+    "turn_31": {
+      "camera": 7352,
+      "world": 7607,
+      "x": 255,
+      "y": 88,
+      "frame": 31,
+      "pair": 0,
+      "turning": 1
+    },
+    "turn_33": {
+      "camera": 7352,
+      "world": 7607,
+      "x": 255,
+      "y": 88,
+      "frame": 33,
+      "pair": 1,
+      "turning": 1
+    },
+    "turn_38": {
+      "camera": 7352,
+      "world": 7607,
+      "x": 255,
+      "y": 88,
+      "frame": 38,
+      "pair": 1,
+      "turning": 1
+    },
+    "turn_18": {
+      "camera": 7352,
+      "world": 7607,
+      "x": 255,
+      "y": 88,
+      "frame": 18,
+      "pair": 1,
+      "turning": 1
+    },
+    "turn_16": {
+      "camera": 7352,
+      "world": 7607,
+      "x": 255,
+      "y": 88,
+      "frame": 16,
+      "pair": 0,
+      "turning": 1
+    },
+    "stationary_turn": {
+      "camera": 7352,
+      "world": 7607,
+      "x": 255,
+      "y": 88,
+      "frame": 16,
+      "pair": 0,
+      "turning": 0
+    }
+  },
+  "checks": [
+    "full visible VRAM; raster screenshots not checked (headless renderer)",
+    "transparent aircraft and trail restoration",
+    "bounded world flight and camera following",
+    "all fine-scroll phases",
+    "aircraft page/ring seams",
+    "turns and vertical clipping",
+    "both world bounds and reset",
+    "immutable visible page during every redraw",
+    "immutable aircraft atlas",
+    "12.5 Hz VBlank publication",
+    "immutable terrain tile cache",
+    "actual mapper-bank restoration",
+    "original-art authored scene at every visible pixel",
+    "source-backed a.map landmarks and reset position",
+    "compressed 16-bit tile-ID columns"
+  ],
+  "terrain_bundle_sha256": "4010b292270cf7fe471fffaf7a491781864291e433fa199c2a0933ed43cb3264",
+  "source_map_sha256": "dc23457f290a15076d07e6acf1eda5e1c25d5946a2f1c284bd7472979e148196"
+}

@@ -161,9 +161,11 @@ extern const unsigned char g_TurnRightToLeft[AIRCRAFT_TURN_STEPS];
     palette_rgb3 = base_manifest['palette_rgb3']
     palette = bytes(v for r, g, b in palette_rgb3 for v in ((r << 4) | b, g))
     code += c_array('g_HellcatPalette', palette, '[32]') + '\n'
-    code += c_array('g_AircraftPixels', pixels, f'[{len(pixels)}]') + '\n'
+    for bank, offset in enumerate(range(0, len(pixels), 8192), 8):
+        files[destination / f'mission_bank_{bank}.bin'] = bytes(pixels[offset:offset + 8192])
+    code += '#ifdef MISSION_TERRAIN\n' + '\n#define AIRCRAFT_DATA(offset) ((const unsigned char*)(offset))\n#else\n' + c_array('g_AircraftPixels', pixels, f'[{len(pixels)}]') + '\n#define AIRCRAFT_DATA(offset) (g_AircraftPixels + (offset))\n#endif\n'
     code += 'const AircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT] = {\n'
-    code += ',\n'.join(f"    {{g_AircraftPixels + {r['data_offset']}, {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in records) + '\n};\n'
+    code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in records) + '\n};\n'
     for symbol, table in [('g_PitchRight', pitch_right), ('g_PitchLeft', pitch_left),
                           ('g_TurnLeftToRight', ltr), ('g_TurnRightToLeft', rtl)]:
         code += '\n' + c_array(symbol, table, f'[{len(table)}]')

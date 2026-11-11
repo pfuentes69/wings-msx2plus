@@ -1,0 +1,197 @@
+{
+  "machine": "C-BIOS_MSX2+_EU",
+  "rom_sha256": "c9453b3df00e80c1297d13052ffe1e35c52da72fa4f3c40eb352f53977659bcb",
+  "target_fps": 25,
+  "publication_samples": 1386,
+  "publication_ms": {
+    "min": 39.87210665042085,
+    "median": 39.873503475995165,
+    "max": 39.87434157134828
+  },
+  "redraw_ms": {
+    "min": 0.14107938299190437,
+    "median": 0.1410793829990098,
+    "max": 4.377930714660749
+  },
+  "missed_deadlines": 0,
+  "streamed_columns": 575,
+  "offscreen_write_checks": 575,
+  "snapshots": {
+    "sample_1": {
+      "camera": 3,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_3": {
+      "camera": 3,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_7": {
+      "camera": 7,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_2": {
+      "camera": 10,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_6": {
+      "camera": 14,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_5": {
+      "camera": 21,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_1": {
+      "camera": 25,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_4": {
+      "camera": 28,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_0": {
+      "camera": 32,
+      "paused": 0,
+      "reverse": 0
+    },
+    "page_before": {
+      "camera": 252,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_101": {
+      "camera": 255,
+      "paused": 0,
+      "reverse": 0
+    },
+    "page_after": {
+      "camera": 259,
+      "paused": 0,
+      "reverse": 0
+    },
+    "ring_before": {
+      "camera": 511,
+      "paused": 0,
+      "reverse": 0
+    },
+    "ring_after": {
+      "camera": 514,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_201": {
+      "camera": 572,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_301": {
+      "camera": 921,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_401": {
+      "camera": 1270,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_501": {
+      "camera": 1620,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_601": {
+      "camera": 1969,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_701": {
+      "camera": 2318,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_801": {
+      "camera": 2667,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_901": {
+      "camera": 3016,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_1001": {
+      "camera": 3366,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_1101": {
+      "camera": 3715,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_1201": {
+      "camera": 4064,
+      "paused": 0,
+      "reverse": 0
+    },
+    "forward_wrap": {
+      "camera": 0,
+      "paused": 0,
+      "reverse": 0
+    },
+    "paused": {
+      "camera": 0,
+      "paused": 1,
+      "reverse": 0
+    },
+    "still_paused": {
+      "camera": 0,
+      "paused": 1,
+      "reverse": 0
+    },
+    "reverse_wrap": {
+      "camera": 4092,
+      "paused": 0,
+      "reverse": 1
+    },
+    "sample_1301": {
+      "camera": 3876,
+      "paused": 0,
+      "reverse": 1
+    },
+    "reverse_page_before": {
+      "camera": 3844,
+      "paused": 0,
+      "reverse": 1
+    },
+    "reverse_page_after": {
+      "camera": 3836,
+      "paused": 0,
+      "reverse": 1
+    },
+    "reversed": {
+      "camera": 3599,
+      "paused": 0,
+      "reverse": 1
+    }
+  },
+  "checks": [
+    "full-height visible VRAM",
+    "rendered raster pixels and left mask",
+    "all eight fine-scroll phases",
+    "forward and reverse world wrap",
+    "page and ring seams in both directions",
+    "pause and keyboard reversal",
+    "untouched upper 64 KiB",
+    "VBlank register publication",
+    "25/30 Hz deadlines"
+  ]
+}

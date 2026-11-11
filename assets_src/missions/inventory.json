@@ -1,0 +1,1007 @@
+{
+  "a.map": {
+    "bytes": 1910,
+    "sha256": "dc23457f290a15076d07e6acf1eda5e1c25d5946a2f1c284bd7472979e148196",
+    "width": 7608,
+    "columns": 951,
+    "reset_x": 7032,
+    "draw_entries": 89,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 3976,
+        "surface": 2
+      },
+      {
+        "start": 3976,
+        "end": 6600,
+        "surface": 0
+      },
+      {
+        "start": 6600,
+        "end": 7360,
+        "surface": 1
+      },
+      {
+        "start": 7360,
+        "end": 7608,
+        "surface": 0
+      }
+    ]
+  },
+  "b.map": {
+    "bytes": 3502,
+    "sha256": "a291d9064871e91549c9dd368205826a431839e28f21f667936c73e88cdb7923",
+    "width": 13976,
+    "columns": 1747,
+    "reset_x": 6112,
+    "draw_entries": 172,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 3976,
+        "surface": 2
+      },
+      {
+        "start": 3976,
+        "end": 5680,
+        "surface": 0
+      },
+      {
+        "start": 5680,
+        "end": 6440,
+        "surface": 1
+      },
+      {
+        "start": 6440,
+        "end": 10280,
+        "surface": 0
+      },
+      {
+        "start": 10280,
+        "end": 13968,
+        "surface": 2
+      },
+      {
+        "start": 13968,
+        "end": 13976,
+        "surface": 0
+      }
+    ]
+  },
+  "c.map": {
+    "bytes": 3902,
+    "sha256": "c7ebda40e4652ad5ac9a3134ed1136feaef7c7693365c0bb9ecf25583fe5057e",
+    "width": 15576,
+    "columns": 1947,
+    "reset_x": 5880,
+    "draw_entries": 238,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 3528,
+        "surface": 2
+      },
+      {
+        "start": 3528,
+        "end": 5448,
+        "surface": 0
+      },
+      {
+        "start": 5448,
+        "end": 6208,
+        "surface": 1
+      },
+      {
+        "start": 6208,
+        "end": 8128,
+        "surface": 0
+      },
+      {
+        "start": 8128,
+        "end": 11464,
+        "surface": 2
+      },
+      {
+        "start": 11464,
+        "end": 11976,
+        "surface": 0
+      },
+      {
+        "start": 11976,
+        "end": 15568,
+        "surface": 2
+      },
+      {
+        "start": 15568,
+        "end": 15576,
+        "surface": 0
+      }
+    ]
+  },
+  "d.map": {
+    "bytes": 3590,
+    "sha256": "dca3fd46f21d05b6d5210d69e1cd85e8d40ec5e978c6238c80023fad490b5c7a",
+    "width": 14328,
+    "columns": 1791,
+    "reset_x": 7456,
+    "draw_entries": 213,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 3544,
+        "surface": 2
+      },
+      {
+        "start": 3544,
+        "end": 3552,
+        "surface": 0
+      },
+      {
+        "start": 3552,
+        "end": 4464,
+        "surface": 2
+      },
+      {
+        "start": 4464,
+        "end": 7024,
+        "surface": 0
+      },
+      {
+        "start": 7024,
+        "end": 7784,
+        "surface": 1
+      },
+      {
+        "start": 7784,
+        "end": 10344,
+        "surface": 0
+      },
+      {
+        "start": 10344,
+        "end": 14320,
+        "surface": 2
+      },
+      {
+        "start": 14320,
+        "end": 14328,
+        "surface": 0
+      }
+    ]
+  },
+  "e.map": {
+    "bytes": 4270,
+    "sha256": "57648b6e965270dfe3bee014b2b80a74567f2de633f8092eb99cf0da036e07b2",
+    "width": 17048,
+    "columns": 2131,
+    "reset_x": 10760,
+    "draw_entries": 259,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 3584,
+        "surface": 2
+      },
+      {
+        "start": 3584,
+        "end": 5288,
+        "surface": 0
+      },
+      {
+        "start": 5288,
+        "end": 8624,
+        "surface": 2
+      },
+      {
+        "start": 8624,
+        "end": 10328,
+        "surface": 0
+      },
+      {
+        "start": 10328,
+        "end": 11088,
+        "surface": 1
+      },
+      {
+        "start": 11088,
+        "end": 12792,
+        "surface": 0
+      },
+      {
+        "start": 12792,
+        "end": 16008,
+        "surface": 2
+      },
+      {
+        "start": 16008,
+        "end": 16016,
+        "surface": 0
+      },
+      {
+        "start": 16016,
+        "end": 17040,
+        "surface": 2
+      },
+      {
+        "start": 17040,
+        "end": 17048,
+        "surface": 0
+      }
+    ]
+  },
+  "f.map": {
+    "bytes": 3488,
+    "sha256": "7a2e189e2edf10cbf8e8516d183327196e5925541101ce7fcc9054da7cef3076",
+    "width": 13920,
+    "columns": 1740,
+    "reset_x": 8416,
+    "draw_entries": 157,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 3592,
+        "surface": 2
+      },
+      {
+        "start": 3592,
+        "end": 5296,
+        "surface": 0
+      },
+      {
+        "start": 5296,
+        "end": 5424,
+        "surface": 1
+      },
+      {
+        "start": 5424,
+        "end": 7984,
+        "surface": 0
+      },
+      {
+        "start": 7984,
+        "end": 8744,
+        "surface": 1
+      },
+      {
+        "start": 8744,
+        "end": 10448,
+        "surface": 0
+      },
+      {
+        "start": 10448,
+        "end": 13912,
+        "surface": 2
+      },
+      {
+        "start": 13912,
+        "end": 13920,
+        "surface": 0
+      }
+    ]
+  },
+  "g.map": {
+    "bytes": 4718,
+    "sha256": "623459868a10e9b3da9578aeb7c9819d04c3bdd1f945a7d6b0e50359011426dd",
+    "width": 18840,
+    "columns": 2355,
+    "reset_x": 10488,
+    "draw_entries": 226,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 3344,
+        "surface": 2
+      },
+      {
+        "start": 3344,
+        "end": 5048,
+        "surface": 0
+      },
+      {
+        "start": 5048,
+        "end": 8352,
+        "surface": 2
+      },
+      {
+        "start": 8352,
+        "end": 10056,
+        "surface": 0
+      },
+      {
+        "start": 10056,
+        "end": 10816,
+        "surface": 1
+      },
+      {
+        "start": 10816,
+        "end": 12520,
+        "surface": 0
+      },
+      {
+        "start": 12520,
+        "end": 16672,
+        "surface": 2
+      },
+      {
+        "start": 16672,
+        "end": 18704,
+        "surface": 0
+      },
+      {
+        "start": 18704,
+        "end": 18832,
+        "surface": 1
+      },
+      {
+        "start": 18832,
+        "end": 18840,
+        "surface": 0
+      }
+    ]
+  },
+  "h.map": {
+    "bytes": 5550,
+    "sha256": "18b68e01ce111e0455c9859bcd7af2514d5befcea9c54933799fc5dbec0e9dde",
+    "width": 22168,
+    "columns": 2771,
+    "reset_x": 12920,
+    "draw_entries": 281,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 3648,
+        "surface": 2
+      },
+      {
+        "start": 3648,
+        "end": 5888,
+        "surface": 0
+      },
+      {
+        "start": 5888,
+        "end": 10248,
+        "surface": 2
+      },
+      {
+        "start": 10248,
+        "end": 12488,
+        "surface": 0
+      },
+      {
+        "start": 12488,
+        "end": 13248,
+        "surface": 1
+      },
+      {
+        "start": 13248,
+        "end": 15488,
+        "surface": 0
+      },
+      {
+        "start": 15488,
+        "end": 19488,
+        "surface": 2
+      },
+      {
+        "start": 19488,
+        "end": 21520,
+        "surface": 0
+      },
+      {
+        "start": 21520,
+        "end": 22160,
+        "surface": 1
+      },
+      {
+        "start": 22160,
+        "end": 22168,
+        "surface": 0
+      }
+    ]
+  },
+  "i.map": {
+    "bytes": 5738,
+    "sha256": "e335aebc75aa01f4338b4c5954df5a2fd9038dc8a1c16f1f443ec2917644143c",
+    "width": 22920,
+    "columns": 2865,
+    "reset_x": 10176,
+    "draw_entries": 263,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 3464,
+        "surface": 2
+      },
+      {
+        "start": 3464,
+        "end": 3472,
+        "surface": 0
+      },
+      {
+        "start": 3472,
+        "end": 4624,
+        "surface": 2
+      },
+      {
+        "start": 4624,
+        "end": 6544,
+        "surface": 0
+      },
+      {
+        "start": 6544,
+        "end": 7184,
+        "surface": 1
+      },
+      {
+        "start": 7184,
+        "end": 9744,
+        "surface": 0
+      },
+      {
+        "start": 9744,
+        "end": 10504,
+        "surface": 1
+      },
+      {
+        "start": 10504,
+        "end": 13064,
+        "surface": 0
+      },
+      {
+        "start": 13064,
+        "end": 16240,
+        "surface": 2
+      },
+      {
+        "start": 16240,
+        "end": 17520,
+        "surface": 0
+      },
+      {
+        "start": 17520,
+        "end": 17648,
+        "surface": 1
+      },
+      {
+        "start": 17648,
+        "end": 18928,
+        "surface": 0
+      },
+      {
+        "start": 18928,
+        "end": 22912,
+        "surface": 2
+      },
+      {
+        "start": 22912,
+        "end": 22920,
+        "surface": 0
+      }
+    ]
+  },
+  "j.map": {
+    "bytes": 1994,
+    "sha256": "96ad8e515ba652af8a453e3d28d85533b0f8a7da02abe1ea527c87c3f3aef7a9",
+    "width": 7944,
+    "columns": 993,
+    "reset_x": 3960,
+    "draw_entries": 19,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 648,
+        "surface": 1
+      },
+      {
+        "start": 648,
+        "end": 3528,
+        "surface": 0
+      },
+      {
+        "start": 3528,
+        "end": 4288,
+        "surface": 1
+      },
+      {
+        "start": 4288,
+        "end": 7168,
+        "surface": 0
+      },
+      {
+        "start": 7168,
+        "end": 7936,
+        "surface": 1
+      },
+      {
+        "start": 7936,
+        "end": 7944,
+        "surface": 0
+      }
+    ]
+  },
+  "k.map": {
+    "bytes": 5300,
+    "sha256": "9cfef384ab2cb80ae528b96409a849ac89b43dba7a103faf6cd51d9b6fc961df",
+    "width": 21168,
+    "columns": 2646,
+    "reset_x": 14408,
+    "draw_entries": 215,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 3512,
+        "surface": 2
+      },
+      {
+        "start": 3512,
+        "end": 6072,
+        "surface": 0
+      },
+      {
+        "start": 6072,
+        "end": 6840,
+        "surface": 1
+      },
+      {
+        "start": 6840,
+        "end": 9240,
+        "surface": 0
+      },
+      {
+        "start": 9240,
+        "end": 12016,
+        "surface": 2
+      },
+      {
+        "start": 12016,
+        "end": 13976,
+        "surface": 0
+      },
+      {
+        "start": 13976,
+        "end": 14736,
+        "surface": 1
+      },
+      {
+        "start": 14736,
+        "end": 16784,
+        "surface": 0
+      },
+      {
+        "start": 16784,
+        "end": 20096,
+        "surface": 2
+      },
+      {
+        "start": 20096,
+        "end": 20104,
+        "surface": 0
+      },
+      {
+        "start": 20104,
+        "end": 21160,
+        "surface": 2
+      },
+      {
+        "start": 21160,
+        "end": 21168,
+        "surface": 0
+      }
+    ]
+  },
+  "l.map": {
+    "bytes": 5046,
+    "sha256": "7593af72a7addac4ff7eba6262f67c554cb2e50f61123ae242087ae40b405962",
+    "width": 20152,
+    "columns": 2519,
+    "reset_x": 10184,
+    "draw_entries": 222,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 776,
+        "surface": 1
+      },
+      {
+        "start": 776,
+        "end": 2824,
+        "surface": 0
+      },
+      {
+        "start": 2824,
+        "end": 6176,
+        "surface": 2
+      },
+      {
+        "start": 6176,
+        "end": 6184,
+        "surface": 0
+      },
+      {
+        "start": 6184,
+        "end": 7352,
+        "surface": 2
+      },
+      {
+        "start": 7352,
+        "end": 9752,
+        "surface": 0
+      },
+      {
+        "start": 9752,
+        "end": 10512,
+        "surface": 1
+      },
+      {
+        "start": 10512,
+        "end": 14352,
+        "surface": 0
+      },
+      {
+        "start": 14352,
+        "end": 14992,
+        "surface": 1
+      },
+      {
+        "start": 14992,
+        "end": 15632,
+        "surface": 0
+      },
+      {
+        "start": 15632,
+        "end": 16336,
+        "surface": 2
+      },
+      {
+        "start": 16336,
+        "end": 16848,
+        "surface": 0
+      },
+      {
+        "start": 16848,
+        "end": 19792,
+        "surface": 2
+      },
+      {
+        "start": 19792,
+        "end": 19800,
+        "surface": 0
+      },
+      {
+        "start": 19800,
+        "end": 20144,
+        "surface": 2
+      },
+      {
+        "start": 20144,
+        "end": 20152,
+        "surface": 0
+      }
+    ]
+  },
+  "m.map": {
+    "bytes": 7138,
+    "sha256": "1e61ca9fc168d4f5a2b483da833f8d514429762706c2dc47e79b9bdbc9e22a8b",
+    "width": 28520,
+    "columns": 3565,
+    "reset_x": 13760,
+    "draw_entries": 282,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 776,
+        "surface": 1
+      },
+      {
+        "start": 776,
+        "end": 2696,
+        "surface": 0
+      },
+      {
+        "start": 2696,
+        "end": 5536,
+        "surface": 2
+      },
+      {
+        "start": 5536,
+        "end": 5544,
+        "surface": 0
+      },
+      {
+        "start": 5544,
+        "end": 6392,
+        "surface": 2
+      },
+      {
+        "start": 6392,
+        "end": 8392,
+        "surface": 0
+      },
+      {
+        "start": 8392,
+        "end": 11328,
+        "surface": 2
+      },
+      {
+        "start": 11328,
+        "end": 13328,
+        "surface": 0
+      },
+      {
+        "start": 13328,
+        "end": 14088,
+        "surface": 1
+      },
+      {
+        "start": 14088,
+        "end": 16488,
+        "surface": 0
+      },
+      {
+        "start": 16488,
+        "end": 19600,
+        "surface": 2
+      },
+      {
+        "start": 19600,
+        "end": 22000,
+        "surface": 0
+      },
+      {
+        "start": 22000,
+        "end": 22592,
+        "surface": 1
+      },
+      {
+        "start": 22592,
+        "end": 24992,
+        "surface": 0
+      },
+      {
+        "start": 24992,
+        "end": 28512,
+        "surface": 2
+      },
+      {
+        "start": 28512,
+        "end": 28520,
+        "surface": 0
+      }
+    ]
+  },
+  "n.map": {
+    "bytes": 5864,
+    "sha256": "a96cf46cecd22997304686f08b616fb5fe95ffa3e6621088dc40560f077283ec",
+    "width": 23424,
+    "columns": 2928,
+    "reset_x": 10904,
+    "draw_entries": 183,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 776,
+        "surface": 1
+      },
+      {
+        "start": 776,
+        "end": 2696,
+        "surface": 0
+      },
+      {
+        "start": 2696,
+        "end": 3336,
+        "surface": 1
+      },
+      {
+        "start": 3336,
+        "end": 4616,
+        "surface": 0
+      },
+      {
+        "start": 4616,
+        "end": 8168,
+        "surface": 2
+      },
+      {
+        "start": 8168,
+        "end": 10472,
+        "surface": 0
+      },
+      {
+        "start": 10472,
+        "end": 11232,
+        "surface": 1
+      },
+      {
+        "start": 11232,
+        "end": 12912,
+        "surface": 0
+      },
+      {
+        "start": 12912,
+        "end": 17192,
+        "surface": 2
+      },
+      {
+        "start": 17192,
+        "end": 19112,
+        "surface": 0
+      },
+      {
+        "start": 19112,
+        "end": 23344,
+        "surface": 2
+      },
+      {
+        "start": 23344,
+        "end": 23352,
+        "surface": 0
+      },
+      {
+        "start": 23352,
+        "end": 23416,
+        "surface": 2
+      },
+      {
+        "start": 23416,
+        "end": 23424,
+        "surface": 0
+      }
+    ]
+  },
+  "o.map": {
+    "bytes": 6936,
+    "sha256": "d909d07dccd5a20660f6e44aec8d72cdf75259ea872f3139033ac370a11a5f7b",
+    "width": 27712,
+    "columns": 3464,
+    "reset_x": 9696,
+    "draw_entries": 251,
+    "surface_runs": [
+      {
+        "start": 0,
+        "end": 8,
+        "surface": 0
+      },
+      {
+        "start": 8,
+        "end": 600,
+        "surface": 1
+      },
+      {
+        "start": 600,
+        "end": 3160,
+        "surface": 0
+      },
+      {
+        "start": 3160,
+        "end": 6960,
+        "surface": 2
+      },
+      {
+        "start": 6960,
+        "end": 9264,
+        "surface": 0
+      },
+      {
+        "start": 9264,
+        "end": 10024,
+        "surface": 1
+      },
+      {
+        "start": 10024,
+        "end": 13864,
+        "surface": 0
+      },
+      {
+        "start": 13864,
+        "end": 18368,
+        "surface": 2
+      },
+      {
+        "start": 18368,
+        "end": 20608,
+        "surface": 0
+      },
+      {
+        "start": 20608,
+        "end": 21376,
+        "surface": 1
+      },
+      {
+        "start": 21376,
+        "end": 21800,
+        "surface": 0
+      },
+      {
+        "start": 21800,
+        "end": 26184,
+        "surface": 2
+      },
+      {
+        "start": 26184,
+        "end": 27064,
+        "surface": 0
+      },
+      {
+        "start": 27064,
+        "end": 27704,
+        "surface": 1
+      },
+      {
+        "start": 27704,
+        "end": 27712,
+        "surface": 0
+      }
+    ]
+  }
+}

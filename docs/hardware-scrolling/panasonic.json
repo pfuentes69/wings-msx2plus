@@ -1,0 +1,212 @@
+{
+  "machine": "Panasonic_FS-A1WX-512K",
+  "rom_sha256": "c9453b3df00e80c1297d13052ffe1e35c52da72fa4f3c40eb352f53977659bcb",
+  "target_fps": 30,
+  "publication_samples": 1656,
+  "publication_ms": {
+    "min": 33.375191539704474,
+    "median": 33.37658836527879,
+    "max": 33.377426460624804
+  },
+  "redraw_ms": {
+    "min": 0.14107938299190437,
+    "median": 0.14107938299545708,
+    "max": 4.682997420069057
+  },
+  "missed_deadlines": 0,
+  "streamed_columns": 575,
+  "offscreen_write_checks": 575,
+  "snapshots": {
+    "sample_1": {
+      "camera": 6,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_6": {
+      "camera": 6,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_1": {
+      "camera": 9,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_4": {
+      "camera": 12,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_7": {
+      "camera": 15,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_2": {
+      "camera": 18,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_5": {
+      "camera": 21,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_0": {
+      "camera": 24,
+      "paused": 0,
+      "reverse": 0
+    },
+    "fine_3": {
+      "camera": 27,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_101": {
+      "camera": 225,
+      "paused": 0,
+      "reverse": 0
+    },
+    "page_before": {
+      "camera": 252,
+      "paused": 0,
+      "reverse": 0
+    },
+    "page_after": {
+      "camera": 258,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_201": {
+      "camera": 498,
+      "paused": 0,
+      "reverse": 0
+    },
+    "ring_before": {
+      "camera": 510,
+      "paused": 0,
+      "reverse": 0
+    },
+    "ring_after": {
+      "camera": 513,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_301": {
+      "camera": 771,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_401": {
+      "camera": 1062,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_501": {
+      "camera": 1353,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_601": {
+      "camera": 1644,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_701": {
+      "camera": 1935,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_801": {
+      "camera": 2226,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_901": {
+      "camera": 2517,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_1001": {
+      "camera": 2808,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_1101": {
+      "camera": 3099,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_1201": {
+      "camera": 3390,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_1301": {
+      "camera": 3681,
+      "paused": 0,
+      "reverse": 0
+    },
+    "sample_1401": {
+      "camera": 3972,
+      "paused": 0,
+      "reverse": 0
+    },
+    "forward_wrap": {
+      "camera": 2,
+      "paused": 0,
+      "reverse": 0
+    },
+    "paused": {
+      "camera": 2,
+      "paused": 1,
+      "reverse": 0
+    },
+    "still_paused": {
+      "camera": 2,
+      "paused": 1,
+      "reverse": 0
+    },
+    "reverse_wrap": {
+      "camera": 4095,
+      "paused": 0,
+      "reverse": 1
+    },
+    "sample_1501": {
+      "camera": 4029,
+      "paused": 0,
+      "reverse": 1
+    },
+    "reverse_page_before": {
+      "camera": 3843,
+      "paused": 0,
+      "reverse": 1
+    },
+    "reverse_page_after": {
+      "camera": 3837,
+      "paused": 0,
+      "reverse": 1
+    },
+    "sample_1601": {
+      "camera": 3756,
+      "paused": 0,
+      "reverse": 1
+    },
+    "reversed": {
+      "camera": 3597,
+      "paused": 0,
+      "reverse": 1
+    }
+  },
+  "checks": [
+    "full-height visible VRAM",
+    "rendered raster pixels and left mask",
+    "all eight fine-scroll phases",
+    "forward and reverse world wrap",
+    "page and ring seams in both directions",
+    "pause and keyboard reversal",
+    "untouched upper 64 KiB",
+    "VBlank register publication",
+    "25/30 Hz deadlines"
+  ]
+}

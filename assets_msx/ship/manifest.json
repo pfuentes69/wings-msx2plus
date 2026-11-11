@@ -1,0 +1,225 @@
+{
+  "frames": [
+    {
+      "name": "flg3",
+      "parts": [
+        [
+          236,
+          529
+        ],
+        [
+          236,
+          543
+        ],
+        [
+          152,
+          554
+        ],
+        [
+          168,
+          554
+        ],
+        [
+          184,
+          554
+        ],
+        [
+          200,
+          554
+        ]
+      ],
+      "sha256": "fdc3a6d422fc9d8fc0a05bd2a8670d701e8e5dc2b274753d365317b6a1ee6573",
+      "width": 32,
+      "height": 42,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        6,
+        115
+      ],
+      "source_position_candidate": [
+        64,
+        25
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        24
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "flg4",
+      "parts": [
+        [
+          216,
+          554
+        ],
+        [
+          232,
+          557
+        ],
+        [
+          0,
+          590
+        ],
+        [
+          16,
+          590
+        ],
+        [
+          168,
+          590
+        ],
+        [
+          184,
+          590
+        ]
+      ],
+      "sha256": "23e95297d577868230b9519b1b6132b2acf7ee00f45a59257c5d3d336163b282",
+      "width": 32,
+      "height": 42,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        6,
+        115
+      ],
+      "source_position_candidate": [
+        64,
+        25
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        24
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "flg5",
+      "parts": [
+        [
+          200,
+          590
+        ],
+        [
+          216,
+          590
+        ],
+        [
+          232,
+          590
+        ],
+        [
+          0,
+          617
+        ],
+        [
+          16,
+          617
+        ],
+        [
+          220,
+          791
+        ]
+      ],
+      "sha256": "29265ee6b4b8aaa424ad737955a197a2f2bf9ce5f7081281e312d564a1710802",
+      "width": 32,
+      "height": 42,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        6,
+        115
+      ],
+      "source_position_candidate": [
+        64,
+        25
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        24
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "flg6",
+      "parts": [
+        [
+          236,
+          791
+        ],
+        [
+          240,
+          839
+        ],
+        [
+          240,
+          853
+        ],
+        [
+          240,
+          867
+        ],
+        [
+          240,
+          881
+        ],
+        [
+          240,
+          895
+        ]
+      ],
+      "sha256": "d0675a8cbc59b89294032514dfa7f1bf7459ad30fd9943e6f4ae3d0d707c6dac",
+      "width": 32,
+      "height": 42,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        6,
+        115
+      ],
+      "source_position_candidate": [
+        64,
+        25
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        24
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    }
+  ],
+  "world_left": 6592,
+  "world_right": 7368,
+  "overlay_x": 6906,
+  "overlay_y": 46,
+  "heave": [
+    0,
+    1,
+    2,
+    1
+  ],
+  "heave_step_ticks": 45,
+  "flag_step_ticks": 30,
+  "timing": "MSX adaptation on the 150 Hz simulation clock; original combined artwork retained"
+}

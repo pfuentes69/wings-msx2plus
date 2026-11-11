@@ -4,6 +4,10 @@ Status: pixel layout validated for the supplied Hellcat archive, 2026-11-10.
 This is a description inferred from the supplied files, not a vendor spec.
 Drawing-origin subtraction has since been established by executable inspection
 (see `aircraft-orientation.md`); masks and several other header semantics remain unconfirmed.
+Nine original world-art records are now decoded and used in an authored
+[terrain tile scene](tile-terrain.md). The nonzero-base shoreline pair supports
+the existing OR hypothesis and reflects exactly, but nonzero-base drawing/mask
+semantics remain provisional outside the validated aircraft path.
 
 ## Containers
 
@@ -160,3 +164,27 @@ precision, transparency and VRAM drawing strategy still require explicit
 conversion and emulator checks. At 48×32 maximum for these three samples,
 each would need 768 packed bitmap bytes when padded to that canvas;
 this is a source-data calculation, not a measured rendering budget.
+
+## Verified clear/set masks for mission scenery
+
+The mission fidelity pass traced the original blitter rather than treating
+header byte 12 as an OR-fill colour. At executable file 0x10bca–0x10c16 it reads
+byte 12 and clears those destination planes using zero blitter data. At
+0x10c18–0x10c66 it reads byte 13 and sets those planes using all-one data.
+The following plane-map bytes select destination planes for each stored bitmap.
+These masks are disjoint and cover all five colour bits in the supplied world,
+reduced-world and dashboard records.
+
+For example, reduced `tre1` clears plane 16 and paints the low four bits, yielding
+green foliage; OR-filling 16 produced incorrect pale trees. Reduced `mcar` sets
+planes 24 and paints bits 1/2/4, yielding the intended sky/grey range. The mission
+converter now uses `decode_record(..., plane_constants=True)`. The default
+legacy mode remains for reproducibility of earlier prototype artifacts.
+
+The transparent wrapper at 0x10d0a builds a mask by OR-ing the raw stored planes.
+Constant set bits do not make otherwise empty pixels opaque. The game allocates
+a 1,040-byte mask buffer; the wrapper falls back to an opaque rectangle when
+stride×height exceeds that buffer. Mission reconstruction handles this case
+for the large carrier hulls, mapping source black to the shared palette's dark
+entry. These instruction spans and the allocation are byte-guarded in
+`tools/decode_mission.py`; decoded reduced-tree and hull colours have host tests.

@@ -34,6 +34,8 @@ class AircraftTests(unittest.TestCase):
         cls.core.Aircraft_Reset.restype = None
         cls.core.Aircraft_Step.argtypes = [ctypes.POINTER(Aircraft), ctypes.c_int16, ctypes.c_int16]
         cls.core.Aircraft_Step.restype = None
+        cls.core.Aircraft_StepSample.argtypes = [ctypes.POINTER(Aircraft), ctypes.c_int16, ctypes.c_int16, ctypes.c_uint8]
+        cls.core.Aircraft_StepSample.restype = None
         cls.core.Aircraft_RequestTurn.argtypes = [ctypes.POINTER(Aircraft)]
         cls.core.Aircraft_RequestTurn.restype = None
         cls.core.Aircraft_Pitch.argtypes = [ctypes.c_int16, ctypes.c_int16]
@@ -60,6 +62,21 @@ class AircraftTests(unittest.TestCase):
         self.assertEqual([tables[n]['file_offset'] for n in ('left_bank', 'right_bank', 'pitch')], [0x15d00, 0x15d68, 0x15dd0])
         self.assertEqual([len(tables[n]['names']) for n in ('left_bank', 'right_bank', 'pitch')], [26, 26, 20])
         self.assertEqual(len(self.meta['frames']), 49)
+
+    def test_deferred_pitch_matches_every_published_state(self):
+        for group_size in (5, 6, 7, 8, 9, 10, 12, 13, 15, 18):
+            full, sampled = self.state(), self.state()
+            for group in range(500):
+                if group % 23 == 0:
+                    self.core.Aircraft_RequestTurn(ctypes.byref(full))
+                    self.core.Aircraft_RequestTurn(ctypes.byref(sampled))
+                for step in range(group_size):
+                    tick = group * group_size + step
+                    vx = (tick * 7) % 411 - 205
+                    vy = (tick * 11) % 309 - 154
+                    self.core.Aircraft_Step(ctypes.byref(full), vx, vy)
+                    self.core.Aircraft_StepSample(ctypes.byref(sampled), vx, vy, step == group_size - 1)
+                self.assertEqual(bytes(full), bytes(sampled), (group_size, group))
 
     def test_pitch_response_is_monotonic_and_direction_symmetric(self):
         previous = 0

@@ -115,8 +115,10 @@ python tools/verify_screen5.py
 The scrolling check runs for about 16 emulated seconds after boot. Screenshots,
 128 KiB VRAM captures and timing logs stay under its ignored output directory.
 
-Next: benchmark V9958 horizontal scrolling and incoming-column updates with a
-larger scene, then connect world coordinates to a following camera. Use the
+The next hardware-scroll experiment is now complete; see
+[V9958 horizontal scrolling](hardware-scrolling.md) for the full-height ring,
+incoming-column validation and PAL/NTSC results. Next, integrate aircraft
+composition and connect world coordinates to a following camera. Use the
 measured VRAM layout and ROM headroom to choose storage/mapper requirements
 before adding original map graphics. Original map decoding and flight dynamics
 remain separate research tasks.

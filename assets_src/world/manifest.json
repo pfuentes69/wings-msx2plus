@@ -1,0 +1,233 @@
+{
+  "source": "reference_assets/original_files/Wings_of_Fury/shapes/world.shp",
+  "source_sha256": "04571427c438d26ce0da109177b013358b5318b0f4fb5f8c4abc16b67f65a841",
+  "palette_source_sha256": "1a7fff7d32d80e0628d1e34c4c4b90b59c31396e20204385336c0eedee365ca8",
+  "records": [
+    {
+      "name": "bchl",
+      "offset": 560,
+      "record_bytes": 68,
+      "record_sha256": "b8578fb48ed07672a62c177a4a6e90032e3284c11cb45ed48ac558fcc0690c1a",
+      "width": 32,
+      "height": 6,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        31,
+        1
+      ],
+      "source_position_candidate": [
+        160,
+        170
+      ],
+      "base_color_candidate": 14,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        16
+      ]
+    },
+    {
+      "name": "bchr",
+      "offset": 628,
+      "record_bytes": 68,
+      "record_sha256": "6469ed26343c0c79132929d102cdf56ce31f46dfc5df7b60408fe0aa44c490b0",
+      "width": 32,
+      "height": 6,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        0,
+        1
+      ],
+      "source_position_candidate": [
+        160,
+        170
+      ],
+      "base_color_candidate": 14,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        16
+      ]
+    },
+    {
+      "name": "dugo",
+      "offset": 1936,
+      "record_bytes": 128,
+      "record_sha256": "c84a006f1b028e9ff648093d98d56ee97119205f22401c2658cd1107f97e0e4f",
+      "width": 32,
+      "height": 9,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        15,
+        9
+      ],
+      "source_position_candidate": [
+        16,
+        112
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        14,
+        16
+      ]
+    },
+    {
+      "name": "huta",
+      "offset": 22912,
+      "record_bytes": 280,
+      "record_sha256": "4a417aef198397b638843e087172dec048c841306f666be44c0b9d0620591cd1",
+      "width": 32,
+      "height": 13,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        16,
+        13
+      ],
+      "source_position_candidate": [
+        48,
+        137
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "name": "hutb",
+      "offset": 23192,
+      "record_bytes": 164,
+      "record_sha256": "5333f532b060fe160c13aac36abc53a09727041513e522ae435df7fe9370be4f",
+      "width": 32,
+      "height": 9,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        15,
+        9
+      ],
+      "source_position_candidate": [
+        96,
+        141
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        12,
+        16
+      ]
+    },
+    {
+      "name": "tre1",
+      "offset": 55678,
+      "record_bytes": 780,
+      "record_sha256": "bf6c6e9a2a25d320521ef92fb30989a95c11c26213e294f66174f96e7d971824",
+      "width": 32,
+      "height": 38,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        16,
+        38
+      ],
+      "source_position_candidate": [
+        80,
+        138
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "name": "tre2",
+      "offset": 56458,
+      "record_bytes": 760,
+      "record_sha256": "bc8ae1abca61eaec6552156ef9e45b02388b4c72ec207b1689f343882e76cfe5",
+      "width": 32,
+      "height": 37,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        16,
+        37
+      ],
+      "source_position_candidate": [
+        112,
+        153
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "name": "tre3",
+      "offset": 57218,
+      "record_bytes": 760,
+      "record_sha256": "8530de062b94c3b2c73581f25d59c59bf768b355d96439c218c8aa258dfa2dba",
+      "width": 32,
+      "height": 37,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        15,
+        37
+      ],
+      "source_position_candidate": [
+        144,
+        142
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "name": "wava",
+      "offset": 57978,
+      "record_bytes": 680,
+      "record_sha256": "bd9abaf866b14419e7080e83022ff1c72b13fd0a5252c348308c5d32fede67ad",
+      "width": 96,
+      "height": 11,
+      "stride_bytes": 12,
+      "origin_candidate": [
+        16,
+        10
+      ],
+      "source_position_candidate": [
+        144,
+        94
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    }
+  ],
+  "transparency": "source zero skipped when layering; selected records retain base-color OR hypothesis"
+}

@@ -17,7 +17,7 @@ def read_palette(data):
     return data[8:]
 
 
-def decode_record(data, layout='plane'):
+def decode_record(data, layout='plane', allow_reduced_flag=False, plane_constants=False):
     if len(data) < 20:
         raise ValueError('truncated shape header')
     stride, height, origin_x, origin_y, source_x, source_y = struct.unpack_from('>HHhhhh', data)
@@ -28,14 +28,20 @@ def decode_record(data, layout='plane'):
         raise ValueError('invalid or excessive shape dimensions')
     if not planes or maps[:len(planes)] != planes or any(v > 31 for v in planes):
         raise ValueError('invalid/noncontiguous plane maps')
-    if base_color > 31 or unknown != 0:
+    if base_color > 31 or (unknown != 0 and not (allow_reduced_flag and unknown in (16, 24))):
         raise ValueError('unconfirmed base-color/header variant')
     if len(data) != 20 + stride * height * len(planes):
         raise ValueError('shape payload does not match stride, height and plane count')
     if layout not in ('plane', 'row'):
         raise ValueError('unsupported layout')
     width = stride * 8
-    pixels = bytearray([base_color]) * (width * height)
+    if plane_constants:
+        present = 0
+        for bits in planes: present |= bits
+        if (base_color & present or unknown & present or base_color & unknown or
+                (base_color | unknown | present) != 31):
+            raise ValueError('unsupported overlapping/incomplete plane masks')
+    pixels = bytearray([unknown if plane_constants else base_color]) * (width * height)
     for k, bits in enumerate(planes):
         for y in range(height):
             start = 20 + ((k * height + y) if layout == 'plane' else (y * len(planes) + k)) * stride
@@ -47,6 +53,14 @@ def decode_record(data, layout='plane'):
     metadata = dict(width=width, height=height, stride_bytes=stride,
                     origin_candidate=[origin_x, origin_y], source_position_candidate=[source_x, source_y],
                     base_color_candidate=base_color, unknown_byte=unknown, plane_maps=planes)
+    if plane_constants:
+        metadata.update(clear_planes=base_color, set_planes=unknown,
+                        opaque_rectangle=stride * height > 1040)
+        # The transparent wrapper builds its mask from the raw bitmap planes,
+        # not from constant set bits. Zero raw pixels stay transparent.
+        if not metadata['opaque_rectangle'] and unknown:
+            for i,color in enumerate(pixels):
+                if color == unknown: pixels[i] = 0
     return bytes(pixels), metadata
 
 

@@ -30,7 +30,7 @@ void Aircraft_RequestTurn(AircraftState* state)
     state->target_left ^= 1;
 }
 
-void Aircraft_Step(AircraftState* state, int16_t vx, int16_t vy)
+void Aircraft_StepSample(AircraftState* state, int16_t vx, int16_t vy, uint8_t sample_pose)
 {
     if (vx < -16) state->target_left = 1;
     else if (vx > 16) state->target_left = 0;
@@ -52,9 +52,14 @@ void Aircraft_Step(AircraftState* state, int16_t vx, int16_t vy)
             }
         }
     }
-    else
+    else if (sample_pose)
     {
         uint8_t pitch = Aircraft_Pitch(vx, vy);
         state->shape = state->facing_left ? g_PitchLeft[pitch] : g_PitchRight[pitch];
     }
+}
+
+void Aircraft_Step(AircraftState* state, int16_t vx, int16_t vy)
+{
+    Aircraft_StepSample(state, vx, vy, 1);
 }

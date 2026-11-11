@@ -7,3 +7,5 @@ __pycache__/
 /tools/.build/
 /.venv/
 /MSXgl/projects/default_config.js
+/tile-flight_rawdef.h
+/mission-flight_rawdef.h
