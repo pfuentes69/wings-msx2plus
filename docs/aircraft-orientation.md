@@ -55,7 +55,10 @@ left-facing pitch shapes remain explicit reflections because their matching
 names are absent from the preserved archive. The level-left view uses the
 original `hc28`, including its source propeller details. No missing record is
 claimed to have been recovered, and the derived views are marked in the
-manifest. Landing-gear and damage artwork remain outside this increment.
+manifest. The later [P1 carrier corrections](p1-flight.md) add original gear-down
+`hc40`/`hc41`, plus tail-down `hc21`/`hcoc`, bringing the resident atlas to 53 shapes. The later taxi increment adds nine
+streamed ground-turn poses, for 62 shape records total. Damage artwork remains
+outside this increment.
 
 ## Alignment and cropped data
 

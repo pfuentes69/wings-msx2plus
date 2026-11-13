@@ -140,6 +140,9 @@ class MissionTests(unittest.TestCase):
             for x in range(self.mission['width']):
                 self.assertEqual(core.Mission_Query(x), self.mission['cells'][x // 8]['raw_word'] & 0x7ff, x)
                 self.assertEqual(core.Mission_Surface(x), self.mission['cells'][x // 8]['surface'], x)
+            # Revisit interval boundaries in both directions and after large jumps.
+            for x in list(range(self.mission['width']-1,-1,-7))+[7032,0,7032,128,7607,8]:
+                self.assertEqual(core.Mission_Query(x),self.mission['cells'][x//8]['raw_word']&0x7ff,x)
             for x in (-32768, -1, self.mission['width'], 32767):
                 self.assertEqual(core.Mission_Query(x), 0, x)
 
@@ -172,14 +175,59 @@ class MissionTests(unittest.TestCase):
         self.assertEqual(original()[0].size, (640, 37))
         self.assertEqual(len(panel()), 256 * 40)
         frames = json.loads((ROOT / 'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
-        self.assertLessEqual(max(f['width'] for f in frames), 44)
+        self.assertLessEqual(max(f['width'] for f in frames), 64)
         self.assertLessEqual(max(f['height'] for f in frames), 36)
-        packed = b''.join((ROOT / 'assets_msx/hellcat' / f['file']).read_bytes() for f in frames)
-        self.assertEqual(b''.join((ROOT / f'assets_msx/hellcat/mission_bank_{bank}.bin').read_bytes() for bank in range(8,11)), packed)
+        bundle=b''.join((ROOT/f'assets_msx/hellcat/mission_bank_{bank}.bin').read_bytes() for bank in (8,9,10,14))
+        for frame in frames:
+            packed=(ROOT/'assets_msx/hellcat'/frame['file']).read_bytes()
+            start=frame['data_offset']
+            self.assertEqual(bundle[start:start+len(packed)],packed)
+            self.assertFalse(start<24576<start+len(packed),'frame crosses the bank-10/bank-14 gap')
         # World columns and plane composition end before the fixed panel;
         # both clean-footprint backups begin after the full 212-line display.
         self.assertLessEqual(24 + 19 * 8 - 4, 172)
         self.assertGreaterEqual(212, 172 + 40)
+
+    def test_dashboard_opaque_art_does_not_use_the_sky_border_index(self):
+        from convert_dashboard import panel, dashboard_palette, pilot_frame
+        pixels = panel()
+        # Source sprite transparency is 16. Treating it as color zero leaves
+        # cyan holes in the score and bomb artwork after the raster switch.
+        self.assertNotIn(0, pixels)
+        # During carrier heave, 6..15 are staged over the ocean; 1..5 finish
+        # before the icons/pilot display at line 183. Keep that raster contract.
+        self.assertTrue(all(pixels[y*256+x] >= 6 for y in range(4,11) for x in range(8,256)))
+        score = {pixels[y*256+x] for y in range(14, 21) for x in range(203, 244)}
+        self.assertEqual(score, {11, 15})
+        palette = dashboard_palette()
+        self.assertEqual(palette[:2], (ROOT/'assets_msx/mission_a/palette.bin').read_bytes()[:2])
+        self.assertEqual(palette[2:4], (ROOT/'assets_msx/mission_a/palette.bin').read_bytes()[2:4])
+        self.assertEqual(set(pixels[:4*256]), {1})  # stable across the palette switch
+        self.assertEqual(palette[22:24], bytes(2))  # actual black, not dark sea
+        self.assertEqual(pilot_frame(0, 7)[0], 2)  # dashboard sky, not black
+
+    def test_counters_share_a_face_and_have_clean_rectangular_frames(self):
+        from convert_dashboard import panel
+        pixels = panel()
+        def crop(x, y, width, height):
+            return bytes(pixels[yy*256+xx] for yy in range(y,y+height)
+                         for xx in range(x,x+width))
+        zero = crop(203,14,5,7)
+        for x in range(203,240,6):
+            self.assertEqual(crop(x,14,5,7), zero)
+        for x in (203,209):
+            self.assertEqual(crop(x,25,5,7), zero)
+        # The ammunition zero is the same shape in the reversed colors.
+        self.assertEqual(bytes(15 if p == 12 else 11 for p in crop(32,24,5,7)), zero)
+        for x,y,width in [(201,13,45),(201,24,15)]:
+            self.assertEqual(set(crop(x,y,width,1)), {11})
+            self.assertEqual(set(crop(x,y+8,width,1)), {11})
+            self.assertEqual(set(crop(x,y,2,9)), {11})
+            self.assertEqual(set(crop(x+width-2,y,2,9)), {11})
+        # Removed legacy art must leave green around and between both fields.
+        self.assertEqual(set(crop(201,22,48,2)), {6})
+        self.assertEqual(set(crop(246,13,3,9)), {6})
+        self.assertEqual(set(crop(216,24,33,9)), {6})
 
     def test_fidelity_atlases_are_disjoint_and_source_rules_guarded(self):
         from convert_dashboard import waves, pilot_frame
@@ -230,7 +278,16 @@ class MissionTests(unittest.TestCase):
     def test_distant_sea_and_player_pitch_bank_art(self):
         far = self.files[ROOT/'assets_msx/mission_a/far.indices']
         width = self.metadata['far_width']
-        self.assertEqual(set(far[201*width:]), {3})
+        sand=self.metadata['far_sand_msx_index']
+        self.assertEqual(self.metadata['far_sand_height'],1)
+        self.assertEqual(set(far[202*width:]), {3})
+        # The supplied distant reference shows a continuous sand-colour line
+        # under the palms. Its ends follow the original one-row beach masks.
+        row=far[201*width:202*width]
+        self.assertEqual(row[6:492],bytes([sand])*486)
+        self.assertEqual(row[:6],bytes([3])*6)
+        self.assertEqual(row[492:],bytes([3])*(width-492))
+        self.assertNotEqual(sand,3)
         cockpit=json.loads((ROOT/'assets_src/dashboard/manifest.json').read_text())
         animation=json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']
         def pose(frame): return cockpit['far_poses'][cockpit['far_pose_for_frame'][frame]]

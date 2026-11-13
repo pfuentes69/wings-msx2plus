@@ -204,7 +204,7 @@ python tools/convert_hellcat.py --check
 python tools/convert_mission.py --check
 python tools/convert_dashboard.py --check
 python -m unittest discover -s tests -v
-./build.sh projname=mission-flight
-python tools/verify_world_flight.py --project mission-flight --output tools/.build/scenery-source-final
-python tools/verify_world_flight.py --project mission-flight --machine C-BIOS_MSX2+_EU --output tools/.build/scenery-source-final-pal
+./build.sh projname=mission-flight-debug
+python tools/verify_world_flight.py --project mission-flight --debug-profile --output tools/.build/scenery-source-final
+python tools/verify_world_flight.py --project mission-flight --debug-profile --machine C-BIOS_MSX2+_EU --output tools/.build/scenery-source-final-pal
 ```

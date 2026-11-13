@@ -54,26 +54,29 @@ void Terrain_DrawColumn(u16 world, u8 page)
     u16 offset = s_Map[column] | ((u16)s_Map[column + 1] << 8);
     const u8* run = s_Map + offset;
     u16* cached = s_Cached[page][(world & 255) >> 3];
+    u16* decoded = s_Decoded;
     u16 tile, source_y, dest_y = (u16)page * 256 + 24;
     u8 row = 0, count, height, color, i;
     if (s_ColumnOffsets[page][(world & 255) >> 3] == offset) return;
     s_ColumnOffsets[page][(world & 255) >> 3] = offset;
     // All runs/offsets are bounded and round-trip checked during generation.
-    while (row < TERRAIN_MAP_ROWS)
+    while (decoded < s_Decoded + TERRAIN_MAP_ROWS)
     {
         count = *run++;
         tile = *run++;
         tile |= (u16)*run++ << 8;
         while (count--)
-            s_Decoded[row++] = tile;
+            *decoded++ = tile;
     }
     row = 0;
+    decoded = s_Decoded;
     while (row < TERRAIN_MAP_ROWS)
     {
-        tile = s_Decoded[row];
+        tile = *decoded;
         if (*cached == tile)
         {
             ++cached;
+            ++decoded;
             ++row;
             dest_y += 8;
             continue;
@@ -82,13 +85,13 @@ void Terrain_DrawColumn(u16 world, u8 page)
         color = g_MissionTileColors[tile];
         if (color != 255)
         {
-            while (row + count < TERRAIN_MAP_ROWS && s_Decoded[row + count] == tile) ++count;
+            while (row + count < TERRAIN_MAP_ROWS && decoded[count] == tile) ++count;
         }
         else
         {
             // Consecutive IDs are stacked vertically within an atlas column.
             while (row + count < TERRAIN_MAP_ROWS && count < g_MissionTileLimit[tile] &&
-                   s_Decoded[row + count] == tile + count) ++count;
+                   decoded[count] == tile + count) ++count;
         }
         height = count * 8;
         if (dest_y % 256 + height > 172) height = 172 - dest_y % 256;
@@ -100,8 +103,15 @@ void Terrain_DrawColumn(u16 world, u8 page)
             VDP_CommandHMMM(g_MissionTileX[tile], source_y, world & 255, dest_y, 8, height);
         }
         // The next command waits before submission; update the cache in parallel.
-        for (i = 0; i < count; ++i) *cached++ = s_Decoded[row + i];
+        for (i = 0; i < count; ++i) *cached++ = *decoded++;
         row += count;
         dest_y += count * 8;
     }
+}
+
+void Terrain_DirtyOverlayColumn(u8 page, u16 world, u8 first, u8 last)
+{
+    u8 slot=(world&255)>>3, row;
+    s_ColumnOffsets[page][slot]=65535u;
+    for (row=first; row<=last; ++row) s_Cached[page][slot][row]=65535u;
 }

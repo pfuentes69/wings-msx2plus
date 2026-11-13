@@ -136,6 +136,18 @@ def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False):
                     if 0 <= x + sx < width:
                         ground[dy * width + x + sx] = (data[sy * meta['width'] + sx]
                             if 0 <= sy < meta['height'] else 0)
+            if reduced:
+                # Reduced beach records sit slightly inside the coarse class
+                # interval. Clear fill beyond their outer edges, otherwise the
+                # two transparent shore pixels leave detached sand fragments.
+                for run in map_data['surface_runs']:
+                    if run['surface'] != 2 or not run['start'] <= cell['x'] < run['end']:
+                        continue
+                    start,end=run['start']//8,(run['end']+7)//8
+                    clear_start,clear_end=(start,min(end,x)) if name=='bchl' else (max(start,x+meta['width']),end)
+                    if clear_end>clear_start:
+                        for dy in range(baseline,min(height,baseline+sand_height)):
+                            ground[dy*width+clear_start:dy*width+clear_end]=bytes(clear_end-clear_start)
         visible = 0
         for sy in range(meta['height']):
             for sx in range(meta['width']):

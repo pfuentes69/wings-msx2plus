@@ -7,3 +7,6 @@ void Terrain_DrawColumn(u16 world, u8 page);
 #ifdef MISSION_TERRAIN
 extern u8 g_TerrainFar;
 #endif
+
+/* Dynamic overlays mark their affected tile rows for repaint on ring reuse. */
+void Terrain_DirtyOverlayColumn(u8 page, u16 world, u8 first, u8 last);

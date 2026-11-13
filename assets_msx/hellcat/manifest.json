@@ -63,7 +63,8 @@
     "28": 8,
     "29": 9,
     "30": 10,
-    "31": 11
+    "31": 11,
+    "25": 6
   },
   "palette_rgb3": [
     [
@@ -171,6 +172,26 @@
     ]
   },
   "animation": {
+    "taxi_cache": {
+      "x": 184,
+      "y": 989,
+      "width": 46,
+      "height": 15
+    },
+    "taxi_turn": [
+      52,
+      61,
+      60,
+      59,
+      58,
+      53,
+      54,
+      55,
+      56,
+      57,
+      51
+    ],
+    "taxi_artwork": "Original front/right gear-down poses; four left-quarter views explicitly reflected. Five increments per quarter selected for MSX; exact original playback/timing unverified.",
     "frames": [
       {
         "id": 0,
@@ -1396,14 +1417,356 @@
         "packed_sha256": "08d29aad3bab7141b8d8a7718fe869cef9c5c79b7347dcabfeb6061918a9c6ad",
         "atlas_x": 78,
         "atlas_y": 797
+      },
+      {
+        "id": 49,
+        "name": "hc40",
+        "source": "assets_src/hellcat/hc40.png",
+        "source_sha256": "0c4b836e6651e89c340b133f37ccb68bdf78b2d9e27f8cf5b335c9ddea920756",
+        "mirrored": false,
+        "drawing_origin": [
+          34,
+          8
+        ],
+        "crop_origin": [
+          13,
+          0
+        ],
+        "dx": 4,
+        "dy": 8,
+        "width": 42,
+        "height": 16,
+        "data_offset": 21370,
+        "bytes": 336,
+        "file": "animation/hc40.sc5",
+        "packed_sha256": "d47d8a923f929bc80b20b6f63ded697690fe641192864cbb9cd153d8b95756c8",
+        "atlas_x": 110,
+        "atlas_y": 797
+      },
+      {
+        "id": 50,
+        "name": "hc41",
+        "source": "assets_src/hellcat/hc41.png",
+        "source_sha256": "7f1a294881ead685a3b889517bb7be00fd10221af5b128779fe5a800cd5ba972",
+        "mirrored": false,
+        "drawing_origin": [
+          23,
+          8
+        ],
+        "crop_origin": [
+          2,
+          0
+        ],
+        "dx": 4,
+        "dy": 8,
+        "width": 42,
+        "height": 16,
+        "data_offset": 21706,
+        "bytes": 336,
+        "file": "animation/hc41.sc5",
+        "packed_sha256": "4772d0feffceceacb07948dc08f5a0606d5944afa7f8b901abe2ab7922c2c7f0",
+        "atlas_x": 152,
+        "atlas_y": 797
+      },
+      {
+        "id": 51,
+        "name": "hc21",
+        "source": "assets_src/hellcat/hc21.png",
+        "source_sha256": "481512624248d57b4b8f6e7e1609f198ee84b62ec39b54aff638cc5d57355ec5",
+        "mirrored": false,
+        "drawing_origin": [
+          34,
+          7
+        ],
+        "crop_origin": [
+          13,
+          0
+        ],
+        "dx": 4,
+        "dy": 9,
+        "width": 40,
+        "height": 15,
+        "data_offset": 22042,
+        "bytes": 300,
+        "file": "animation/hc21.sc5",
+        "packed_sha256": "6edf727dac88b8f5560836f4e500bd03696ed895fdf64af7167f773dbc07d157",
+        "atlas_x": 166,
+        "atlas_y": 525
+      },
+      {
+        "id": 52,
+        "name": "hcoc",
+        "source": "assets_src/hellcat/hcoc.png",
+        "source_sha256": "11a750c89f66ad0c7450a93f2d21336d3e90754c0a6ca3c54936712df24c7633",
+        "mirrored": false,
+        "drawing_origin": [
+          24,
+          14
+        ],
+        "crop_origin": [
+          9,
+          0
+        ],
+        "dx": 10,
+        "dy": 2,
+        "width": 40,
+        "height": 15,
+        "data_offset": 22342,
+        "bytes": 300,
+        "file": "animation/hcoc.sc5",
+        "packed_sha256": "1be4d618b8783bceb6a36f2ad4eed9d318dc7e9ae979990c480c4a7369e718ef",
+        "atlas_x": 152,
+        "atlas_y": 554
+      },
+      {
+        "id": 53,
+        "name": "hc1b",
+        "source": "assets_src/hellcat/hc1b.png",
+        "source_sha256": "3a67d4c199dcb902e782fa956ea5a47f8815a0e6841b92d032d1662b7ef42f88",
+        "mirrored": false,
+        "drawing_origin": [
+          23,
+          7
+        ],
+        "crop_origin": [
+          0,
+          0
+        ],
+        "dx": 2,
+        "dy": 9,
+        "width": 46,
+        "height": 15,
+        "data_offset": 22642,
+        "bytes": 345,
+        "file": "animation/hc1b.sc5",
+        "packed_sha256": "d240919a8c2148aea8ba366d19c1594c846a0ceb107db19b1e47dd30b16d4b83",
+        "atlas_x": 184,
+        "atlas_y": 989,
+        "streamed": true
+      },
+      {
+        "id": 54,
+        "name": "hc1c",
+        "source": "assets_src/hellcat/hc1c.png",
+        "source_sha256": "846528bab3c73a0debf02c3f70268ba953a6975c0f1b9a70e1d7c9f632a16ad6",
+        "mirrored": false,
+        "drawing_origin": [
+          23,
+          7
+        ],
+        "crop_origin": [
+          0,
+          0
+        ],
+        "dx": 2,
+        "dy": 9,
+        "width": 44,
+        "height": 15,
+        "data_offset": 22987,
+        "bytes": 330,
+        "file": "animation/hc1c.sc5",
+        "packed_sha256": "fa8adc10a55c9b872a7c94d62f77e289ced03b22ae636cf9af65f44a77b19bda",
+        "atlas_x": 184,
+        "atlas_y": 989,
+        "streamed": true
+      },
+      {
+        "id": 55,
+        "name": "hc1d",
+        "source": "assets_src/hellcat/hc1d.png",
+        "source_sha256": "a3c6289536a3c2a7ac6f610ccb41fde296e520377864a405d9e646ddf02c5056",
+        "mirrored": false,
+        "drawing_origin": [
+          23,
+          7
+        ],
+        "crop_origin": [
+          0,
+          0
+        ],
+        "dx": 2,
+        "dy": 9,
+        "width": 44,
+        "height": 15,
+        "data_offset": 23317,
+        "bytes": 330,
+        "file": "animation/hc1d.sc5",
+        "packed_sha256": "3a5918dd82bbc595188e09f216a99203c46bade924531957afc9a546eb64a150",
+        "atlas_x": 184,
+        "atlas_y": 989,
+        "streamed": true
+      },
+      {
+        "id": 56,
+        "name": "hc1e",
+        "source": "assets_src/hellcat/hc1e.png",
+        "source_sha256": "f667d317036b074a2ea2cc66cb6ce8f22bee64b49fc14e80ad0e1d405fb24f91",
+        "mirrored": false,
+        "drawing_origin": [
+          22,
+          7
+        ],
+        "crop_origin": [
+          3,
+          0
+        ],
+        "dx": 6,
+        "dy": 9,
+        "width": 38,
+        "height": 15,
+        "data_offset": 23647,
+        "bytes": 285,
+        "file": "animation/hc1e.sc5",
+        "packed_sha256": "9cdcc502791cbdbf1585893b08f1440a8ac66e64b6563721975aead969576d8e",
+        "atlas_x": 184,
+        "atlas_y": 989,
+        "streamed": true
+      },
+      {
+        "id": 57,
+        "name": "hc1f",
+        "source": "assets_src/hellcat/hc1f.png",
+        "source_sha256": "7e20119f5f1685d99a3a35b542d326594e32aaec8c6a25093ca7446d48afaf42",
+        "mirrored": false,
+        "drawing_origin": [
+          23,
+          7
+        ],
+        "crop_origin": [
+          4,
+          0
+        ],
+        "dx": 6,
+        "dy": 9,
+        "width": 38,
+        "height": 15,
+        "data_offset": 23932,
+        "bytes": 285,
+        "file": "animation/hc1f.sc5",
+        "packed_sha256": "18a5ce31910febd5665118f3cd7490116c6d21d323cd679194f809fc518ca956",
+        "atlas_x": 184,
+        "atlas_y": 989,
+        "streamed": true
+      },
+      {
+        "id": 58,
+        "name": "hc1c-left",
+        "source": "assets_src/hellcat/hc1c.png",
+        "source_sha256": "846528bab3c73a0debf02c3f70268ba953a6975c0f1b9a70e1d7c9f632a16ad6",
+        "mirrored": true,
+        "drawing_origin": [
+          25,
+          7
+        ],
+        "crop_origin": [
+          4,
+          0
+        ],
+        "dx": 4,
+        "dy": 9,
+        "width": 44,
+        "height": 15,
+        "data_offset": 24217,
+        "bytes": 330,
+        "file": "animation/hc1c-left.sc5",
+        "packed_sha256": "3847472c09bdbc2f41498b26d7857c31cf79ca586e017e408232a68074a2d8b6",
+        "atlas_x": 184,
+        "atlas_y": 989,
+        "streamed": true
+      },
+      {
+        "id": 59,
+        "name": "hc1d-left",
+        "source": "assets_src/hellcat/hc1d.png",
+        "source_sha256": "a3c6289536a3c2a7ac6f610ccb41fde296e520377864a405d9e646ddf02c5056",
+        "mirrored": true,
+        "drawing_origin": [
+          25,
+          7
+        ],
+        "crop_origin": [
+          4,
+          0
+        ],
+        "dx": 4,
+        "dy": 9,
+        "width": 44,
+        "height": 15,
+        "data_offset": 24576,
+        "bytes": 330,
+        "file": "animation/hc1d-left.sc5",
+        "packed_sha256": "f6b453a2b0ea4bd8f60b7cf2dfc8c6831e05a623cf759ebff683d2e30cf93dcc",
+        "atlas_x": 184,
+        "atlas_y": 989,
+        "streamed": true
+      },
+      {
+        "id": 60,
+        "name": "hc1e-left",
+        "source": "assets_src/hellcat/hc1e.png",
+        "source_sha256": "f667d317036b074a2ea2cc66cb6ce8f22bee64b49fc14e80ad0e1d405fb24f91",
+        "mirrored": true,
+        "drawing_origin": [
+          26,
+          7
+        ],
+        "crop_origin": [
+          7,
+          0
+        ],
+        "dx": 6,
+        "dy": 9,
+        "width": 38,
+        "height": 15,
+        "data_offset": 24906,
+        "bytes": 285,
+        "file": "animation/hc1e-left.sc5",
+        "packed_sha256": "9c30f5529aa92d8c75694548ed0e4ba3dbb8ccb01a5f1b55b696fe44675237f3",
+        "atlas_x": 184,
+        "atlas_y": 989,
+        "streamed": true
+      },
+      {
+        "id": 61,
+        "name": "hc1f-left",
+        "source": "assets_src/hellcat/hc1f.png",
+        "source_sha256": "7e20119f5f1685d99a3a35b542d326594e32aaec8c6a25093ca7446d48afaf42",
+        "mirrored": true,
+        "drawing_origin": [
+          25,
+          7
+        ],
+        "crop_origin": [
+          6,
+          0
+        ],
+        "dx": 6,
+        "dy": 9,
+        "width": 38,
+        "height": 15,
+        "data_offset": 25191,
+        "bytes": 285,
+        "file": "animation/hc1f-left.sc5",
+        "packed_sha256": "9651c7035444faa8c2706a85aeb457775604cb29556236e374d33e4ae5137b9b",
+        "atlas_x": 184,
+        "atlas_y": 989,
+        "streamed": true
       }
     ],
-    "pixel_bytes": 21370,
+    "pixel_bytes": 25476,
     "reference_pivot": [
       25,
       16
     ],
     "placement": "logical position + dx/dy; signed source drawing origins preserved; X packed on even byte boundary",
+    "gear_frames": [
+      49,
+      50
+    ],
+    "tail_down_frames": [
+      51,
+      52
+    ],
     "evidence": {
       "executable": "reference_assets/original_files/Wings_of_Fury/wings",
       "sha256": "923b364017f5b2547f0475517dc62e9260854bf3800d56d459721210bc004c27",

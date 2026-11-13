@@ -89,8 +89,11 @@ def artifacts():
     pixels = bytes(mapping[v] for v in source_pixels)
     far_source, far_scene = reconstruct(mission, evidence, reduced=True)
     far_pixels = bytes(mapping[v] for v in far_source)
-    # Original distant-view rectangle fills rows 151..162 with ocean color 10.
-    far_pixels = far_pixels[:201*far_scene['width']] + bytes([3])*(11*far_scene['width'])
+    # Original distant-view sea fill uses ocean color 10. The reduced beach
+    # artwork supplies a one-pixel foreground strip in sand color 17; preserve
+    # it, including the two shore silhouettes, instead of flooding it with sea.
+    far_pixels = bytes(value if i < far_scene['baseline']*far_scene['width'] or far_source[i] == 17 else 3
+                       for i,value in enumerate(far_pixels))
     combined_width = scene['width'] + far_scene['width']
     combined = b''.join(pixels[y * scene['width']:(y + 1) * scene['width']] +
                         far_pixels[y * far_scene['width']:(y + 1) * far_scene['width']] for y in range(212))
@@ -114,6 +117,7 @@ def artifacts():
     metadata = dict(source_map='reference_assets/original_files/Wings_of_Fury/maps/a.map',
         source_sha256=mission['sha256'], executable_sha256=evidence['executable_sha256'],
         source_width=mission['width'], width=scene['width'], height=212, top=64,
+        far_sand_height=far_scene['sand_height'],far_sand_source_index=17,far_sand_msx_index=mapping[17],
         far_width=far_scene['width'], far_source_width=(mission['width'] + 7) // 8, far_column_offset=scene['width'] // 8,
         reset_x=mission['reset_x'], camera_max=mission['width'] - 256,
         scene_scope=scene['scope'], baseline=scene['baseline'], fill=scene['fill'],

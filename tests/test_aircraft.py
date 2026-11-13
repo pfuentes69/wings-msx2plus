@@ -61,7 +61,7 @@ class AircraftTests(unittest.TestCase):
         tables = facts['source_tables']
         self.assertEqual([tables[n]['file_offset'] for n in ('left_bank', 'right_bank', 'pitch')], [0x15d00, 0x15d68, 0x15dd0])
         self.assertEqual([len(tables[n]['names']) for n in ('left_bank', 'right_bank', 'pitch')], [26, 26, 20])
-        self.assertEqual(len(self.meta['frames']), 49)
+        self.assertEqual(len(self.meta['frames']), 62)
 
     def test_deferred_pitch_matches_every_published_state(self):
         for group_size in (5, 6, 7, 8, 9, 10, 12, 13, 15, 18):

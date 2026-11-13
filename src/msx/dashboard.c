@@ -7,7 +7,24 @@
 
 static u8 s_Row[128], s_Count, s_Value, s_Pilot[2];
 static u8 s_WaveBackdropValid[2], s_WaveHeave[2];
-static const u8* s_Input;
+static u8 s_Stream[64], s_StreamPos;
+static u16 s_StreamOffset;
+static u8 s_Ammo[2], s_Lives[2], s_Weapon[2];
+
+static void Input(u16 offset)
+{
+    s_StreamOffset = offset; s_StreamPos = 64; s_Count = 0;
+}
+
+static u8 Next(void)
+{
+    if (s_StreamPos == 64)
+    {
+        Scenery_Read(DASHBOARD_BANK, s_StreamOffset, s_Stream, 64);
+        s_StreamOffset += 64; s_StreamPos = 0;
+    }
+    return s_Stream[s_StreamPos++];
+}
 
 static void Expand(u16 x, u16 y, u16 width, u8 height)
 {
@@ -17,12 +34,22 @@ static void Expand(u16 x, u16 y, u16 width, u8 height)
     {
         for (column = 0; column < bytes; ++column)
         {
-            if (!s_Count) { s_Count = *s_Input++; s_Value = *s_Input++; }
+            if (!s_Count) { s_Count = Next(); s_Value = Next(); }
             s_Row[column] = s_Value; --s_Count;
         }
         VDP_WriteVRAM(s_Row, address, y >= 512 ? 1 : 0, bytes);
         address += 128;
     }
+}
+
+void Dashboard_LoadTables(void)
+{
+    u16 offset;
+    for (offset=0;offset<DASHBOARD_TABLE_BYTES;offset+=64)
+        Scenery_Read(7,offset,g_DashboardTables+offset,64);
+    for (offset=0;offset<512;offset+=128)
+        Scenery_Read(7,AIRCRAFT_TABLE_OFFSET+offset,(u8*)g_AircraftShapes+offset,128);
+    Scenery_Read(7,AIRCRAFT_TABLE_OFFSET+512,(u8*)g_AircraftShapes+512,sizeof(g_AircraftShapes)-512);
 }
 
 void Dashboard_Load(void)
@@ -31,17 +58,20 @@ void Dashboard_Load(void)
     u16 x, y, offset = 0;
     for (page = 0; page < 2; ++page)
     {
-        s_Pilot[page] = 255;
+        s_Pilot[page] = 255; s_Ammo[page] = 30; s_Lives[page] = 3; s_Weapon[page] = 255;
         s_WaveBackdropValid[page] = 0;
-        s_Input = g_DashboardPanel; s_Count = 0;
+        Input(DASHBOARDPANEL_OFFSET);
         Expand(0, (u16)page * 256 + 172, 256, 40);
     }
-    s_Input = g_PilotRLE; s_Count = 0;
+    Input(PILOTRLE_OFFSET);
     for (frame = 0; frame < 24; ++frame)
         Expand(g_PilotX[frame], g_PilotY[frame], 48, 24);
-    s_Input = g_FarPlaneRLE; s_Count = 0;
+    Input(FARPLANERLE_OFFSET);
     for (frame = 0; frame < FAR_PLANE_COUNT; ++frame)
         Expand(g_FarShapes[frame].atlas_x, g_FarShapes[frame].atlas_y, 16, 5);
+    Input(BOMBRLE_OFFSET);
+    for (frame = 0; frame < 5; ++frame)
+        Expand(g_BombX[frame], g_BombY[frame], 8, 8);
     for (frame = 0; frame < 12; ++frame)
     {
         x = frame >= 4 && frame < 8 ? 144 : 48;
@@ -159,4 +189,54 @@ void Dashboard_Waves(u8 page, u16 camera, u8 frame, u8 heave)
         }
     }
     if (height) DrawWaterBand(page, source_x, source_y, start, end, row, height, frame);
+}
+
+static void Stock(u8 page, u8 ammo)
+{
+    u8 digit, row, value, previous;
+    u16 address;
+    if (s_Ammo[page] == ammo) return;
+    previous = s_Ammo[page];
+    s_Ammo[page] = ammo;
+    for (digit = 0; digit < 2; ++digit)
+    {
+        value = digit ? ammo % 10 : ammo / 10;
+        if (value == (digit ? previous % 10 : previous / 10)) continue;
+        address = ((u16)page*256+196)*128 + (digit ? 15 : 10);
+        Scenery_Read(DASHBOARD_BANK,AMMO_DIGITS_OFFSET+(u16)value*28,s_Row,28);
+        for (row = 0; row < 7; ++row)
+        {
+            VDP_WriteVRAM(s_Row+row*4, address, 0, 4);
+            address += 128;
+        }
+    }
+}
+
+void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives)
+{
+    u8 row;
+    u16 address;
+    Stock(page, stock);
+    if (s_Lives[page] != lives)
+    {
+        s_Lives[page] = lives;
+        if (lives > 9) lives = 9;
+        address = ((u16)page*256+196)*128+25;
+        Scenery_Read(DASHBOARD_BANK,LIFE_DIGITS_OFFSET+(u16)lives*42,s_Row,42);
+        for (row=0; row<7; ++row)
+        {
+            VDP_WriteVRAM(s_Row+row*6,address,0,6);
+            address += 128;
+        }
+    }
+    if (s_Weapon[page] != weapon)
+    {
+        s_Weapon[page] = weapon;
+        Scenery_Read(DASHBOARD_BANK,WEAPON_ICONS_OFFSET+(u16)weapon*77,s_Row,77);
+        address = ((u16)page*256+186)*128+9;
+        for (row=0; row<7; ++row)
+        {
+            VDP_WriteVRAM(s_Row+row*11,address,0,11); address += 128;
+        }
+    }
 }

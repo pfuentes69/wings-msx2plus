@@ -2,7 +2,8 @@
 #pragma once
 #define HELLCAT_WIDTH 48
 #define HELLCAT_HEIGHT 32
-#define AIRCRAFT_SHAPE_COUNT 49
+#define AIRCRAFT_SHAPE_COUNT 62
+#define AIRCRAFT_STATIC_SHAPES 53
 #define AIRCRAFT_TURN_STEPS 22
 typedef struct AircraftShape {
     const unsigned char* data;
@@ -12,7 +13,13 @@ typedef struct AircraftShape {
     unsigned short atlas_y;
 } AircraftShape;
 extern const unsigned char g_HellcatPalette[32];
+#ifdef MISSION_TERRAIN
+extern AircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT];
+#else
 extern const AircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT];
+#endif
 extern const unsigned char g_PitchRight[10], g_PitchLeft[10];
+extern const unsigned char g_GearFrame[2], g_TailDownFrame[2];
+extern const unsigned char g_TaxiTurn[11];
 extern const unsigned char g_TurnLeftToRight[AIRCRAFT_TURN_STEPS];
 extern const unsigned char g_TurnRightToLeft[AIRCRAFT_TURN_STEPS];

@@ -1,4 +1,606 @@
 {
+  "crew_pointing_arms": {
+    "fixed_left": 1,
+    "right_cycle": [
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ]
+  },
+  "crew_idle_arms": [
+    0,
+    8
+  ],
+  "crew_idle_frame": 16,
+  "crew_frame_count": 17,
+  "crew_records": [
+    {
+      "name": "fgy0",
+      "sha256": "923ddaebfc32b0f1c08888a351f7d376acb3dcfd1f135beb70b59628c6131cc3",
+      "width": 32,
+      "height": 9,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        41
+      ],
+      "source_position_candidate": [
+        176,
+        122
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgy1",
+      "sha256": "6905bef23e2c1de03dad6871e7df48c194e604febe81ea1f2117723a7d21308d",
+      "width": 32,
+      "height": 9,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        41
+      ],
+      "source_position_candidate": [
+        176,
+        122
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgy2",
+      "sha256": "390a6d100dfb2185911c7630dede861c997494ec0a82ca0d51e06c834f1bfeb1",
+      "width": 32,
+      "height": 10,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        42
+      ],
+      "source_position_candidate": [
+        176,
+        121
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgy3",
+      "sha256": "0f98c67a54801121bbe4816059f14f9c69c4394c48d692c146b5f801f7e3aa0e",
+      "width": 32,
+      "height": 12,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        44
+      ],
+      "source_position_candidate": [
+        176,
+        119
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgy4",
+      "sha256": "50a05f0ff9c3a0e99ded6fc5a1f3c65038c86e40f417c9467dc0ff26951743ac",
+      "width": 32,
+      "height": 13,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        45
+      ],
+      "source_position_candidate": [
+        176,
+        118
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgy5",
+      "sha256": "7f0454fa17820b0226f17446da8a574b36217f5e1ab066dc5eff4c50c100f8b0",
+      "width": 32,
+      "height": 13,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        45
+      ],
+      "source_position_candidate": [
+        176,
+        118
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgy6",
+      "sha256": "771a3debb065b6912a213456515bf6f03e9f835a951160c2ed00bbe68d500080",
+      "width": 32,
+      "height": 12,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        44
+      ],
+      "source_position_candidate": [
+        176,
+        119
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgy7",
+      "sha256": "1cf40d063927ab3e835bbf7b9ddd6f8783381411cf8ade6085495b612e78c8f9",
+      "width": 32,
+      "height": 11,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        43
+      ],
+      "source_position_candidate": [
+        176,
+        120
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgy8",
+      "sha256": "754e2392ebf3af023f8e381670d181119895c715c7aaf8b68e5013059166d080",
+      "width": 32,
+      "height": 9,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        41
+      ],
+      "source_position_candidate": [
+        176,
+        122
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgy9",
+      "sha256": "9b1b7ffc1ae8d86d757121b8f10a62037811991f7f1486b63e4970bb2c01eea1",
+      "width": 32,
+      "height": 9,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        41
+      ],
+      "source_position_candidate": [
+        176,
+        122
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgya",
+      "sha256": "76e28e000422b8b24b2ec7b8840f00dad95d1e1b870b24cc55ecc228302833fa",
+      "width": 32,
+      "height": 10,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        42
+      ],
+      "source_position_candidate": [
+        176,
+        121
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgyb",
+      "sha256": "7a5653c358c49361ee046e170f379a53b133f8b8f07b08ae274c3364e3d3b3ef",
+      "width": 32,
+      "height": 12,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        44
+      ],
+      "source_position_candidate": [
+        176,
+        119
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgyc",
+      "sha256": "a0048626c66c34edaacd070a1188b408c5ae318ac7a6f6c9503b2c6a4ad2916d",
+      "width": 32,
+      "height": 13,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        45
+      ],
+      "source_position_candidate": [
+        176,
+        118
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgyd",
+      "sha256": "44cd276815013a751ba1f063aea3c35b014a79b3a1b459c4c985c1ddb836dffa",
+      "width": 32,
+      "height": 13,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        45
+      ],
+      "source_position_candidate": [
+        176,
+        118
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgye",
+      "sha256": "ff33d661b8593221530521e515342e8b414c0693ce90d6db8ab25cd98f821e14",
+      "width": 32,
+      "height": 12,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        44
+      ],
+      "source_position_candidate": [
+        176,
+        119
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    },
+    {
+      "name": "fgyf",
+      "sha256": "9e512aecb817fc2c05c8359a10e47dd3cf93ee836745d73c13823707e6eb4ecb",
+      "width": 32,
+      "height": 11,
+      "stride_bytes": 4,
+      "origin_candidate": [
+        17,
+        43
+      ],
+      "source_position_candidate": [
+        176,
+        120
+      ],
+      "base_color_candidate": 0,
+      "unknown_byte": 0,
+      "plane_maps": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "clear_planes": 0,
+      "set_planes": 0,
+      "opaque_rectangle": false
+    }
+  ],
+  "crew_anchors": [
+    6968,
+    7344
+  ],
+  "crew_slots": [
+    [
+      124,
+      528
+    ],
+    [
+      206,
+      529
+    ],
+    [
+      224,
+      557
+    ],
+    [
+      0,
+      564
+    ],
+    [
+      22,
+      568
+    ],
+    [
+      44,
+      568
+    ],
+    [
+      32,
+      592
+    ],
+    [
+      54,
+      592
+    ],
+    [
+      32,
+      619
+    ],
+    [
+      54,
+      619
+    ],
+    [
+      124,
+      784
+    ],
+    [
+      146,
+      785
+    ],
+    [
+      168,
+      785
+    ],
+    [
+      82,
+      789
+    ],
+    [
+      64,
+      929
+    ],
+    [
+      86,
+      933
+    ],
+    [
+      108,
+      933
+    ],
+    [
+      130,
+      935
+    ],
+    [
+      152,
+      935
+    ],
+    [
+      64,
+      936
+    ],
+    [
+      232,
+      937
+    ],
+    [
+      0,
+      939
+    ],
+    [
+      22,
+      939
+    ],
+    [
+      86,
+      940
+    ],
+    [
+      108,
+      940
+    ],
+    [
+      232,
+      944
+    ],
+    [
+      232,
+      951
+    ],
+    [
+      232,
+      958
+    ],
+    [
+      232,
+      965
+    ],
+    [
+      232,
+      972
+    ],
+    [
+      232,
+      979
+    ],
+    [
+      232,
+      986
+    ],
+    [
+      232,
+      993
+    ],
+    [
+      232,
+      1000
+    ]
+  ],
+  "crew_width": 22,
+  "crew_height": 14,
+  "crew_piece_height": 7,
+  "crew_top": 116,
+  "crew_step_ticks": 15,
+  "crew_timing": "MSX adaptation: left arm fixed horizontally; right arm cycles at 10 Hz. Elevator signalman has both arms down off deck; end signalman always points.",
+  "crew_crop": "anchor-10; opaque decoded scenery plus transparent original figures",
   "frames": [
     {
       "name": "flg3",
@@ -12,20 +614,20 @@
           543
         ],
         [
-          152,
+          192,
           554
         ],
         [
-          168,
+          208,
           554
         ],
         [
-          184,
-          554
+          0,
+          590
         ],
         [
-          200,
-          554
+          16,
+          590
         ]
       ],
       "sha256": "fdc3a6d422fc9d8fc0a05bd2a8670d701e8e5dc2b274753d365317b6a1ee6573",
@@ -56,28 +658,28 @@
       "name": "flg4",
       "parts": [
         [
-          216,
-          554
-        ],
-        [
-          232,
-          557
-        ],
-        [
-          0,
-          590
-        ],
-        [
-          16,
-          590
-        ],
-        [
           168,
           590
         ],
         [
           184,
           590
+        ],
+        [
+          200,
+          590
+        ],
+        [
+          216,
+          590
+        ],
+        [
+          232,
+          590
+        ],
+        [
+          0,
+          617
         ]
       ],
       "sha256": "23e95297d577868230b9519b1b6132b2acf7ee00f45a59257c5d3d336163b282",
@@ -108,28 +710,28 @@
       "name": "flg5",
       "parts": [
         [
-          200,
-          590
-        ],
-        [
-          216,
-          590
-        ],
-        [
-          232,
-          590
-        ],
-        [
-          0,
-          617
-        ],
-        [
           16,
           617
         ],
         [
-          220,
-          791
+          240,
+          839
+        ],
+        [
+          240,
+          853
+        ],
+        [
+          240,
+          867
+        ],
+        [
+          240,
+          881
+        ],
+        [
+          240,
+          895
         ]
       ],
       "sha256": "29265ee6b4b8aaa424ad737955a197a2f2bf9ce5f7081281e312d564a1710802",
@@ -160,28 +762,28 @@
       "name": "flg6",
       "parts": [
         [
-          236,
-          791
+          240,
+          909
         ],
         [
           240,
-          839
+          923
         ],
         [
-          240,
-          853
+          0,
+          925
         ],
         [
-          240,
-          867
+          16,
+          925
         ],
         [
-          240,
-          881
+          32,
+          925
         ],
         [
-          240,
-          895
+          48,
+          929
         ]
       ],
       "sha256": "d0675a8cbc59b89294032514dfa7f1bf7459ad30fd9943e6f4ae3d0d707c6dac",

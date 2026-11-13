@@ -6,6 +6,9 @@
   "width": 7616,
   "height": 212,
   "top": 64,
+  "far_sand_height": 1,
+  "far_sand_source_index": 17,
+  "far_sand_msx_index": 14,
   "far_width": 960,
   "far_source_width": 951,
   "far_column_offset": 952,
@@ -1651,18 +1654,18 @@
   ],
   "selected": {
     "size": 8,
-    "tile_count": 490,
-    "tile_bytes": 15680,
+    "tile_count": 493,
+    "tile_bytes": 15776,
     "columns": 1072,
     "rows": 19,
-    "unique_columns": 227,
+    "unique_columns": 229,
     "dense_map_bytes": 40736,
-    "compressed_map_bytes": 6356,
-    "total_bytes": 22036
+    "compressed_map_bytes": 6377,
+    "total_bytes": 22153
   },
-  "bundle_bytes": 22036,
-  "tile_map_offset": 15680,
-  "bundle_sha256": "110744baae59be00ce4aa23fbee2756eaa8ff7f4b53ae28c2f8cf33871591471",
+  "bundle_bytes": 22153,
+  "tile_map_offset": 15776,
+  "bundle_sha256": "0cac84babd730c02e7b46fc0d75e002f99be745f608f707a6816fb6b95384748",
   "palette_sha256": "0b37b14c0c7d721406951e121885f75479ae3d439bd8429cee8bb2986e7715f9",
   "ocean_palette_sha256": "701a351ccfbae78c8285f9d7ffab0d532dcaf6716395930b7055e2bfc4d70902",
   "palette_rgb3": [
@@ -1760,5 +1763,5 @@
     "ordering": "column-major groups of 9 tiles"
   },
   "map_format": "u16le column offsets, deduplicated count:u8/tile:u16le runs; exactly 19 tile rows",
-  "map_and_cache_ram_bytes": 8954
+  "map_and_cache_ram_bytes": 8975
 }

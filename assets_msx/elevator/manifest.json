@@ -1,0 +1,61 @@
+{
+  "source": "world.shp:elev",
+  "sha256": "14f50af2c0b08c19ffab426e6ba646f94c9f037da4e8ad45cb2a5e0b40223e25",
+  "width": 64,
+  "height": 13,
+  "stride_bytes": 8,
+  "origin_candidate": [
+    28,
+    -1
+  ],
+  "source_position_candidate": [
+    176,
+    70
+  ],
+  "base_color_candidate": 0,
+  "unknown_byte": 0,
+  "plane_maps": [
+    1,
+    2,
+    4,
+    24
+  ],
+  "clear_planes": 0,
+  "set_planes": 0,
+  "opaque_rectangle": false,
+  "background_slots": [
+    [
+      144,
+      468
+    ]
+  ],
+  "platform_slots": [
+    [
+      208,
+      468
+    ],
+    [
+      208,
+      475
+    ],
+    [
+      208,
+      482
+    ],
+    [
+      208,
+      489
+    ]
+  ],
+  "marker_x": 7000,
+  "plane_start_x": 7032,
+  "world_left": 7004,
+  "deck_row": 129,
+  "shaft_bottom": 145,
+  "depth": 32,
+  "pixel_ticks": 18,
+  "background_tile_bytes": 1280,
+  "platform_tile_bytes": 112,
+  "geometry": "marker + 32 gives player/platform anchor; source X origin 28; deck/shaft from decoded mcar and supplied captures",
+  "timing": "MSX adaptation: 32 pixels at 18 simulation ticks/pixel; six-VBlank presentation; original timing not recovered"
+}

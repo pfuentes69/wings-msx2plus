@@ -1,8 +1,27 @@
 # Wings of Fury MSX2+
 
 Target: Panasonic FS-A1WX (MSX2+, V9958, 128 KiB VRAM).
-Read [the handoff](CODEX_HANDOFF_PROMPT.md) and
-[the port strategy](docs/PORT_ANALYSIS_AND_STRATEGY.md) for research status.
+The [implementation plan](docs/PORT_ANALYSIS_AND_STRATEGY.md) now targets the
+supplied manual's complete game loop. See the [manual requirements and gaps](docs/MANUAL_FUNCTIONAL_SPEC.md)
+for page references, prototype differences and acceptance criteria. The
+[English Amiga reference](docs/AMIGA_ENGLISH_REFERENCE.md) adds held/short-click
+Fire, one-torpedo stock and saved games; the
+[French review](docs/AMIGA_MANUAL_REVIEW.md) supplies Space/Enter and landing-side
+details and records conflicting double-Fire wording. The release MSX controls
+use Space/trigger 1 for guns and N/GRAPH/trigger 2 for the secondary action;
+Enter is reserved for menus/text. [P0 controls and state](docs/p0-foundation.md)
+are implemented; the release starts at rank selection.
+[P1 flight and takeoff](docs/p1-flight.md) now starts with the
+[carrier elevator](docs/carrier-elevator.md) raising the plane from inside the ship.
+Once on deck, hold
+Left to roll, then Up+Left near the bow to climb. Neutral maintains 3/4 throttle
+in flight. Hold Up alone for a nose-up, gently descending stall; release Up to
+level out. Cannon shots follow the nose angle and heading. A Down tap latches a nose-down dive until Up or horizontal steering
+changes it. Left/Right also taxi on deck, with an animated turn
+on reversal and temporary stops at both deck ends. Stop over the platform and
+press either logical Fire button to enter the hold, reload and emerge with the
+same heading. The
+[original handoff](CODEX_HANDOFF_PROMPT.md) is historical research context.
 
 The project follows MSXgl's [alternative file layout](https://aoineko.org/msxgl/index.php?title=Alternative_file_layout),
 with game source under `src/`:
@@ -42,6 +61,9 @@ the bundled executables.
 ./build.sh clean      # Remove generated out/ files
 ./build.sh rebuild    # Clean, compile, package and deploy to emul/rom/
 ```
+
+The launcher uses crisp pixel scaling for legible dashboard type and keeps
+these display settings local to the emulator session.
 
 On Windows use `build.bat` with the same arguments. MSXgl generates its shared
 defaults in `MSXgl/projects/default_config.js` on first use. Keep project
@@ -83,8 +105,15 @@ lowers the carrier/land strip, animates the original wave frames, replaces the
 central overview with a forward pilot view, and switches to original 1:8
 scenery at altitude. It uses a 128 KiB ASCII8 ROM and currently targets
 7.5/6.25 fps with nominal 150 Hz simulation; scale changes briefly rebuild the
-hidden pages. Collision, original flight dynamics and instrument behavior are
-still pending.
+hidden pages. The [weapons foundation](docs/combat-prototype.md) adds gunfire,
+bombs and terrain impacts. [P0](docs/p0-foundation.md) supplies rank/briefing/loadout
+shells, three lives and a 30-bomb load: Space/trigger 1 fires guns, while
+N/GRAPH/trigger 2 releases the selected secondary. Esc pauses, Ctrl-R restarts
+at rank selection, and Ctrl-F inverts joystick vertical input. Rockets/torpedo
+are inventory previews; their launch behavior and actual save/load are deferred.
+Use `./launch.sh mission-flight-debug` for instant-flight renderer inspection
+with R reset and stationary T turn. Targets, damage, scoring, carrier landing
+remain pending; P1 flight constants still need Amiga timing comparison.
 For a manual run with openMSX installed:
 
 ```sh

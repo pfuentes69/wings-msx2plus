@@ -13,11 +13,15 @@ uint8_t Aircraft_Pitch(int16_t vx, int16_t vy)
     return vy < 0 ? 0 : 8;
 }
 
+/* Legacy fixed-pose viewer; the release derives poses from flight state. */
+#ifndef WINGS_P1_FLIGHT
 uint8_t Aircraft_ManualPose(uint8_t pose, uint8_t left)
 {
     uint8_t pitch = pose == 0 ? 0 : pose == 2 ? 8 : 4;
     return left ? g_PitchLeft[pitch] : g_PitchRight[pitch];
 }
+
+#endif
 
 void Aircraft_Reset(AircraftState* state)
 {
@@ -25,6 +29,7 @@ void Aircraft_Reset(AircraftState* state)
     state->shape = g_PitchRight[4];
 }
 
+#ifndef WINGS_P1_FLIGHT
 void Aircraft_RequestTurn(AircraftState* state)
 {
     state->target_left ^= 1;
@@ -63,3 +68,49 @@ void Aircraft_Step(AircraftState* state, int16_t vx, int16_t vy)
 {
     Aircraft_StepSample(state, vx, vy, 1);
 }
+
+#endif
+
+#ifdef WINGS_P1_FLIGHT
+/* P1 attitude is independent of descent: a stall sinks with its nose raised. */
+static const uint8_t s_ModePitch[4] = {4,4,3,6};
+#endif
+uint8_t Aircraft_FlightPitch(const FlightState* flight)
+{
+#ifdef WINGS_P1_FLIGHT
+    if (flight->mode!=FLIGHT_AIRBORNE) return s_ModePitch[flight->mode];
+#endif
+    return Aircraft_Pitch(flight->vx,flight->vy);
+}
+#ifdef WINGS_P1_FLIGHT
+/* Presentation samples the simulation turn clock; it never starts a second turn. */
+void Aircraft_SyncFlight(AircraftState* state, const FlightState* flight, uint16_t world)
+{
+    state->facing_left = flight->facing_left;
+    state->target_left = flight->target_left;
+    state->turning = flight->turn_ticks != 0;
+    if (state->turning)
+    {
+        if (flight->mode == FLIGHT_GROUND)
+        {
+            state->step = (FLIGHT_TAXI_TURN_TICKS - flight->turn_ticks) / FLIGHT_TAXI_STEP_TICKS;
+            state->shape = g_TaxiTurn[flight->facing_left ? state->step : 10-state->step];
+        }
+        else
+        {
+            state->step = (FLIGHT_TURN_TICKS - flight->turn_ticks) / 5;
+            state->shape = flight->facing_left ? g_TurnLeftToRight[state->step] : g_TurnRightToLeft[state->step];
+        }
+    }
+    else
+    {
+        uint8_t pitch = Aircraft_FlightPitch(flight);
+        if (flight->mode == FLIGHT_GROUND &&
+            flight->vx > -FLIGHT_TAKEOFF_SPEED && flight->vx < FLIGHT_TAKEOFF_SPEED)
+            state->shape = g_TailDownFrame[flight->facing_left];
+        else state->shape = Flight_GearDown(flight, world) ?
+            (flight->mode == FLIGHT_STALL ? g_TailDownFrame[flight->facing_left] : g_GearFrame[flight->facing_left]) :
+            flight->facing_left ? g_PitchLeft[pitch] : g_PitchRight[pitch];
+    }
+}
+#endif

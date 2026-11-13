@@ -9,3 +9,5 @@ __pycache__/
 /MSXgl/projects/default_config.js
 /tile-flight_rawdef.h
 /mission-flight_rawdef.h
+
+/mission-flight-debug_rawdef.h

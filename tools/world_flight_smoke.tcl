@@ -1,15 +1,20 @@
 set save_settings_on_exit false
+source [file join $env(WINGS_ROOT) tools pixel_display.tcl]
 set mute true
 set throttle true
 set pause false
+set power on
+after realtime 0.1 {set power on; set pause false}
 # Only the scripted matrix inputs should reach the test machine.
 bind -layer codex_verification "keyb SPACE" {set ::ignored_host_input 1}
 activate_input_layer -blocking codex_verification
 catch {unplug joyporta}
 keymatrixup 8 255
 keymatrixup 5 2
+keymatrixup 4 136
+keymatrixup 8 1
 set headless [expr {[info exists env(WINGS_HEADLESS)] && $env(WINGS_HEADLESS) eq "1"}]
-if {$headless} { set throttle false }
+if {$headless} {set throttle false} else {set renderer SDLGL-PP}
 set maxframeskip 0
 set root $env(WINGS_ROOT)
 set output $env(WINGS_TEST_OUT)
@@ -21,7 +26,8 @@ proc bgerror {message} {
     close $::report
     exit
 }
-set f [open [file join $root out $project $project.noi] r]
+set rom_project [expr {[info exists env(WINGS_ROM_PROJECT)] ? $env(WINGS_ROM_PROJECT) : $project}]
+set f [open [file join $root out $rom_project $rom_project.noi] r]
 set symbols [read $f]
 close $f
 foreach name {g_Ready g_Rendering g_FramePublished g_DisplayCamera g_DisplayWorld g_DisplayPage g_DisplayX g_DisplayY g_SelectedFrame g_Turning g_MissedFrames g_HoldFlight g_RenderPage} {
@@ -31,7 +37,7 @@ foreach name {g_Ready g_Rendering g_FramePublished g_DisplayCamera g_DisplayWorl
 if {$project eq "mission-flight"} {
     if {![regexp {DEF _g_DisplaySurfaceWord (0x[0-9A-Fa-f]+)} $symbols -> address]} { error "Missing surface diagnostic" }
     set addr(g_DisplaySurfaceWord) $address
-    foreach name {g_DisplayScale g_DisplayWave g_DisplayPilot g_ViewChange g_DisplayHeave g_DisplayShipFrame} {
+    foreach name {g_DisplayScale g_DisplayWave g_DisplayPilot g_ViewChange g_DisplayHeave g_DisplayShipFrame g_Combat g_GameView} {
         if {![regexp "DEF _$name (0x\[0-9A-Fa-f\]+)" $symbols -> address]} { error "Missing $name" }
         set addr($name) $address
     }
@@ -71,6 +77,10 @@ proc snapshot {name} {
     file delete -force [file join $::output $name.png]
     dump $name.vram [debug read_block VRAM 0 131072]
     dump $name.regs [debug read_block {VDP regs} 0 32]
+    if {$::project eq "mission-flight"} {
+        dump $name.combat [debug read_block memory $::addr(g_Combat) 158]
+        dump $name.game [debug read_block memory $::addr(g_GameView) 8]
+    }
     dump $name.palette [debug read_block {VDP palette} 0 32]
     if {$::project in {tile-flight mission-flight}} {
         foreach symbol {g_Bank0Segment g_Bank1Segment g_Bank2Segment g_Bank3Segment} expected {0 1 2 3} {
@@ -94,7 +104,12 @@ if {$project in {tile-flight mission-flight}} {
     }
 }
 proc finish_snapshot {name} {
-    if {!$::headless} { screenshot -raw [file join $::output $name.png] }
+    if {!$::headless} {
+        screenshot -raw [file join $::output $name.png]
+        if {$name in {initial fine_3 fine_2}} {
+            screenshot [file join $::output $name-display.png]
+        }
+    }
     debug write memory $::addr(g_HoldFlight) 0
     set ::throttle false
     unset ::capturing
@@ -109,6 +124,31 @@ proc publication {} {
     }
     set ::last_publish [machine_info time]
     incr ::count
+    # Startup must be captured before opportunistic weapon/fine-phase images.
+    if {[info exists ::capture] && $::capture eq "initial"} {
+        if {[snapshot initial]} { unset ::capture }
+    }
+    if {$::project eq "mission-flight" && [info exists ::env(WINGS_WEAPONS)] && $::env(WINGS_WEAPONS) eq "1"} {
+        set bombs 0
+        for {set i 0} {$i < 18} {incr i} {
+            set kind [debug read memory [expr {$::addr(g_Combat)+$i*8+7}]]
+            if {$kind == 2} {incr bombs}
+            if {$kind > 0} {
+                set name weapon_$kind
+                if {[value g_DisplayScale] == 8} { append name _far }
+                if {![info exists ::weapon($name)] && [snapshot $name]} { set ::weapon($name) 1 }
+                if {$kind == 2 && [value g_DisplayScale] == 1} {
+                    set life [debug read memory [expr {$::addr(g_Combat)+$i*8+6}]]
+                    set pose [expr {$life>95 ? 0 : $life>92 ? 1 : 2}]
+                    set name bomb_pose_$pose
+                    if {![info exists ::weapon($name)] && [snapshot $name]} { set ::weapon($name) 1 }
+                }
+            }
+        }
+    }
+    if {[info exists bombs] && $bombs>=8 && ![info exists ::weapon(salvo)]} {
+        if {[snapshot bomb_salvo]} {set ::weapon(salvo) 1}
+    }
     if {$::count % 100 == 1} { snapshot sample_$::count }
     set phase [expr {$camera & 7}]
     if {![info exists ::fine($phase)] && $camera > 0} {
@@ -121,6 +161,9 @@ proc publication {} {
                 if {[snapshot $name]} { set ::landmark($name) 1 }
             }
         }
+    }
+    if {$::project eq "mission-flight" && [value g_DisplayScale]==8 && $world>=3880 && $world<=4100 && ![info exists ::landmark(distant_island)]} {
+        if {[snapshot distant_island]} {set ::landmark(distant_island) 1}
     }
     set view_world $world
     if {$::project eq "mission-flight"} { set view_world [expr {$world / [value g_DisplayScale]}] }
@@ -161,6 +204,19 @@ proc begin {} {
     set ::measuring 1
     capture initial
     if {$::project eq "mission-flight"} {
+        if {[info exists ::env(WINGS_WEAPONS)] && $::env(WINGS_WEAPONS) eq "1"} {
+            after time 0.15 {keymatrixdown 8 1; keymatrixdown 4 8}
+            after time 1.5 {keymatrixup 4 8}
+            after time 1.8 {keymatrixup 8 1}
+            after time 72.2 {keymatrixdown 4 8}
+            after time 72.7 {keymatrixup 4 8}
+            after time 74.5 {keymatrixdown 8 1}
+            after time 82 {keymatrixdown 4 8}
+            after time 87 {keymatrixup 4 8}
+            after time 147.4 {keymatrixdown 4 8}
+            after time 147.65 {keymatrixup 4 8}
+            after time 76 {keymatrixup 8 1}
+        }
         after time 0.3 {keymatrixdown 8 80}
         after time 0.4 {capture ship_1}
         after time 0.7 {capture ship_2}
@@ -181,12 +237,14 @@ proc begin {} {
         after time 102 {keymatrixup 8 16; keymatrixdown 8 128}
         after time 102.5 {capture distant_bank_3}
         after time 143 {keymatrixup 8 128; capture right_bound}
-        after time 144 {keymatrixdown 8 1}
-        after time 144.15 {keymatrixup 8 1}
-        after time 144.4 {capture reset}
-        after time 145 terrain_turn
-        after time 148 {capture stationary_turn}
-        after time 149 {set ::finishing 1}
+        # A 150 ms pulse can fall entirely between PAL input polls. Hold
+        # across multiple presentations and both close-view page rebuilds.
+        after time 144 {set ::suppress_captures 1; keymatrixdown 4 128}
+        after time 144.6 {keymatrixup 4 128; unset ::suppress_captures}
+        after time 145.4 {capture reset}
+        after time 146 terrain_turn
+        after time 149 {capture stationary_turn}
+        after time 150 {set ::finishing 1}
         return
     }
     after time 0.3 {keymatrixdown 8 192}

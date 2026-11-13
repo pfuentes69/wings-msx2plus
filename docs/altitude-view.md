@@ -17,7 +17,8 @@ Other prototypes retain their earlier vertical representation and bounds.
 
 The source distant renderer fills a solid color-10 sea rectangle from row 151
 to the bottom (file 0x3ea2). The MSX conversion fills rows 161–171 using the
-corresponding mission ocean blue. The carrier hull now meets the water surface.
+corresponding mission ocean blue, preserving the original sand pixels at row
+161. The carrier hull now meets the water surface.
 This distant fill is deliberately flat; the close view keeps animated waves.
 
 All 27 original `lpn…` records are retained with their own drawing origins and
@@ -47,3 +48,25 @@ scenery panning and faster rendering remain planned work.
 ![Actual reduced pitch and bank captures, enlarged](mission/distant-aircraft-poses.png)
 
 ![Aircraft at the upper height bound](mission/altitude-top.png)
+
+## Distant sand strip correction
+
+The sea fill had overwritten the one-pixel sand strip already reconstructed
+from the original reduced terrain. It now preserves source palette index 17
+(MSX index 14) at viewport row 161; rows 162–171 remain ocean blue. The original
+`8thscale.shp` beach records, `bchl` and `bchr`, supply the shoreline silhouettes.
+Coarse ground outside their outer edges is removed so it cannot leave detached
+sand fragments. The close-view artwork is unchanged.
+
+The generated terrain uses 493 shared tiles. The release excludes the unused
+legacy fixed-pose aircraft entry point to fit the resident ROM, now 32,728 of
+32,768 bytes; debug profiles retain that entry point.
+
+Validation: 117 host tests pass. Release gameplay checks pass 78 snapshots on
+each NTSC and PAL profile. Renderer checks pass 59 NTSC and 65 PAL snapshots,
+including full-VRAM comparison over the distant island. Results include ROM
+hashes: [release NTSC](sand/release-ntsc.json), [release PAL](sand/release-pal.json),
+[renderer NTSC](sand/renderer-ntsc.json), [renderer PAL](sand/renderer-pal.json).
+The image below is a VRAM reconstruction, not a raster or hardware capture.
+
+![Continuous sand beneath distant palms](sand/distant-island-vram.png)

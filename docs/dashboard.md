@@ -7,7 +7,7 @@ VBlank restores the flight-view offsets.
 
 ![Original dashboard source](../assets_src/dashboard/original.png)
 
-![Current dashboard in flight](mission/scenery-close.png)
+![Current dashboard in flight](mission/dashboard-fidelity-flight.png)
 
 The central window is a forward-looking pilot display, not a miniature
 side-view map. It now uses original `3dl`/`3dc` perspective sprites, altitude
@@ -15,10 +15,47 @@ profiles, forward surface queries and a fixed `targ` reticle. The earlier 2D
 overview has been replaced. The original continuous projection and dynamic
 entities remain future work; the current profiles are an MSX adaptation.
 
-The OIL/FUEL dials, equipment icons and counters remain static artwork until
-those gameplay systems are implemented. They do not represent working fuel,
-ammunition, lives or score. The complete layout is retained, with a reduced
-shared palette.
+The dashboard fidelity pass composes the separate original `bomb`, `ndlg`
+and `ndln` sprites onto `iff-dash`, then draws counters at their final pixel
+size: 30 rounds, one aircraft,
+seven score zeroes and the two reference needle positions. OIL/FUEL use larger
+5×7 letters, centered in the dial bases. All counters use one 5×7 number face,
+including identical zeroes for ammunition, score and the lower pair. Score
+fields have two-pixel side padding, one-pixel vertical padding and one-pixel
+character gaps. The complete original counter regions are cleared before the
+new rectangular frames are drawn, so resized source edges cannot protrude
+from behind them.
+The [B4 weapons prototype](combat-prototype.md) now updates the two-digit
+ammunition counter with the same generated face. Other counters and the two
+dials remain static reference artwork.
+
+The panel and pilot window use the original dashboard palette, quantized from
+Amiga RGB4 to MSX RGB3. The line interrupt switches it during the four separator
+rows; VBlank restores the flight palette. Carrier heave still resets scrolling
+earlier: that interrupt stages colors unused by the ocean, and a second line
+interrupt finishes the lower entries before the icons and pilot window begin. Index zero retains the
+flight border sky. Slot 1 retains the same dark sea color in both palettes,
+so the four separator rows stay constant throughout each transfer; dashboard
+blue moves to unused slot 9. Opaque black uses index 11. The previous separator
+used slot 11 before it had changed from flight white to dashboard black, which
+caused the bright flickering stripe. All separator rows are now raster-checked.
+This restores black dial
+faces, the red warnings, green panels and the distinct gray frame shades.
+Palette writes are unrolled, and terrain column traversal uses sequential
+pointers to preserve the existing presentation budget.
+
+![Dashboard before and after the fidelity pass](mission/dashboard-fidelity.png)
+
+The launcher loads `tools/pixel_display.tcl` for crisp scaling (`simple`, no
+blur or scanlines) without saving over personal emulator preferences. The
+previous personal `hq` filter rounded tiny stems into distorted lettering.
+Checks capture both raw pixels and normal display screenshots.
+
+![Normal emulator display with crisp scaling](mission/dashboard-fidelity-display.png)
+
+The 248-pixel display width still requires horizontal compression, and MSX RGB3
+cannot reproduce every original RGB4 shade. The pilot display remains the
+altitude-profile adaptation described above.
 
 The [source manifest](../assets_src/dashboard/manifest.json) retains hashes,
 dimensions and origins for all 223 `dash.shp` records, as well as the packed
@@ -41,3 +78,16 @@ python tools/convert_dashboard.py
 Each converter supports `--check` to verify generated artifacts. Earlier
 static-dashboard and side-overview reports are retained under `docs/mission/`
 as historical milestones, with their original ROM hashes.
+
+The fidelity build passes all 75 host tests and full visible-pixel, palette,
+scrolling, hidden-page and timing checks in both
+[Panasonic NTSC](mission/panasonic-dashboard-fidelity.json) (54 snapshots,
+7.5 fps, maximum redraw 79.17 ms) and
+[C-BIOS PAL](mission/pal-dashboard-fidelity.json) (62 snapshots,
+6.25 fps, maximum redraw 88.23 ms), with no missed deadlines. These reports
+record the exact ROM hash. Reproduce the emulator checks with:
+
+```sh
+python tools/verify_world_flight.py --project mission-flight --debug-profile --output tools/.build/dashboard-fidelity
+python tools/verify_world_flight.py --project mission-flight --debug-profile --machine C-BIOS_MSX2+_EU --output tools/.build/dashboard-fidelity-pal
+```

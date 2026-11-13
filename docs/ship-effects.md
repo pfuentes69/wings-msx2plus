@@ -1,5 +1,13 @@
 # Carrier flag, radar and heave
 
+The [deck personnel correction](deck-personnel.md) now separates the elevator
+wait pose from the one-arm pointing cycle and keeps the deck-end man signalling.
+
+The later [elevator/service increment](carrier-elevator.md) adds the original
+platform and moves flag/radar pixels from resident RLE into bank 13. Its report
+contains the current budgets and verification. The measurements below retain
+the earlier heave milestone evidence.
+
 The original normal-scale `world.shp` has four combined carrier overlays:
 `flg3`, `flg4`, `flg5`, `flg6`. Each is 32×42 with drawing origin (6,115).
 They contain both the changing cloth and the turning radar, plus opaque sky
@@ -20,8 +28,10 @@ adaptations; the original combined artwork and observed displacement are
 retained, without claiming exact original animation timing.
 
 Heave uses the MSX vertical scroll register while the close carrier is in
-view. Aircraft and water coordinates compensate for the offset, keeping their
-screen positions fixed. The dashboard interrupt restores zero vertical scroll;
+view. Airborne aircraft and water coordinates compensate for the offset, keeping their
+screen positions fixed. Grounded release-profile aircraft follow the deck instead.
+The [P1 carrier corrections](p1-flight.md) also add both source-backed signalmen,
+using the special map markers and original two-arm animation records. The dashboard interrupt restores zero vertical scroll;
 its line number compensates for the scroll offset. A uniform one-pixel guard
 line at row 171 lets the reset settle before the panel begins at row 172. The same scroll state is restored at every VBlank, even
 when no new frame is published. The distant view keeps its current source art;
