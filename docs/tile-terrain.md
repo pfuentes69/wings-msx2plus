@@ -1,5 +1,9 @@
 # Original artwork as SCREEN 5 terrain tiles
 
+> **Retired 2026-11-13.** This build no longer exists; the mission ROM
+> absorbed its renderer. Source is in git history up to commit `af61737`.
+
+
 Completed 2026-11-11. The `tile-flight` prototype replaces procedural scenery
 with an authored island scene built from original world graphics. It retains
 world-space flight, camera following and transparent aircraft composition.

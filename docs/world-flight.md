@@ -1,5 +1,9 @@
 # World-space flight and following camera
 
+> **Retired 2026-11-13.** This build no longer exists; the mission ROM
+> absorbed its renderer. Source is in git history up to commit `af61737`.
+
+
 Completed 2026-11-11. The `world-flight` prototype combines the recovered
 aircraft poses with full-height synthetic terrain, bounded world-space motion,
 and a following camera. It retains 30 Hz NTSC / 25 Hz PAL presentation.

@@ -169,17 +169,15 @@ def main():
     parser.add_argument('--machine', default='Panasonic_FS-A1WX-512K')
     parser.add_argument('--emulator', default=shutil.which('openmsx'))
     parser.add_argument('--output', type=Path, default=ROOT / 'tools/.build/world-flight')
-    parser.add_argument('--project', choices=['world-flight', 'tile-flight', 'mission-flight'], default='world-flight')
-    parser.add_argument('--debug-profile', action='store_true', help='use mission-flight-debug ROM with renderer test controls')
+    # The world-flight and tile-flight prototypes are retired; only the mission
+    # renderer remains. Its scenarios need the debug profile's R/T controls.
+    parser.add_argument('--project', choices=['mission-flight'], default='mission-flight')
+    parser.add_argument('--debug-profile', action='store_true', help='use mission-flight-debug ROM with renderer test controls (required)')
     parser.add_argument('--weapons', action='store_true', help='exercise gunfire, bombs, impacts and live ammunition')
     parser.add_argument('--headless', action='store_true', help='disable graphics; verify VRAM and timing without raster screenshots')
     args = parser.parse_args()
     if args.project=='mission-flight' and not args.debug_profile:
         parser.error('mission renderer scenarios require --debug-profile; build mission-flight-debug first')
-    if args.debug_profile and args.project!='mission-flight':
-        parser.error('--debug-profile requires --project mission-flight')
-    if args.weapons and args.project != 'mission-flight':
-        parser.error('--weapons requires --project mission-flight')
     if not args.emulator:
         parser.error('openmsx is required')
     output = args.output.resolve()
@@ -196,31 +194,24 @@ def main():
     env['WINGS_HEADLESS'] = '1' if args.headless else '0'
     rom = ROOT / f'out/{rom_project}/{rom_project}.rom'
     rom_bytes = rom.read_bytes()
-    background = terrain = None
-    if args.project in ('tile-flight', 'mission-flight'):
-        import re
-        symbols = dict((name, int(value, 16)) for name, value in re.findall(
-            r'DEF _(\w+) (0x[0-9A-Fa-f]+)', rom.with_suffix('.noi').read_text()))
-        if args.project == 'mission-flight':
-            assert 0x4000 <= symbols['Scenery_Read'] < symbols['Scenery_ReadEnd'] < 0x6000
-        else:
-            assert 0x4000 <= symbols['Terrain_Load'] < symbols['Terrain_LoadEnd'] < 0x6000
-            assert not 0x6000 <= symbols['VDP_WriteVRAM_128K'] < 0x8000
-        folder = ROOT / ('assets_msx/mission_a' if args.project == 'mission-flight' else 'assets_msx/terrain')
-        terrain = json.loads((folder / 'manifest.json').read_text())
-        background = (folder / 'scene.indices').read_bytes()
-        bundle = (folder / 'tiles.sc5').read_bytes() + (folder / 'map.bin').read_bytes()
-        assert len(rom_bytes) == (262144 if args.project.startswith('mission-flight') else 65536)
-        assert rom_bytes[32768:32768 + len(bundle)] == bundle, 'incorrect ROM asset bank placement'
-        if args.project == 'mission-flight':
-            tables=(ROOT/'assets_msx/dashboard/bank_7.bin').read_bytes()
-            assert rom_bytes[7*8192:7*8192+len(tables)]==tables
-            for bank in range(8,11):
-                data = (ROOT / f'assets_msx/hellcat/mission_bank_{bank}.bin').read_bytes()
-                assert rom_bytes[bank*8192:bank*8192+len(data)] == data
-            assert rom_bytes[11*8192:11*8192+6336] == (ROOT / 'assets_msx/dashboard/waves.sc5').read_bytes()
+    import re
+    symbols = dict((name, int(value, 16)) for name, value in re.findall(
+        r'DEF _(\w+) (0x[0-9A-Fa-f]+)', rom.with_suffix('.noi').read_text()))
+    assert 0x4000 <= symbols['Scenery_Read'] < symbols['Scenery_ReadEnd'] < 0x6000
+    folder = ROOT / 'assets_msx/mission_a'
+    terrain = json.loads((folder / 'manifest.json').read_text())
+    background = (folder / 'scene.indices').read_bytes()
+    bundle = (folder / 'tiles.sc5').read_bytes() + (folder / 'map.bin').read_bytes()
+    assert len(rom_bytes) == 262144
+    assert rom_bytes[32768:32768 + len(bundle)] == bundle, 'incorrect ROM asset bank placement'
+    tables=(ROOT/'assets_msx/dashboard/bank_7.bin').read_bytes()
+    assert rom_bytes[7*8192:7*8192+len(tables)]==tables
+    for bank in range(8,11):
+        data = (ROOT / f'assets_msx/hellcat/mission_bank_{bank}.bin').read_bytes()
+        assert rom_bytes[bank*8192:bank*8192+len(data)] == data
+    assert rom_bytes[11*8192:11*8192+6336] == (ROOT / 'assets_msx/dashboard/waves.sc5').read_bytes()
     with (output / 'openmsx.log').open('w') as log:
-        cartridge = ['-cart', str(rom)] + (['-romtype', 'ASCII8'] if terrain else [])
+        cartridge = ['-cart', str(rom), '-romtype', 'ASCII8']
         settings = []
         if args.headless:
             config = output / 'headless.xml'

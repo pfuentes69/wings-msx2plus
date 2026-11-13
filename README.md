@@ -54,8 +54,6 @@ the bundled executables.
 
 ```sh
 ./launch.sh           # Build and run on Panasonic_FS-A1WX-512K
-./launch.sh world-flight # Fly over scrolling terrain with a following camera
-./launch.sh tile-flight  # Original-art terrain tiles; 64 KiB ASCII8 prototype
 ./launch.sh mission-flight # Source-backed a.map layout and carrier; slower baseline
 ./build.sh            # Build out/wings.rom (32 KiB); no emulator auto-launch
 ./build.sh clean      # Remove generated out/ files
@@ -88,16 +86,13 @@ now streams a full-height, 4,096-pixel synthetic landscape through a two-page
 ring, with verified PAL/NTSC timing and pixel comparisons. Build it with
 `./build.sh projname=hardware-scroll`; its ROM is
 `out/hardware-scroll/hardware-scroll.rom`. P pauses and R reverses it.
-The integrated [world-flight prototype](docs/world-flight.md) adds a bounded
-4,096-pixel world, following camera, transparent aircraft and trail restoration
-using two alternating single-page rings. Run `./launch.sh world-flight`;
-arrows/joystick fly, stationary T turns, and Space/fire resets altitude and
-velocity while retaining horizontal world position. PAL/NTSC checks pass.
-The [original-art tile prototype](docs/tile-terrain.md) replaces its test
-graphics with palms, huts and shoreline pieces in an authored island scene.
-It uses 16×16 SCREEN 5 bitmap tiles, a shared reduced palette and a 64 KiB
-ASCII8 ROM. Run `./launch.sh tile-flight`; this is not an original mission-map
-decode. Both PAL and NTSC pass pixel, cache, mapper and timing checks.
+The [world-flight](docs/world-flight.md) and [original-art tile](docs/tile-terrain.md)
+prototypes established the following camera, trail restoration and 16×16
+SCREEN 5 tile renderer that the mission build now uses. Both builds were
+retired on 2026-11-13 after outgrowing their 32/64 KiB layouts; their source
+remains in git history up to commit `af61737`. The tile converter is kept
+because its palette and index mapping feed the mission, ship and dashboard
+converters.
 The [a.map mission prototype](docs/mission-map.md) recovers original object
 positions, depth offsets, carrier layout and reset X. Run
 `./launch.sh mission-flight`. The [scenery fidelity pass](docs/scenery-fidelity.md)

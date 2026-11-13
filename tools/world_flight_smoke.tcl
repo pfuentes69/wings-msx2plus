@@ -18,7 +18,7 @@ if {$headless} {set throttle false} else {set renderer SDLGL-PP}
 set maxframeskip 0
 set root $env(WINGS_ROOT)
 set output $env(WINGS_TEST_OUT)
-set project [expr {[info exists env(WINGS_PROJECT)] ? $env(WINGS_PROJECT) : "world-flight"}]
+set project [expr {[info exists env(WINGS_PROJECT)] ? $env(WINGS_PROJECT) : "mission-flight"}]
 set report [open [file join $output emulator-report.txt] w]
 proc bgerror {message} {
     puts $::report "FAIL $message\n$::errorInfo"
@@ -82,7 +82,7 @@ proc snapshot {name} {
         dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     }
     dump $name.palette [debug read_block {VDP palette} 0 32]
-    if {$::project in {tile-flight mission-flight}} {
+    if {$::project eq "mission-flight"} {
         foreach symbol {g_Bank0Segment g_Bank1Segment g_Bank2Segment g_Bank3Segment} expected {0 1 2 3} {
             if {[debug read memory $::addr($symbol)] != $expected} { error "Mapper bank not restored: $symbol" }
         }
@@ -97,7 +97,7 @@ proc snapshot {name} {
     after time 0.1 [list finish_snapshot $name]
     return 1
 }
-if {$project in {tile-flight mission-flight}} {
+if {$project eq "mission-flight"} {
     foreach name {g_Bank0Segment g_Bank1Segment g_Bank2Segment g_Bank3Segment} {
         if {![regexp "DEF _$name (0x\[0-9A-Fa-f\]+)" $symbols -> address]} { error "Missing $name" }
         set addr($name) $address
@@ -251,14 +251,6 @@ proc begin {} {
     after time 2.5 {keymatrixup 8 64}
     after time 4 {capture terrain_flight}
     set extra 0
-    if {$::project eq "tile-flight"} {
-        after time 8 {keymatrixup 8 128}
-        # NTSC coast can encounter several first-time fine-phase capture holds.
-        # Leave enough simulated movement time to come fully to rest before T.
-        after time 10.5 terrain_turn
-        after time 13.5 {keymatrixdown 8 128}
-        set extra 10.5
-    }
     after time [expr {38 + $extra}] {keymatrixup 8 128; capture right_bound}
     after time [expr {39 + $extra}] {keymatrixdown 8 48}
     after time [expr {42 + $extra}] {capture left_climb}
