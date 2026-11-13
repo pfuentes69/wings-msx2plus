@@ -1,4 +1,5 @@
 #include "menu.h"
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCENE)
 #include "vdp.h"
 #include "vdp_inl.h"
 
@@ -69,7 +70,7 @@ static void Text(u8 page, u8 y, const char* text)
     }
 }
 
-void Menu_Draw(u8 page, const GameState* game)
+void Menu_Draw(u8 page, const GameState* game) WINGS_BANKED
 {
     u8 i;
     char rank[]="  RANK 1";

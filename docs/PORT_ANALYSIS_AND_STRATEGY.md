@@ -28,7 +28,7 @@ when reported; this plan does not schedule another general dashboard art pass.
 
 | Area | Verified baseline | Remaining functional gap |
 | --- | --- | --- |
-| Build and platform | MSXgl/SDCC, 128 KiB ASCII8 ROM, native build/launcher, scripted openMSX | Physical hardware and final storage compatibility |
+| Build and platform | MSXgl/SDCC, 256 KiB ASCII8 ROM with banked code, native build/launcher, scripted openMSX | Physical hardware and final storage compatibility |
 | Asset research | 73 recovered files, 12 unpacked archives/1,049 records; aircraft, terrain, dashboard and carrier effects decoded as needed | Complete enemy/weapon/ship animation exports and semantic gameplay tables |
 | Mission data | All 15 map files parsed; a.map anchors, surface classes, depth and reset X recovered | Briefings, objectives, ranks, dynamic target/enemy initialization |
 | Flight and views | P1 heading/throttle, stall modes, coupled turns, bidirectional deck taxi with ground-turn artwork/end stops, and leftward deck takeoff; scrolling and close/distant views | Timed Amiga tuning, landing and aircraft collisions |
@@ -298,11 +298,13 @@ and sortie lifetimes; feed all HUD values from those states. The MSX layer owns
 input sampling, safe bank calls, draw budgets, VBlank publication and sound.
 The Python pipeline owns source decoding, manifests and reproducible conversion.
 
-The pre-P0 ROM used 31,529 of 32,768 resident bytes and 9,306 static RAM
-bytes before IM2, stack and BIOS workspace. P0 moves dashboard streams to bank 12
-and keeps ISR palette data in RAM; see the [current measured budget](p0-foundation.md).
-Subsequent stages must maintain a measured RAM/entity and banked-code budget;
-the existing four resident segments cannot absorb the rest of the game unchanged.
+After P1 the four resident segments were full (32,472 of 32,768 bytes). The
+mission ROM now uses [banked code](rom-banking.md): 24 KiB stays resident and
+window 3 switches between code segments in a 256 KiB ROM. The release uses
+21,165 resident bytes plus banked segments 3 and 16, and 11,067 static RAM
+bytes before IM2, stack and BIOS workspace. New gameplay modules go into banked
+segments; every build checks the layout. Subsequent stages must maintain a
+measured RAM/entity and banked-code budget.
 Keep the validated mapper restoration and disjoint VRAM allocator as contracts.
 
 The current projectile pool is a performance choice, not a manual ammunition

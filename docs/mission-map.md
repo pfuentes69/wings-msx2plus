@@ -11,7 +11,7 @@ rules, collision, carrier motion and landing behavior remain future work.
 ./build.sh projname=mission-flight
 ```
 
-The ROM is `out/mission-flight/mission-flight.rom`, a 128 KiB ASCII8 image. Arrows
+The ROM is `out/mission-flight/mission-flight.rom`, now a 256 KiB ASCII8 image with banked code (see [ROM banking](rom-banking.md)). Arrows
 or joystick port 1 move, stationary T turns, and Space/fire resets altitude,
 velocity and pose while retaining horizontal position. The aircraft starts
 airborne at the recovered horizontal reset coordinate, not in a recovered

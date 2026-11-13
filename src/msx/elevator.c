@@ -1,4 +1,5 @@
 #include "elevator.h"
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCENE)
 #include "../core/flight.h"
 #include "../generated/elevator.h"
 #include "terrain_renderer.h"
@@ -7,7 +8,7 @@
 #ifdef WINGS_P1_FLIGHT
 static u8 s_Depth[2];
 static u16 s_Camera[2];
-void Elevator_Load(void)
+void Elevator_Load(void) WINGS_BANKED
 {
     u8 i,row,width,height,line[32];
     u16 offset=0,address;
@@ -38,7 +39,7 @@ static void Copy(u8 page,u16 camera,u8 index,u16 origin,u8 y,u8 height,u8 width)
     if (index) VDP_CommandLMMM(sx,g_ElevatorY[index],left&255,(u16)page*256+y,right-left,height,VDP_OP_TIMP);
     else VDP_CommandHMMM(sx,g_ElevatorY[0],left&255,(u16)page*256+y,right-left,height);
 }
-void Elevator_Draw(u8 page,u16 camera,u8 depth,u8 cleared)
+void Elevator_Draw(u8 page,u16 camera,u8 depth,u8 cleared) WINGS_BANKED
 {
     u16 left=(camera+8)&65534u,right=(camera+257)&65534u,column;
     u8 i;

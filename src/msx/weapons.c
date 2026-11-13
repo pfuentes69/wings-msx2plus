@@ -1,4 +1,5 @@
 #include "weapons.h"
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_HUD)
 #include "dashboard.h"
 #include "vdp.h"
 #include "vdp_inl.h"
@@ -8,7 +9,7 @@ static Footprint s_Old[2][COMBAT_COUNT];
 static u16 s_Camera;
 static u8 s_Page, s_BombPose, s_Count[2];
 
-void Weapons_Init(void)
+void Weapons_Init(void) WINGS_BANKED
 {
     u8 page, i;
     s_Count[0]=s_Count[1]=0;
@@ -35,7 +36,7 @@ static void Backup(u8 page, u8 index, u8 save)
     }
 }
 
-void Weapons_Restore(u8 page, u8 cleared)
+void Weapons_Restore(u8 page, u8 cleared) WINGS_BANKED
 {
     u8 i = s_Count[page];
     // Later backups can contain earlier effects: unwind in reverse draw order.
@@ -66,7 +67,7 @@ static void Mark(i16 x, i16 y, u8 width, u8 height, u8 color)
     }
 }
 
-void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* state)
+void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* state) WINGS_BANKED
 {
     u8 i, kind;
     i8 tx,ty;
@@ -133,7 +134,7 @@ void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* stat
     }
 }
 
-u8 Weapons_PendingRestore(void)
+u8 Weapons_PendingRestore(void) WINGS_BANKED
 {
     return s_Count[0]>COMBAT_GUN_COUNT || s_Count[1]>COMBAT_GUN_COUNT;
 }

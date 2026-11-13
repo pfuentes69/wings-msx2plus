@@ -643,7 +643,8 @@ void main(void)
 #ifdef WINGS_DEBUG_CONTROLS
     g_Game.phase=GAME_PLAY;
 #endif
-    for (i=0; i<32; ++i) { g_TopPalette[i]=g_TerrainPalette[i]; g_BottomPalette[i]=g_DashboardPalette[i]; }
+    for (i=0; i<32; ++i) g_TopPalette[i]=g_TerrainPalette[i];
+    Dashboard_CopyPalette(g_BottomPalette);
     Combat_Reset(&g_Combat);
     Weapons_Init();
     g_TerrainFar = g_ViewChange = s_PageScale[0] = s_PageScale[1] = 0;

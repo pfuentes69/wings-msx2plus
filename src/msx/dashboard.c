@@ -1,4 +1,5 @@
 #include "dashboard.h"
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_HUD)
 #include "vdp.h"
 #include "vdp_inl.h"
 #include "scenery_load.h"
@@ -42,7 +43,7 @@ static void Expand(u16 x, u16 y, u16 width, u8 height)
     }
 }
 
-void Dashboard_LoadTables(void)
+void Dashboard_LoadTables(void) WINGS_BANKED
 {
     u16 offset;
     for (offset=0;offset<DASHBOARD_TABLE_BYTES;offset+=64)
@@ -52,7 +53,7 @@ void Dashboard_LoadTables(void)
     Scenery_Read(7,AIRCRAFT_TABLE_OFFSET+512,(u8*)g_AircraftShapes+512,sizeof(g_AircraftShapes)-512);
 }
 
-void Dashboard_Load(void)
+void Dashboard_Load(void) WINGS_BANKED
 {
     u8 page, frame, row, piece;
     u16 x, y, offset = 0;
@@ -91,7 +92,7 @@ void Dashboard_Load(void)
     }
 }
 
-u8 Dashboard_Draw(u8 page, u8 area, u8 altitude)
+u8 Dashboard_Draw(u8 page, u8 area, u8 altitude) WINGS_BANKED
 {
     u8 profile = area * 8 + (altitude >> 5);
     if (s_Pilot[page] != profile)
@@ -103,9 +104,13 @@ u8 Dashboard_Draw(u8 page, u8 area, u8 altitude)
     return profile;
 }
 
-const AircraftShape* Dashboard_FarShape(u8 frame) { return &g_FarShapes[g_FarPoseForFrame[frame]]; }
+void Dashboard_CopyPalette(u8* destination) WINGS_BANKED
+{
+    u8 i;
+    for (i = 0; i < 32; ++i) destination[i] = g_DashboardPalette[i];
+}
 
-void Dashboard_RestoreWaves(u8 page, u8 reset)
+void Dashboard_RestoreWaves(u8 page, u8 reset) WINGS_BANKED
 {
     if (reset) s_WaveBackdropValid[page] = 0;
     else if (s_WaveBackdropValid[page])
@@ -157,7 +162,7 @@ static void DrawWaterBand(u8 page, u16 source_x, u16 source_y,
     }
 }
 
-void Dashboard_Waves(u8 page, u16 camera, u8 frame, u8 heave)
+void Dashboard_Waves(u8 page, u16 camera, u8 frame, u8 heave) WINGS_BANKED
 {
     const MissionWaterBand* band = g_MissionWaterBands;
     u8 region, row = 0, height = 0;
@@ -212,7 +217,7 @@ static void Stock(u8 page, u8 ammo)
     }
 }
 
-void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives)
+void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives) WINGS_BANKED
 {
     u8 row;
     u16 address;

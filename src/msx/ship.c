@@ -1,4 +1,5 @@
 #include "ship.h"
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCENE)
 #include "vdp.h"
 #include "vdp_inl.h"
 #include "../generated/ship.h"
@@ -17,7 +18,7 @@ u8 g_CrewFrame;
 static u8 s_CrewTick;
 #endif
 
-void Ship_Load(void)
+void Ship_Load(void) WINGS_BANKED
 {
     u8 piece, row, buffer[8];
     u16 address;
@@ -45,7 +46,7 @@ void Ship_Load(void)
 #endif
 }
 
-void Ship_Advance(u8 ticks)
+void Ship_Advance(u8 ticks) WINGS_BANKED
 {
 #ifdef WINGS_P1_FLIGHT
     s_CrewTick += ticks;
@@ -61,7 +62,7 @@ void Ship_Advance(u8 ticks)
     }
 }
 
-void Ship_Draw(u8 page, u16 camera)
+void Ship_Draw(u8 page, u16 camera) WINGS_BANKED
 {
     u8 piece, index;
     u16 left, right, origin, sx, width, part, ring;
@@ -88,7 +89,7 @@ void Ship_Draw(u8 page, u16 camera)
 #ifdef WINGS_P1_FLIGHT
 /* Each frame contains the source figure over its exact static deck backdrop.
  * Replacing the whole rectangle erases old arms before the plane is composited. */
-void Ship_DrawCrew(u8 page, u16 camera)
+void Ship_DrawCrew(u8 page, u16 camera) WINGS_BANKED
 {
     u8 piece, index;
     u16 origin, left, right, sx, ring, width, part, column;

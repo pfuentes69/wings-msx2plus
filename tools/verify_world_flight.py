@@ -210,7 +210,7 @@ def main():
         terrain = json.loads((folder / 'manifest.json').read_text())
         background = (folder / 'scene.indices').read_bytes()
         bundle = (folder / 'tiles.sc5').read_bytes() + (folder / 'map.bin').read_bytes()
-        assert len(rom_bytes) == (131072 if args.project == 'mission-flight' else 65536)
+        assert len(rom_bytes) == (262144 if args.project.startswith('mission-flight') else 65536)
         assert rom_bytes[32768:32768 + len(bundle)] == bundle, 'incorrect ROM asset bank placement'
         if args.project == 'mission-flight':
             tables=(ROOT/'assets_msx/dashboard/bank_7.bin').read_bytes()

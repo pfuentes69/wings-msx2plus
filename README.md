@@ -103,7 +103,7 @@ positions, depth offsets, carrier layout and reset X. Run
 `./launch.sh mission-flight`. The [scenery fidelity pass](docs/scenery-fidelity.md)
 lowers the carrier/land strip, animates the original wave frames, replaces the
 central overview with a forward pilot view, and switches to original 1:8
-scenery at altitude. It uses a 128 KiB ASCII8 ROM and currently targets
+scenery at altitude. It uses a 256 KiB ASCII8 ROM with [banked code](docs/rom-banking.md) and currently targets
 7.5/6.25 fps with nominal 150 Hz simulation; scale changes briefly rebuild the
 hidden pages. The [weapons foundation](docs/combat-prototype.md) adds gunfire,
 bombs and terrain impacts. [P0](docs/p0-foundation.md) supplies rank/briefing/loadout
