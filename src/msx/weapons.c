@@ -70,7 +70,6 @@ static void Mark(i16 x, i16 y, u8 width, u8 height, u8 color)
 void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* state) WINGS_BANKED
 {
     u8 i, kind;
-    i8 tx,ty;
     i16 x, y, left, right, top, bottom;
     Footprint* f;
     const CombatProjectile* p;
@@ -86,7 +85,6 @@ void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* stat
         // Back up only the affected pixels (plus byte alignment). Small
         // rounds must not pay for a full impact cross on every page restore.
         if (far) { left=x&~1; right=left+2; top=y; bottom=y+(kind>=COMBAT_IMPACT ? 2 : 1); }
-        else if (kind==COMBAT_ROUND) { left=(x-1)&~1; right=left+4; top=y-1; bottom=y+2; }
         else if (kind==COMBAT_FALLING_BOMB) { left=(x-3)&~1; right=left+8; top=y-3; bottom=y+3; }
         else { left=(x-3)&~1; right=left+8; top=y-3; bottom=y+4; }
         if (left < (i16)((camera+8)&65534u)) left = (camera+8)&65534u;
@@ -99,25 +97,6 @@ void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* stat
         f->width = right-left; f->height = bottom-top;
         Backup(page, i, 1);
         if (far) Mark(x, y, 1, kind >= COMBAT_IMPACT ? 2 : 1, 11);
-        else if (kind == COMBAT_ROUND)
-        {
-            if (p->vy>-8 && p->vy<8) Mark(x-1,y,3,1,11);
-            else
-            {
-                tx=(p->vx>-24 && p->vx<24) ? 0 : p->vx<0 ? -1 : 1;
-                ty=p->vy<0 ? -1 : 1;
-                if (f->width==4 && f->height==3 && (u8)(x-1)<254)
-                    VDP_CommandLINE((x-tx)&255,(u16)page*256+y-ty,2,tx ? 2 : 0,11,
-                        (tx<0 ? VDP_ARG_DIX_LEFT : 0) | (ty<0 ? VDP_ARG_DIY_UP : 0) |
-                        (tx ? VDP_ARG_MAJ_H : VDP_ARG_MAJ_V),VDP_OP_IMP);
-                else
-                {
-                    Mark(x-tx,y-ty,1,1,11);
-                    Mark(x,y,1,1,11);
-                    Mark(x+tx,y+ty,1,1,11);
-                }
-            }
-        }
         else if (kind == COMBAT_FALLING_BOMB)
         {
             // Two discrete rotations after release: horizontal, diagonal, down.

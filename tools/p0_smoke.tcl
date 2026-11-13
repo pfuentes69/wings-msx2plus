@@ -89,7 +89,7 @@ proc publishing {} {
     dump $name.view [debug read_block memory $::addr(g_DisplayScale) 3]
     dump $name.crew [debug read_block memory $::addr(g_CrewFrame) 1]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
-    dump $name.combat [debug read_block memory $::addr(g_Combat) 158]
+    dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
     dump $name.rom [debug read_block memory 16384 32768]
     puts $::report "snapshot $name [value g_DisplayPage] [word g_DisplayWorld] [word g_DisplayY] [value g_SelectedFrame] [value g_DisplayWave] [value g_DisplayHeave] [value g_DisplayShipFrame] [word g_DisplayCamera]"
     debug write memory $::addr(g_HoldFlight) 1

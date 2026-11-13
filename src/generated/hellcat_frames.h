@@ -23,3 +23,9 @@ extern const unsigned char g_GearFrame[2], g_TailDownFrame[2];
 extern const unsigned char g_TaxiTurn[11];
 extern const unsigned char g_TurnLeftToRight[AIRCRAFT_TURN_STEPS];
 extern const unsigned char g_TurnRightToLeft[AIRCRAFT_TURN_STEPS];
+/* Original cannon flash/tracer overlays: variant * 20 + (left ? 10 : 0) + pitch.
+ * Each variant streams into one VRAM slot (atlas_x/atlas_y) when its pose changes. */
+#define GUN_FLASH_COUNT 40
+#ifdef MISSION_TERRAIN
+extern const AircraftShape g_GunFlash[GUN_FLASH_COUNT];
+#endif

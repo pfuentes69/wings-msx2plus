@@ -11,7 +11,7 @@ import statistics
 import subprocess
 from PIL import Image
 from convert_dashboard import DASHBOARD_DIGITS, weapon_patch
-from verify_world_flight import vram_image, expected_pixels
+from verify_world_flight import vram_image, expected_pixels, gun_flash_shape
 from aircraft_scene import AircraftScene
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -72,7 +72,7 @@ def main():
             expected=expected_pixels(scene,int(pose),int(world),int(y),int(camera),
                 (ROOT/'assets_msx/mission_a'/('far.indices' if scale==8 else 'scene.indices')).read_bytes(),
                 terrain['far_width'] if scale==8 else terrain['width'],True,scale,int(wave),pilot,int(heave),int(ship),
-                projectiles,game[4],game[3],game[2],crew,ground,depth,stage!=1)
+                projectiles,game[4],game[3],game[2],crew,ground,depth,stage!=1,flash=combat[158])
             for row in range(212):
                 for col in range(8,256):
                     ring=col if row>=172 else (int(camera)+col)%256
@@ -104,7 +104,7 @@ def main():
         shots,secondary,impacts=struct.unpack_from('<HHH',combat,152)
         snapshots[name]=dict(phase=game[0],rank=game[1],lives=game[2],weapon=game[3],stock=game[4],invert=game[5],
                             stage=stage,depth=depth,crew=crew,scale=scale,pilot=pilot,camera=int(camera),world=int(world),y=int(y),pose=int(pose),wave=int(wave),heave=int(heave),ship=int(ship),
-                            shots=shots,secondary=secondary,impacts=impacts,projectiles=projectiles)
+                            shots=shots,secondary=secondary,impacts=impacts,projectiles=projectiles,flash=combat[158])
         if not args.headless:
             assert Image.open(out/f'{name}.png').size==(320,240)
     required={'lift_paused','lift_pause_wait','lift_start','lift_rise_24','lift_rise_16','lift_rise_8','lift_left_down_8','lift_left_down_16','lift_left_down_24','lift_left_inside','service_left','lift_left_return','lift_right_down_8','lift_right_down_24','lift_right_inside','service_right','lift_right_return','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','approach','climb_gear_up','rank','load_menu','briefing','rockets','torpedo','loadout','start','guns','aliases','short_press','paused',
@@ -130,12 +130,13 @@ def main():
             snapshot=snapshots[f'cannon_{attitude}_{heading}']
             expected_pose={'left':{'stall':43,'level':16,'dive':45},'right':{'stall':3,'level':4,'dive':6}}[heading][attitude]
             assert snapshot['pose']==expected_pose,(heading,attitude,'aircraft pose',snapshot['pose'])
-            rounds=[p for p in snapshot['projectiles'] if p['kind']==1]
-            assert rounds,(heading,attitude,'no live shots')
-            if attitude=='level':rounds=[max(rounds,key=lambda p:p['life'])]
-            for p in rounds:
-                assert (p['vx']<0)==(heading=='left'),(heading,attitude,p)
-                assert p['vy']<0 if attitude=='stall' else p['vy']>0 if attitude=='dive' else p['vy']==0,(heading,attitude,p)
+            # The original draws a per-pose flash/tracer overlay, not travelling rounds.
+            assert snapshot['flash'] in (1,2),(heading,attitude,'no cannon flash overlay')
+            assert gun_flash_shape(scene,expected_pose,snapshot['flash']),(heading,attitude,'no overlay for pose')
+            strikes=[p for p in snapshot['projectiles'][:2] if p['kind'] in (3,4)]
+            if attitude!='dive':assert not strikes,(heading,attitude,'level/climbing fire struck the surface')
+            for p in strikes:
+                assert (p['x']//4<snapshot['world'])==(heading=='left'),(heading,attitude,p)
     taxi=scene.metadata['taxi_turn']
     for i in range(10):assert snapshots[f'taxi_right_{i}']['pose']==taxi[i]
     for i in range(10,0,-1):assert snapshots[f'taxi_left_{i}']['pose']==taxi[i]

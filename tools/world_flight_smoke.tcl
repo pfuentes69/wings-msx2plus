@@ -78,7 +78,7 @@ proc snapshot {name} {
     dump $name.vram [debug read_block VRAM 0 131072]
     dump $name.regs [debug read_block {VDP regs} 0 32]
     if {$::project eq "mission-flight"} {
-        dump $name.combat [debug read_block memory $::addr(g_Combat) 158]
+        dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
         dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     }
     dump $name.palette [debug read_block {VDP palette} 0 32]
@@ -93,6 +93,7 @@ proc snapshot {name} {
     if {$::project eq "mission-flight"} { puts $::report "surface $name [word g_DisplaySurfaceWord]"; puts $::report "view $name [value g_DisplayScale] [value g_DisplayWave] [value g_DisplayPilot]" }
     if {$::project eq "mission-flight"} { puts $::report "ship $name [value g_DisplayHeave] [value g_DisplayShipFrame]" }
     debug write memory $::addr(g_HoldFlight) 1
+    set ::after_snapshot 1
     if {!$::headless} { set ::throttle true }
     after time 0.1 [list finish_snapshot $name]
     return 1
@@ -130,6 +131,16 @@ proc publication {} {
     }
     if {$::project eq "mission-flight" && [info exists ::env(WINGS_WEAPONS)] && $::env(WINGS_WEAPONS) eq "1"} {
         set bombs 0
+        set flash [debug read memory [expr {$::addr(g_Combat)+158}]]
+        # A snapshot holds the flight; the next publish may repeat the page unrendered.
+        set held [info exists ::after_snapshot]
+        unset -nocomplain ::after_snapshot
+        # Overlays exist only for straight pitch poses: skip turns and far view.
+        if {$flash > 0 && [value g_DisplayScale] == 1 && ![value g_Turning]} {
+            # Every published close-view frame while firing: verifies fa/fb alternation.
+            puts $::report "flash $::count $flash $held"
+            if {![info exists ::weapon(gun_flash_$flash)] && [snapshot gun_flash_$flash]} { set ::weapon(gun_flash_$flash) 1 }
+        }
         for {set i 0} {$i < 18} {incr i} {
             set kind [debug read memory [expr {$::addr(g_Combat)+$i*8+7}]]
             if {$kind == 2} {incr bombs}
@@ -208,6 +219,9 @@ proc begin {} {
             after time 0.15 {keymatrixdown 8 1; keymatrixdown 4 8}
             after time 1.5 {keymatrixup 4 8}
             after time 1.8 {keymatrixup 8 1}
+            # Straight, level close-view burst: original fa/fb overlays, no strike.
+            after time 8.0 {keymatrixdown 8 1}
+            after time 9.2 {keymatrixup 8 1}
             after time 72.2 {keymatrixdown 4 8}
             after time 72.7 {keymatrixup 4 8}
             after time 74.5 {keymatrixdown 8 1}

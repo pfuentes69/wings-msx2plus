@@ -3,12 +3,12 @@
     "presentation_vblanks": 6,
     "samples": 185,
     "median_publication_ms": 119.61967233265725,
-    "max_regular_redraw_ms": 60.85857280743312,
+    "max_regular_redraw_ms": 60.03304889308936,
     "simulation_ticks_per_pixel": 18,
     "travel_ticks": 576
   },
   "machine": "C-BIOS_MSX2+_EU",
-  "rom_sha256": "70c607961b69662d499f2dbc3bdcd3ac5996667b08586f5caadff50b2ad82258",
+  "rom_sha256": "151c3b361dc74d7648161fd5fefe7c0c7e14c896aa60b435f98f49aa508b8580",
   "raster_captured": false,
   "snapshots": {
     "rank": {
@@ -33,7 +33,8 @@
       "shots": 0,
       "secondary": 0,
       "impacts": 0,
-      "projectiles": []
+      "projectiles": [],
+      "flash": 0
     },
     "load_menu": {
       "phase": 5,
@@ -57,7 +58,8 @@
       "shots": 0,
       "secondary": 0,
       "impacts": 0,
-      "projectiles": []
+      "projectiles": [],
+      "flash": 0
     },
     "briefing": {
       "phase": 1,
@@ -81,7 +83,8 @@
       "shots": 0,
       "secondary": 0,
       "impacts": 0,
-      "projectiles": []
+      "projectiles": [],
+      "flash": 0
     },
     "rockets": {
       "phase": 2,
@@ -105,7 +108,8 @@
       "shots": 0,
       "secondary": 0,
       "impacts": 0,
-      "projectiles": []
+      "projectiles": [],
+      "flash": 0
     },
     "torpedo": {
       "phase": 2,
@@ -129,7 +133,8 @@
       "shots": 0,
       "secondary": 0,
       "impacts": 0,
-      "projectiles": []
+      "projectiles": [],
+      "flash": 0
     },
     "loadout": {
       "phase": 2,
@@ -153,7 +158,8 @@
       "shots": 0,
       "secondary": 0,
       "impacts": 0,
-      "projectiles": []
+      "projectiles": [],
+      "flash": 0
     },
     "lift_start": {
       "phase": 3,
@@ -322,7 +328,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_rise_24": {
       "phase": 3,
@@ -491,7 +498,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_rise_16": {
       "phase": 3,
@@ -660,7 +668,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_rise_8": {
       "phase": 3,
@@ -829,7 +838,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "start": {
       "phase": 3,
@@ -998,7 +1008,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "deck_0": {
       "phase": 3,
@@ -1167,7 +1178,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "deck_1": {
       "phase": 3,
@@ -1336,7 +1348,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "deck_2": {
       "phase": 3,
@@ -1505,7 +1518,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_left_down_8": {
       "phase": 3,
@@ -1674,7 +1688,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_paused": {
       "phase": 4,
@@ -1698,7 +1713,8 @@
       "shots": 0,
       "secondary": 0,
       "impacts": 0,
-      "projectiles": []
+      "projectiles": [],
+      "flash": 0
     },
     "lift_pause_wait": {
       "phase": 4,
@@ -1722,7 +1738,8 @@
       "shots": 0,
       "secondary": 0,
       "impacts": 0,
-      "projectiles": []
+      "projectiles": [],
+      "flash": 0
     },
     "lift_left_down_16": {
       "phase": 3,
@@ -1891,7 +1908,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_left_down_24": {
       "phase": 3,
@@ -2060,7 +2078,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_left_inside": {
       "phase": 3,
@@ -2229,7 +2248,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "service_left": {
       "phase": 7,
@@ -2253,7 +2273,8 @@
       "shots": 0,
       "secondary": 0,
       "impacts": 0,
-      "projectiles": []
+      "projectiles": [],
+      "flash": 0
     },
     "lift_left_up_24": {
       "phase": 3,
@@ -2422,7 +2443,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_left_up_8": {
       "phase": 3,
@@ -2591,7 +2613,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_left_return": {
       "phase": 3,
@@ -2760,7 +2783,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_right_down_8": {
       "phase": 3,
@@ -2929,7 +2953,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_right_down_24": {
       "phase": 3,
@@ -3098,7 +3123,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_right_inside": {
       "phase": 3,
@@ -3267,7 +3293,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "service_right": {
       "phase": 7,
@@ -3291,7 +3318,8 @@
       "shots": 0,
       "secondary": 0,
       "impacts": 0,
-      "projectiles": []
+      "projectiles": [],
+      "flash": 0
     },
     "lift_right_up_24": {
       "phase": 3,
@@ -3460,7 +3488,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_right_up_8": {
       "phase": 3,
@@ -3629,7 +3658,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "lift_right_return": {
       "phase": 3,
@@ -3798,7 +3828,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_0": {
       "phase": 3,
@@ -3967,7 +3998,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_1": {
       "phase": 3,
@@ -4136,7 +4168,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_2": {
       "phase": 3,
@@ -4305,7 +4338,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_3": {
       "phase": 3,
@@ -4474,7 +4508,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_4": {
       "phase": 3,
@@ -4643,7 +4678,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_5": {
       "phase": 3,
@@ -4812,7 +4848,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_6": {
       "phase": 3,
@@ -4981,7 +5018,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_7": {
       "phase": 3,
@@ -5150,7 +5188,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_8": {
       "phase": 3,
@@ -5319,7 +5358,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_9": {
       "phase": 3,
@@ -5488,7 +5528,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_stop": {
       "phase": 3,
@@ -5657,7 +5698,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_right_hold": {
       "phase": 3,
@@ -5826,7 +5868,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_10": {
       "phase": 3,
@@ -5995,7 +6038,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_9": {
       "phase": 3,
@@ -6164,7 +6208,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_8": {
       "phase": 3,
@@ -6333,7 +6378,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_7": {
       "phase": 3,
@@ -6502,7 +6548,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_6": {
       "phase": 3,
@@ -6671,7 +6718,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_5": {
       "phase": 3,
@@ -6840,7 +6888,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_4": {
       "phase": 3,
@@ -7009,7 +7058,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_3": {
       "phase": 3,
@@ -7178,7 +7228,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_2": {
       "phase": 3,
@@ -7347,7 +7398,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_1": {
       "phase": 3,
@@ -7516,7 +7568,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_stop": {
       "phase": 3,
@@ -7685,7 +7738,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "taxi_left_hold": {
       "phase": 3,
@@ -7854,7 +7908,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "slow_roll": {
       "phase": 3,
@@ -8023,7 +8078,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "accelerating_roll": {
       "phase": 3,
@@ -8192,7 +8248,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "ground_roll": {
       "phase": 3,
@@ -8361,7 +8418,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "takeoff": {
       "phase": 3,
@@ -8530,7 +8588,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "turn": {
       "phase": 3,
@@ -8699,7 +8758,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "turn_complete": {
       "phase": 3,
@@ -8868,7 +8928,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "compensated_turn": {
       "phase": 3,
@@ -9037,7 +9098,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "stall_held": {
       "phase": 3,
@@ -9206,7 +9268,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "stall_released": {
       "phase": 3,
@@ -9375,7 +9438,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "dive_released": {
       "phase": 3,
@@ -9544,7 +9608,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "dive_persistent": {
       "phase": 3,
@@ -9713,7 +9778,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "dive_recovered": {
       "phase": 3,
@@ -9882,7 +9948,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "guns": {
       "phase": 3,
@@ -9903,25 +9970,25 @@
       "wave": 1,
       "heave": 0,
       "ship": 1,
-      "shots": 36,
+      "shots": 70,
       "secondary": 0,
       "impacts": 0,
       "projectiles": [
         {
-          "x": 19710,
-          "y": 3888,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
-          "life": 7,
-          "kind": 1
+          "life": 0,
+          "kind": 0
         },
         {
-          "x": 19852,
-          "y": 3888,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
-          "life": 10,
-          "kind": 1
+          "life": 0,
+          "kind": 0
         },
         {
           "x": 0,
@@ -10051,81 +10118,50 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 1
     },
     "aliases": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 23,
+      "stock": 22,
       "invert": 0,
       "stage": 1,
       "depth": 0,
-      "crew": 7,
+      "crew": 1,
       "scale": 8,
       "pilot": 7,
-      "camera": 474,
-      "world": 4819,
+      "camera": 471,
+      "world": 4798,
       "y": 974,
       "pose": 16,
-      "wave": 11,
+      "wave": 8,
       "heave": 0,
-      "ship": 3,
-      "shots": 36,
-      "secondary": 7,
-      "impacts": 5,
+      "ship": 0,
+      "shots": 70,
+      "secondary": 8,
+      "impacts": 6,
       "projectiles": [
         {
-          "x": 19338,
-          "y": 3888,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 19294,
-          "y": 3888,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 19286,
-          "y": 4776,
-          "vx": -14,
-          "vy": 64,
-          "life": 79,
-          "kind": 2
-        },
-        {
-          "x": 19286,
-          "y": 4392,
-          "vx": -14,
-          "vy": 60,
-          "life": 85,
-          "kind": 2
-        },
-        {
-          "x": 19548,
-          "y": 4800,
-          "vx": -14,
-          "vy": 64,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 19460,
-          "y": 4800,
-          "vx": -14,
-          "vy": 64,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 19360,
+          "x": 19272,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -10133,6 +10169,38 @@
           "kind": 4
         },
         {
+          "x": 19202,
+          "y": 4776,
+          "vx": -14,
+          "vy": 64,
+          "life": 79,
+          "kind": 2
+        },
+        {
+          "x": 19198,
+          "y": 4392,
+          "vx": -14,
+          "vy": 60,
+          "life": 85,
+          "kind": 2
+        },
+        {
+          "x": 19460,
+          "y": 4800,
+          "vx": -14,
+          "vy": 64,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 19360,
+          "y": 4800,
+          "vx": -14,
+          "vy": 64,
+          "life": 0,
+          "kind": 0
+        },
+        {
           "x": 0,
           "y": 0,
           "vx": 0,
@@ -10220,65 +10288,50 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "short_press": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 22,
+      "stock": 21,
       "invert": 0,
       "stage": 1,
       "depth": 0,
-      "crew": 5,
+      "crew": 7,
       "scale": 8,
       "pilot": 7,
-      "camera": 467,
-      "world": 4765,
+      "camera": 465,
+      "world": 4744,
       "y": 974,
       "pose": 16,
-      "wave": 3,
+      "wave": 0,
       "heave": 0,
-      "ship": 2,
-      "shots": 36,
-      "secondary": 8,
-      "impacts": 7,
+      "ship": 3,
+      "shots": 70,
+      "secondary": 9,
+      "impacts": 8,
       "projectiles": [
         {
-          "x": 19338,
-          "y": 3888,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 19294,
-          "y": 3888,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 19272,
-          "y": 4800,
-          "vx": -14,
-          "vy": 64,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 19188,
-          "y": 4800,
-          "vx": -14,
-          "vy": 64,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 19066,
+          "x": 18978,
           "y": 4092,
           "vx": -14,
           "vy": 36,
@@ -10286,6 +10339,22 @@
           "kind": 2
         },
         {
+          "x": 19188,
+          "y": 4800,
+          "vx": -14,
+          "vy": 64,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 19100,
+          "y": 4800,
+          "vx": -14,
+          "vy": 64,
+          "life": 0,
+          "kind": 0
+        },
+        {
           "x": 19460,
           "y": 4800,
           "vx": -14,
@@ -10389,137 +10458,125 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "paused": {
       "phase": 4,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 22,
+      "stock": 21,
       "invert": 0,
       "stage": 1,
       "depth": 0,
-      "crew": 5,
+      "crew": 7,
       "scale": 8,
       "pilot": 7,
       "camera": 0,
-      "world": 4765,
+      "world": 4744,
       "y": 974,
       "pose": 16,
-      "wave": 3,
+      "wave": 0,
       "heave": 0,
-      "ship": 2,
-      "shots": 36,
-      "secondary": 8,
-      "impacts": 7,
-      "projectiles": []
+      "ship": 3,
+      "shots": 70,
+      "secondary": 9,
+      "impacts": 8,
+      "projectiles": [],
+      "flash": 0
     },
     "pause_wait": {
       "phase": 4,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 22,
+      "stock": 21,
       "invert": 0,
       "stage": 1,
       "depth": 0,
-      "crew": 5,
+      "crew": 7,
       "scale": 8,
       "pilot": 7,
       "camera": 0,
-      "world": 4765,
+      "world": 4744,
       "y": 974,
       "pose": 16,
-      "wave": 3,
+      "wave": 0,
       "heave": 0,
-      "ship": 2,
-      "shots": 36,
-      "secondary": 8,
-      "impacts": 7,
-      "projectiles": []
+      "ship": 3,
+      "shots": 70,
+      "secondary": 9,
+      "impacts": 8,
+      "projectiles": [],
+      "flash": 0
     },
     "inverted": {
       "phase": 4,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 22,
+      "stock": 21,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 5,
+      "crew": 7,
       "scale": 8,
       "pilot": 7,
       "camera": 0,
-      "world": 4765,
+      "world": 4744,
       "y": 974,
       "pose": 16,
-      "wave": 3,
+      "wave": 0,
       "heave": 0,
-      "ship": 2,
-      "shots": 36,
-      "secondary": 8,
-      "impacts": 7,
-      "projectiles": []
+      "ship": 3,
+      "shots": 70,
+      "secondary": 9,
+      "impacts": 8,
+      "projectiles": [],
+      "flash": 0
     },
     "resumed": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 22,
+      "stock": 21,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 3,
+      "crew": 5,
       "scale": 8,
       "pilot": 7,
-      "camera": 460,
-      "world": 4711,
+      "camera": 458,
+      "world": 4690,
       "y": 974,
       "pose": 16,
-      "wave": 8,
+      "wave": 5,
       "heave": 0,
-      "ship": 1,
-      "shots": 36,
-      "secondary": 8,
-      "impacts": 8,
+      "ship": 2,
+      "shots": 70,
+      "secondary": 9,
+      "impacts": 9,
       "projectiles": [
         {
-          "x": 19338,
-          "y": 3888,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 19294,
-          "y": 3888,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 19272,
-          "y": 4800,
-          "vx": -14,
-          "vy": 64,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 19188,
-          "y": 4800,
-          "vx": -14,
-          "vy": 64,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 18884,
+          "x": 18796,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -10527,6 +10584,22 @@
           "kind": 4
         },
         {
+          "x": 19188,
+          "y": 4800,
+          "vx": -14,
+          "vy": 64,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 19100,
+          "y": 4800,
+          "vx": -14,
+          "vy": 64,
+          "life": 0,
+          "kind": 0
+        },
+        {
           "x": 19460,
           "y": 4800,
           "vx": -14,
@@ -10630,49 +10703,50 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "no_debug": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 22,
+      "stock": 21,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 5,
+      "crew": 0,
       "scale": 8,
       "pilot": 7,
-      "camera": 438,
-      "world": 4533,
+      "camera": 436,
+      "world": 4512,
       "y": 952,
       "pose": 16,
-      "wave": 9,
+      "wave": 6,
       "heave": 0,
-      "ship": 2,
-      "shots": 36,
-      "secondary": 8,
-      "impacts": 8,
+      "ship": 0,
+      "shots": 70,
+      "secondary": 9,
+      "impacts": 9,
       "projectiles": [
         {
-          "x": 19338,
-          "y": 3888,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 19294,
-          "y": 3888,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 19272,
+          "x": 18796,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -10688,7 +10762,7 @@
           "kind": 0
         },
         {
-          "x": 18884,
+          "x": 19100,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -10799,49 +10873,50 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "joystick_guns": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 22,
+      "stock": 21,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 1,
+      "crew": 3,
       "scale": 8,
       "pilot": 7,
-      "camera": 425,
-      "world": 4425,
+      "camera": 423,
+      "world": 4410,
       "y": 952,
       "pose": 16,
-      "wave": 6,
+      "wave": 4,
       "heave": 0,
-      "ship": 0,
-      "shots": 40,
-      "secondary": 8,
-      "impacts": 8,
+      "ship": 1,
+      "shots": 78,
+      "secondary": 9,
+      "impacts": 9,
       "projectiles": [
         {
-          "x": 17166,
-          "y": 3800,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 17122,
-          "y": 3800,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 19272,
+          "x": 18796,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -10857,7 +10932,7 @@
           "kind": 0
         },
         {
-          "x": 18884,
+          "x": 19100,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -10968,49 +11043,50 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "joystick_secondary": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 12,
+      "stock": 11,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 3,
+      "crew": 4,
       "scale": 8,
       "pilot": 7,
-      "camera": 396,
-      "world": 4194,
+      "camera": 394,
+      "world": 4179,
       "y": 952,
       "pose": 16,
-      "wave": 10,
+      "wave": 8,
       "heave": 0,
-      "ship": 1,
-      "shots": 40,
-      "secondary": 18,
-      "impacts": 15,
+      "ship": 2,
+      "shots": 78,
+      "secondary": 19,
+      "impacts": 16,
       "projectiles": [
         {
-          "x": 17166,
-          "y": 3800,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 17122,
-          "y": 3800,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 16914,
+          "x": 16858,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11018,7 +11094,7 @@
           "kind": 0
         },
         {
-          "x": 16830,
+          "x": 16770,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11026,15 +11102,15 @@
           "kind": 4
         },
         {
-          "x": 16784,
-          "y": 4624,
+          "x": 16726,
+          "y": 4560,
           "vx": -14,
           "vy": 64,
-          "life": 80,
+          "life": 81,
           "kind": 2
         },
         {
-          "x": 16782,
+          "x": 16722,
           "y": 4188,
           "vx": -14,
           "vy": 52,
@@ -11042,7 +11118,7 @@
           "kind": 2
         },
         {
-          "x": 16778,
+          "x": 16722,
           "y": 3936,
           "vx": -14,
           "vy": 28,
@@ -11137,49 +11213,50 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "joystick_inverted": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 12,
+      "stock": 11,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 7,
+      "crew": 0,
       "scale": 8,
       "pilot": 22,
-      "camera": 382,
-      "world": 4086,
+      "camera": 380,
+      "world": 4071,
       "y": 985,
       "pose": 45,
-      "wave": 7,
+      "wave": 5,
       "heave": 0,
-      "ship": 3,
-      "shots": 40,
-      "secondary": 18,
-      "impacts": 18,
+      "ship": 0,
+      "shots": 78,
+      "secondary": 19,
+      "impacts": 19,
       "projectiles": [
         {
-          "x": 17166,
-          "y": 3800,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 17122,
-          "y": 3800,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 16914,
+          "x": 16858,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11187,7 +11264,7 @@
           "kind": 0
         },
         {
-          "x": 16830,
+          "x": 16770,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11195,7 +11272,7 @@
           "kind": 0
         },
         {
-          "x": 16742,
+          "x": 16670,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11203,7 +11280,7 @@
           "kind": 0
         },
         {
-          "x": 16642,
+          "x": 16582,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11211,7 +11288,7 @@
           "kind": 0
         },
         {
-          "x": 16554,
+          "x": 16498,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11306,14 +11383,40 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "in_game_load": {
       "phase": 5,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 12,
+      "stock": 11,
+      "invert": 1,
+      "stage": 1,
+      "depth": 0,
+      "crew": 0,
+      "scale": 8,
+      "pilot": 22,
+      "camera": 0,
+      "world": 4071,
+      "y": 985,
+      "pose": 45,
+      "wave": 5,
+      "heave": 0,
+      "ship": 0,
+      "shots": 78,
+      "secondary": 19,
+      "impacts": 19,
+      "projectiles": [],
+      "flash": 0
+    },
+    "in_game_save": {
+      "phase": 6,
+      "rank": 0,
+      "lives": 3,
+      "weapon": 0,
+      "stock": 11,
       "invert": 1,
       "stage": 1,
       "depth": 0,
@@ -11321,82 +11424,59 @@
       "scale": 8,
       "pilot": 22,
       "camera": 0,
-      "world": 4086,
-      "y": 985,
-      "pose": 45,
-      "wave": 7,
-      "heave": 0,
-      "ship": 3,
-      "shots": 40,
-      "secondary": 18,
-      "impacts": 18,
-      "projectiles": []
-    },
-    "in_game_save": {
-      "phase": 6,
-      "rank": 0,
-      "lives": 3,
-      "weapon": 0,
-      "stock": 12,
-      "invert": 1,
-      "stage": 1,
-      "depth": 0,
-      "crew": 5,
-      "scale": 8,
-      "pilot": 22,
-      "camera": 0,
-      "world": 4028,
+      "world": 4013,
       "y": 1003,
       "pose": 45,
-      "wave": 11,
+      "wave": 9,
       "heave": 0,
-      "ship": 2,
-      "shots": 40,
-      "secondary": 18,
-      "impacts": 18,
-      "projectiles": []
+      "ship": 3,
+      "shots": 78,
+      "secondary": 19,
+      "impacts": 19,
+      "projectiles": [],
+      "flash": 0
     },
     "approach": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 12,
+      "stock": 11,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 0,
+      "crew": 4,
       "scale": 1,
       "pilot": 9,
       "camera": 7274,
       "world": 7402,
       "y": 1137,
       "pose": 50,
-      "wave": 7,
-      "heave": 2,
-      "ship": 0,
-      "shots": 40,
-      "secondary": 18,
-      "impacts": 18,
+      "wave": 3,
+      "heave": 0,
+      "ship": 2,
+      "shots": 78,
+      "secondary": 19,
+      "impacts": 19,
       "projectiles": [
         {
-          "x": 17166,
-          "y": 3800,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 17122,
-          "y": 3800,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 16914,
+          "x": 16858,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11404,7 +11484,7 @@
           "kind": 0
         },
         {
-          "x": 16830,
+          "x": 16770,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11412,7 +11492,7 @@
           "kind": 0
         },
         {
-          "x": 16742,
+          "x": 16670,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11420,7 +11500,7 @@
           "kind": 0
         },
         {
-          "x": 16642,
+          "x": 16582,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11428,7 +11508,7 @@
           "kind": 0
         },
         {
-          "x": 16554,
+          "x": 16498,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11523,49 +11603,50 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "climb_gear_up": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 12,
+      "stock": 11,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 4,
+      "crew": 7,
       "scale": 1,
       "pilot": 11,
       "camera": 7140,
       "world": 7268,
       "y": 1077,
       "pose": 42,
-      "wave": 5,
-      "heave": 2,
-      "ship": 2,
-      "shots": 40,
-      "secondary": 18,
-      "impacts": 18,
+      "wave": 1,
+      "heave": 1,
+      "ship": 3,
+      "shots": 78,
+      "secondary": 19,
+      "impacts": 19,
       "projectiles": [
         {
-          "x": 17166,
-          "y": 3800,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 17122,
-          "y": 3800,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
           "life": 0,
           "kind": 0
         },
         {
-          "x": 16914,
+          "x": 16858,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11573,7 +11654,7 @@
           "kind": 0
         },
         {
-          "x": 16830,
+          "x": 16770,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11581,7 +11662,7 @@
           "kind": 0
         },
         {
-          "x": 16742,
+          "x": 16670,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11589,7 +11670,7 @@
           "kind": 0
         },
         {
-          "x": 16642,
+          "x": 16582,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11597,7 +11678,7 @@
           "kind": 0
         },
         {
-          "x": 16554,
+          "x": 16498,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11692,49 +11773,50 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 0
     },
     "cannon_stall_left": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 12,
+      "stock": 11,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 4,
+      "crew": 7,
       "scale": 1,
       "pilot": 13,
       "camera": 6985,
       "world": 7113,
       "y": 1017,
       "pose": 43,
-      "wave": 9,
-      "heave": 0,
-      "ship": 2,
-      "shots": 42,
-      "secondary": 18,
-      "impacts": 18,
+      "wave": 5,
+      "heave": 1,
+      "ship": 3,
+      "shots": 82,
+      "secondary": 19,
+      "impacts": 19,
       "projectiles": [
         {
-          "x": 27742,
-          "y": 3818,
-          "vx": -62,
-          "vy": -18,
-          "life": 1,
-          "kind": 1
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
         },
         {
-          "x": 27964,
-          "y": 3932,
-          "vx": -53,
-          "vy": -10,
-          "life": 4,
-          "kind": 1
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
         },
         {
-          "x": 16914,
+          "x": 16858,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11742,7 +11824,7 @@
           "kind": 0
         },
         {
-          "x": 16830,
+          "x": 16770,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11750,7 +11832,7 @@
           "kind": 0
         },
         {
-          "x": 16742,
+          "x": 16670,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11758,7 +11840,7 @@
           "kind": 0
         },
         {
-          "x": 16642,
+          "x": 16582,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11766,7 +11848,7 @@
           "kind": 0
         },
         {
-          "x": 16554,
+          "x": 16498,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11861,49 +11943,50 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 2
     },
     "cannon_level_left": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 12,
+      "stock": 11,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 6,
+      "crew": 1,
       "scale": 1,
       "pilot": 13,
       "camera": 6969,
       "world": 7097,
       "y": 1017,
       "pose": 16,
-      "wave": 6,
-      "heave": 0,
-      "ship": 3,
-      "shots": 44,
-      "secondary": 18,
-      "impacts": 18,
+      "wave": 2,
+      "heave": 1,
+      "ship": 0,
+      "shots": 84,
+      "secondary": 19,
+      "impacts": 19,
       "projectiles": [
         {
-          "x": 28087,
-          "y": 4060,
-          "vx": -53,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
-          "life": 7,
-          "kind": 1
+          "life": 0,
+          "kind": 0
         },
         {
-          "x": 28196,
-          "y": 4060,
-          "vx": -62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
-          "life": 10,
-          "kind": 1
+          "life": 0,
+          "kind": 0
         },
         {
-          "x": 16914,
+          "x": 16858,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11911,7 +11994,7 @@
           "kind": 0
         },
         {
-          "x": 16830,
+          "x": 16770,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11919,7 +12002,7 @@
           "kind": 0
         },
         {
-          "x": 16742,
+          "x": 16670,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11927,7 +12010,7 @@
           "kind": 0
         },
         {
-          "x": 16642,
+          "x": 16582,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -11935,7 +12018,7 @@
           "kind": 0
         },
         {
-          "x": 16554,
+          "x": 16498,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12030,49 +12113,50 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 2
     },
     "cannon_dive_left": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 12,
+      "stock": 11,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 5,
+      "crew": 0,
       "scale": 1,
       "pilot": 13,
       "camera": 6904,
       "world": 7032,
       "y": 1037,
       "pose": 45,
-      "wave": 9,
-      "heave": 1,
-      "ship": 2,
-      "shots": 46,
-      "secondary": 18,
-      "impacts": 18,
+      "wave": 5,
+      "heave": 0,
+      "ship": 0,
+      "shots": 90,
+      "secondary": 19,
+      "impacts": 19,
       "projectiles": [
         {
-          "x": 27588,
-          "y": 4444,
-          "vx": -56,
-          "vy": 28,
-          "life": 1,
-          "kind": 1
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
         },
         {
-          "x": 27712,
-          "y": 4376,
-          "vx": -56,
-          "vy": 28,
-          "life": 4,
-          "kind": 1
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
         },
         {
-          "x": 16914,
+          "x": 16858,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12080,7 +12164,7 @@
           "kind": 0
         },
         {
-          "x": 16830,
+          "x": 16770,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12088,7 +12172,7 @@
           "kind": 0
         },
         {
-          "x": 16742,
+          "x": 16670,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12096,7 +12180,7 @@
           "kind": 0
         },
         {
-          "x": 16642,
+          "x": 16582,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12104,7 +12188,7 @@
           "kind": 0
         },
         {
-          "x": 16554,
+          "x": 16498,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12199,14 +12283,185 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 1
     },
     "cannon_stall_right": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 12,
+      "stock": 11,
+      "invert": 1,
+      "stage": 1,
+      "depth": 0,
+      "crew": 7,
+      "scale": 8,
+      "pilot": 14,
+      "camera": 695,
+      "world": 7018,
+      "y": 999,
+      "pose": 3,
+      "wave": 11,
+      "heave": 0,
+      "ship": 3,
+      "shots": 102,
+      "secondary": 19,
+      "impacts": 19,
+      "projectiles": [
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 16858,
+          "y": 4800,
+          "vx": -14,
+          "vy": 64,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 16770,
+          "y": 4800,
+          "vx": -14,
+          "vy": 64,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 16670,
+          "y": 4800,
+          "vx": -14,
+          "vy": 64,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 16582,
+          "y": 4800,
+          "vx": -14,
+          "vy": 64,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 16498,
+          "y": 4800,
+          "vx": -14,
+          "vy": 64,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
+        }
+      ],
+      "flash": 1
+    },
+    "cannon_level_right": {
+      "phase": 3,
+      "rank": 0,
+      "lives": 3,
+      "weapon": 0,
+      "stock": 11,
       "invert": 1,
       "stage": 1,
       "depth": 0,
@@ -12214,203 +12469,34 @@
       "scale": 8,
       "pilot": 14,
       "camera": 695,
-      "world": 7018,
-      "y": 999,
-      "pose": 3,
-      "wave": 3,
-      "heave": 0,
-      "ship": 2,
-      "shots": 52,
-      "secondary": 18,
-      "impacts": 18,
-      "projectiles": [
-        {
-          "x": 28563,
-          "y": 3499,
-          "vx": 53,
-          "vy": -43,
-          "life": 1,
-          "kind": 1
-        },
-        {
-          "x": 28464,
-          "y": 3600,
-          "vx": 53,
-          "vy": -43,
-          "life": 4,
-          "kind": 1
-        },
-        {
-          "x": 16914,
-          "y": 4800,
-          "vx": -14,
-          "vy": 64,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 16830,
-          "y": 4800,
-          "vx": -14,
-          "vy": 64,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 16742,
-          "y": 4800,
-          "vx": -14,
-          "vy": 64,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 16642,
-          "y": 4800,
-          "vx": -14,
-          "vy": 64,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 16554,
-          "y": 4800,
-          "vx": -14,
-          "vy": 64,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "vx": 0,
-          "vy": 0,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "vx": 0,
-          "vy": 0,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "vx": 0,
-          "vy": 0,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "vx": 0,
-          "vy": 0,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "vx": 0,
-          "vy": 0,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "vx": 0,
-          "vy": 0,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "vx": 0,
-          "vy": 0,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "vx": 0,
-          "vy": 0,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "vx": 0,
-          "vy": 0,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "vx": 0,
-          "vy": 0,
-          "life": 0,
-          "kind": 0
-        },
-        {
-          "x": 0,
-          "y": 0,
-          "vx": 0,
-          "vy": 0,
-          "life": 0,
-          "kind": 0
-        }
-      ]
-    },
-    "cannon_level_right": {
-      "phase": 3,
-      "rank": 0,
-      "lives": 3,
-      "weapon": 0,
-      "stock": 12,
-      "invert": 1,
-      "stage": 1,
-      "depth": 0,
-      "crew": 0,
-      "scale": 8,
-      "pilot": 14,
-      "camera": 695,
       "world": 7056,
       "y": 999,
       "pose": 4,
-      "wave": 9,
+      "wave": 5,
       "heave": 0,
-      "ship": 0,
-      "shots": 54,
-      "secondary": 18,
-      "impacts": 18,
+      "ship": 2,
+      "shots": 106,
+      "secondary": 19,
+      "impacts": 19,
       "projectiles": [
         {
-          "x": 28755,
-          "y": 3988,
-          "vx": 53,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
-          "life": 1,
-          "kind": 1
+          "life": 0,
+          "kind": 0
         },
         {
-          "x": 28700,
-          "y": 3988,
-          "vx": 62,
+          "x": 0,
+          "y": 0,
+          "vx": 0,
           "vy": 0,
-          "life": 4,
-          "kind": 1
+          "life": 0,
+          "kind": 0
         },
         {
-          "x": 16914,
+          "x": 16858,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12418,7 +12504,7 @@
           "kind": 0
         },
         {
-          "x": 16830,
+          "x": 16770,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12426,7 +12512,7 @@
           "kind": 0
         },
         {
-          "x": 16742,
+          "x": 16670,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12434,7 +12520,7 @@
           "kind": 0
         },
         {
-          "x": 16642,
+          "x": 16582,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12442,7 +12528,7 @@
           "kind": 0
         },
         {
-          "x": 16554,
+          "x": 16498,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12537,49 +12623,50 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 1
     },
     "cannon_dive_right": {
       "phase": 3,
       "rank": 0,
       "lives": 3,
       "weapon": 0,
-      "stock": 12,
+      "stock": 11,
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 0,
+      "crew": 3,
       "scale": 1,
       "pilot": 13,
       "camera": 6993,
       "world": 7121,
       "y": 1019,
       "pose": 6,
-      "wave": 0,
-      "heave": 0,
-      "ship": 0,
-      "shots": 58,
-      "secondary": 18,
-      "impacts": 18,
+      "wave": 8,
+      "heave": 1,
+      "ship": 1,
+      "shots": 112,
+      "secondary": 19,
+      "impacts": 19,
       "projectiles": [
         {
-          "x": 28776,
-          "y": 4232,
-          "vx": 56,
-          "vy": 28,
-          "life": 7,
-          "kind": 1
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
         },
         {
-          "x": 28652,
-          "y": 4160,
-          "vx": 56,
-          "vy": 28,
-          "life": 10,
-          "kind": 1
+          "x": 0,
+          "y": 0,
+          "vx": 0,
+          "vy": 0,
+          "life": 0,
+          "kind": 0
         },
         {
-          "x": 16914,
+          "x": 16858,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12587,7 +12674,7 @@
           "kind": 0
         },
         {
-          "x": 16830,
+          "x": 16770,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12595,7 +12682,7 @@
           "kind": 0
         },
         {
-          "x": 16742,
+          "x": 16670,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12603,7 +12690,7 @@
           "kind": 0
         },
         {
-          "x": 16642,
+          "x": 16582,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12611,7 +12698,7 @@
           "kind": 0
         },
         {
-          "x": 16554,
+          "x": 16498,
           "y": 4800,
           "vx": -14,
           "vy": 64,
@@ -12706,7 +12793,8 @@
           "life": 0,
           "kind": 0
         }
-      ]
+      ],
+      "flash": 2
     },
     "restart": {
       "phase": 0,
@@ -12717,20 +12805,21 @@
       "invert": 1,
       "stage": 1,
       "depth": 0,
-      "crew": 0,
+      "crew": 3,
       "scale": 1,
       "pilot": 13,
       "camera": 0,
       "world": 7121,
       "y": 1019,
       "pose": 6,
-      "wave": 0,
+      "wave": 8,
       "heave": 0,
-      "ship": 0,
+      "ship": 1,
       "shots": 0,
       "secondary": 0,
       "impacts": 0,
-      "projectiles": []
+      "projectiles": [],
+      "flash": 0
     }
   },
   "checks": [

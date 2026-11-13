@@ -6,16 +6,18 @@
 #define COMBAT_FIRE 1
 #define COMBAT_SECONDARY 2
 #define COMBAT_BOMB COMBAT_SECONDARY
+/* Slots 0..1 hold cannon strike effects. The original draws no travelling
+ * cannon rounds: a per-pose flash/tracer overlay is drawn on the aircraft and
+ * downward fire strikes the surface where the line of fire meets it. */
 #define COMBAT_GUN_COUNT 2
 /* Sixteen bomb slots cover the 100-tick lifetime at four releases/second. */
 #define COMBAT_COUNT 18
-#define COMBAT_ROUND 1
 #define COMBAT_FALLING_BOMB 2
 #define COMBAT_IMPACT 3
 #define COMBAT_SPLASH 4
 
 /* Unsigned Q2 world positions, signed Q2 velocity per 25 Hz weapon tick.
- * Parameters are authored for this prototype, not recovered Amiga physics. */
+ * Bomb parameters are authored for this prototype, not recovered physics. */
 typedef struct CombatProjectile {
     uint16_t x, y;
     int8_t vx, vy;
@@ -27,7 +29,16 @@ typedef struct CombatState {
     uint8_t phase, cooldown, secondary_cooldown, secondary_pending, primary_pending, secondary_phase;
     uint8_t count, aim_pitch; /* 0..9, same pitch convention as original aircraft poses. */
     uint16_t shots_fired, secondary_fired, impacts;
+    /* Cannon flash: 0 none, else the overlay drawn next (1 = fa, 2 = fb).
+     * Firing activates it; it expires flash_ticks weapon ticks after the
+     * last shot. The renderer alternates 1/2 on every presented frame, as
+     * the original alternates fa/fb on game frames. */
+    uint8_t flash, flash_ticks;
 } CombatState;
+
+/* Cannon strikes need the surface within this height below the aircraft
+ * (original executable: altitude < 0xa0 before computing a splash). */
+#define COMBAT_GUN_RANGE 160
 
 void Combat_Reset(CombatState* state);
 /* Called on the same 150 Hz fixed clock as flight; advances weapons every
@@ -48,7 +59,7 @@ static inline uint8_t Combat_Tick(CombatState* state)
 static inline uint8_t Combat_Required(const CombatState* state,uint8_t controls)
 {
     return controls || state->primary_pending || state->secondary_pending || state->cooldown ||
-        state->secondary_cooldown || state->count>COMBAT_GUN_COUNT ||
+        state->secondary_cooldown || state->count>COMBAT_GUN_COUNT || state->flash_ticks ||
         state->projectile[0].kind || state->projectile[1].kind;
 }
 static inline uint8_t Combat_Clock(CombatState* state, uint8_t controls)

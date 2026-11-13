@@ -147,28 +147,38 @@ in flight together, full visible pixels, source caches and hidden-page drawing.
 
 ![Eight simultaneous falling bombs, reconstructed from VRAM](bombs/repeat/salvo-vram.png)
 
-## Cannon pitch and heading correction
+## Original cannon flash and hit-scan strikes
 
-Cannon rounds now launch along the aircraft's nose rather than receiving a
-fixed horizontal shot velocity. `Aircraft_FlightPitch` supplies the same pitch
-convention to flight presentation and gun aiming. This distinguishes the
-nose-up stall from its downward motion: its shots rise even while the aircraft
-sinks. The latched dive fires downward, and level flight fires horizontally.
-Both headings use mirrored horizontal components; banked turns retain the
-flight core's committed heading until the reversal completes.
+Updated 2026-11-13. The original game does not fly bullets. Its player renderer
+draws one of 40 pre-drawn muzzle flash + tracer overlays from `hellcat.shp`
+(`fa`/`fb`, ten pitch poses per facing) at the aircraft's own position, and
+downward fire strikes the surface where the line of fire meets it. The evidence
+is in [Amiga cannon findings](research/amiga-cannon.md).
 
-Ten authored shot vectors cover the original ten pitch poses. The muzzle moves
-with that angle, then the round inherits the aircraft velocity. Existing rounds
-retain their launch velocity as the plane changes attitude. Top/world-edge
-checks prevent wrapped muzzle coordinates. The former padding byte in combat
-state now holds the sampled aim pitch, preserving the 158-byte capture layout.
-The vectors and muzzle distances are MSX tuning, not recovered original values.
+The MSX port now does the same:
 
-Close-view tracers also follow the shot direction. The normal angled case uses
-one native VDP line command; clipped or world-ring edge fragments use individually
-clipped pixels. The per-page backup includes their three-pixel vertical extent,
-so overlap, clipping and restoration leave no trails. Far-view rounds keep the
-existing single-pixel representation.
+- `CombatState.flash` activates the overlay while firing and expires it four
+  weapon ticks (160 ms) after the last shot. The renderer alternates `fa`/`fb`
+  on every presented frame and writes back the variant it drew, so snapshots
+  record exactly what is on screen.
+- The overlay is chosen from the drawn frame, never from a separately sampled
+  pitch, so it cannot mismatch the aircraft. There is no overlay in the distant
+  view, on the ground or during turns.
+- Strikes are hit-scan. Downward poses within 160 px of the surface place a
+  splash or impact where the pose's tracer line (slopes measured from the `fb`
+  art) meets the sea, carrier deck or ground. Level and climbing fire show only
+  the flash, as in the original. Two strike slots sustain held fire at the
+  existing cadence.
+- Each overlay variant streams into its own 16×12 VRAM slot in the free hidden
+  strip of page 0 (x=240, rows 212/224) when the pose changes. The aircraft
+  background backup covers the union of aircraft and overlay, at most 48 px wide.
+- The capture layout grows from 158 to 160 bytes by appending `flash` and
+  `flash_ticks`; earlier offsets are unchanged.
+
+The former authored shot vectors, travelling rounds and VDP-line tracers have
+been removed. Air-to-air and ship hits remain future work (P3–P5).
+
+![Original overlays drawn at the matching Hellcat poses](cannon/original-flash-overlays.png)
 
 The generated atlas tables and all 62 aircraft shape records now reside in raw
 ROM bank 7 and load into RAM before aircraft caches are initialized. This frees
@@ -179,25 +189,25 @@ pointer offset, geometry and atlas coordinates against the source manifest.
 The release occupies 32,473/32,768 resident bytes; SDCC static data plus
 initializers occupy 11,071 bytes before stack, IM2 and BIOS workspace.
 
-Firing reserves four additional VBlanks for cannon simulation, tracers and scene
-redraw; bomb workload independently reserves two. Both flight profiles normally
+Firing still reserves four additional VBlanks, sized for the former tracers; bomb workload independently reserves two. Both flight profiles normally
 present every eight VBlanks, use twelve while firing guns, ten for bombs, and
 fourteen when both workloads are active. Thus gun rendering runs at 5 fps NTSC /
 4.17 fps PAL; simulation remains 150 Hz, so flight speed and weapon release rates
-are retained. The six-VBlank elevator cadence is unchanged. Faster rendering
-remains separate optimization work.
+are retained. The six-VBlank elevator cadence is unchanged. With hit-scan strikes this reservation is probably larger than needed;
+reducing it is separate optimization work.
 
-Validation: all 124 host tests pass, including ten pitch vectors and muzzle
-positions in both headings, top clipping, upward stall shots despite descent,
-and downward dive shots. Release checks pass 89 snapshots each on NTSC/PAL,
-including live cannon fire during stall, level flight and dive in both headings.
-Full visible pixel comparisons cover the rotated tracers and original aircraft
-poses. Renderer regressions pass 64 NTSC / 71 PAL snapshots, including concurrent
-guns/bombs, cache integrity, mapper restoration and hidden-page immutability.
-No regular frame deadlines are missed in these scenarios.
+Validation (2026-11-13): 134 host tests pass. They include tracer slopes
+recomputed from the original art, strikes for every downward pose in both
+headings, range and world-edge limits, deck stops, cadence, and hidden-row VRAM
+layout. Release checks pass 89 snapshots each on NTSC and PAL, with the overlay
+pixel-verified in all six cannon snapshots, and level/climbing fire never
+striking. Renderer regressions pass 65 NTSC / 69 PAL snapshots (maximum redraw
+95.4/101.1 ms). The publication log shows that `fa`/`fb` alternate on
+consecutive presented frames.
 [Release NTSC](cannon/release-ntsc.json), [release PAL](cannon/release-pal.json),
 [renderer NTSC](cannon/renderer-ntsc.json), [renderer PAL](cannon/renderer-pal.json).
 The images below reconstruct VRAM; they are not raster or hardware captures.
 
+![MSX overlays: level fa/fb, level right, stall left, dive right, dive left](cannon/msx-flash-vram.png)
 ![Leftward cannon fire during a nose-up stall](cannon/stall-left-vram.png)
 ![Rightward cannon fire during a dive](cannon/dive-right-vram.png)

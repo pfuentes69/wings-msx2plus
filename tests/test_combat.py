@@ -1,6 +1,8 @@
-"""Bounded prototype weapons on the deterministic flight clock."""
+"""Cannon flash/strikes and bombs on the deterministic flight clock."""
 import ctypes
+import math
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -20,7 +22,7 @@ class Combat(ctypes.Structure):
                ('secondary_cooldown',ctypes.c_uint8),('secondary_pending',ctypes.c_uint8),
                ('primary_pending',ctypes.c_uint8),('secondary_phase',ctypes.c_uint8),('count',ctypes.c_uint8),('aim_pitch',ctypes.c_uint8),
                ('shots_fired',ctypes.c_uint16),('secondary_fired',ctypes.c_uint16),
-               ('impacts',ctypes.c_uint16)]
+               ('impacts',ctypes.c_uint16),('flash',ctypes.c_uint8),('flash_ticks',ctypes.c_uint8)]
 
 class CombatTests(unittest.TestCase):
     @classmethod
@@ -41,6 +43,8 @@ class CombatTests(unittest.TestCase):
         cls.core.Combat_Step.restype = None
         cls.core.Combat_OptimizedStep.argtypes=cls.core.Combat_Step.argtypes
         cls.core.Combat_OptimizedStep.restype=None
+        cls.core.Mission_Surface.argtypes=[ctypes.c_uint16]
+        cls.core.Mission_Surface.restype=ctypes.c_uint8
 
     @classmethod
     def tearDownClass(cls): cls.directory.cleanup()
@@ -64,18 +68,26 @@ class CombatTests(unittest.TestCase):
                     self.assertEqual(bytes(reference.sortie),bytes(optimized.sortie))
 
     def test_reset_and_capture_layout(self):
-        self.assertEqual(ctypes.sizeof(Combat),158)
+        self.assertEqual(ctypes.sizeof(Combat),160)
         s=self.state();self.advance(s,100,3);self.core.Combat_Reset(ctypes.byref(s))
         self.assertEqual(bytes(s),bytes(self.state()))
         self.assertEqual((s.sortie.stock,s.sortie.weapon),(27,0))
 
-    def test_cadence_pool_bounds_and_no_charge_for_full_pool(self):
-        s=self.state();self.advance(s,72,1)
-        self.assertEqual((s.shots_fired,s.sortie.stock),(2,30))
-        self.assertTrue(all(p.kind==1 for p in s.projectile[:2]))
-        self.assertEqual(s.projectile[2].kind,0)
-        self.advance(s,6,1)
-        self.assertEqual((s.shots_fired,s.sortie.stock),(3,30))
+    def test_cadence_keeps_flash_active_and_clears_after_release(self):
+        s=self.state();flashes=[]
+        for _ in range(12):
+            self.advance(s,6,1);flashes.append(s.flash)
+        self.assertEqual(s.shots_fired,4)
+        # The renderer alternates fa/fb per presented frame; the core only
+        # activates the overlay and must preserve the variant drawn last.
+        self.assertEqual(flashes,[1]*12)
+        s.flash=2;self.advance(s,6,1);self.assertEqual(s.flash,2)
+        self.assertTrue(all(p.kind==0 for p in s.projectile),'level fire never strikes')
+        # The last shot (weapon tick 13) stays visible for four ticks: 160 ms.
+        self.assertEqual((s.shots_fired,s.flash_ticks),(5,4))
+        self.advance(s,6);self.assertEqual((s.flash,s.flash_ticks),(2,3))
+        self.advance(s,12);self.assertEqual((s.flash,s.flash_ticks),(2,1))
+        self.advance(s,6);self.assertEqual((s.flash,s.flash_ticks),(0,0))
 
     def test_guns_have_no_invented_cap_and_do_not_consume_secondary(self):
         s=self.state();self.advance(s,10000,1)
@@ -123,50 +135,69 @@ class CombatTests(unittest.TestCase):
         s=self.state();s.sortie.stock=2;self.advance(s,600,2,x=5000,y=0)
         self.assertEqual((s.secondary_fired,s.sortie.stock),(2,0))
 
-    def test_inherited_velocity_and_both_firing_directions(self):
-        for left,vx,expected in [(0,205,67),(1,-205,-67)]:
-            s=self.state();self.advance(s,6,1,x=5000,vx=vx,vy=-154,left=left)
-            p=s.projectile[0]
-            self.assertEqual(p.x,(5000+(-24 if left else 24))*4)
-            self.assertEqual((p.vx,p.vy),(expected,-14))
+    TRACER=((10,-6),(10,-4),(10,-3),(10,-3),(11,0),(11,3),(10,5),(10,7),(9,8),(5,9))
 
-    def test_all_pitch_vectors_and_muzzle_positions_in_both_headings(self):
-        xs=(12,24,34,46,48,46,42,34,24,12)
-        ys=(-46,-42,-34,-12,0,12,24,34,42,46)
+    def test_tracer_slopes_match_original_fb_art(self):
+        import sys;sys.path.insert(0,str(ROOT/'tools'))
+        from decode_shapes import decode_record
+        measured=[]
+        for n in range(1,11):
+            raw=next((ROOT/'reference_assets/unpacked_shapes/hellcat').glob(f'*_fb{n:02x}.bin')).read_bytes()
+            pixels,meta=decode_record(raw);w=meta['width'];ox,oy=meta['origin_candidate']
+            points=[(i%w-ox,i//w-oy,c) for i,c in enumerate(pixels) if c]
+            tracer=[q for q in points if q[2] in (2,3,11,15,16,17)]
+            root=min(points,key=lambda q:math.hypot(q[0],q[1]))
+            tip=max(tracer,key=lambda q:math.hypot(q[0],q[1]))
+            measured.append((tip[0]-root[0],tip[1]-root[1]))
+        self.assertEqual(tuple(measured),self.TRACER)
+        source=(ROOT/'src/core/combat.c').read_text()
+        xs=[int(v) for v in re.search(r's_TracerX\[10\]=\{([^}]*)\}',source).group(1).split(',')]
+        ys=[int(v) for v in re.search(r's_TracerY\[10\]=\{([^}]*)\}',source).group(1).split(',')]
+        self.assertEqual(tuple(zip(xs,ys)),self.TRACER)
+
+    def test_downward_fire_strikes_where_the_tracer_line_meets_the_sea(self):
         for left in (0,1):
-            for pitch,(ax,ay) in enumerate(zip(xs,ys)):
+            for pitch in range(5,10):
+                tx,ty=self.TRACER[pitch]
                 s=self.state();s.aim_pitch=pitch
-                ax=-ax if left else ax
-                self.advance(s,6,1,x=5000,y=800,left=left)
+                self.advance(s,6,1,x=4500,y=1160,left=left)
+                reach=40*tx//ty;target=4500-reach if left else 4500+reach
                 p=s.projectile[0]
-                self.assertEqual((p.x,p.y),((5000+ax//2)*4,(798+ay//2)*4))
-                self.assertEqual((p.vx,p.vy),(ax,ay))
-                x,y=p.x,p.y;self.advance(s,6,x=5000,y=800)
-                self.assertEqual((p.x-x,p.y-y),(ax,ay))
+                kind=4 if self.core.Mission_Surface(target)==0 else 3
+                self.assertEqual((p.x,p.y,p.kind,p.life,s.impacts),(target*4,1200*4,kind,6,1),(left,pitch))
+                self.advance(s,36,x=4500,y=1160)
+                self.assertEqual(p.kind,0)
 
-        s=self.state();s.aim_pitch=0
-        self.advance(s,6,1,x=5000,y=0)
-        self.assertEqual(s.projectile[0].y,0)
-        self.advance(s,6,x=5000,y=0)
-        self.assertEqual(s.projectile[0].kind,0)
+    def test_level_or_climbing_fire_and_out_of_range_fire_show_only_the_flash(self):
+        for pitch in range(5):
+            s=self.state();s.aim_pitch=pitch;self.advance(s,36,1,x=4500,y=1180)
+            self.assertGreater(s.shots_fired,0);self.assertTrue(s.flash)
+            self.assertEqual((s.impacts,s.projectile[0].kind),(0,0))
+        s=self.state();s.aim_pitch=9;self.advance(s,6,1,x=4500,y=1200-161)
+        self.assertEqual((s.shots_fired,s.impacts),(1,0))
+        s=self.state();s.aim_pitch=9;self.advance(s,6,1,x=4500,y=1200-160)
+        self.assertEqual(s.impacts,1)
 
-    def test_stall_shots_rise_despite_sinking_and_dive_shots_descend(self):
-        for left in (0,1):
-            for pitch,vx,vy,shot_vy in ((3,32,32,-9),(6,154,48,28)):
-                s=self.state();s.aim_pitch=pitch
-                self.advance(s,6,1,x=5000,y=800,vx=-vx if left else vx,vy=vy,left=left)
-                self.assertEqual(s.projectile[0].vy,shot_vy)
-                self.assertEqual(s.projectile[0].vx<0,bool(left))
+    def test_carrier_deck_stops_the_line_of_fire(self):
+        s=self.state();s.aim_pitch=9
+        self.advance(s,6,1,x=7032,y=1140)
+        p=s.projectile[0]
+        self.assertEqual((p.x,p.y,p.kind),((7032+28*5//9)*4,1168*4,3))
 
-    def test_world_boundaries_do_not_wrap_or_consume_outside_shots(self):
-        for x,left in [(0,1),(7607,0)]:
-            s=self.state();self.advance(s,12,1,x=x,left=left)
-            self.assertEqual((s.sortie.stock,s.shots_fired),(30,0))
-        for x,vx in [(1,-24),(7607*4,24)]:
-            s=self.state();p=s.projectile[0]
-            p.x=x;p.y=1000*4;p.vx=vx;p.life=20;p.kind=1
-            self.advance(s,6)
-            self.assertEqual(p.kind,0)
+    def test_strikes_never_wrap_world_edges_and_both_slots_bound_the_rate(self):
+        for x,left in [(3,1),(7604,0)]:
+            s=self.state();s.aim_pitch=5;self.advance(s,6,1,x=x,y=1160,left=left)
+            self.assertEqual((s.shots_fired,s.impacts),(1,0))
+        s=self.state();self.advance(s,12,1,x=7608)
+        self.assertEqual(s.shots_fired,0)
+        # Six-tick strikes and three-tick shots: two slots sustain held fire.
+        s=self.state();s.aim_pitch=9
+        self.advance(s,600,1,x=4500,y=1160)
+        self.assertEqual((s.shots_fired,s.impacts),(34,34))
+        s=self.state();s.aim_pitch=9
+        for p in s.projectile[:2]:p.kind=3;p.life=50
+        self.advance(s,6,1,x=4500,y=1160)
+        self.assertEqual((s.shots_fired,s.impacts,s.flash),(1,0,1),'busy slots still flash')
 
     def test_surface_impacts_and_fixed_flash_lifetime(self):
         for x,floor,kind in [(1000,1200,3),(4500,1200,4),(7032,1168,3)]:

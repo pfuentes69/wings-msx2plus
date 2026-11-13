@@ -5,9 +5,11 @@
 #error Combat Q2 coordinates require a world no wider than 8191 pixels
 #endif
 
-/* Authored Q2 shot vectors for the ten original pitch poses. */
-static const int8_t s_AimX[10]={12,24,34,46,48,46,42,34,24,12};
-static const int8_t s_AimY[10]={-46,-42,-34,-12,0,12,24,34,42,46};
+/* Line of fire per original pitch pose, measured from the fb01..fb0a tracer
+ * art (nearest pixel to the aircraft origin to the far tracer tip). The
+ * flash overlay shows the same direction; tests recompute these values. */
+static const uint8_t s_TracerX[10]={10,10,10,10,11,11,10,10,9,5};
+static const int8_t s_TracerY[10]={-6,-4,-3,-3,0,3,5,7,8,9};
 
 void Combat_Reset(CombatState* state)
 {
@@ -22,6 +24,47 @@ void Combat_Reset(CombatState* state)
     state->primary_pending = state->secondary_phase = 0;
     state->count = COMBAT_GUN_COUNT; state->aim_pitch=4;
     state->shots_fired = state->secondary_fired = state->impacts = 0;
+    state->flash = state->flash_ticks = 0;
+}
+
+/* height <= COMBAT_GUN_RANGE and tracer runs <= 11 keep this in 16 bits. */
+static uint16_t Reach(uint16_t height, uint8_t pitch)
+{
+    return (uint16_t)(height * s_TracerX[pitch]) / (uint8_t)s_TracerY[pitch];
+}
+
+/* Hit-scan cannon strike: no projectile travels. Like the original, only
+ * downward fire within range of the surface produces a visible strike. */
+static void Strike(CombatState* state, uint16_t x, uint16_t y, uint8_t left)
+{
+    CombatProjectile* p;
+    uint16_t floor = 1200u, reach, target;
+    uint8_t i, pitch = state->aim_pitch, surface;
+    if (pitch > 9 || s_TracerY[pitch] <= 0 || y >= floor || floor - y > COMBAT_GUN_RANGE) return;
+    reach = Reach(floor - y, pitch);
+    if (left ? reach > x : reach >= WINGS_WORLD_WIDTH - x) return;
+    target = left ? x - reach : x + reach;
+    surface = Mission_Surface(target);
+    if (surface == MISSION_CARRIER)
+    {
+        // The deck stands 32 pixels above the sea: stop the line there.
+        floor = 1168u;
+        if (y >= floor) return;
+        reach = Reach(floor - y, pitch);
+        target = left ? x - reach : x + reach;
+        surface = Mission_Surface(target);
+        if (surface != MISSION_CARRIER) floor = 1200u;
+    }
+    for (i = 0; i < COMBAT_GUN_COUNT; ++i)
+    {
+        p = &state->projectile[i];
+        if (p->kind) continue;
+        p->x = target * 4u; p->y = floor * 4u;
+        p->vx = p->vy = 0; p->life = 6;
+        p->kind = surface == MISSION_SEA ? COMBAT_SPLASH : COMBAT_IMPACT;
+        if (state->impacts != 65535u) ++state->impacts;
+        return;
+    }
 }
 
 static void Advance(CombatState* state, CombatProjectile* p)
@@ -56,33 +99,21 @@ void Combat_Advance(CombatState* state, SortieState* sortie, uint16_t x, uint16_
                  int16_t vx, int16_t vy, uint8_t left, uint8_t controls)
 {
     CombatProjectile* p;
-    int16_t muzzle, muzzle_y;
-    int8_t aim_x, aim_y;
     uint8_t i, fire = (controls & COMBAT_FIRE) || state->primary_pending;
     state->primary_pending=0;
+    if (state->flash_ticks && !--state->flash_ticks) state->flash = 0;
     if (state->cooldown) --state->cooldown;
     if (state->secondary_cooldown) --state->secondary_cooldown;
     for (i = 0; i < state->count; ++i) Advance(state, &state->projectile[i]);
     while (state->count>COMBAT_GUN_COUNT && !state->projectile[state->count-1].kind) --state->count;
-    if (fire && !state->cooldown)
+    if (fire && !state->cooldown && x < WINGS_WORLD_WIDTH)
     {
-        for (i = 0; i < COMBAT_GUN_COUNT; ++i)
-        {
-            p = &state->projectile[i];
-            if (p->kind) continue;
-            aim_x=s_AimX[state->aim_pitch]; aim_y=s_AimY[state->aim_pitch];
-            if (left) aim_x=-aim_x;
-            muzzle=(int16_t)x+aim_x/2;
-            muzzle_y=(int16_t)y-2+aim_y/2;
-            if (muzzle<0 || (uint16_t)muzzle>=WINGS_WORLD_WIDTH) break;
-            p->x = muzzle * 4u; p->y = (muzzle_y > 0 ? muzzle_y : 0) * 4u;
-            p->vx = aim_x + vx * 6 / 64;
-            p->vy = aim_y + vy * 6 / 64;
-            p->life = 12; p->kind = COMBAT_ROUND;
-            state->cooldown = 3;
-            if (state->shots_fired != 65535u) ++state->shots_fired;
-            break;
-        }
+        state->cooldown = 3;
+        // Keep the overlay visible until one tick after the next shot is due.
+        if (!state->flash) state->flash = 1;
+        state->flash_ticks = 4;
+        if (state->shots_fired != 65535u) ++state->shots_fired;
+        Strike(state, x, y, left);
     }
     if (state->secondary_pending || (controls & COMBAT_BOMB))
     {

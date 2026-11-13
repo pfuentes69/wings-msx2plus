@@ -33,7 +33,7 @@ when reported; this plan does not schedule another general dashboard art pass.
 | Mission data | All 15 map files parsed; a.map anchors, surface classes, depth and reset X recovered | Briefings, objectives, ranks, dynamic target/enemy initialization |
 | Flight and views | P1 heading/throttle, stall modes, coupled turns, bidirectional deck taxi with ground-turn artwork/end stops, and leftward deck takeoff; scrolling and close/distant views | Timed Amiga tuning, landing and aircraft collisions |
 | Scenery and dashboard | Original-art panels, waves, flag/radar/heave, altitude pilot profiles | Functional instruments, horizon/target distance, threat arrow, kill counter and damage/promotion semantics |
-| Weapons | P0 primary/secondary controls, 30/15/1 stocks, three lives; two rounds plus sixteen bombs, held release at about four/second, and flat training impacts | Rockets/torpedoes, target damage, explosions and scoring |
+| Weapons | P0 primary/secondary controls, 30/15/1 stocks, three lives; original per-pose cannon flash overlays with hit-scan surface strikes; sixteen bombs, held release at about four/second, and flat training impacts | Rockets/torpedoes, target damage, explosions and scoring |
 | Audio | Original effects and music extracted/previewed | Runtime PSG/OPLL implementation and sound toggle |
 | Validation | 124 host tests; release passes 89 NTSC/89 PAL snapshots, weapon renderer passes 64/71 full-VRAM checks including pitched cannon fire and bomb salvos | Fresh raster and physical FS-A1WX acceptance; later manual gameplay gates |
 

@@ -268,55 +268,101 @@ static void Background(u8 page, u8 save)
     }
 }
 
-static void LoadShape(u8 i)
+static void LoadShape(const AircraftShape* shape)
 {
-    const AircraftShape* shape;
     const u8* source;
-    u16 offset;
+    u16 offset = (u16)shape->data;
+    // Atlas rows 0..511 are the lower 64 KiB (pages 0/1), 512..1023 the upper.
+    u16 address = (shape->atlas_y & 511) * 128 + shape->atlas_x / 2;
+    u8 high = shape->atlas_y >= 512;
     u8 scratch[32];
     u8 row;
-    u16 address;
+    for (row = 0; row < shape->height; ++row)
     {
-        shape = &g_AircraftShapes[i];
-        offset = (u16)shape->data;
-        address = shape->atlas_y * 128 + shape->atlas_x / 2;
-        for (row = 0; row < shape->height; ++row)
-        {
-            Scenery_Read((offset >> 13) < 3 ? 8 + (offset >> 13) : 11 + (offset >> 13), offset & 8191, scratch, shape->width / 2);
-            offset += shape->width / 2;
-            source = scratch;
-            VDP_WriteVRAM(source, address, 1, shape->width / 2);
-            address += 128;
-        }
+        Scenery_Read((offset >> 13) < 3 ? 8 + (offset >> 13) : 11 + (offset >> 13), offset & 8191, scratch, shape->width / 2);
+        offset += shape->width / 2;
+        source = scratch;
+        VDP_WriteVRAM(source, address, high, shape->width / 2);
+        address += 128;
     }
 }
 
-static u8 s_GroundShape;
+static u8 s_GroundShape, s_FlashSlot[2];
 static void LoadCaches(void)
 {
     u8 i;
-    s_GroundShape=255;
-    for (i=0; i<AIRCRAFT_STATIC_SHAPES; ++i) LoadShape(i);
+    s_GroundShape=s_FlashSlot[0]=s_FlashSlot[1]=255;
+    for (i=0; i<AIRCRAFT_STATIC_SHAPES; ++i) LoadShape(&g_AircraftShapes[i]);
+}
+
+/* The original cannon overlay matching the drawn pitch pose. There is no
+ * source art for distant, ground or turning poses, so none is drawn there. */
+static const AircraftShape* GunFlash(u8 frame)
+{
+    u8 i, slot, index = 255;
+    if (!g_Combat.flash || g_TerrainFar) return 0;
+#ifdef WINGS_P1_FLIGHT
+    if (s_World.flight.mode == FLIGHT_GROUND) return 0;
+#endif
+    for (i = 0; i < 10; ++i)
+    {
+        if (g_PitchRight[i] == frame) index = i;
+        else if (g_PitchLeft[i] == frame) index = 10 + i;
+    }
+    if (index == 255) return 0;
+    // Alternate fa/fb on presented frames. The captured state then records
+    // the variant drawn on this page. Each variant streams into its own
+    // small VRAM slot when the pose changes.
+    g_Combat.flash ^= 3;
+    slot = g_Combat.flash - 1;
+    index += slot * 20;
+    if (s_FlashSlot[slot] != index)
+    {
+        LoadShape(&g_GunFlash[index]);
+        s_FlashSlot[slot] = index;
+    }
+    return &g_GunFlash[index];
+}
+
+/* Transparent copy of an atlas shape at world X dx / screen row dy,
+ * clipped to the camera and the playfield rows above limit. */
+static void CopyShape(u8 page, const AircraftShape* shape, int16_t dx, int16_t dy, u16 camera, int16_t limit)
+{
+    int16_t left = dx < (int16_t)camera ? (int16_t)camera : dx, right = dx + shape->width;
+    int16_t top = dy < 0 ? 0 : dy, bottom = dy + shape->height;
+    u16 base = (u16)page * 256;
+    u8 ring, width, part, source_x;
+    if (right > (int16_t)(camera + 256)) right = camera + 256;
+    if (bottom > limit) bottom = limit;
+    if (right <= left || bottom <= top) return;
+    ring = left & 255;
+    width = right - left;
+    source_x = shape->atlas_x + left - dx;
+    while (width)
+    {
+        part = width;
+        if ((u16)ring + part > 256) part = 256 - ring;
+        VDP_CommandLMMM(source_x, shape->atlas_y + top - dy, ring,
+                        base + top, part, bottom - top, VDP_OP_TIMP);
+        width -= part;
+        source_x += part;
+        ring += part;
+    }
 }
 
 static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
 {
     const AircraftShape* shape = &g_AircraftShapes[frame];
+    const AircraftShape* flash;
+    int16_t dx, dy, fx = 0, fy = 0, left, top, right, bottom, limit = 172;
     if (frame >= AIRCRAFT_STATIC_SHAPES && s_GroundShape != frame)
     {
-        LoadShape(frame);
+        LoadShape(shape);
         s_GroundShape=frame;
     }
+    flash = GunFlash(frame);
     if (g_TerrainFar) { shape = Dashboard_FarShape(frame); world >>= 3; }
-    int16_t dx = (int16_t)world + shape->dx
-        - (g_TerrainFar ? 0 : 25)
-        , dy = (int16_t)y + shape->dy;
-    int16_t left = dx < (int16_t)camera ? (int16_t)camera : dx;
-    int16_t top = dy < 0 ? 0 : dy;
-    int16_t right = dx + shape->width, bottom = dy + shape->height;
-    u16 ring, base = (u16)page * 256;
-    u8 width, part, source_x;
-    if (right > (int16_t)(camera + 256)) right = camera + 256;
+    dx = (int16_t)world + shape->dx - (g_TerrainFar ? 0 : 25);
     dy = (g_TerrainFar ? 161 - ((WINGS_FLIGHT_MAX_Y - y) >> 3) :
           WINGS_FLIGHT_MAX_Y - y > 131 ? 14 : 145 - (WINGS_FLIGHT_MAX_Y - y)) + shape->dy;
 #ifdef WINGS_P1_FLIGHT
@@ -325,11 +371,25 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     else
 #endif
     dy -= s_RenderHeave;
-    top = dy < 0 ? 0 : dy; bottom = dy + shape->height;
 #ifdef WINGS_P1_FLIGHT
-    if (g_Carrier.stage != CARRIER_DECK && bottom>145) bottom=145;
+    if (g_Carrier.stage != CARRIER_DECK) limit = 145;
 #endif
-    if (bottom > 172) bottom = 172;
+    left = dx; right = dx + shape->width;
+    top = dy; bottom = dy + shape->height;
+    if (flash)
+    {
+        // Both shapes use the original drawing origins around one object point.
+        fx = (int16_t)world + flash->dx - 25;
+        fy = dy - shape->dy + flash->dy;
+        if (fx < left) left = fx;
+        if (fx + flash->width > right) right = fx + flash->width;
+        if (fy < top) top = fy;
+        if (fy + flash->height > bottom) bottom = fy + flash->height;
+    }
+    if (left < (int16_t)camera) left = camera;
+    if (right > (int16_t)(camera + 256)) right = camera + 256;
+    if (top < 0) top = 0;
+    if (bottom > limit) bottom = limit;
     s_Valid[page] = 0;
     if (right <= left || bottom <= top) return;
     s_OldX[page] = (left & 254);
@@ -338,19 +398,8 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     s_OldHeight[page] = bottom - top;
     Background(page, 1);
     s_Valid[page] = 1;
-    ring = left & 255;
-    width = right - left;
-    source_x = shape->atlas_x + left - dx;
-    while (width)
-    {
-        part = width;
-        if ((u16)(ring & 255) + part > 256) part = 256 - (ring & 255);
-        VDP_CommandLMMM(source_x, shape->atlas_y + top - dy, ring & 255,
-                        base + top, part, bottom - top, VDP_OP_TIMP);
-        width -= part;
-        source_x += part;
-        ring = (ring + part) & 255;
-    }
+    CopyShape(page, shape, dx, dy, camera, limit);
+    if (flash) CopyShape(page, flash, fx, fy, camera, limit);
 }
 
 static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)

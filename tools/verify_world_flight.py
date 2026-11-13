@@ -39,7 +39,22 @@ def vram_image(vram, palette, camera, page, mission=False, heave=0):
     return image
 
 
-def expected_pixels(scene, frame, world, y, camera, background=None, background_width=4096, mission=False, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False):
+def gun_flash_shape(scene, frame, flash):
+    """Original cannon overlay record and packed pixels for a drawn pitch frame, or None."""
+    meta = scene.metadata
+    if not flash or 'gun_flash' not in meta:
+        return None
+    for side, table in ((0, meta['pitch_right']), (10, meta['pitch_left'])):
+        if frame in table:
+            record = meta['gun_flash'][(flash - 1) * 20 + side + table.index(frame)]
+            bank = record['data_offset'] // 8192
+            data = (scene.folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
+            offset = record['data_offset'] % 8192
+            return record, data[offset:offset + record['bytes']]
+    return None
+
+
+def expected_pixels(scene, frame, world, y, camera, background=None, background_width=4096, mission=False, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0):
     if background is None:
         pixels = [[world_pixel(camera + x, row) for x in range(256)] for row in range(212)]
     else:
@@ -116,6 +131,18 @@ def expected_pixels(scene, frame, world, y, camera, background=None, background_
                 packed = source[sy * (shape['width']//2) + sx//2]
                 pixel = packed & 15 if sx%2 else packed >> 4
             if pixel: pixels[dy][dx] = pixel
+    overlay = gun_flash_shape(scene, frame, flash) if mission and scale == 1 and not on_deck else None
+    if overlay:
+        record, source = overlay
+        for sy in range(record['height']):
+            dy = pivot + record['dy'] + sy
+            if not 0 <= dy < 172: continue
+            for sx in range(record['width']):
+                dx = world + record['dx'] + sx - camera - 25
+                if not 0 <= dx < 256: continue
+                packed = source[sy * (record['width']//2) + sx//2]
+                pixel = packed & 15 if sx%2 else packed >> 4
+                if pixel: pixels[dy][dx] = pixel
     if mission:
         def mark(x,y,w,h,color):
             for yy in range(max(0,y),min(171,y+h)):
@@ -128,12 +155,6 @@ def expected_pixels(scene, frame, world, y, camera, background=None, background_
             if scale == 8: x//=8; y=161-((1200-y)>>3)
             else: y=y-1039
             if scale == 8: mark(x,y,1,2 if kind>=3 else 1,11)
-            elif kind == 1:
-                if -8<p['vy']<8:mark(x-1,y,3,1,11)
-                else:
-                    tx=0 if -24<p['vx']<24 else -1 if p['vx']<0 else 1
-                    ty=-1 if p['vy']<0 else 1
-                    for step in (-1,0,1):mark(x+tx*step,y+ty*step,1,1,11)
             elif kind == 2:
                 from convert_dashboard import bomb_pixels
                 pose=0 if p['life']>95 else 1 if p['life']>92 else 2
@@ -265,7 +286,7 @@ def main():
             if mission:
                 snapshots[name].update(heave=heave,ship_frame=ship_frame)
                 combat=(output/f'{name}.combat').read_bytes()
-                assert len(combat)==158
+                assert len(combat)==160
                 for i in range(18):
                     values=struct.unpack_from('<HHbbBB',combat,i*8)
                     projectiles.append(dict(zip(('x','y','vx','vy','life','kind'),values)))
@@ -274,7 +295,7 @@ def main():
                 lives,weapon,stock=game[2:5]
                 shots,dropped,impacts=struct.unpack_from('<HHH',combat,152)
                 snapshots[name].update(stock=stock,weapon=weapon,lives=lives,shots=shots,dropped=dropped,impacts=impacts,
-                                       projectiles=projectiles)
+                                       projectiles=projectiles,flash=combat[158],aim_pitch=combat[151])
                 assert stock+dropped==30 and lives==3
 
             regs = (output / f'{name}.regs').read_bytes()
@@ -346,7 +367,7 @@ def main():
                         pixels = far_pixels[index*80+row*16:index*80+(row+1)*16]
                         packed = bytes((pixels[x]<<4)|pixels[x+1] for x in range(0,16,2))
                         assert vram[address:address+8] == packed, (name,'reduced aircraft atlas',pose['name'])
-            expected = expected_pixels(scene, frame, world, y, camera, (folder / 'far.indices').read_bytes() if mission and scale == 8 else background, terrain['far_width'] if mission and scale == 8 else terrain['width'] if terrain else 4096, mission, scale, wave, pilot, heave, ship_frame, projectiles, stock, weapon, lives)
+            expected = expected_pixels(scene, frame, world, y, camera, (folder / 'far.indices').read_bytes() if mission and scale == 8 else background, terrain['far_width'] if mission and scale == 8 else terrain['width'] if terrain else 4096, mission, scale, wave, pilot, heave, ship_frame, projectiles, stock, weapon, lives, flash=snapshots[name].get('flash', 0))
             if mission:
                 assert regs[0] & 16 and regs[19] == (169-heave if heave else 170), (name, 'dashboard split IRQ')
             for row in range(212):
@@ -450,11 +471,21 @@ def main():
                               'original twelve-frame water animation', 'forward pilot display with fixed reticle']
     if args.weapons:
         assert mission, '--weapons requires mission-flight'
-        assert {'weapon_1','weapon_2','weapon_3','weapon_1_far','weapon_2_far'} <= snapshots.keys(), 'missing weapon coverage'
+        assert {'weapon_2','weapon_3','weapon_2_far'} <= snapshots.keys(), 'missing weapon coverage'
+        flash_shots = [n for n in ('gun_flash_1', 'gun_flash_2') if n in snapshots]
+        assert flash_shots, 'no cannon flash snapshot'
+        for name in flash_shots:
+            shot = snapshots[name]
+            assert gun_flash_shape(scene, shot['frame'], shot['flash']), (name, 'flash overlay not drawn')
+        # Publication log while firing: the renderer alternates fa/fb per presented frame.
+        flashes = [tuple(map(int, line.split()[1:])) for line in report.splitlines() if line.startswith('flash ')]
+        assert {v for _, v, _ in flashes} == {1, 2}, ('fa/fb overlays not both presented', flashes[:12])
+        consecutive = [(a, b) for (n0, a, _), (n1, b, held) in zip(flashes, flashes[1:]) if n1 == n0 + 1 and not held]
+        assert consecutive and all(a != b for a, b in consecutive), ('overlay did not alternate per frame', consecutive[:12])
         assert sum(p['kind']==2 for p in snapshots['bomb_salvo']['projectiles'])>=8
         assert {'bomb_pose_0','bomb_pose_1','bomb_pose_2'} <= snapshots.keys(), 'missing bomb orientation coverage'
         assert snapshots['reset']['stock']==30 and snapshots['reset']['weapon']==0
-        summary['checks'] += ['gunfire and bombs in close/distant views', 'terrain impact flashes',
+        summary['checks'] += ['original fa/fb cannon flash overlays on the drawn pose', 'gun strikes and bombs in close/distant views', 'terrain impact flashes',
                               'original horizontal/diagonal/vertical bomb poses and immutable cache',
                               'projectile trails, overlap and clipping', 'secondary stock and debug reset']
         summary['weapons'] = dict(max_shots=max(s['shots'] for s in snapshots.values()),

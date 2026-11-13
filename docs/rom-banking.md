@@ -23,16 +23,16 @@ now banks code and grows to 256 KiB.
 | 16 | Banked code: `WINGS_SEGMENT_SCENE` (menu, ship, carrier elevator) |
 | 17–31 | Free for code or data |
 
-Measured release layout:
+Measured release layout (after the cannon overlay change; the banking change itself left 3,411 resident bytes free):
 
 | Area | Used | Free |
 | --- | --- | --- |
-| Resident 4000h–9FFFh | 21,165 bytes | 3,411 of 24,576 |
-| Segment 3 | 6,602 bytes | 1,590 |
+| Resident 4000h–9FFFh | 22,372 bytes | 2,204 of 24,576 |
+| Segment 3 | 6,006 bytes | 2,186 |
 | Segment 16 | 4,821 bytes | 3,371 |
-| Static RAM (`_DATA`, C1C4h–ED02h) | 11,067 bytes | n/a |
+| Static RAM (`_DATA`) | 11,071 bytes | n/a |
 
-The debug profile is smaller (19,788 resident bytes; its segment 16 omits the
+The debug profile is smaller (20,917 resident bytes; its segment 16 omits the
 P1 elevator). Every build prints these figures in its post-build step.
 
 ## How it works
