@@ -18,8 +18,8 @@ included in all figures below.
 | Render, mean | 47.9 ms | 46.0 ms |
 | Simulation + render, mean | 67.5 ms | 69.0 ms |
 | Simulation + render, p99 | 119 ms | 110 ms |
-| Worst gameplay frame | ~126 ms (29 + 97, low over the carrier, one dial redraw) | ~114 ms |
-| **Spare time, worst frame** | **~7 ms** | **~46 ms** |
+| Worst gameplay frame | ~127 ms (31 + 96, low over the carrier, one dial redraw) | ~114 ms |
+| **Spare time, worst frame** | **~6 ms** | **~46 ms** |
 | Spare time, mean frame | ~66 ms | ~91 ms |
 
 Updated 2026-11-14 for the P2 engine work. The P0 run now also takes off
@@ -32,7 +32,7 @@ View rebuilds (altitude scale switch, full-page redraw, 300+ ms) and
 restart/menu transition frames are excluded. They are exempt from the
 deadline by design (`g_ViewChange`, phase not `GAME_PLAY`).
 
-**NTSC worst case is the binding limit: only about 7 ms per frame is left
+**NTSC worst case is the binding limit: only about 6 ms per frame is left
 in the heaviest scene (low over the carrier) for enemy simulation and
 drawing.** Recovering render time (candidates below) is a precondition for
 enemies there. Before adding

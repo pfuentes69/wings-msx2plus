@@ -22,6 +22,7 @@ volatile u8 g_DisplayElevator;
 #include "msx/weapons.h"
 #include "core/combat.h"
 #include "core/engine.h"
+#include "core/landing.h"
 #include "core/game.h"
 #include "msx/input_sampler.h"
 #include "msx/menu.h"
@@ -33,7 +34,8 @@ static u8 s_UiDirty;
 CombatState g_Combat;
 #ifdef WINGS_P1_FLIGHT
 EngineState g_Engine;
-static u8 s_CrashSteps;          /* 1-second hold after a dead plane reaches the sea */
+static u8 s_CrashSteps;          /* 1-second hold after a crash */
+u8 g_LastContact;                /* latest LANDING_* contact, for verification */
 static u8 s_EngineSteps;         /* simulation steps into the current original tick */
 #endif
 /* Oil needle, fuel needle and lamps drawn on the rendered/published page.
@@ -58,7 +60,8 @@ volatile u8 g_DisplayPage, g_SelectedFrame, g_DisplayX, g_Turning;
 volatile u16 g_DisplayY;
 volatile u8 g_HoldFlight, g_RenderPage;
 volatile u16 g_DisplayCamera, g_DisplayWorld, g_MissedFrames;
-static WorldState s_World;
+/* Not static: the openMSX scenarios read the flight state (tools/p0_smoke.tcl). */
+WorldState s_World;
 static AircraftState s_Aircraft;
 static u16 s_Camera[2], s_OldX[2];
 static u8 s_OldY[2], s_OldWidth[2], s_OldHeight[2], s_Valid[2];
@@ -554,6 +557,19 @@ static void NewPlane(void)
 }
 
 #ifdef WINGS_P1_FLIGHT
+/* Contact crash: hold the scene for one second with a splash (sea) or an
+ * impact (deck, island) at the plane; the original's crash art is pending. */
+static void StartCrash(void)
+{
+    CombatProjectile* p = &g_Combat.projectile[0];
+    u16 world = s_World.x >> 8;
+    u8 deck = world >= FLIGHT_DECK_LEFT && world <= FLIGHT_DECK_RIGHT;
+    p->x = world * 4u; p->y = (deck ? 1168u : 1200u) * 4u; p->vx = p->vy = 0;
+    p->life = 25;
+    p->kind = Mission_Surface(world) == MISSION_SEA ? COMBAT_SPLASH : COMBAT_IMPACT;
+    s_CrashSteps = 150;
+}
+
 /* The crashed plane is lost: launch the next one with the same weapon, or end
  * the game when none remain (manual: lives > 0 ? next plane : game over). */
 static void LosePlane(void)
@@ -641,6 +657,9 @@ void main(void)
     u16 column, camera, world, y;
     u16 surface;
     u8 weapons, reset_weapons, i;
+#ifdef WINGS_P1_FLIGHT
+    u8 contact;
+#endif
     u8 page, frame, steps, step, input, tick, turn, held = 0;
     u8 base_steps, present_ticks, core_phase = 0;
     g_Ready = g_Rendering = g_FramePublished = g_HoldFlight = 0;
@@ -787,7 +806,13 @@ void main(void)
 #endif
                         World_StepSample(&s_World,input,step==steps-1);
 #ifdef WINGS_P1_FLIGHT
-                        if (g_Engine.failed && s_World.flight.y>=FLIGHT_MAX_Y) s_CrashSteps=150;
+                        /* Contact needs the plane below deck height; skip the call otherwise
+                         * (nearly every step), which keeps it off the frame budget. */
+                        contact=s_World.flight.y>(FlightVertical)FLIGHT_DECK_Y*256u ?
+                            Landing_Contact(&s_World.flight,s_World.x>>8,g_Engine.failed) : LANDING_NONE;
+                        if (contact) g_LastContact=contact;
+                        if (contact==LANDING_CRASH) { StartCrash(); goto advance_clocks; }
+                        if (contact) Landing_Apply(&s_World.flight,contact);
 #endif
                     if (Combat_Tick(&g_Combat)
 #ifdef WINGS_P1_FLIGHT

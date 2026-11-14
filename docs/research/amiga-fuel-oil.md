@@ -82,3 +82,21 @@ plane at full oil and fuel, not two arbitrary needle positions.
 Engine-out flight physics, crash and splash presentation, refill in the hold,
 what crashes on contact with the sea or deck, and which attackers cause each
 kind of damage.
+
+## Landing and contact (0xba80, 0xb8c4, 0xc2ce)
+
+Recovered 2026-11-14 with the same method.
+
+| Evidence | Meaning | Confidence |
+| --- | --- | --- |
+| 0xaaea | The plane's bottom offset below its origin: a per-pose table (`-$5552`, indexed by pose `-$5a6c`), plus a gear-down table (`-$553c`) while gear `-$5bf4` is down; turn frames use `-$54fe` | Established control flow; table values not yet extracted |
+| 0x5710 | Surface height from the map word's object id (`(word >> 2) & 0x1ff`) | Established; heights per id not extracted |
+| 0xb8c4 | Contact when `altitude − bottom < surface` (strictly below) or ≤ 0. Resting exactly on the surface is not contact, so takeoff is safe | Established |
+| 0xb7bc | Landing range = carrier map extents × 4, 16 px inward at each end | Established |
+| 0xc2ce | While UP (input bit 0) is held facing left, horizontal speed approaches 600 and flag `-$5554` is set; facing right clears it | Established; bit-0 = UP inferred from the horizontal mask `$0c` |
+| 0xba80, mode 0 contact | **Landed (mode 1)** when inside the landing range, at most 4 px into the deck, `-$5b22` set, facing left and `-$5554` set: altitude snaps onto the deck. Inside the range otherwise: **bounce** (vertical velocity negated, +6 px). Outside the range: **crash** (mode 4, explosion via 0xafba) | Established control flow; `-$5b22` is only read (probably "carrier present") |
+| 0xc6de | Altitude ≤ −7 (into the sea) → mode 6, crash sound | Established |
+
+There is no cable geometry in the capture rule. The manual's "four arresting
+cables" are scenery as far as this code is concerned: a stall onto the deck,
+facing left, is a landing.

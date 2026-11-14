@@ -44,7 +44,7 @@ def main():
         with subprocess.Popen([shutil.which('openmsx'),'-control','stdio',*settings,'-machine',args.machine,'-cart',str(rom),'-romtype','ASCII8',
                         '-script',str(ROOT/'tools/p0_smoke.tcl')],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT,stdin=subprocess.PIPE) as emulator:
             try:
-                assert emulator.wait(timeout=200)==0, 'openMSX failed'
+                assert emulator.wait(timeout=400)==0, 'openMSX failed'
             except subprocess.TimeoutExpired:
                 emulator.kill(); emulator.wait(); raise
     assert rom.read_bytes()==data,'ROM changed during verification'
@@ -69,7 +69,9 @@ def main():
         projectiles=[]
         if game[0]==3:
             projectiles=[dict(zip(('x','y','vx','vy','life','kind'),struct.unpack_from('<HHbbBB',combat,i*8))) for i in range(18)]
-            ground=stage!=1 or name.startswith(('taxi_','lift_')) or name in {'start','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','ground_roll'}
+            # On the deck (ground mode, flight byte 12) or riding the elevator.
+            flight=(out/f'{name}.flight').read_bytes()
+            ground=stage!=1 or flight[12]==0
             expected=expected_pixels(scene,int(pose),int(world),int(y),int(camera),
                 (ROOT/'assets_msx/mission_a'/('far.indices' if scale==8 else 'scene.indices')).read_bytes(),
                 terrain['far_width'] if scale==8 else terrain['width'],scale,int(wave),pilot,int(heave),int(ship),
@@ -112,6 +114,7 @@ def main():
     required|={f'taxi_right_{i}' for i in range(10)}|{f'taxi_left_{i}' for i in range(10,0,-1)}
     required|={'taxi_right_stop','taxi_right_hold','taxi_left_stop','taxi_left_hold'}
     required|={'engine_low_fuel','engine_failed','engine_next_plane','game_over'}
+    required|={'landed','landed_service','deck_bounce','sea_splash','sea_crash_next'}
     assert required<=snapshots.keys(),required-snapshots.keys()
     assert (out/'paused.combat').read_bytes()==(out/'pause_wait.combat').read_bytes(),'Pause advanced weapons'
     for key in ('world','y','pose','wave','heave','ship','crew','depth','stage'):

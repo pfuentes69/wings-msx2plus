@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -90,6 +90,7 @@ proc publishing {} {
     dump $name.view [debug read_block memory $::addr(g_DisplayScale) 3]
     dump $name.crew [debug read_block memory $::addr(g_CrewFrame) 1]
     dump $name.gauges [debug read_block memory $::addr(g_DisplayGauges) 3]
+    dump $name.flight [debug read_block memory $::addr(s_World) 22]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
     dump $name.rom [debug read_block memory 16384 32768]
@@ -493,7 +494,112 @@ proc engine_wait_respawn {} {
     require [expr {[machine_info time]<$::crash_deadline}] "Dead plane never crashed"
     if {[view 2]!=2 || [word g_DisplayWorld]!=7032 || [word g_DisplayY]!=1160} {after time 0.05 engine_wait_respawn;return}
     require [expr {[debug read memory [expr {$::addr(g_Game)+15}]]==192 && [debug read memory [expr {$::addr(g_Game)+14}]]==128 && [engine_byte 3]==0}] "Next plane not refuelled and repaired"
-    snap engine_next_plane {wait_lift_up {engine_takeoff engine_last_plane}}
+    snap engine_next_plane {wait_lift_up {engine_takeoff land_circuit}}
+}
+# P2 landing: a closed-loop autopilot flies the circuit from the real state.
+# s_World: flight y (Q8 u32) +2, vx +6, facing_left +11, mode +12; world x (Q8 u32) +16.
+proc world_byte {offset} {debug read memory [expr {$::addr(s_World)+$offset}]}
+proc world_x {} {expr {[world_byte 17]+256*[world_byte 18]}}
+proc world_y {} {expr {[world_byte 3]+256*[world_byte 4]+65536*[world_byte 5]}}
+proc world_vx {} {set v [expr {[world_byte 6]+256*[world_byte 7]}]; expr {$v>=32768 ? $v-65536 : $v}}
+proc fly {mask} {keymatrixup 8 [expr {240 & ~$mask}]; if {$mask} {keymatrixdown 8 $mask}}
+proc fly_hold {mask target} {
+    # Hold a heading; trim toward a target altitude (screen y grows downward).
+    set y [world_y]
+    if {$y < $target - 2} {fly [expr {$mask|64}]} elseif {$y > $target + 2} {fly [expr {$mask|32}]} else {fly $mask}
+}
+proc circuit_deadline {seconds} {set ::circuit_deadline [expr {[machine_info time]+$seconds}]}
+proc circuit_check {what} {require [expr {[machine_info time]<$::circuit_deadline}] "Circuit timeout: $what x=[world_x] y=[world_y]"}
+proc circuit_out {then} {
+    # From takeoff (flying left off the bow): turn right, fly past the carrier.
+    circuit_deadline 30
+    set ::circuit_then $then
+    fly 128
+    after time 1.0 circuit_outbound
+}
+proc circuit_outbound {} {
+    circuit_check outbound
+    if {[world_byte 11]} {after time 0.05 circuit_outbound;return}
+    fly_hold 128 1100
+    if {[world_x] < 7560} {after time 0.025 circuit_outbound;return}
+    fly 16
+    after time 1.0 circuit_inbound
+}
+proc circuit_inbound {} {
+    circuit_check inbound
+    if {![world_byte 11]} {after time 0.05 circuit_inbound;return}
+    fly_hold 16 1150
+    if {[world_x] > 7280 || abs([world_y]-1150) > 3} {
+        require [expr {[world_x] > 7200}] "Approach not stabilised over the deck: x=[world_x] y=[world_y]"
+        after time 0.01 circuit_inbound;return
+    }
+    puts $::report "approach x=[world_x] y=[world_y] vx=[world_vx]"
+    uplevel #0 $::circuit_then
+}
+proc land_circuit {} {set ::contact_before [value g_LastContact]; circuit_out land_stall}
+proc land_stall {} {
+    debug write memory $::addr(g_LastContact) 0
+    fly 32
+    circuit_deadline 6
+    land_touch
+}
+proc land_touch {} {
+    circuit_check touchdown
+    if {[value g_LastContact]==0} {after time 0.025 land_touch;return}
+    require [expr {[value g_LastContact]==1 && [world_byte 12]==0 && [world_y]==1160 && [world_byte 11]}] "Stall onto the deck must land: contact=[value g_LastContact] mode=[world_byte 12] y=[world_y]"
+    fly 0
+    after time 0.6 {require [expr {[world_vx]==0}] "Landed plane did not stop"; snap landed land_taxi}
+}
+proc land_taxi {} {
+    circuit_deadline 20
+    require [expr {[world_x] > 7038}] "Landed past the elevator: x=[world_x]"
+    fly 16
+    land_taxi_wait
+}
+proc land_taxi_wait {} {
+    circuit_check taxi
+    # Release when the remaining distance equals the braking distance (the
+    # ground model sheds 5 Q8 units of speed per 150 Hz step).
+    set v [expr {abs([world_vx])}]
+    if {[world_x] - 7032 > $v*$v/2560 + 1} {after time 0.01 land_taxi_wait;return}
+    fly 0
+    after time 0.5 {
+        require [expr {[world_vx]==0 && abs([world_x]-7032)<=6}] "Taxi did not stop on the elevator: x=[world_x]"
+        pulse 8 1 {phase 7 {snap landed_service {pulse 7 128 {phase 3 {wait_lift_up {engine_takeoff bounce_circuit}}}}}}
+    }
+}
+proc bounce_circuit {} {circuit_out bounce_dive}
+proc bounce_dive {} {
+    debug write memory $::addr(g_LastContact) 0
+    fly 80
+    circuit_deadline 6
+    bounce_wait
+}
+proc bounce_wait {} {
+    circuit_check bounce
+    if {[value g_LastContact]==0} {after time 0.01 bounce_wait;return}
+    require [expr {[value g_LastContact]==2 && [world_byte 12]!=0}] "Powered deck contact must bounce: contact=[value g_LastContact] x=[world_x] y=[world_y]"
+    fly 48
+    snap deck_bounce {after time 1.5 sea_dive}
+}
+proc sea_dive {} {
+    debug write memory $::addr(g_LastContact) 0
+    set ::lives_before [view 2]
+    fly 80
+    circuit_deadline 15
+    sea_splash
+}
+proc sea_splash {} {
+    circuit_check splash
+    if {[value g_LastContact]!=3} {after time 0.01 sea_splash;return}
+    after time 0.2 {snap sea_splash sea_wait}
+}
+proc sea_wait {} {
+    circuit_check sea
+    if {[view 2]==$::lives_before || [word g_DisplayWorld]!=7032 || [word g_DisplayY]!=1160} {after time 0.05 sea_wait;return}
+    require [expr {[value g_LastContact]==3 && [view 2]==$::lives_before-1}] "Powered sea dive must crash and cost a plane"
+    fly 0
+    snap sea_crash_next {wait_lift_up {engine_takeoff engine_last_plane}}
 }
 proc engine_last_plane {} {
     game_byte 7 1
@@ -514,4 +620,4 @@ proc done {} {
 }
 debug watchpoint create -type write_mem -address $addr(g_MissedFrames) -command {guard missed_frame}
 after time 1 {guard ready}
-after time 330 {bgerror "P0 scenario timeout"}
+after time 480 {bgerror "P0 scenario timeout"}
