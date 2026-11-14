@@ -53,6 +53,7 @@ volatile u8 g_DisplayCrash = 255;
 static u8 s_Wheel = 255, s_GearPos = 5, s_RenderWheel = 255, s_RenderGear = 5;
 /* The arresting rope (src/msx/rope.c): the cable drawn, 255 none. */
 volatile u8 g_DisplayRope = 255;
+volatile u32 g_DisplayScore;
 /* The smoke puffs the shown page holds: count, then x (2), row (2), frame. */
 volatile u8 g_DisplaySmoke[1 + SMOKE_DRAWN_MAX * 5];
 static u8 s_RenderSmokePage;
@@ -640,6 +641,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     DrawAircraft(page, frame, world, y, camera);
     Weapons_Draw(page, camera, g_TerrainFar, s_RenderHeave, &g_Combat);
     Dashboard_Status(page, g_Game.sortie.weapon, g_Game.sortie.stock, g_Game.progress.lives);
+    Dashboard_Score(page, g_Game.progress.score);
 #ifdef WINGS_P1_FLIGHT
     s_RenderGauges[0] = g_Engine.oil_needle; s_RenderGauges[1] = g_Engine.fuel_needle;
     s_RenderGauges[2] = g_Engine.lamps;
@@ -1057,6 +1059,7 @@ advance_clocks:
                 g_RenderPage=page; g_Rendering=1;
                 Menu_Draw(page,&g_Game);
                 Dashboard_Status(page,g_Game.sortie.weapon,g_Game.sortie.stock,g_Game.progress.lives);
+                Dashboard_Score(page,g_Game.progress.score);
                 Dashboard_Gauges(page,s_RenderGauges,0);
                 VDP_CommandWait(); g_Rendering=0;
                 s_PageScale[page]=255; s_UiDirty=0;
@@ -1134,6 +1137,7 @@ advance_clocks:
 #ifdef WINGS_P1_FLIGHT
         g_DisplayWheel=s_RenderWheel; g_DisplayGear=s_RenderGear; g_DisplayRope=s_RenderRope;
         PublishSmoke(page);
+        g_DisplayScore = g_HudScore[page];
 #endif
         g_FramePublished ^= 1;
     }

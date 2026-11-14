@@ -15,6 +15,9 @@ void Dashboard_RestoreWaves(u8 page, u8 reset) WINGS_BANKED;
 void Dashboard_CopyPalette(u8* destination) WINGS_BANKED;
 
 void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives) WINGS_BANKED;
+/* The six-digit score field; redrawn only when the value changes. */
+void Dashboard_Score(u8 page, u32 score) WINGS_BANKED;
+extern u32 g_HudScore[2];  /* what each page shows */
 /* gauges: in {oil frame, fuel frame, lamps (bit 0 oil, bit 1 fuel)} wanted;
  * out: what the page shows (at most one dial changes per call). */
 /* hold: redraw nothing this page (a heavy frame); gauges still reports what

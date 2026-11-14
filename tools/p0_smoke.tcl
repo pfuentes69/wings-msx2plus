@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_DisplaySmoke g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_HudScore g_DisplayScore g_DisplaySmoke g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -120,6 +120,7 @@ proc publishing {} {
     dump $name.crash [debug read_block memory $::addr(g_DisplayCrash) 1]
     dump $name.wheel [binary format ccc [value g_DisplayWheel] [value g_DisplayGear] [value g_DisplayRope]]
     dump $name.smoke [debug read_block memory $::addr(g_DisplaySmoke) 41]
+    dump $name.score [debug read_block memory $::addr(g_DisplayScore) 4]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
     dump $name.rom [debug read_block memory 16384 32768]
@@ -146,7 +147,7 @@ proc rendering {} {
 }
 proc missed_frame {} {
     if {![info exists ::last_publish]} {return}
-    puts $::report "deadline elapsed=[expr {1000*([machine_info time]-$::last_publish)}] render=$::last_render stage=[value g_Carrier] world=[word g_DisplayWorld] vblank=[value g_VBlankTicks]"
+    puts $::report "deadline elapsed=[expr {1000*([machine_info time]-$::last_publish)}] render=$::last_render stage=[value g_Carrier] world=[word g_DisplayWorld] vblank=[value g_VBlankTicks] viewchange=[value g_ViewChange] camera=[word g_DisplayCamera] scale=[value g_DisplayScale] y=[word g_DisplayY] hudscore=[debug read_block memory $::addr(g_HudScore) 8] score=[debug read_block memory $::addr(g_Game) 4]"
     flush $::report
 }
 debug watchpoint create -type write_mem -address $addr(g_FramePublished) -command {guard publishing}
@@ -527,6 +528,8 @@ proc engine_airborne {then} {
     uplevel #0 $then
 }
 proc engine_low_fuel {} {
+    # The score field (no targets yet): the manual's example score, 20160.
+    game_byte 0 [expr {20160 & 255}];game_byte 1 [expr {20160 >> 8}];game_byte 2 0;game_byte 3 0
     game_byte 15 60
     set ::lamps {}
     after time 1.4 engine_watch_lamp

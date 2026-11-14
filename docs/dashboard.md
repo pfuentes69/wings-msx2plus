@@ -56,9 +56,11 @@ the lamp at the warning thresholds, and the original draws the needle over
 the lamp, so every frame exists both dark and lit. `Dashboard_Status` and
 `Dashboard_Gauges` copy a rectangle only when its value changes, and at most
 one dial per rendered page (see [p2-engine.md](p2-engine.md)). The score and
-kills digits sit on a 7-pixel pitch, so neighbours share bytes. They will be
-plotted at runtime from the generated glyph rows when scoring arrives (P3);
-until then the panel shows 0 and 00.
+kills digits sit on a 7-pixel pitch, so neighbours share bytes.
+`Dashboard_Score` rebuilds the 42-pixel score field from the generated glyph
+rows when the score changes: digit pairs are byte-aligned 14-pixel cells, and
+each byte is two pixels from a 4-entry table (an earlier per-pixel loop with
+divisions cost ~300 ms). The kills pair still shows 00 until P5.
 
 `convert_dashboard.layout()` is the single source of positions for the
 converter, the generated header (`HUD_*`) and both pixel oracles. The oracles

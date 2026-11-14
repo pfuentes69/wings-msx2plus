@@ -75,7 +75,7 @@ def crash_shape(scene, index):
     return record, data[offset:offset + record['bytes']]
 
 
-def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True, smoke=()):
+def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True, smoke=(), score=0):
     # World x is a 16-bit ring read as signed; beyond the map the MSX draws a
     # column of open sea (map x 5000 near, far x 624 in the distant view).
     signed = lambda v: v - 65536 if v >= 32768 else v
@@ -87,7 +87,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
     from convert_dashboard import compose, waves, pilot_frame, layout, PILOT_WIDTH
     # gauges: oil needle frame, fuel needle frame, lamp bits (1 oil, 2 fuel) as published.
     dashboard = compose(ammo=stock, weapon=weapon, lives=lives, oil=gauges[0], fuel=gauges[1],
-                        oil_lamp=bool(gauges[2] & 1), fuel_lamp=bool(gauges[2] & 2))
+                        oil_lamp=bool(gauges[2] & 1), fuel_lamp=bool(gauges[2] & 2), score=score)
     pixels = pixels[40:] + [list(dashboard[row * 256:(row + 1) * 256]) for row in range(40)]
     if scale == 1:
         for x in range(256):

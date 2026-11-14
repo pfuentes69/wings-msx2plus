@@ -84,7 +84,8 @@ def main():
                 projectiles,game[4],game[3],game[2],crew,ground,depth,stage!=1,flash=combat[158],
                 gauges=tuple((out/f'{name}.gauges').read_bytes()),crash=(out/f'{name}.crash').read_bytes()[0],
                 wheel=wheel,gear=gear,deck_level=deck_level,rope=rope,facing_left=bool(flight[11]),
-                smoke=[(x & 0xFFFF,row,frame) for x,row,frame in smoke])
+                smoke=[(x & 0xFFFF,row,frame) for x,row,frame in smoke],
+                score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0])
             for row in range(212):
                 for col in range(8,256):
                     ring=col if row>=172 else (int(camera)+col)%256
@@ -97,8 +98,9 @@ def main():
         # it in every phase (the pilot window shows the last flight profile).
         gauges=tuple((out/f'{name}.gauges').read_bytes())
         assert all(g<=22 for g in gauges[:2]) and gauges[2]<=3,(name,'gauge state',gauges)
+        score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0]
         hud=compose(ammo=game[4],weapon=game[3],lives=game[2],oil=gauges[0],fuel=gauges[1],
-                    oil_lamp=bool(gauges[2]&1),fuel_lamp=bool(gauges[2]&2))
+                    oil_lamp=bool(gauges[2]&1),fuel_lamp=bool(gauges[2]&2),score=min(score,999999))
         spots=layout()
         for row in range(40):
             for col in range(8,256):
@@ -148,6 +150,7 @@ def main():
     assert snapshots['landed']['y']==1160 and 7038<snapshots['landed']['world']<7345
     assert snapshots['arrest']['rope'] in (0,1,2,3) and snapshots['landed']['rope']==255
     assert snapshots['engine_smoke']['smoke']>=2 and snapshots['start']['smoke']==0
+    assert struct.unpack('<I',(out/'engine_smoke.score').read_bytes())[0]==20160
     for heading in ('left','right'):
         for attitude in ('climb','level','dive'):
             snapshot=snapshots[f'cannon_{attitude}_{heading}']
@@ -186,7 +189,7 @@ def main():
     lift_timing=dict(presentation_vblanks=6,samples=len(cadence),median_publication_ms=median,
         max_regular_redraw_ms=max(r for i,r in cadence),simulation_ticks_per_pixel=18,travel_ticks=576)
     summary=dict(lift_timing=lift_timing,machine=args.machine,rom_sha256=hashlib.sha256(data).hexdigest(),raster_captured=not args.headless,
-                 snapshots=snapshots,checks=['original elevator platform and hull occlusion at multiple depths','initial leftward emergence and two heading-preserving service cycles','primary/secondary elevator activation with held-confirmation consumption','real bomb expenditure then reload without a game reset','turning round on the deck at rest in both directions, in place','streamed ground-turn artwork and noncontiguous bank restoration','gear down near the carrier in either direction; original wheel overlays on every pose, sliding up and down','open sea past the map end with the camera centred on the plane','arresting rope drawn from the caught cable to the hook during the arrest','engine smoke from a damaged engine, erased by repainting terrain','full visible composite pixels including both original signalmen and deck heave','original flight model (12.5 Hz): deck roll, tail up, rolling off the bow and climbing away','original turn: height lost, regained by climbing through the turn','stall flare keeps airspeed and sinks nose up; a Down tap starts a held dive','release boot and seven-rank/load shells','context edge consumption',
+                 snapshots=snapshots,checks=['original elevator platform and hull occlusion at multiple depths','initial leftward emergence and two heading-preserving service cycles','primary/secondary elevator activation with held-confirmation consumption','real bomb expenditure then reload without a game reset','turning round on the deck at rest in both directions, in place','streamed ground-turn artwork and noncontiguous bank restoration','gear down near the carrier in either direction; original wheel overlays on every pose, sliding up and down','open sea past the map end with the camera centred on the plane','arresting rope drawn from the caught cable to the hook during the arrest','engine smoke from a damaged engine, erased by repainting terrain','six-digit score field drawn from the glyphs','full visible composite pixels including both original signalmen and deck heave','original flight model (12.5 Hz): deck roll, tail up, rolling off the bow and climbing away','original turn: height lost, regained by climbing through the turn','stall flare keeps airspeed and sinks nose up; a Down tap starts a held dive','release boot and seven-rank/load shells','context edge consumption',
                     '30/15/1 stock previews and three lives','unlimited provisional guns do not spend secondary stock',
                     'N/GRAPH alias overlap and short press buffering','PSG-boundary injection of both joystick triggers and inversion','in-game save/load shells return without state mutation','Esc-only pause freezes gameplay clocks',
                     'Ctrl-F settings and Ctrl-R restart','release profile ignores debug R/T',
