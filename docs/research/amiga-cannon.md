@@ -63,8 +63,9 @@ Hits on aircraft and ships were not traced. They probably use other routines.
   is not copied until it can be checked at runtime.
 - Each overlay variant streams into a 16×12 VRAM slot at page 0, x=240, rows
   212/224, the only free hidden-row space. See `tests/test_vram_layout.py`.
-- The original's yellow flash core has no match in the 16-colour playfield
-  palette, so it maps to light grey.
+- The original's pale-yellow flash core (RGB3 7,7,3) has no match in the
+  16-colour playfield palette. It maps to white, the closest colour by
+  brightness; nearest colour distance tied grey with orange.
 
 The reproduction helpers used for this note are not committed. Repeat the
 analysis by parsing the hunks and disassembling with Capstone (`CS_ARCH_M68K`).

@@ -2010,7 +2010,7 @@
         "atlas_y": 212,
         "data_offset": 25476,
         "bytes": 24,
-        "packed_sha256": "e8cfa3fa9328205814dba8015f4cce372283dff53a261294cb3fab81fd8ad284"
+        "packed_sha256": "e415a9972623957e3bf7d78db526bfaf7ed56d126a3722ed8c7c66c1ee99cf49"
       },
       {
         "name": "fa02",
@@ -2028,7 +2028,7 @@
         "atlas_y": 212,
         "data_offset": 25500,
         "bytes": 20,
-        "packed_sha256": "98266cdad99559ff0fa997e633fb71a83a6d49aeebcd37dd960da00f1ecdc86c"
+        "packed_sha256": "d675831568ef32b4507ed881be511bffa6e119a8eb5db372b98d704304f88f79"
       },
       {
         "name": "fa03",
@@ -2064,7 +2064,7 @@
         "atlas_y": 212,
         "data_offset": 25536,
         "bytes": 12,
-        "packed_sha256": "5f0f0bf2790a2375875e225574dfbb5bbcbccac3b5735fea2863aa90925dc96e"
+        "packed_sha256": "132eee5d43e6c17a340d4b13844ca5e1bff9f55a033e44126acd7237e7c3b179"
       },
       {
         "name": "fa05",
@@ -2082,7 +2082,7 @@
         "atlas_y": 212,
         "data_offset": 25548,
         "bytes": 12,
-        "packed_sha256": "0c001eb5593aaa44cc41b5053726d609c7f9dfb0d8bf0dab0f71b0f953d83013"
+        "packed_sha256": "e1bdba99297add850a612ac601e715ba7c2806b89e234c1eb9551930bb6cd80f"
       },
       {
         "name": "fa06",
@@ -2100,7 +2100,7 @@
         "atlas_y": 212,
         "data_offset": 25560,
         "bytes": 12,
-        "packed_sha256": "c1bb81719489400a96b668a5419ff03048b12ae6df29a53fe06df95a158a0c80"
+        "packed_sha256": "e2d14f318b5bdc53be1336aee17e693a1d96e883f3349828ead06e88a9d12c09"
       },
       {
         "name": "fa07",
@@ -2118,7 +2118,7 @@
         "atlas_y": 212,
         "data_offset": 25572,
         "bytes": 16,
-        "packed_sha256": "a22d1e74883d7fd0776f3482b2ac52e5094e3b0062aab9a9aaeb37db787ee6cf"
+        "packed_sha256": "2ab8b5e9d9435e91ac59cabad4c6ed1ceef47f68da64f38ff9ecd15cf0ec5939"
       },
       {
         "name": "fa08",
@@ -2154,7 +2154,7 @@
         "atlas_y": 212,
         "data_offset": 25612,
         "bytes": 15,
-        "packed_sha256": "e6f59fff116e951183cf3503f63d7b98507f0b3317e180478c9407f6e16e3b88"
+        "packed_sha256": "c5a017198c9ecf36a7d5d5db933e07d1cbe199cd4a39f66d27950bbbdb73c0f4"
       },
       {
         "name": "fa0a",
@@ -2172,7 +2172,7 @@
         "atlas_y": 212,
         "data_offset": 25627,
         "bytes": 21,
-        "packed_sha256": "5e2bd263a91eec56f5dcbcd5838cbee39b59aa482f7a13e8e5a090e73804f451"
+        "packed_sha256": "3ba7b30dd3a68569034fce89a894aa867ead8480e2dbdcc5ae8f245c92971912"
       },
       {
         "name": "fa0b",
@@ -2190,7 +2190,7 @@
         "atlas_y": 212,
         "data_offset": 25648,
         "bytes": 24,
-        "packed_sha256": "3330a56c73e0b6e215647222058c5a11e6dd111f8793cba3fc776976a28701d1"
+        "packed_sha256": "8b5ef10ca4e6f3e0f4cda4afcfd562329ddff2bc0f48f7bd3cda672091ba3be0"
       },
       {
         "name": "fa0c",
@@ -2208,7 +2208,7 @@
         "atlas_y": 212,
         "data_offset": 25672,
         "bytes": 20,
-        "packed_sha256": "80ae27ddbd03de3796172b4eb82911748b2cdf560c85a0fb780f448a97d2aac3"
+        "packed_sha256": "28b17bd077be407308d0d611325366704119b5c569d28c5af8eb82466cc4cc58"
       },
       {
         "name": "fa0d",
@@ -2244,7 +2244,7 @@
         "atlas_y": 212,
         "data_offset": 25708,
         "bytes": 12,
-        "packed_sha256": "2b9b440445e9431e1772f83b6c6eb58312fe0943e98a0efacecee87f4018b5cd"
+        "packed_sha256": "e82af38bf2b7c6b9e53391ba6a16c6d681d20e0fa4c209dc568d971c38861c31"
       },
       {
         "name": "fa0f",
@@ -2262,7 +2262,7 @@
         "atlas_y": 212,
         "data_offset": 25720,
         "bytes": 12,
-        "packed_sha256": "e1edc54ea0718394ece1a03879bcf1b475602d30c64edfae4074e42fe9b3d846"
+        "packed_sha256": "169a6811745312d993c5cbfaeb09998d04793ab2ac88d7733bf31a9f52f942cc"
       },
       {
         "name": "fa10",
@@ -2280,7 +2280,7 @@
         "atlas_y": 212,
         "data_offset": 25732,
         "bytes": 12,
-        "packed_sha256": "2832f350c0ef0171ee138afce3181f48fcb480b93d1935fd4b58d9d2c792ec23"
+        "packed_sha256": "a3fc9641fc99ae138da80a09845eea84c54f5a32c3d9c6a7070590b1269fb886"
       },
       {
         "name": "fa11",
@@ -2298,7 +2298,7 @@
         "atlas_y": 212,
         "data_offset": 25744,
         "bytes": 16,
-        "packed_sha256": "9de8afb4924a37706ad23621d8d8959063eadfa6b410f40f029d73039dc7e528"
+        "packed_sha256": "9d9912ae70f89e7f68e08f687cbc1827f9e14ec0b85cd626fd4f45b2f68a4f5a"
       },
       {
         "name": "fa12",
@@ -2334,7 +2334,7 @@
         "atlas_y": 212,
         "data_offset": 25784,
         "bytes": 15,
-        "packed_sha256": "191c7ec6679140e6d3a862445756add03d9248e21d2cedcb925f2a7d2e7fcbc9"
+        "packed_sha256": "55ce4f005e5874afb63dd5450b2e5a5b13a095f144ada5565cd5030268e0060b"
       },
       {
         "name": "fa14",
@@ -2352,7 +2352,7 @@
         "atlas_y": 212,
         "data_offset": 25799,
         "bytes": 21,
-        "packed_sha256": "7d69ea950f9309520b9f8d4daf61d2f1470562431714837d43e0be3e6f266ea1"
+        "packed_sha256": "2d7fc6b281c5c62b818ecf1e93a63f7ce4cadb68fc8534f5b5bf70f47b7c46cb"
       },
       {
         "name": "fb01",
@@ -2370,7 +2370,7 @@
         "atlas_y": 224,
         "data_offset": 25820,
         "bytes": 54,
-        "packed_sha256": "37b2df0559bb75c645d889f95329135c9fcdcbc2ad16326f8fc7828baa7d6100"
+        "packed_sha256": "9b743b9ca573ea28ded289e206dfc87efcf21be4affe5706a1dfcfdc44446b36"
       },
       {
         "name": "fb02",
@@ -2388,7 +2388,7 @@
         "atlas_y": 224,
         "data_offset": 25874,
         "bytes": 30,
-        "packed_sha256": "ddd172f02b2e59dadff4f0a5812f8ddb3a5a55858de9bc89472ee3fca4beeebc"
+        "packed_sha256": "62fc6eddcdbceaaa9d622b8d737ff9d8b0803eee241abf18127840372b7bdbcb"
       },
       {
         "name": "fb03",
@@ -2406,7 +2406,7 @@
         "atlas_y": 224,
         "data_offset": 25904,
         "bytes": 30,
-        "packed_sha256": "fa7b1bd94eb36ce1391a48bb46f53366f12af2ef8cf4307d74cf9b75a043a328"
+        "packed_sha256": "60ab7a09004905c1c722c3d8aeb7d3cf153e36b9f41eeeae9e942d50d1212d0c"
       },
       {
         "name": "fb04",
@@ -2424,7 +2424,7 @@
         "atlas_y": 224,
         "data_offset": 25934,
         "bytes": 30,
-        "packed_sha256": "229734c94c5b69414bd429a4689081cc9358852389cc5672cb68a277887cd740"
+        "packed_sha256": "152b010eb7830bbfd12585687f286f6a273cb0bd7583d5f4924abddb7ec65989"
       },
       {
         "name": "fb05",
@@ -2442,7 +2442,7 @@
         "atlas_y": 224,
         "data_offset": 25964,
         "bytes": 24,
-        "packed_sha256": "a8a42b313b59a2d37b3b410cbe6d3bb1bff568000e40b8aae73096580e9dd450"
+        "packed_sha256": "b329f8c4935fe97760777fbc9a35dc62a990b33d2b3719025e76154a0848247c"
       },
       {
         "name": "fb06",
@@ -2460,7 +2460,7 @@
         "atlas_y": 224,
         "data_offset": 25988,
         "bytes": 36,
-        "packed_sha256": "674f044732beb9aeb4e0e352fa300c00998dea3118c96cd6f6aa58a43ec8db00"
+        "packed_sha256": "601fc60bfb073963e665adf84c27970b226c534e17330ec4e392edb32a229950"
       },
       {
         "name": "fb07",
@@ -2478,7 +2478,7 @@
         "atlas_y": 224,
         "data_offset": 26024,
         "bytes": 36,
-        "packed_sha256": "4695f48ca2de347b18696df9b2e4ff1458dbadaa3d9f157e9711a5d069aea674"
+        "packed_sha256": "fba0e5e3718c559ce0dfd5871ffbcd73d207c4e45013ce40425298d9fb6adcab"
       },
       {
         "name": "fb08",
@@ -2514,7 +2514,7 @@
         "atlas_y": 224,
         "data_offset": 26102,
         "bytes": 45,
-        "packed_sha256": "180aa26a8fa1578ebf1152a5c6a46a789ab1dfe67d884351e9b95c39aab88e9b"
+        "packed_sha256": "dba6160fb4c3e59987aa4cc2bc47dc42c048220b1fb6fde516add3a639bcd0cc"
       },
       {
         "name": "fb0a",
@@ -2532,7 +2532,7 @@
         "atlas_y": 224,
         "data_offset": 26147,
         "bytes": 40,
-        "packed_sha256": "0143c73f39996427c97aa7bb10c6126cd3e74c718d0ec3ee7dc5372e9a9c8542"
+        "packed_sha256": "075e383b9214f2f812a26b794ddf874b467d41786f40cfbeda27b1cdf1cce0c5"
       },
       {
         "name": "fb0b",
@@ -2550,7 +2550,7 @@
         "atlas_y": 224,
         "data_offset": 26187,
         "bytes": 54,
-        "packed_sha256": "03e3902d7a7344469dbeedff8ec34500814b24092d2f2d390a1c1ac776759496"
+        "packed_sha256": "de4ab01b4b74e1326b3faf979a36e2fd8f9a025c5867ee522423364c4e0c2beb"
       },
       {
         "name": "fb0c",
@@ -2568,7 +2568,7 @@
         "atlas_y": 224,
         "data_offset": 26241,
         "bytes": 30,
-        "packed_sha256": "8f4db9b095721fa8322a2acc929d1322332831cda833562b5e9a06e10d94f63f"
+        "packed_sha256": "07844119d2fb16d062ebd9a55d772d7010c99f3de7763346043f37812c41c097"
       },
       {
         "name": "fb0d",
@@ -2586,7 +2586,7 @@
         "atlas_y": 224,
         "data_offset": 26271,
         "bytes": 30,
-        "packed_sha256": "48797159d3bc446e3542eff65b800685a8d5b1a953fa7db178b87b682e13da13"
+        "packed_sha256": "c3c7df66c6c4b48c0dfac8734445fd36bfbd6e676234cf1c2d44f8b13a0b9d56"
       },
       {
         "name": "fb0e",
@@ -2604,7 +2604,7 @@
         "atlas_y": 224,
         "data_offset": 26301,
         "bytes": 30,
-        "packed_sha256": "e89bd2344db766b8a493972faa8b3261ca19c3171f25fb043d0c143466288590"
+        "packed_sha256": "93850027c5256c7f362203f24de578500d3da1646c3214c12027fbb7a9e01867"
       },
       {
         "name": "fb0f",
@@ -2622,7 +2622,7 @@
         "atlas_y": 224,
         "data_offset": 26331,
         "bytes": 24,
-        "packed_sha256": "9615922afb10d8b33c6e8eb88e132888873b9664e5f15c05e064fac180ef071c"
+        "packed_sha256": "6e30cf7bee862c2e304b6ce8de1aba2e1ce6cd307671b572723320b549d18616"
       },
       {
         "name": "fb10",
@@ -2640,7 +2640,7 @@
         "atlas_y": 224,
         "data_offset": 26355,
         "bytes": 36,
-        "packed_sha256": "1aa24adb01917ebbcc7734b633731bfb58e1128116b86e4825943a8f18662bdf"
+        "packed_sha256": "94b9aa988832602270d3ba7ebb452653590d72033d531539ed543251e65973d5"
       },
       {
         "name": "fb11",
@@ -2658,7 +2658,7 @@
         "atlas_y": 224,
         "data_offset": 26391,
         "bytes": 36,
-        "packed_sha256": "c174d0e2adfa4a212fa41d5f620d5904f627c32785e9da270e35c7a731d26b18"
+        "packed_sha256": "573fd7135bd057ce97082dc1f3d92bb4becf7de52f135980ef4a42b283f366c5"
       },
       {
         "name": "fb12",
@@ -2694,7 +2694,7 @@
         "atlas_y": 224,
         "data_offset": 26469,
         "bytes": 45,
-        "packed_sha256": "8eee9ec9ddb96c8af259f7b2b83ba1db7771b31a8a47362852a1bd1ed3bba207"
+        "packed_sha256": "9d166b833e95bb96e0bd8df19ed42fe817d7d9f6cf8e10ded4209dfb25e5512f"
       },
       {
         "name": "fb14",
@@ -2712,7 +2712,7 @@
         "atlas_y": 224,
         "data_offset": 26514,
         "bytes": 40,
-        "packed_sha256": "a568c11f064ff8f1aa62a7c2c7b640ca219531a933cd983034c5a5f116e4c17b"
+        "packed_sha256": "ea3c1368848a3d0edea7c0c2dce6417131bdb3c3274d6692cc9158bd8034eec8"
       }
     ],
     "gun_flash_slots": [

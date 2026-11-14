@@ -79,6 +79,7 @@ def c_array(name, data, dimensions):
 
 
 FLASH_SOURCE = Path('reference_assets/unpacked_shapes/hellcat')
+FLASH_CORE = 11  # playfield white
 # Hidden rows 212..251 of the display pages are full: aircraft background
 # backups use x=0..47, water frames x=48..239 (page 0) and x=48..143 (page 1),
 # other caches page 1 x=144..245, and carrier heave exposes rows 254/255.
@@ -109,7 +110,10 @@ def gun_flash_assets(pixels):
             indices, meta = decode_record(raw)
             width, height = meta['width'], meta['height']
             ox, oy = meta['origin_candidate']
-            colors = [0 if v == 0 else mapping[v] for v in indices]
+            # The pale-yellow core (source 10, RGB3 7,7,3) ties between grey
+            # and orange on colour distance; white is closest in brightness and
+            # reads as the hot core. The 16-colour playfield has no yellow.
+            colors = [0 if v == 0 else FLASH_CORE if v == 10 else mapping[v] for v in indices]
             opaque = [(i % width, i // width) for i, c in enumerate(colors) if c]
             x0, x1 = min(p[0] for p in opaque), max(p[0] for p in opaque) + 1
             y0, y1 = min(p[1] for p in opaque), max(p[1] for p in opaque) + 1
