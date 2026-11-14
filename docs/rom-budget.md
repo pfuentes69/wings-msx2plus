@@ -43,6 +43,8 @@ configuration change (`ROMSize` in `mission-flight.js`; the layout check
 follows). The real constraint is the cartridge: commercial-style ASCII8
 megaROM boards or flash carts in 512 KiB or 1 MiB sizes.
 
+**Decision (2026-11-14):** plan for 512 KiB; 1 MiB is acceptable if the game finally needs it.
+
 **Recommendation:** plan for 512 KiB. Before adding missions, design a denser
 map format (for example the original map words decoded at runtime, or
 dictionary-coded columns). Keep 1 MiB as the fallback. Re-run this projection
