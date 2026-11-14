@@ -1,0 +1,26 @@
+#ifndef WINGS_MSX_SMOKE_DRAW_H
+#define WINGS_MSX_SMOKE_DRAW_H
+#include "core.h"
+#include "banking.h"
+
+/* Drawing the engine smoke (banked, segment 22). Puffs are drawn behind the
+ * plane and erased by repainting the terrain tiles under them (sky above
+ * the terrain rows): no VRAM backup is needed. */
+#define SMOKE_DRAWN_MAX 8
+typedef struct SmokeDrawn { u16 x; i16 row; u8 frame; } SmokeDrawn;
+/* What each page shows (for publication and the pixel oracle). */
+extern SmokeDrawn g_SmokeDrawn[2][SMOKE_DRAWN_MAX];
+extern u8 g_SmokeDrawnCount[2];
+
+/* Erase the puffs drawn on this page (skipped on a full rebuild). Call
+ * before the frame's new terrain columns. Returns 1 when the elevator's
+ * columns were repainted (the elevator overlay must then redraw). */
+u8 Smoke_Restore(u8 page, u8 rebuilt, u16 camera) WINGS_BANKED;
+/* Forget what both pages show (boot: RAM is not cleared; new plane). */
+void Smoke_ClearPages(void) WINGS_BANKED;
+/* Draw the live puffs. shift: rows the plane is pushed down by the
+ * near-view top clamp; heave: the carrier's vertical scroll (screen
+ * positions stay fixed, as for aircraft and weapons); limit: first row not
+ * to draw. g_SmokeDrawn rows are screen rows (before the heave). */
+void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, u8 heave, i16 limit) WINGS_BANKED;
+#endif

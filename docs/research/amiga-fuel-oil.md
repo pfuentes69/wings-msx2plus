@@ -54,7 +54,7 @@ Per logic tick, unpaused, in mode 0 only (0x1386):
 | --- | --- | --- |
 | 0x4f9e, random and distance-scaled | Hit counter −1; at 0: oil −1, fuel −random(0..3), counter = 6 + random(0..7) | Established control flow; attacker identity not mapped |
 | 0xde52 | Hit counter −1; at 0: oil −8, fuel −random(0..31) | Established control flow; attacker identity not mapped |
-| 0x1c18 | Smoke level from `128 − oil`: none at 0; light levels for 1..19 (`(d<<3)&0xf0` + random(0..15)); a heavier path above 19 | Control flow established; smoke rendering not mapped |
+| 0x1bfc | Engine smoke, every other tick except while sinking or crashed (modes 6, 8): damage = 128 − oil. At 0 nothing; above 19 a puff every time; 1..19 a puff when bit `((damage << 3) & 0xf0) + random(0..15)` of DATA `-$5a34` is set (3/16 rising to 12/16) | Established; see "Engine smoke" below |
 
 ## Instruments (0xee5e..0xf000)
 
@@ -243,3 +243,23 @@ reports bottom pose 0.
 
 Mode 0: gear 5 when |x − carrier x| < 1280 (`-$50fc`) and `-$5b22` is set;
 modes 1, 7 and 11: gear on; otherwise off. No heading or altitude condition.
+
+## Engine smoke (0x1bfc, 0x54e0, 0x5460, 0x0ee0)
+
+Recovered 2026-11-14.
+
+- **Spawn (0x54e0 → 0x5460):** effect type 5 at the plane's x ± 10 (ahead, in
+  the facing direction) and altitude + 13, at least 16. During turn frames
+  9..17 the x shifts by the low nibble of DATA `-$640e[frame − 8]`, negated
+  facing right below 11 and facing left up to 11.
+- **Pool:** 40 effects of 20 bytes (`-$40a6`): 16.16 x and altitude, speeds
+  1.0..2.0 px (random) right and up, type, life 6.
+- **Update and draw (0x0ee0, once per drawn frame):** shape 0x60 + type,
+  then the position adds the speeds. The life counts 6 down past 0, then the
+  type drops by one. So a puff shows five frames of 7 updates each, about
+  2.8 s at 12.5 Hz. The executable's world shape table maps 0x61..0x65 to
+  `smk0`..`smk4`, so a puff starts as `smk4` and shrinks to `smk0`; `smk5`,
+  with fire colours, belongs to another effect. The far view uses
+  `8thscale` `smk0` (type ≤ 3) or `smk1`.
+- **Draw position (0x5174):** screen y = 11 − altitude + base, i.e. the puff
+  starts 2 px above the plane's origin.

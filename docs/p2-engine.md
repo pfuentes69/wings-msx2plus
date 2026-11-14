@@ -34,8 +34,30 @@ warnings are active in flight and on deck. The hold refills through
 - The next plane keeps the current weapon with a full load.
 - GAME OVER returns to rank selection (the high-score table is P6).
 - Damage (`Engine_Damage`) is injected by tests until enemy fire exists
-  (P3–P5). The executable's two hit types are documented; smoke is not drawn
-  yet.
+  (P3–P5). The executable's two hit types are documented.
+
+## Engine smoke
+
+A damaged engine smokes as the original's does (0x1bfc; evidence in
+[research/amiga-fuel-oil.md](research/amiga-fuel-oil.md#engine-smoke-0x1bfc-0x54e0-0x5460-0x0ee0)).
+Damage is 128 − oil. Above 19 a puff comes every time, below that with the
+original's odds (3/16 rising to 12/16). Puffs start 10 px ahead of the
+plane and 2 px above its origin, rise and drift right 1–2 px a tick, and
+shrink through `smk4`..`smk0` in 2.8 s. The far view uses its two small
+dots. `src/core/smoke.c` holds the rules and `src/msx/smoke_draw.c` the
+drawing, both banked in segment 22.
+
+| MSX choice | Why |
+| --- | --- |
+| 8 puffs; the emitter checks every 4th tick (the original: every other tick, from a 40-effect pool) | Bounds the drawing cost |
+| Puffs are drawn behind the plane and erased without VRAM backups: a sky fill over plain sky tiles, otherwise the tiles repainted from the page's tile cache (sky fill above the terrain rows) | The atlas has no room for backups |
+| Erasing happens before the frame's new terrain columns | Puffs that scrolled out of view are still in the page's ring, and the tile cache does not know about them |
+| Smoke stays above the wave strip (row 159) | The strip has its own backup and restore |
+
+`tests/test_smoke.py` covers the emitter odds, spawn point, drift, the
+five 7-tick stages, the 16 px floor, the pool and the turn offsets. The P0
+run damages the engine (oil 100) during the engine scenario and
+pixel-checks a snapshot of the trail (`engine_smoke`).
 
 ## Instruments
 

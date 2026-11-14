@@ -56,3 +56,12 @@ extern const unsigned char g_WheelFirst[21];
 #define ROPE_BACKUP0_Y 1020
 #define ROPE_BACKUP1_X 0
 #define ROPE_BACKUP1_Y 1022
+/* Original engine smoke frames as atlas pieces, offsets from the puff's
+ * origin: frame = stage - 1 (near smk0..smk4) or 5 + (far smk0/smk1);
+ * pieces g_SmokePieces[g_SmokeFirst[frame] .. g_SmokeFirst[frame + 1]). */
+#define SMOKE_PIECE_COUNT 8
+#ifdef MISSION_TERRAIN
+extern const AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT];
+#endif
+extern const unsigned char g_SmokeFirst[8];
+extern const signed char g_SmokeBox[28];   /* per frame: dx, dy, width, height */

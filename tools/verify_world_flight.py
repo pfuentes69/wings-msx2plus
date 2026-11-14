@@ -75,7 +75,7 @@ def crash_shape(scene, index):
     return record, data[offset:offset + record['bytes']]
 
 
-def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True):
+def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True, smoke=()):
     # World x is a 16-bit ring read as signed; beyond the map the MSX draws a
     # column of open sea (map x 5000 near, far x 624 in the distant view).
     signed = lambda v: v - 65536 if v >= 32768 else v
@@ -146,6 +146,25 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
     else:
         source = (scene.folder / shape['file']).read_bytes()
     pivot = 161 - ((1200-y)//8) if scale == 8 else max(14,y-1055)
+    # Engine smoke, behind the plane: published (x, screen row, frame) per puff;
+    # x is in this view's scale. Clipped above the wave strip (VRAM row 159).
+    meta = scene.metadata
+    for sx_, row, frame in smoke:
+        sx_ = signed(sx_)
+        for record in meta['smoke'][meta['smoke_first'][frame]:meta['smoke_first'][frame + 1]]:
+            bank = record['data_offset'] // 8192
+            data = (scene.folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
+            packed = data[record['data_offset'] % 8192:record['data_offset'] % 8192 + record['bytes']]
+            vram_limit = min(142 if elevator_active else 172, 159)
+            for yy in range(record['height']):
+                r = row + record['dy'] + yy
+                if not 0 <= r - heave < vram_limit or r >= 172: continue
+                for xx in range(record['width']):
+                    wx = sx_ + record['dx'] + xx
+                    if not camera + 8 <= wx < camera + 256: continue
+                    b = packed[yy * (record['width'] // 2) + xx // 2]
+                    v = b & 15 if xx % 2 else b >> 4
+                    if v: pixels[r][wx - camera] = v
     if on_deck and deck_level:
         # Rolling fast or held by a cable: the level pose at deck height on its
         # wheel overlay, riding the deck heave and the elevator.

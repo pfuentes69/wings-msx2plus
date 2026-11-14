@@ -7,6 +7,8 @@
 #ifdef WINGS_P1_FLIGHT
 #include "core/carrier.h"
 #include "msx/rope.h"
+#include "msx/smoke_draw.h"
+#include "core/smoke.h"
 #include "msx/elevator.h"
 CarrierState g_Carrier;
 volatile u8 g_DisplayElevator;
@@ -50,6 +52,12 @@ volatile u8 g_DisplayCrash = 255;
 static u8 s_Wheel = 255, s_GearPos = 5, s_RenderWheel = 255, s_RenderGear = 5;
 /* The arresting rope (src/msx/rope.c): the cable drawn, 255 none. */
 volatile u8 g_DisplayRope = 255;
+/* The smoke puffs the shown page holds: count, then x (2), row (2), frame. */
+volatile u8 g_DisplaySmoke[1 + SMOKE_DRAWN_MAX * 5];
+static u8 s_RenderSmokePage;
+/* Smoke_Restore repainted the elevator's columns this frame. A static: a
+ * local held across Render's column loops makes SDCC spill throughout. */
+static u8 s_Smoked;
 static u8 s_RenderRope = 255;
 volatile u8 g_DisplayWheel = 255, g_DisplayGear = 5;
 #endif
@@ -360,6 +368,7 @@ static void LoadCaches(void)
     for (i=0; i<AIRCRAFT_STATIC_SHAPES; ++i) LoadShape(&g_AircraftShapes[i]);
 #ifdef WINGS_P1_FLIGHT
     for (i=0; i<WHEEL_PIECE_COUNT; ++i) LoadShape(&g_WheelPieces[i]);
+    for (i=0; i<SMOKE_PIECE_COUNT; ++i) LoadShape(&g_SmokePieces[i]);
 #endif
 }
 
@@ -419,6 +428,25 @@ static void CopyShape(u8 page, const AircraftShape* shape, int16_t dx, int16_t d
 }
 
 #ifdef WINGS_P1_FLIGHT
+static u8 SmokeActive(void)
+{
+    u8 i;
+    for (i = 0; i < SMOKE_COUNT; ++i) if (g_Smoke[i].stage) return 1;
+    return 0;
+}
+static void PublishSmoke(u8 page)
+{
+    u8 i, n = g_SmokeDrawnCount[page] > SMOKE_DRAWN_MAX ? SMOKE_DRAWN_MAX : g_SmokeDrawnCount[page];
+    volatile u8* out = g_DisplaySmoke + 1;
+    g_DisplaySmoke[0] = n;
+    for (i = 0; i < n; ++i)
+    {
+        const SmokeDrawn* d = &g_SmokeDrawn[page][i];
+        *out++ = (u8)d->x; *out++ = (u8)(d->x >> 8);
+        *out++ = (u8)d->row; *out++ = (u8)((u16)d->row >> 8);
+        *out++ = d->frame;
+    }
+}
 /* The plane's origin row on screen, set by DrawAircraft. A static keeps the
  * call below from holding DrawAircraft's locals live (SDCC then spills
  * through the whole function: ~900 bytes). */
@@ -562,6 +590,11 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
 #endif
     if (s_Valid[page]) Background(page, 0);
     Dashboard_RestoreWaves(page, g_ViewChange);
+#ifdef WINGS_P1_FLIGHT
+    /* Erase this page's old smoke before the new columns: the tile cache does
+     * not know about it, so scrolled-in columns must see the clean sky. */
+    s_Smoked = Smoke_Restore(page, g_ViewChange, camera);
+#endif
     /* Signed differences: the camera may cross 0 into the open sea. */
     if ((int16_t)(camera - s_Camera[page]) > 0)
     {
@@ -587,7 +620,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     if (!g_TerrainFar)
     {
 #ifdef WINGS_P1_FLIGHT
-        Elevator_Draw(page,camera,g_Carrier.depth,g_ViewChange);
+        Elevator_Draw(page,camera,g_Carrier.depth,g_ViewChange || s_Smoked);
 #endif
         Ship_Draw(page, camera);
 #ifdef WINGS_P1_FLIGHT
@@ -595,6 +628,14 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
 #endif
         Dashboard_Waves(page, camera, s_Wave, s_RenderHeave);
     }
+#ifdef WINGS_P1_FLIGHT
+    /* Engine smoke, behind the plane. The near view pins a high plane to the
+     * top rows; the smoke follows it down by the same amount. */
+    Smoke_Draw(page, camera, g_TerrainFar,
+               !g_TerrainFar && WINGS_FLIGHT_MAX_Y - y > 131 ? (int16_t)(WINGS_FLIGHT_MAX_Y - y) - 131 : 0,
+               s_RenderHeave, g_Carrier.stage != CARRIER_DECK ? CARRIER_WELL_BOTTOM : 172);
+    s_RenderSmokePage = page;
+#endif
     DrawAircraft(page, frame, world, y, camera);
     Weapons_Draw(page, camera, g_TerrainFar, s_RenderHeave, &g_Combat);
     Dashboard_Status(page, g_Game.sortie.weapon, g_Game.sortie.stock, g_Game.progress.lives);
@@ -662,6 +703,7 @@ static void NewPlane(void)
     Engine_Reset(&g_Engine,&g_Game.sortie);
     s_CrashSteps=s_EngineSteps=0;
     s_GearPos=5; s_Wheel=255;
+    Smoke_Reset(); Smoke_ClearPages();
 #endif
     s_CrashFrame=255;
     if (s_CrashLoaded!=255) { LoadShape(&g_AircraftShapes[CRASH_HOST_SHAPE]); s_CrashLoaded=255; }
@@ -795,6 +837,8 @@ void main(void)
     /* The boot render reads the instruments before any sortie starts. */
     Engine_Reset(&g_Engine,&g_Game.sortie);
     s_CrashSteps=s_EngineSteps=0;
+    /* RAM is not cleared at boot: the smoke state must be. */
+    Smoke_Reset(); Smoke_ClearPages();
 #endif
     camera = s_World.camera;
     world = s_World.x >> 8;
@@ -961,7 +1005,15 @@ void main(void)
 #ifdef WINGS_P1_FLIGHT
 advance_clocks:
 #endif
-                    if (++s_AnimTick==12) { s_AnimTick=0; s_Wave=s_Wave ? s_Wave-1 : 11; }
+                    if (++s_AnimTick==12)
+                    {
+                        s_AnimTick=0; s_Wave=s_Wave ? s_Wave-1 : 11;
+#ifdef WINGS_P1_FLIGHT
+                        /* One original tick: smoke drifts on through a crash; only
+                         * a running sortie puts out new puffs. */
+                        Smoke_Tick(&s_World.flight, s_World.x >> 8, g_Game.sortie.oil, !s_CrashSteps);
+#endif
+                    }
 #ifdef WINGS_P1_FLIGHT
                     if (step==steps-1) Aircraft_SyncFlight(&s_Aircraft,&s_World.flight,s_World.x>>8);
 #else
@@ -1019,6 +1071,7 @@ advance_clocks:
             g_DisplayGauges[0] != g_Engine.oil_needle || g_DisplayGauges[1] != g_Engine.fuel_needle ||
             g_DisplayGauges[2] != g_Engine.lamps || g_DisplayCrash != s_CrashFrame ||
             g_DisplayWheel != (g_TerrainFar || s_CrashFrame != 255 ? 255 : s_Wheel) || g_DisplayGear != s_GearPos ||
+            SmokeActive() || g_DisplaySmoke[0] ||
 #endif
             g_DisplayWave != s_Wave || g_DisplayHeave != s_RenderHeave || camera != g_DisplayCamera || world != g_DisplayWorld || y != g_DisplayY || frame != g_SelectedFrame)
             Render(page, camera, world, y, frame);
@@ -1079,6 +1132,7 @@ advance_clocks:
         g_DisplayGauges[2]=s_RenderGauges[2]; g_DisplayCrash=s_RenderCrash;
 #ifdef WINGS_P1_FLIGHT
         g_DisplayWheel=s_RenderWheel; g_DisplayGear=s_RenderGear; g_DisplayRope=s_RenderRope;
+        PublishSmoke(page);
 #endif
         g_FramePublished ^= 1;
     }

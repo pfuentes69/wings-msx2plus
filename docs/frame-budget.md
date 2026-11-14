@@ -139,3 +139,4 @@ and restore, 96-pixel wave segments, transparent top rows via LMMM).
 | `column_ops` decode/compare helpers | 4.5 → 2.2 ms per terrain column; worst weapons redraw 101–107 → ~81 ms |
 | Flight model rebuilt from the original | step 0.475 → 0.21 ms; faster flight adds terrain columns; 2-VBlank reservation for fast carrier frames |
 | `Column_Runs` in Z80; dial redraws held in fast carrier frames | worst carrier frame 148 → 117 ms at the original's speed; reservation removed |
+| `Scenery_Read` copies with LDIR (was a C byte loop, ~80 T-states a byte) | a dial patch or streamed shape: ~8 ms → ~2 ms of ROM reads |

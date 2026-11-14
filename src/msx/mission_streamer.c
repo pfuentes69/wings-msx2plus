@@ -8,8 +8,10 @@
 
 u8 g_TerrainFar;
 static u8 s_Map[TERRAIN_MAP_BYTES];
-static u16 s_Cached[2][32][TERRAIN_MAP_ROWS];
-static u16 s_ColumnOffsets[2][32];
+/* The tile ids each page shows per ring column, and the map column drawn
+ * there (65535: invalid). Shared with the smoke eraser (smoke_draw.c). */
+u16 g_TerrainCached[2][32][TERRAIN_MAP_ROWS];
+u16 g_TerrainColumns[2][32];
 // One extra entry holds a sentinel (65534) that never matches the cache,
 // which only holds tile IDs or 65535; Column_Equal stops there.
 #define TERRAIN_SENTINEL 65534u
@@ -48,9 +50,9 @@ void Terrain_InitPage(u8 page)
     u8 column, row;
     for (column = 0; column < 32; ++column)
     {
-        s_ColumnOffsets[page][column] = 65535u;
+        g_TerrainColumns[page][column] = 65535u;
         for (row = 0; row < TERRAIN_MAP_ROWS; ++row)
-            s_Cached[page][column][row] = 0; // VRAM was cleared to the all-sky tile.
+            g_TerrainCached[page][column][row] = 0; // VRAM was cleared to the all-sky tile.
     }
 }
 
@@ -73,11 +75,11 @@ void Terrain_DrawColumn(u16 world, u8 page)
     u16* decoded;
     u16 tile, source_y, dest_y = (u16)page * 256 + 24;
     u8 row, count, height, color, i;
-    if (s_ColumnOffsets[page][slot] == offset) return;
-    s_ColumnOffsets[page][slot] = offset;
+    if (g_TerrainColumns[page][slot] == offset) return;
+    g_TerrainColumns[page][slot] = offset;
     // All runs/offsets are bounded and round-trip checked during generation.
     Column_Decode(s_Map + offset, s_Decoded);
-    cached = s_Cached[page][slot];
+    cached = g_TerrainCached[page][slot];
     decoded = s_Decoded;
 #ifndef WINGS_TERRAIN_C
     /* Hand-written Z80 (column_ops.c): SDCC's version of the loop below cost
@@ -132,7 +134,7 @@ typedef char ColumnRunsLayout[(sizeof(VDP_Command) == 15 && sizeof(g_VDP_Command
 void Terrain_DirtyOverlayColumn(u8 page, u16 world, u8 first, u8 last)
 {
     u8 slot=(world&255)>>3, count=last-first+1;
-    u16* cached=&s_Cached[page][slot][first]; // index once; SDCC re-multiplies per row otherwise
-    s_ColumnOffsets[page][slot]=65535u;
+    u16* cached=&g_TerrainCached[page][slot][first]; // index once; SDCC re-multiplies per row otherwise
+    g_TerrainColumns[page][slot]=65535u;
     do *cached++=65535u; while (--count);
 }

@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_DisplaySmoke g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -85,6 +85,10 @@ proc publishing {} {
         if {[value g_SelectedFrame] ni $::wanted_frame} {return}
         unset ::wanted_frame
     }
+    if {[info exists ::wanted_smoke]} {
+        if {[value g_DisplaySmoke]<$::wanted_smoke} {return}
+        unset ::wanted_smoke
+    }
     if {[info exists ::wanted_rope]} {
         # Mid-arrest, so the rope is well stretched.
         if {[value g_DisplayRope]==255 || [speed]>700} {return}
@@ -115,6 +119,7 @@ proc publishing {} {
     dump $name.flight [debug read_block memory $::addr(s_World) 37]
     dump $name.crash [debug read_block memory $::addr(g_DisplayCrash) 1]
     dump $name.wheel [binary format ccc [value g_DisplayWheel] [value g_DisplayGear] [value g_DisplayRope]]
+    dump $name.smoke [debug read_block memory $::addr(g_DisplaySmoke) 41]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
     dump $name.rom [debug read_block memory 16384 32768]
@@ -131,7 +136,7 @@ proc rendering {} {
         set ::render_start [machine_info time]
         if {[info exists ::last_publish] && [stat 30]>0} {puts $::report "pre_render [expr {1000*($::render_start-$::last_publish)}]"}
         set ::visible_base [expr {[value g_DisplayPage]*32768}]
-        require [expr {[value g_RenderPage]!=[value g_DisplayPage]}] "Rendering visible page"
+        require [expr {[value g_RenderPage]!=[value g_DisplayPage]}] "Rendering visible page: render=[value g_RenderPage] display=[value g_DisplayPage] phase=[view 0] pc=[format %04x [reg pc]] sp=[format %04x [reg sp]] ret=[format %04x [expr {[debug read memory [reg sp]]+256*[debug read memory [expr {[reg sp]+1}]]}]]"
         set ::pixels [debug read_block VRAM $::visible_base 27136]
     } elseif {[info exists ::pixels]} {
         set ::last_render [expr {1000*([machine_info time]-$::render_start)}]
@@ -531,7 +536,13 @@ proc engine_watch_lamp {} {
     if {[llength $::lamps] < 40} {after time 0.02 engine_watch_lamp;return}
     require [expr {[lsearch $::lamps 0]>=0 && [lsearch $::lamps 2]>=0}] "Fuel lamp did not blink: $::lamps"
     require [expr {[engine_byte 7]<=8}] "Fuel needle did not sweep down"
-    snap engine_low_fuel engine_dry
+    snap engine_low_fuel engine_smoke
+}
+proc engine_smoke {} {
+    # A damaged engine (oil 100 of 128) smokes: wait for a trail of puffs.
+    game_byte 14 100
+    set ::wanted_smoke 2
+    snap engine_smoke {game_byte 14 128;after time 0.2 engine_dry}
 }
 proc engine_dry {} {
     game_byte 15 0

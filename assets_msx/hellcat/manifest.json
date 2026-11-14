@@ -1753,7 +1753,7 @@
         "streamed": true
       }
     ],
-    "pixel_bytes": 28410,
+    "pixel_bytes": 28590,
     "reference_pivot": [
       25,
       16
@@ -2535,6 +2535,122 @@
         0,
         1022
       ]
+    ],
+    "smoke": [
+      {
+        "name": "smk0",
+        "source_sha256": "4349872cf971913fab571550e387c652367adc515181169685baa88f24576904",
+        "dx": -1,
+        "dy": -1,
+        "width": 4,
+        "height": 3,
+        "atlas_x": 252,
+        "atlas_y": 539,
+        "data_offset": 28410,
+        "bytes": 6,
+        "packed_sha256": "2ad4685f0f7c692eb26e6f6ae126e4793d2f124473e6c5c8880d73f73ed6538e"
+      },
+      {
+        "name": "smk1",
+        "source_sha256": "50d122d930ed951e180d51ad7d34d5aa2d223ee4464acf2768451244e82fc94e",
+        "dx": -2,
+        "dy": -2,
+        "width": 6,
+        "height": 4,
+        "atlas_x": 22,
+        "atlas_y": 564,
+        "data_offset": 28416,
+        "bytes": 12,
+        "packed_sha256": "eda5b5c2131462c16d332911892c7bdeb8505a67bfd616f38f1cbcffa45a2577"
+      },
+      {
+        "name": "smk2",
+        "source_sha256": "0dc845597afb2f43db2985fda613642b3c6c92b7f3790bceab9b21ad6d264eb9",
+        "dx": -4,
+        "dy": -3,
+        "width": 10,
+        "height": 6,
+        "atlas_x": 32,
+        "atlas_y": 626,
+        "data_offset": 28428,
+        "bytes": 30,
+        "packed_sha256": "a7753422411641acf27ac2643dee7a828b638f81d1ea77807b54b5088dab33a9"
+      },
+      {
+        "name": "smk3",
+        "source_sha256": "e29e38cd2c242321fd783a4d84ed7c57cba86ad57069522868394023d56e6948",
+        "dx": -6,
+        "dy": -4,
+        "width": 14,
+        "height": 8,
+        "atlas_x": 240,
+        "atlas_y": 1015,
+        "data_offset": 28458,
+        "bytes": 56,
+        "packed_sha256": "e17b29f117a36882386462aad125c2dd8130b5c16f28b87ebe39f682103c7b31"
+      },
+      {
+        "name": "smk4",
+        "source_sha256": "75b85916491b33448e9149aae498a4c7d1e8f3b1c4f34e90d300397794201096",
+        "dx": -7,
+        "dy": -5,
+        "width": 14,
+        "height": 5,
+        "atlas_x": 224,
+        "atlas_y": 564,
+        "data_offset": 28514,
+        "bytes": 35,
+        "packed_sha256": "b0e6e8fc316aaaac69c69d5391decfe6c8c52486b6d82761ecc99fe14dfa2bbf"
+      },
+      {
+        "name": "smk4",
+        "source_sha256": "75b85916491b33448e9149aae498a4c7d1e8f3b1c4f34e90d300397794201096",
+        "dx": -7,
+        "dy": 0,
+        "width": 14,
+        "height": 5,
+        "atlas_x": 0,
+        "atlas_y": 571,
+        "data_offset": 28549,
+        "bytes": 35,
+        "packed_sha256": "e014f60182fdaba551f9d4cf70da4c98020520018523286eb6eb725975f56d72"
+      },
+      {
+        "name": "smk0",
+        "source_sha256": "def3a64cbeba30bfe37747b559104f46205038b1a365a5b5a2aaf6ac4484a07a",
+        "dx": -1,
+        "dy": 0,
+        "width": 4,
+        "height": 1,
+        "atlas_x": 82,
+        "atlas_y": 537,
+        "data_offset": 28584,
+        "bytes": 2,
+        "packed_sha256": "82e0e8c0da71d9b9ef5ae84ff4d8f35eee5f01a107cf77e04223124becffa218"
+      },
+      {
+        "name": "smk1",
+        "source_sha256": "66d6c3a1b3896af9ffc9f27c95b2e5eabece798576ebc5a1569e93aa58c8b4c2",
+        "dx": -1,
+        "dy": -1,
+        "width": 4,
+        "height": 2,
+        "atlas_x": 222,
+        "atlas_y": 539,
+        "data_offset": 28586,
+        "bytes": 4,
+        "packed_sha256": "522b3e89b4fbf9a80ed61bd366144055beb73c982d238439415f04d1f8636c36"
+      }
+    ],
+    "smoke_first": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8
     ],
     "gun_flash": [
       {

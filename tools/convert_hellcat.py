@@ -214,7 +214,74 @@ def wheel_assets(pixels, color_map, frames):
         for name, crop, rx, ry, w, h in pieces:
             records.append(dict(name=name, dx=25 + rx, dy=16 + ry, width=w, height=h, **stored[(w, h, bytes(crop))]))
     first.append(len(records))
-    return records, first, [list(c) for c in cells], [list(r) for r in rope]
+    return records, first, [list(c) for c in cells], [list(r) for r in rope], [(w, h) for w, h, _ in keys]
+
+
+SMOKE_NEAR = ('smk0', 'smk1', 'smk2', 'smk3', 'smk4')
+SMOKE_FAR = ('smk0', 'smk1')
+
+
+def smoke_assets(pixels, color_map, frames, wheel_sizes):
+    """The original engine smoke: world.shp smk0..smk4 (near view) and
+    8thscale.shp smk0/smk1 (far view), drawn at shape 0x60 + puff stage
+    (0x0ee0; the executable's world shape table maps 0x61..0x65 to
+    smk0..smk4). Frames that do not fit a leftover atlas gap whole are split
+    into row bands. Returns pieces (offsets from the puff's origin) and the
+    first piece of each frame: near stages 1..5, then far 1..2."""
+    from convert_dashboard import atlas_slots
+    from decode_shapes import decode_record
+    from unpack_shapes import read_ppkc, unpack_rpck
+    root = Path(__file__).resolve().parents[1]
+    shapes = root / 'reference_assets/original_files/Wings_of_Fury/shapes'
+    world = {n: r for n, _, r in read_ppkc(unpack_rpck((shapes / 'world.shp').read_bytes()))}
+    reduced = {n: r for n, _, r in read_ppkc(unpack_rpck((shapes / '8thscale.shp').read_bytes()))}
+    images = []
+    for records, names, options in ((world, SMOKE_NEAR, dict(plane_constants=True)),
+                                    (reduced, SMOKE_FAR, dict(allow_reduced_flag=True, plane_constants=True))):
+        for name in names:
+            indices, meta = decode_record(records[name], **options)
+            width = meta['width']
+            ox, oy = meta['origin_candidate']
+            colors = {(i % width, i // width): color_map[v] for i, v in enumerate(indices) if v}
+            x0, y0 = min(x for x, _ in colors), min(y for _, y in colors)
+            x1, y1 = max(x for x, _ in colors) + 1, max(y for _, y in colors) + 1
+            images.append((name, colors, x0, y0, (x1 - x0 + 1) // 2 * 2, y1 - y0, ox, oy,
+                           hashlib.sha256(records[name]).hexdigest()))
+    # Pieces: (frame, row offset, height); split the largest until all fit.
+    pieces = [(f, 0, img[5]) for f, img in enumerate(images)]
+    while True:
+        sizes = [(images[f][4], h) for f, _, h in pieces]
+        try:
+            *_, smoke = atlas_slots(27, True, True, True, True, frames=frames,
+                                    reserve_wheels=wheel_sizes, reserve_rope=True, reserve_smoke=sizes)
+            break
+        except ValueError:
+            big = max(range(len(pieces)), key=lambda i: images[pieces[i][0]][4] * pieces[i][2])
+            f, top, h = pieces[big]
+            if h < 2:
+                raise
+            pieces[big:big + 1] = [(f, top, h // 2), (f, top + h // 2, h - h // 2)]
+    records, first = [], []
+    for f, img in enumerate(images):
+        first.append(len(records))
+        name, colors, x0, y0, w, _, ox, oy, sha = img
+        for (pf, top, h), (ax, ay) in zip(pieces, smoke):
+            if pf != f:
+                continue
+            crop = [colors.get((x0 + c, y0 + top + r), 0) for r in range(h) for c in range(w)]
+            packed = pack_pixels(crop)
+            records.append(dict(name=name, source_sha256=sha, dx=x0 - ox, dy=y0 + top - oy, width=w, height=h,
+                                atlas_x=ax, atlas_y=ay, data_offset=len(pixels), bytes=len(packed),
+                                packed_sha256=hashlib.sha256(packed).hexdigest()))
+            pixels.extend(packed)
+    first.append(len(records))
+    # Whole-frame box (dx, dy, width, height) for erasing a puff.
+    boxes = []
+    for f in range(len(images)):
+        part = records[first[f]:first[f + 1]]
+        x0 = min(r['dx'] for r in part); y0 = min(r['dy'] for r in part)
+        boxes += [x0, y0, max(r['dx'] + r['width'] for r in part) - x0, max(r['dy'] + r['height'] for r in part) - y0]
+    return records, first, boxes
 
 
 CRASH_SOURCE = Path('reference_assets/unpacked_shapes/world')
@@ -360,7 +427,8 @@ def animation_assets(source, destination, base_manifest):
         record['streamed']=True
     flashes = gun_flash_assets(pixels)
     crashes, crash_host = crash_assets(pixels, records)
-    wheels, wheel_first, wheel_cells, rope_backups = wheel_assets(pixels, color_map, records[:53])
+    wheels, wheel_first, wheel_cells, rope_backups, wheel_sizes = wheel_assets(pixels, color_map, records[:53])
+    smoke, smoke_first, smoke_boxes = smoke_assets(pixels, color_map, records[:53], wheel_sizes)
     pitch_left = [index['hc28' if n == 5 else f'hc{n:02x}-left'] for n in range(1, 11)]
     taxi = [index[name] for name in ('hcoc','hc1f-left','hc1e-left','hc1d-left','hc1c-left','hc1b','hc1c','hc1d','hc1e','hc1f','hc21')]
     # The original's air-turn shapes by turn frame 1..25 (DATA -$52ee facing
@@ -429,6 +497,15 @@ extern const unsigned char g_WheelFirst[21];
 #define ROPE_BACKUP0_Y {rope_backups[0][1]}
 #define ROPE_BACKUP1_X {rope_backups[1][0]}
 #define ROPE_BACKUP1_Y {rope_backups[1][1]}
+/* Original engine smoke frames as atlas pieces, offsets from the puff's
+ * origin: frame = stage - 1 (near smk0..smk4) or 5 + (far smk0/smk1);
+ * pieces g_SmokePieces[g_SmokeFirst[frame] .. g_SmokeFirst[frame + 1]). */
+#define SMOKE_PIECE_COUNT {len(smoke)}
+#ifdef MISSION_TERRAIN
+extern const AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT];
+#endif
+extern const unsigned char g_SmokeFirst[8];
+extern const signed char g_SmokeBox[28];   /* per frame: dx, dy, width, height */
 """
     code = '/* Generated by tools/convert_hellcat.py; do not edit. */\n#include "hellcat_frames.h"\n\n'
     # Palette bytes are generated by the legacy/reference conversion using the same source indices.
@@ -448,7 +525,10 @@ extern const unsigned char g_WheelFirst[21];
     code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in crashes) + '\n};\n#endif\n'
     code += f'#ifdef MISSION_TERRAIN\nconst AircraftShape g_WheelPieces[WHEEL_PIECE_COUNT] = {{\n'
     code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in wheels) + '\n};\n#endif\n'
-    for symbol, table in [('g_WheelFirst', wheel_first), ('g_PitchRight', pitch_right), ('g_PitchLeft', pitch_left),
+    code += f'#ifdef MISSION_TERRAIN\nconst AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT] = {{\n'
+    code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in smoke) + '\n};\n#endif\n'
+    code += '\nconst signed char g_SmokeBox[28] = {' + ', '.join(str(v) for v in smoke_boxes) + '};\n'
+    for symbol, table in [('g_SmokeFirst', smoke_first), ('g_WheelFirst', wheel_first), ('g_PitchRight', pitch_right), ('g_PitchLeft', pitch_left),
                           ('g_TurnLeftToRight', ltr), ('g_TurnRightToLeft', rtl),
                           ('g_GearFrame', [index['hc40'], index['hc41']]),
                           ('g_TailDownFrame', [index['hc21'], index['hcoc']]),
@@ -459,6 +539,7 @@ extern const unsigned char g_WheelFirst[21];
         placement='logical position + dx/dy; signed source drawing origins preserved; X packed on even byte boundary',
         gear_frames=[index['hc40'], index['hc41']], tail_down_frames=[index['hc21'], index['hcoc']], evidence=facts, pitch_right=pitch_right, pitch_left=pitch_left, left_to_right=ltr, right_to_left=rtl,
         wheels=wheels, wheel_first=wheel_first, wheel_cell=WHEEL_CELL, rope_backups=rope_backups,
+        smoke=smoke, smoke_first=smoke_first,
         gun_flash=flashes, gun_flash_slots=FLASH_SLOTS, gun_flash_slot_size=FLASH_SLOT_SIZE,
         crash=crashes, crash_host_shape=crash_host, crash_evidence='world.shp exp0..exp5 / spl0..spl6; crash outcome by surface at 0xafba (docs/research/amiga-fuel-oil.md)',
         gun_flash_order='variant (fa, fb) * 20 + (left ? 10 : 0) + pitch pose 0..9',

@@ -75,12 +75,15 @@ def main():
             # Level on the deck (rolling fast, byte 17, or held by a cable).
             deck_level=stage==1 and (flight[12]==2 or (flight[12]==0 and flight[17]!=0))
             wheel,gear,rope=(out/f'{name}.wheel').read_bytes()
+            raw=(out/f'{name}.smoke').read_bytes()
+            smoke=[struct.unpack_from('<HhB',raw,1+5*i) for i in range(raw[0])]
             expected=expected_pixels(scene,int(pose),int(world),int(y),int(camera),
                 (ROOT/'assets_msx/mission_a'/('far.indices' if scale==8 else 'scene.indices')).read_bytes(),
                 terrain['far_width'] if scale==8 else terrain['width'],scale,int(wave),pilot,int(heave),int(ship),
                 projectiles,game[4],game[3],game[2],crew,ground,depth,stage!=1,flash=combat[158],
                 gauges=tuple((out/f'{name}.gauges').read_bytes()),crash=(out/f'{name}.crash').read_bytes()[0],
-                wheel=wheel,gear=gear,deck_level=deck_level,rope=rope,facing_left=bool(flight[11]))
+                wheel=wheel,gear=gear,deck_level=deck_level,rope=rope,facing_left=bool(flight[11]),
+                smoke=[(x & 0xFFFF,row,frame) for x,row,frame in smoke])
             for row in range(212):
                 for col in range(8,256):
                     ring=col if row>=172 else (int(camera)+col)%256
@@ -110,7 +113,7 @@ def main():
                             stage=stage,depth=depth,crew=crew,scale=scale,pilot=pilot,camera=int(camera),world=int(world),y=int(y),pose=int(pose),wave=int(wave),heave=int(heave),ship=int(ship),
                             shots=shots,secondary=secondary,impacts=impacts,projectiles=projectiles,flash=combat[158],
                             wheel=(out/f'{name}.wheel').read_bytes()[0],gear=(out/f'{name}.wheel').read_bytes()[1],
-                            rope=(out/f'{name}.wheel').read_bytes()[2])
+                            rope=(out/f'{name}.wheel').read_bytes()[2],smoke=(out/f'{name}.smoke').read_bytes()[0])
         if not args.headless:
             assert Image.open(out/f'{name}.png').size==(320,240)
     required={'lift_paused','lift_pause_wait','lift_start','lift_rise_24','lift_rise_16','lift_rise_8','lift_left_down_8','lift_left_down_16','lift_left_down_24','lift_left_inside','service_left','lift_left_return','lift_right_down_8','lift_right_down_24','lift_right_inside','service_right','lift_right_return','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','approach','open_sea_right','rank','load_menu','briefing','rockets','torpedo','loadout','start','guns','aliases','short_press','paused',
@@ -118,7 +121,7 @@ def main():
     required|={f'cannon_{pitch}_{heading}' for pitch in ('climb','level','dive') for heading in ('left','right')}
     required|={'stall_held','stall_released','dive_released','dive_persistent','dive_recovered'}
     required|={'taxi_right_stop','taxi_left_stop'}
-    required|={'engine_low_fuel','engine_failed','engine_next_plane','game_over'}
+    required|={'engine_low_fuel','engine_smoke','engine_failed','engine_next_plane','game_over'}
     required|={'landed','landed_service','deck_bounce','sea_splash','sea_crash_next','engine_splash','arrest'}
     assert required<=snapshots.keys(),required-snapshots.keys()
     assert (out/'paused.combat').read_bytes()==(out/'pause_wait.combat').read_bytes(),'Pause advanced weapons'
@@ -143,6 +146,7 @@ def main():
     assert snapshots['dive_recovered']['pose']==16
     assert snapshots['landed']['y']==1160 and 7038<snapshots['landed']['world']<7345
     assert snapshots['arrest']['rope'] in (0,1,2,3) and snapshots['landed']['rope']==255
+    assert snapshots['engine_smoke']['smoke']>=2 and snapshots['start']['smoke']==0
     for heading in ('left','right'):
         for attitude in ('climb','level','dive'):
             snapshot=snapshots[f'cannon_{attitude}_{heading}']
@@ -181,7 +185,7 @@ def main():
     lift_timing=dict(presentation_vblanks=6,samples=len(cadence),median_publication_ms=median,
         max_regular_redraw_ms=max(r for i,r in cadence),simulation_ticks_per_pixel=18,travel_ticks=576)
     summary=dict(lift_timing=lift_timing,machine=args.machine,rom_sha256=hashlib.sha256(data).hexdigest(),raster_captured=not args.headless,
-                 snapshots=snapshots,checks=['original elevator platform and hull occlusion at multiple depths','initial leftward emergence and two heading-preserving service cycles','primary/secondary elevator activation with held-confirmation consumption','real bomb expenditure then reload without a game reset','turning round on the deck at rest in both directions, in place','streamed ground-turn artwork and noncontiguous bank restoration','gear down near the carrier in either direction; original wheel overlays on every pose, sliding up and down','open sea past the map end with the camera centred on the plane','arresting rope drawn from the caught cable to the hook during the arrest','full visible composite pixels including both original signalmen and deck heave','original flight model (12.5 Hz): deck roll, tail up, rolling off the bow and climbing away','original turn: height lost, regained by climbing through the turn','stall flare keeps airspeed and sinks nose up; a Down tap starts a held dive','release boot and seven-rank/load shells','context edge consumption',
+                 snapshots=snapshots,checks=['original elevator platform and hull occlusion at multiple depths','initial leftward emergence and two heading-preserving service cycles','primary/secondary elevator activation with held-confirmation consumption','real bomb expenditure then reload without a game reset','turning round on the deck at rest in both directions, in place','streamed ground-turn artwork and noncontiguous bank restoration','gear down near the carrier in either direction; original wheel overlays on every pose, sliding up and down','open sea past the map end with the camera centred on the plane','arresting rope drawn from the caught cable to the hook during the arrest','engine smoke from a damaged engine, erased by repainting terrain','full visible composite pixels including both original signalmen and deck heave','original flight model (12.5 Hz): deck roll, tail up, rolling off the bow and climbing away','original turn: height lost, regained by climbing through the turn','stall flare keeps airspeed and sinks nose up; a Down tap starts a held dive','release boot and seven-rank/load shells','context edge consumption',
                     '30/15/1 stock previews and three lives','unlimited provisional guns do not spend secondary stock',
                     'N/GRAPH alias overlap and short press buffering','PSG-boundary injection of both joystick triggers and inversion','in-game save/load shells return without state mutation','Esc-only pause freezes gameplay clocks',
                     'Ctrl-F settings and Ctrl-R restart','release profile ignores debug R/T',
