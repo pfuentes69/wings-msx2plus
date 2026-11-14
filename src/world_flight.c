@@ -87,6 +87,7 @@ volatile u8 g_DisplayFine;   /* the published page's fine pan (verification) */
 static u8 s_ViewKey, s_RenderFine;   /* view: 8 distant, else pan rows / 8 */
 static int8_t s_PanStep;              /* tile rows the page moves this render */
 static u8 s_Repainted;                /* scenery under the elevator was repainted */
+static u8 s_GuardTop[2];              /* first VRAM row of each page's guard line */
 static u8 s_RenderHeave;
 /* Far view x: an arithmetic shift, so the sea left of the map (negative x)
  * stays continuous with the map. */
@@ -218,28 +219,14 @@ void VDP_HBlankHandler(void) __naked
         jp z, pan_split$
         or a
         jp nz, dashboard_low_palette$
-        // Requested on line 169: switch the scroll in the horizontal retrace
-        // before line 171 (S#2 bit 5, polled), so no line mixes two offsets.
-        // R23 = +1 shows the dashboard's solid top rows (VRAM 172..175,
-        // colour 1) from line 171: a separator never drawn into the play area.
-        ld a, #2
-        out (0x99), a
-        ld a, #0x8f
-        out (0x99), a
-    split_wait_display$:
-        in a, (0x99)
-        and #0x20
-        jr nz, split_wait_display$
-    split_wait_retrace$:
-        in a, (0x99)
-        and #0x20
-        jr z, split_wait_retrace$
-        ld a, #1
+        // Requested on line 170: back to the dashboard's scroll. Lines
+        // 170..175 read dark pixels under either scroll (the guard line
+        // drawn at VRAM 170 - scroll .. 171, then the dashboard's solid top
+        // rows 172..175), so a late interrupt changes nothing on screen.
+        xor a
         out (0x99), a
         ld a, #0x97
         out (0x99), a
-        // The rest happens on the solid rows: horizontal scroll, the second
-        // request (line 173 in the +1 scroll) and the upper colors.
         xor a
         out (0x99), a
         ld a, #0x9b
@@ -250,10 +237,13 @@ void VDP_HBlankHandler(void) __naked
         out (0x99), a
         ld a, #1
         ld (_g_DashboardSplit), a
+        // Leave time to return from this ISR before requesting the next.
         ld a, #174
         out (0x99), a
         ld a, #0x93
         out (0x99), a
+        // Stage the upper dashboard colors on the dark lines, leaving a
+        // short final transfer before the icons at 183.
         ld a, #6
         out (0x99), a
         ld a, #0x90
@@ -296,11 +286,6 @@ void VDP_HBlankHandler(void) __naked
         out (0x99), a
         ret
     dashboard_low_palette$:
-        // Still on the solid rows: back to the dashboard's own scroll.
-        xor a
-        out (0x99), a
-        ld a, #0x97
-        out (0x99), a
         ld a, #1
         out (0x99), a
         ld a, #0x90
@@ -326,7 +311,7 @@ static void PublishScroll(void)
     u8 scroll = s_RenderHeave + s_RenderFine;
     g_VerticalOffset = 0 - s_RenderHeave;
     g_PlayOffset = 0 - scroll;
-    g_LineSplit = 169 - scroll;   /* line 169 in the play scroll */
+    g_LineSplit = 170 - scroll;   /* line 170 in the play scroll */
     /* R19 counts scrolled lines: line s with the top region's -heave. */
     g_FirstSplit = (int8_t)s_RenderFine > 0 ? s_RenderFine : g_LineSplit;
     g_FirstState = (int8_t)s_RenderFine > 0 ? 2 : 0;
@@ -385,6 +370,29 @@ static void PanStep(u8 page, u16 camera)
         Terrain_RepaintBand(page, camera, TERRAIN_MAP_ROWS - 1 + s_PanStep - s_ViewKey, TERRAIN_MAP_ROWS - 1 - s_ViewKey);
     }
     s_PageScale[page] = s_ViewKey;
+    /* The old guard line moved with the page. */
+    s_GuardTop[page] = s_PanStep > 0 ? (s_GuardTop[page] + rows > 172 ? 172 : s_GuardTop[page] + rows)
+                                     : s_GuardTop[page] - rows;
+}
+
+/* The guard line moves with the scroll. When it shrinks, repaint the rows
+ * it leaves from the tile cache (map rows at the page's pan). */
+static void RepairGuard(u8 page, u16 camera)
+{
+    u8 top = 170 - (u8)(s_RenderHeave + (int8_t)s_RenderFine), old = s_GuardTop[page];
+    s_GuardTop[page] = top;
+    if (old >= top) return;
+    if (!g_PanRows && !s_PanStep)
+    {
+        /* Waves drawn last frame here: rows 166..171 are redrawn opaque and
+         * 161..162 restored from their backup; rows 163..165 are water only
+         * away from the island's beach (x 16..3972, a-scene.json bands). */
+        if (old < 163) old = 163;
+        if (top > 166) top = 166;
+        if (old >= top || (int16_t)(camera + 255) < 16 || (int16_t)(camera + 8) >= 3973) return;
+    }
+    Terrain_RepaintBand(page, camera, (old - 24 - g_PanRows) >> 3, (top - 25 - g_PanRows) >> 3);
+    s_Repainted = 1;
 }
 
 /* Every column a page shows from this camera (unchanged ones cost a check). */
@@ -670,6 +678,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
         DrawView(camera, page);
         s_Camera[page] = camera;
         s_PageScale[page] = s_ViewKey;
+        s_GuardTop[page] = 172;
     }
     Weapons_Restore(page, g_ViewChange);
 #ifdef WINGS_P1_FLIGHT
@@ -685,6 +694,8 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     s_Repainted = 0;
     if (s_PanStep) { PanStep(page, camera); s_Repainted = 1; }
     g_PanRows = s_ViewKey == 8 ? 0 : s_ViewKey << 3;
+    /* Before the scrolled-in columns compare against the cache. */
+    RepairGuard(page, camera);
     /* Signed differences: the camera may cross 0 into the open sea. */
     if ((int16_t)(camera - s_Camera[page]) > 0)
     {
@@ -753,6 +764,9 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
                      0
 #endif
                      ); /* now holds what this page shows */
+    /* The guard line: VRAM 170 - scroll .. 171, dark under either scroll
+     * around the dashboard split (see VDP_HBlankHandler). */
+    VDP_CommandHMMV(0, (u16)page * 256 + s_GuardTop[page], 256, 172 - s_GuardTop[page], 0x11);
     {
         u16 ahead = s_Aircraft.facing_left ? world - 128 : world + 128;
         u16 altitude = WINGS_FLIGHT_MAX_Y - y;
@@ -935,6 +949,7 @@ void main(void)
     g_TerrainFar = g_ViewChange = s_PageScale[0] = s_PageScale[1] = 0;
     g_VerticalOffset = s_RenderHeave = 0; g_LineSplit = 170;
     g_PlayOffset = g_FirstState = s_RenderFine = s_ViewKey = g_PanRows = 0; g_FirstSplit = 170;
+    s_GuardTop[0] = s_GuardTop[1] = 172;
     g_DisplayPage = 0;
     s_Valid[0] = s_Valid[1] = 0;
     World_Reset(&s_World);

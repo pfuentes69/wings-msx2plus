@@ -92,7 +92,6 @@ def main():
                 smoke=[(x & 0xFFFF,row,frame) for x,row,frame in smoke],
                 score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0],fine=fine)
             for row in range(212):
-                if row==171:continue   # the split shows the dashboard's solid row
                 for col in range(8,256):
                     ring=col if row>=172 else (int(camera)+col)%256
                     sy=row if row>=172 else vram_row(row,fine,int(heave))

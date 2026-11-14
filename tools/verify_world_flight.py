@@ -23,8 +23,6 @@ def vram_image(vram, palette, camera, page, heave=0, fine=0):
             source_row = vram_row(row, fine, heave) if row < 172 else row
             packed = vram[page * 32768 + source_row * 128 + ring // 2]
             indices[row * 256 + col] = packed & 15 if ring % 2 else packed >> 4
-            # Line 171 shows the dashboard's solid top row (the split's +1 scroll).
-            if row == 171: indices[row * 256 + col] = 1
     image = Image.frombytes('P', (256, 212), bytes(indices))
     colors = bytes(channel * 255 // 7 for i in range(16)
                    for channel in ((palette[i * 2] >> 4) & 7, palette[i * 2 + 1] & 7, palette[i * 2] & 7))
@@ -298,6 +296,8 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             mark(x-3,y,7,1,5 if kind==4 else 14)
             mark(x,y-3,1,7,5 if kind==4 else 14)
             mark(x-1,y-1,3,3,11)
+    pixels[170] = [1]*256   # the guard line (VRAM 170 - scroll .. 171)
+    pixels[171] = [1]*256
     return pixels
 
 
@@ -478,7 +478,7 @@ def main():
             expected = expected_pixels(scene, frame, world, y, camera, (folder / 'far.indices').read_bytes() if scale == 8 else background, terrain['far_width'] if scale == 8 else terrain['width'], scale, wave, pilot, heave, ship_frame, projectiles, stock, weapon, lives, flash=snapshots[name].get('flash', 0))
             fine = 0   # the renderer harness never flies inside the pan band
             assert not pan_of(y, scale), (name, 'pan band snapshot needs the fine scroll')
-            assert regs[0] & 16 and regs[19] in ({169-heave-fine, 174} | ({fine} if fine else set())), (name, 'dashboard split IRQ', regs[19])
+            assert regs[0] & 16 and regs[19] in ({(170-heave-fine) % 256, 174} | ({fine} if fine else set())), (name, 'dashboard split IRQ', regs[19])
             for row in range(212):
                 for col in range(8, 256):
                     ring = (col if row >= 172 else camera + col) % 256

@@ -113,14 +113,23 @@ The port now pans by p = altitude − 131 (0..55) in two parts.
   on a row boundary therefore doesn't step every frame. At −1 the last
   play line shows terrain row 171.
 
-The bottom split no longer relies on a dark guard line drawn into the play
-area. That line moved with the scroll and left stale rows when the scroll
-shrank. The first dashboard interrupt is requested on line 169 and polls
-the horizontal-retrace flag (S#2 bit 5). R23 = +1 is written in the retrace
-before line 171, so no line mixes two scrolls. From line 171 the screen shows
-the dashboard's top rows, VRAM 172..175, which are solid colour 1. The
-second interrupt, anywhere in those dark lines, restores R23 = 0 and
-finishes the palette.
+The bottom split must not depend on the line interrupt's exact timing.
+Interrupts can arrive a line or more late (other interrupt work, short
+sections with interrupts off), and two earlier attempts showed it:
+- **A +2 scroll onto the dashboard's top rows:** a late second interrupt left
+  the dashboard shifted, with hidden VRAM below it.
+- **A switch exactly in the horizontal retrace:** a late first interrupt
+  switched on the wrong line, so the dashboard flickered and jumped a pixel.
+
+Now the split is requested at line 170, and the scroll returns straight to
+the dashboard's 0. A dark guard line is drawn at VRAM 170 − scroll .. 171,
+and the dashboard's top rows 172..175 are solid colour 1. Lines 170..175
+therefore read dark pixels under either scroll, and the switch may land
+anywhere in them. When the scroll shrinks, `RepairGuard` repaints the rows
+the guard leaves, from the tile cache. With no tile-row pan, waves are drawn,
+and most of those rows are handled every frame anyway: rows 166..171 are
+redrawn opaque and 161..162 are restored from the wave backup. So only rows
+163..165 need repainting, and only where the island's beach is in view.
 
 **Timing.** Steps over open sea and the islands fit the 8-VBlank frame. Over
 the carrier the block move spans the tower, about 130 rows. There a step can
@@ -134,6 +143,5 @@ island run. It comes down through the band over the carrier with a bomb
 falling, and captures `pan_high` (pan 45..55) and `pan_mid` (17..29). The
 cannon tests also fly in the band. Each snapshot dumps the published fine
 scroll (`g_DisplayFine`). `verify_world_flight.pan_of` and `vram_row` model
-the pan and the two scroll regions in the oracle, which skips line 171 (the
-split's dark row). `tests/test_column_runs_z80.py` covers the run loop with
+the pan and the two scroll regions in the oracle, which expects the guard line on screen rows 170..171. `tests/test_column_runs_z80.py` covers the run loop with
 pans of 0..6 rows.
