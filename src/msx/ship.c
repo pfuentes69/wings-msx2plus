@@ -89,18 +89,24 @@ void Ship_Draw(u8 page, u16 camera) WINGS_BANKED
 #ifdef WINGS_P1_FLIGHT
 /* Each frame contains the source figure over its exact static deck backdrop.
  * Replacing the whole rectangle erases old arms before the plane is composited. */
-void Ship_DrawCrew(u8 page, u16 camera) WINGS_BANKED
+static u16 s_CrewCamera[2] = {65535u, 65535u};
+void Ship_DrawCrew(u8 page, u16 camera, u8 cleared) WINGS_BANKED
 {
-    u8 piece, index;
+    u8 piece, index, mark;
     u16 origin, left, right, sx, ring, width, part, column;
+    /* Terrain columns are only redrawn when the camera moves or the page is
+     * rebuilt, so the overlay rows need re-marking only then (per page). */
+    mark = cleared || s_CrewCamera[page] != camera;
+    s_CrewCamera[page] = camera;
     for (piece=0; piece<4; ++piece)
     {
         origin = piece < 2 ? 6958 : 7334;
         left = (camera+8)&65534u; if (left < origin) left=origin;
         right = (camera+257)&65534u; if (right > origin+22) right=origin+22;
         if (left>=right) continue;
-        for (column=left&65528u; column<right; column+=8)
-            Terrain_DirtyOverlayColumn(page,column,11,13);
+        if (mark)
+            for (column=left&65528u; column<right; column+=8)
+                Terrain_DirtyOverlayColumn(page,column,11,13);
         index = (piece < 2 ? 0 : 16) + g_CrewFrame*2 + (piece&1);
         if (piece<2 && g_Carrier.stage!=CARRIER_DECK) index=CREW_IDLE_PIECE+(piece&1);
         sx = g_CrewX[index] + left-origin;

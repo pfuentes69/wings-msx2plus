@@ -510,7 +510,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
 #endif
         Ship_Draw(page, camera);
 #ifdef WINGS_P1_FLIGHT
-        Ship_DrawCrew(page, camera);
+        Ship_DrawCrew(page, camera, g_ViewChange);
 #endif
         Dashboard_Waves(page, camera, s_Wave, s_RenderHeave);
     }

@@ -54,9 +54,38 @@ of render time. About 21 VDP commands per frame. Mean per frame (NTSC):
 | Ship, elevator and deck crew overlays | ~4.4 | Only while the carrier is visible |
 | Overlay dirty marking | ~1.7 | 6 calls per frame near the carrier |
 
+## Over the carrier (2026-11-14)
+
+`tools/profile_p0.py` tags samples taken while the camera is over the ship.
+Those frames average 57 ms of render (1,293 frames in the P0 run):
+
+| Item | ms/frame |
+| --- | --- |
+| Waiting for the VDP before the next command (`VDP_CommandWait`) | 8.5 |
+| Wave strip restore (`Dashboard_RestoreWaves`, mostly waiting) | 6.8 |
+| Terrain columns (+ decode/compare helpers) | 6.3 (+1.7) |
+| Wave bands (`Dashboard_Waves`) | 4.2 |
+| Sound budget (line interrupt) | 3.0 |
+| Command setup (`VDP_CommandSetupR32`) | 2.9 |
+| Ship, crew, elevator overlays | 5.6 |
+| Overlay dirty marking | 1.9 |
+| Surface queries (`Mission_Query`) | 0.9 |
+
+Done: `Dashboard_Status` skips the digit divisions when nothing changed, and
+the crew re-marks overlay rows only when the camera moved or the page was
+rebuilt (mean render 50.2 → 49.0 ms, worst frame 128 → 127 ms). Tried and
+reverted: a binary-searched `Mission_Surface` and a one-entry query cache
+(SDCC's search costs ~2,500 T-states and the alternating queries never hit),
+and an early-out in dirty marking (no measurable gain).
+
+The remaining time is structural: about 15 ms per frame is the CPU waiting on
+the VDP, and the wave strip issues about 12 commands per frame (2-row backup
+and restore, 96-pixel wave segments, transparent top rows via LMMM).
+
 ## Candidates, in order of expected value
 
-1. **Reorder render work to overlap CPU with VDP.** Prepare terrain columns
+1. **Schedule render work to overlap CPU with VDP** (the largest item over
+   the carrier, ~15 ms per frame). Prepare terrain columns
    (decode and compare) while the background restores run, and emit their
    commands afterwards. VDP command order must stay as it is: the wave
    restore must precede the new columns.

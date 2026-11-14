@@ -12,6 +12,7 @@ static u8 s_Stream[64], s_StreamPos;
 static u16 s_StreamOffset;
 // Value currently shown per page for each pre-rendered HUD element.
 static u8 s_Hud[2][HUD_ELEMENT_COUNT];
+static u8 s_Status[2][3]; /* weapon, stock, lives last shown per page */
 // The baked panel shows 30 bombs, three lives, bombs and a new plane's
 // gauges (oil frame 16, fuel frame 22, lamps dark). Dial entries hold the
 // frame plus HUD_LIT when the lit variant is shown; the _LIT slots are unused.
@@ -67,6 +68,7 @@ void Dashboard_Load(void) WINGS_BANKED
     {
         s_Pilot[page] = 255;
         for (frame = 0; frame < HUD_ELEMENT_COUNT; ++frame) s_Hud[page][frame] = s_HudDefault[frame];
+        s_Status[page][0] = s_Status[page][1] = s_Status[page][2] = 255;
         s_WaveBackdropValid[page] = 0;
         Input(DASHBOARDPANEL_OFFSET);
         Expand(0, (u16)page * 256 + 172, 256, 40);
@@ -235,6 +237,9 @@ static void Show(u8 page, u8 element, u8 value)
 
 void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives) WINGS_BANKED
 {
+    /* Called every render: skip the divisions when nothing changed. */
+    if (s_Status[page][0] == weapon && s_Status[page][1] == stock && s_Status[page][2] == lives) return;
+    s_Status[page][0] = weapon; s_Status[page][1] = stock; s_Status[page][2] = lives;
     Show(page, HUD_AMMO_TENS, stock / 10);
     Show(page, HUD_AMMO_UNITS, stock % 10);
     Show(page, HUD_LIVES, lives > 9 ? 9 : lives);

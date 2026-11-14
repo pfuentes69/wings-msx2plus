@@ -25,7 +25,9 @@ class LandingTests(unittest.TestCase):
         lib = Path(cls.temp.name) / 'landing.so'
         subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
                         '-DWINGS_P1_FLIGHT', '-DMISSION_TERRAIN', '-DWINGS_FLIGHT_MAX_Y=1200u',
-                        '-DWINGS_WORLD_WIDTH=7608u', str(ROOT / 'src/core/landing.c'), '-o', str(lib)],
+                        '-DWINGS_WORLD_WIDTH=7608u', '-DWINGS_WORLD_START=7032u',
+                        *[str(ROOT / 'src' / p) for p in ('core/landing.c', 'core/flight.c',
+                          'core/aircraft.c', 'generated/hellcat_frames.c')], '-o', str(lib)],
                        check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))
         cls.core.Landing_Contact.restype = C.c_uint8

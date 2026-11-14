@@ -51,6 +51,8 @@ proc prof_rendering {} {
         set draw [expr {int(($end-$::prof_render_start)*1000)}]
         # View changes (altitude scale switch, full page rebuild) are exempt from deadlines.
         set kind [expr {[debug read memory $::prof_addr(g_ViewChange)] ? "rebuild" : "frame"}]
+        set cwx [expr {[debug read memory $::prof_addr(g_DisplayWorld)]+256*[debug read memory [expr {$::prof_addr(g_DisplayWorld)+1}]]}]
+        if {$kind eq "frame" && $cwx >= 6500 && $cwx <= 7450} {incr ::prof_calls([list carrier_frames 0])}
         incr ::prof_calls([list ${kind}_cost_${sim}_${draw} [prof_guns]])
         # Where the heaviest gameplay frames happen (world x, y of the last publication).
         if {$kind eq "frame" && $sim + $draw > 110} {
@@ -73,7 +75,10 @@ proc prof_sample {} {
         set guns [prof_guns]
         # VDP command engine busy (S#2 bit 0): shows whether rendering is CPU- or VDP-bound.
         set vdp [expr {[debug read {VDP status regs} 2] & 1}]
-        incr ::prof_hist([list $pc $bank $render $guns $ret $vdp])
+        # Carrier scene: published world x inside the ship's span (heaviest render).
+        set wx [expr {[debug read memory $::prof_addr(g_DisplayWorld)]+256*[debug read memory [expr {$::prof_addr(g_DisplayWorld)+1}]]}]
+        set carrier [expr {$wx >= 6500 && $wx <= 7450}]
+        incr ::prof_hist([list $pc $bank $render $guns $ret $vdp $carrier])
     }
     after time $::prof_period prof_sample
 }
