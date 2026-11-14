@@ -53,8 +53,9 @@ Linux uses host Node if available and the bundled SDCC/MSXhex; Windows uses
 the bundled executables.
 
 ```sh
-./launch.sh           # Build and run on Panasonic_FS-A1WX-512K
-./launch.sh mission-flight # Source-backed a.map layout and carrier; slower baseline
+./launch.sh           # Build and run the game (mission ROM) on Panasonic_FS-A1WX-512K
+./launch.sh mission-flight-debug # Renderer/training harness (R/T shortcuts)
+./launch.sh wings     # Original 32 KiB viewer (out/wings.rom)
 ./build.sh            # Build out/wings.rom (32 KiB); no emulator auto-launch
 ./build.sh clean      # Remove generated out/ files
 ./build.sh rebuild    # Clean, compile, package and deploy to emul/rom/

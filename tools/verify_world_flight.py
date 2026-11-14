@@ -10,32 +10,30 @@ import struct
 import subprocess
 from PIL import Image
 from aircraft_scene import AircraftScene
-from verify_hardware_scroll import world_pixel
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def vram_image(vram, palette, camera, page, mission=False, heave=0):
+def vram_image(vram, palette, camera, page, heave=0):
     """A linear RGB3 preview reconstructed from VRAM, not a rendered raster check."""
     indices = bytearray(256 * 212)
     for row in range(212):
         for col in range(8, 256):
-            ring = (col if mission and row >= 172 else camera + col) % 256
-            source_row = (row-heave)&255 if mission and row < 172 else row
+            ring = (col if row >= 172 else camera + col) % 256
+            source_row = (row-heave)&255 if row < 172 else row
             packed = vram[page * 32768 + source_row * 128 + ring // 2]
             indices[row * 256 + col] = packed & 15 if ring % 2 else packed >> 4
     image = Image.frombytes('P', (256, 212), bytes(indices))
     colors = bytes(channel * 255 // 7 for i in range(16)
                    for channel in ((palette[i * 2] >> 4) & 7, palette[i * 2 + 1] & 7, palette[i * 2] & 7))
     image.putpalette(colors + bytes(768 - len(colors)))
-    if mission:
-        from convert_dashboard import dashboard_palette
-        panel = Image.frombytes('P', (256, 40), bytes(indices[172*256:]))
-        p = dashboard_palette()
-        panel.putpalette(bytes(v*255//7 for i in range(16)
-            for v in (p[i*2]>>4, p[i*2+1], p[i*2]&7)) + bytes(720))
-        image = image.convert('RGB')
-        image.paste(panel.convert('RGB'), (0, 172))
+    from convert_dashboard import dashboard_palette
+    panel = Image.frombytes('P', (256, 40), bytes(indices[172*256:]))
+    p = dashboard_palette()
+    panel.putpalette(bytes(v*255//7 for i in range(16)
+        for v in (p[i*2]>>4, p[i*2+1], p[i*2]&7)) + bytes(720))
+    image = image.convert('RGB')
+    image.paste(panel.convert('RGB'), (0, 172))
     return image
 
 
@@ -54,62 +52,56 @@ def gun_flash_shape(scene, frame, flash):
     return None
 
 
-def expected_pixels(scene, frame, world, y, camera, background=None, background_width=4096, mission=False, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0):
-    if background is None:
-        pixels = [[world_pixel(camera + x, row) for x in range(256)] for row in range(212)]
-    else:
-        pixels = [list(background[row * background_width + camera:row * background_width + camera + 256]) for row in range(212)]
-    if mission:
-        from convert_dashboard import panel
-        dashboard = panel()
-        pixels = pixels[40:] + [list(dashboard[row * 256:(row + 1) * 256]) for row in range(40)]
-    if mission:
-        from convert_dashboard import waves, pilot_frame
-        if scale == 1:
-            for x in range(256):
-                wx = camera + x
-                if 6592 <= wx < 7368:
-                    for row in range(172):
-                        pixels[row][x] = background[(row+40-heave)*background_width+wx]
-            ship = (ROOT/'assets_msx/ship/frames.indices').read_bytes()[ship_frame*1344:(ship_frame+1)*1344]
-            for row in range(42):
-                for col in range(32):
-                    x = 6906 + col - camera
-                    if 0 <= x < 256: pixels[46+heave+row][x] = ship[row*32+col]
-            if crew_phase is not None:
-                crew=(ROOT/'assets_msx/ship/crew.indices').read_bytes()
-                for man,anchor in enumerate((6968,7344)):
-                    pose=16 if man==0 and elevator_active else man*8+crew_phase
-                    patch=crew[pose*308:(pose+1)*308]
-                    for row in range(14):
-                        for col in range(22):
-                            x=anchor-10+col-camera
-                            if 0<=x<256:pixels[116+heave+row][x]=patch[row*22+col]
-            if elevator_depth is not None:
-                from unpack_shapes import read_ppkc,unpack_rpck
-                from decode_shapes import decode_record
-                records={n:r for n,_,r in read_ppkc(unpack_rpck((ROOT/'reference_assets/original_files/Wings_of_Fury/shapes/world.shp').read_bytes()))}
-                platform,_=decode_record(records['elev'],plane_constants=True)
-                mapping=json.loads((ROOT/'assets_msx/terrain/manifest.json').read_text())['source_to_msx_index']
-                for row in range(13):
-                    dy=129+elevator_depth+row+heave
-                    if dy>=145+heave:continue
-                    for col in range(64):
-                        x=7004+col-camera;v=platform[row*64+col]
-                        if v and 0<=x<256:pixels[dy][x]=mapping[str(v)]
-            water = waves()[wave]
-            water_bands = json.loads((ROOT / 'assets_src/missions/a-scene.json').read_text())['water_bands']
-            for x in range(256):
-                wx = camera + x
-                for band in water_bands:
-                    if not band['start'] <= wx < band['end']: continue
-                    for row in range(band['row'], band['row'] + band['height']):
-                        color = water[row * 96 + wx % 96]
-                        if color: pixels[161 + row][x] = color
-        cockpit = pilot_frame(pilot // 8, pilot % 8)
-        for row in range(24): pixels[183 + row][108:156] = cockpit[row * 48:(row+1)*48]
+def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0):
+    pixels = [list(background[row * background_width + camera:row * background_width + camera + 256]) for row in range(212)]
+    from convert_dashboard import panel, waves, pilot_frame
+    dashboard = panel()
+    pixels = pixels[40:] + [list(dashboard[row * 256:(row + 1) * 256]) for row in range(40)]
+    if scale == 1:
+        for x in range(256):
+            wx = camera + x
+            if 6592 <= wx < 7368:
+                for row in range(172):
+                    pixels[row][x] = background[(row+40-heave)*background_width+wx]
+        ship = (ROOT/'assets_msx/ship/frames.indices').read_bytes()[ship_frame*1344:(ship_frame+1)*1344]
+        for row in range(42):
+            for col in range(32):
+                x = 6906 + col - camera
+                if 0 <= x < 256: pixels[46+heave+row][x] = ship[row*32+col]
+        if crew_phase is not None:
+            crew=(ROOT/'assets_msx/ship/crew.indices').read_bytes()
+            for man,anchor in enumerate((6968,7344)):
+                pose=16 if man==0 and elevator_active else man*8+crew_phase
+                patch=crew[pose*308:(pose+1)*308]
+                for row in range(14):
+                    for col in range(22):
+                        x=anchor-10+col-camera
+                        if 0<=x<256:pixels[116+heave+row][x]=patch[row*22+col]
+        if elevator_depth is not None:
+            from unpack_shapes import read_ppkc,unpack_rpck
+            from decode_shapes import decode_record
+            records={n:r for n,_,r in read_ppkc(unpack_rpck((ROOT/'reference_assets/original_files/Wings_of_Fury/shapes/world.shp').read_bytes()))}
+            platform,_=decode_record(records['elev'],plane_constants=True)
+            mapping=json.loads((ROOT/'assets_msx/terrain/manifest.json').read_text())['source_to_msx_index']
+            for row in range(13):
+                dy=129+elevator_depth+row+heave
+                if dy>=145+heave:continue
+                for col in range(64):
+                    x=7004+col-camera;v=platform[row*64+col]
+                    if v and 0<=x<256:pixels[dy][x]=mapping[str(v)]
+        water = waves()[wave]
+        water_bands = json.loads((ROOT / 'assets_src/missions/a-scene.json').read_text())['water_bands']
+        for x in range(256):
+            wx = camera + x
+            for band in water_bands:
+                if not band['start'] <= wx < band['end']: continue
+                for row in range(band['row'], band['row'] + band['height']):
+                    color = water[row * 96 + wx % 96]
+                    if color: pixels[161 + row][x] = color
+    cockpit = pilot_frame(pilot // 8, pilot % 8)
+    for row in range(24): pixels[183 + row][108:156] = cockpit[row * 48:(row+1)*48]
     shape = scene.frames[frame]
-    if mission and scale == 8:
+    if scale == 8:
         meta = json.loads((ROOT / 'assets_src/dashboard/manifest.json').read_text())
         index = meta['far_pose_for_frame'][frame]
         far = meta['far_poses'][index]
@@ -118,20 +110,20 @@ def expected_pixels(scene, frame, world, y, camera, background=None, background_
 
     else:
         source = (scene.folder / shape['file']).read_bytes()
-    pivot = (161 - ((1200-y)//8) if scale == 8 else max(14,y-1055)) if mission else y
+    pivot = 161 - ((1200-y)//8) if scale == 8 else max(14,y-1055)
     for sy in range(shape['height']):
         dy = (129 - shape['height'] + sy + heave + (elevator_depth or 0)) if on_deck else pivot + shape['dy'] + sy
         if elevator_active and dy>=145+heave:continue
-        if not 0 <= dy < (172 if mission else 212): continue
+        if not 0 <= dy < 172: continue
         for sx in range(shape['width']):
-            dx = world // scale + shape['dx'] + sx - camera - (25 if mission and scale == 1 else 0)
+            dx = world // scale + shape['dx'] + sx - camera - (25 if scale == 1 else 0)
             if not 0 <= dx < 256: continue
-            if mission and scale == 8: pixel = source[sy * shape['width'] + sx]
+            if scale == 8: pixel = source[sy * shape['width'] + sx]
             else:
                 packed = source[sy * (shape['width']//2) + sx//2]
                 pixel = packed & 15 if sx%2 else packed >> 4
             if pixel: pixels[dy][dx] = pixel
-    overlay = gun_flash_shape(scene, frame, flash) if mission and scale == 1 and not on_deck else None
+    overlay = gun_flash_shape(scene, frame, flash) if scale == 1 and not on_deck else None
     if overlay:
         record, source = overlay
         for sy in range(record['height']):
@@ -143,45 +135,44 @@ def expected_pixels(scene, frame, world, y, camera, background=None, background_
                 packed = source[sy * (record['width']//2) + sx//2]
                 pixel = packed & 15 if sx%2 else packed >> 4
                 if pixel: pixels[dy][dx] = pixel
-    if mission:
-        def mark(x,y,w,h,color):
-            for yy in range(max(0,y),min(171,y+h)):
-                for xx in range(max(camera+8,x),min(camera+256,x+w)):
-                    pixels[yy][xx-camera] = color
-        for p in projectiles:
-            kind=p['kind']
-            if not kind: continue
-            x,y=p['x']//4,p['y']//4
-            if scale == 8: x//=8; y=161-((1200-y)>>3)
-            else: y=y-1039
-            if scale == 8: mark(x,y,1,2 if kind>=3 else 1,11)
-            elif kind == 2:
-                from convert_dashboard import bomb_pixels
-                pose=0 if p['life']>95 else 1 if p['life']>92 else 2
-                if pose!=2 and p['vx']>0:pose+=3
-                source=bomb_pixels()[pose*64:(pose+1)*64]
-                for row in range(8):
-                    for col in range(8):
-                        color=source[row*8+col]
-                        if color:mark(x-4+col,y-4+row,1,1,color)
-            else:
-                mark(x-3,y,7,1,5 if kind==4 else 14)
-                mark(x,y-3,1,7,5 if kind==4 else 14)
-                mark(x-1,y-1,3,3,11)
-        if stock != 30:
-            from convert_dashboard import DASHBOARD_DIGITS
-            for digit,x in zip(f'{stock:02}',(20,30)):
-                for row,bits in enumerate(DASHBOARD_DIGITS[digit]):
-                    pixels[196+row][x:x+8]=[15,15]+[12 if bit=='1' else 15 for bit in bits]+[15]
-        if weapon:
-            from convert_dashboard import weapon_patch
-            icon=weapon_patch(weapon)
-            for row in range(7):pixels[186+row][18:40]=icon[row*22:(row+1)*22]
-        if lives != 3:
-            from convert_dashboard import DASHBOARD_DIGITS
-            for row,bits in enumerate(DASHBOARD_DIGITS[str(min(lives,9))]):
-                pixels[196+row][50:62]=[11,15,15]+[12 if bit=='1' else 15 for bit in bits]+[15,15,11,6]
-        pixels[171] = [1]*256
+    def mark(x,y,w,h,color):
+        for yy in range(max(0,y),min(171,y+h)):
+            for xx in range(max(camera+8,x),min(camera+256,x+w)):
+                pixels[yy][xx-camera] = color
+    for p in projectiles:
+        kind=p['kind']
+        if not kind: continue
+        x,y=p['x']//4,p['y']//4
+        if scale == 8: x//=8; y=161-((1200-y)>>3)
+        else: y=y-1039
+        if scale == 8: mark(x,y,1,2 if kind>=3 else 1,11)
+        elif kind == 2:
+            from convert_dashboard import bomb_pixels
+            pose=0 if p['life']>95 else 1 if p['life']>92 else 2
+            if pose!=2 and p['vx']>0:pose+=3
+            source=bomb_pixels()[pose*64:(pose+1)*64]
+            for row in range(8):
+                for col in range(8):
+                    color=source[row*8+col]
+                    if color:mark(x-4+col,y-4+row,1,1,color)
+        else:
+            mark(x-3,y,7,1,5 if kind==4 else 14)
+            mark(x,y-3,1,7,5 if kind==4 else 14)
+            mark(x-1,y-1,3,3,11)
+    if stock != 30:
+        from convert_dashboard import DASHBOARD_DIGITS
+        for digit,x in zip(f'{stock:02}',(20,30)):
+            for row,bits in enumerate(DASHBOARD_DIGITS[digit]):
+                pixels[196+row][x:x+8]=[15,15]+[12 if bit=='1' else 15 for bit in bits]+[15]
+    if weapon:
+        from convert_dashboard import weapon_patch
+        icon=weapon_patch(weapon)
+        for row in range(7):pixels[186+row][18:40]=icon[row*22:(row+1)*22]
+    if lives != 3:
+        from convert_dashboard import DASHBOARD_DIGITS
+        for row,bits in enumerate(DASHBOARD_DIGITS[str(min(lives,9))]):
+            pixels[196+row][50:62]=[11,15,15]+[12 if bit=='1' else 15 for bit in bits]+[15,15,11,6]
+    pixels[171] = [1]*256
     return pixels
 
 
@@ -227,9 +218,12 @@ def main():
     assert rom_bytes[32768:32768 + len(bundle)] == bundle, 'incorrect ROM asset bank placement'
     tables=(ROOT/'assets_msx/dashboard/bank_7.bin').read_bytes()
     assert rom_bytes[7*8192:7*8192+len(tables)]==tables
-    for bank in range(8,11):
+    # Aircraft pixels: banks 8-10, then 14 (same rule as mission-flight.js).
+    aircraft_bytes = json.loads((ROOT / 'assets_msx/hellcat/manifest.json').read_text())['animation']['pixel_bytes']
+    for segment in range((aircraft_bytes + 8191) // 8192):
+        bank = 8 + segment if segment < 3 else 11 + segment
         data = (ROOT / f'assets_msx/hellcat/mission_bank_{bank}.bin').read_bytes()
-        assert rom_bytes[bank*8192:bank*8192+len(data)] == data
+        assert rom_bytes[bank*8192:bank*8192+len(data)] == data, ('aircraft bank', bank)
     assert rom_bytes[11*8192:11*8192+6336] == (ROOT / 'assets_msx/dashboard/waves.sc5').read_bytes()
     with (output / 'openmsx.log').open('w') as log:
         cartridge = ['-cart', str(rom), '-romtype', 'ASCII8']
@@ -250,15 +244,12 @@ def main():
     report = (output / 'emulator-report.txt').read_text()
     assert report.rstrip().endswith('PASS'), report[-2000:]
     scene = AircraftScene()
-    if terrain:
-        scene.palette = (folder / 'palette.bin').read_bytes()
-    mission = args.project == 'mission-flight'
-    world_width = terrain['source_width'] if mission else 4096
-    initial_x = terrain['reset_x'] if mission else 104
+    scene.palette = (folder / 'palette.bin').read_bytes()
+    world_width = terrain['source_width']
+    initial_x = terrain['reset_x']
     snapshots, renders, intervals, colors = {}, [], [], {}
-    if mission:
-        from convert_dashboard import dashboard_palette
-        instrument_palette = dashboard_palette()
+    from convert_dashboard import dashboard_palette
+    instrument_palette = dashboard_palette()
     views = {p[1]: tuple(map(int,p[2:])) for line in report.splitlines() if (p := line.split()) and p[0] == 'view'}
     ships = {p[1]: tuple(map(int,p[2:])) for line in report.splitlines() if (p := line.split()) and p[0] == 'ship'}
     transitions = []
@@ -275,28 +266,27 @@ def main():
             hidden_checks = int(parts[1])
         elif parts[0] == 'snapshot':
             name, camera, world, x, y, frame, pair, turning = parts[1], *map(int, parts[2:])
-            scale, wave, pilot = views[name] if mission else (1,0,0)
+            scale, wave, pilot = views[name]
             view_world = world // scale
             assert camera == max(0, min((world_width + scale - 1) // scale - 256, view_world - 128)), name
             assert x == view_world - camera and pair in (0, 1), name
             snapshots[name] = dict(camera=camera, world=world, x=x, y=y, frame=frame, pair=pair, turning=turning, scale=scale, wave=wave, pilot=pilot)
-            heave, ship_frame = ships[name] if mission else (0,0)
+            heave, ship_frame = ships[name]
             projectiles = []
             stock,weapon,lives = 30,0,3
-            if mission:
-                snapshots[name].update(heave=heave,ship_frame=ship_frame)
-                combat=(output/f'{name}.combat').read_bytes()
-                assert len(combat)==160
-                for i in range(18):
-                    values=struct.unpack_from('<HHbbBB',combat,i*8)
-                    projectiles.append(dict(zip(('x','y','vx','vy','life','kind'),values)))
-                game=(output/f'{name}.game').read_bytes()
-                assert game[0]==3, (name,'renderer harness requires playing/debug profile')
-                lives,weapon,stock=game[2:5]
-                shots,dropped,impacts=struct.unpack_from('<HHH',combat,152)
-                snapshots[name].update(stock=stock,weapon=weapon,lives=lives,shots=shots,dropped=dropped,impacts=impacts,
-                                       projectiles=projectiles,flash=combat[158],aim_pitch=combat[151])
-                assert stock+dropped==30 and lives==3
+            snapshots[name].update(heave=heave,ship_frame=ship_frame)
+            combat=(output/f'{name}.combat').read_bytes()
+            assert len(combat)==160
+            for i in range(18):
+                values=struct.unpack_from('<HHbbBB',combat,i*8)
+                projectiles.append(dict(zip(('x','y','vx','vy','life','kind'),values)))
+            game=(output/f'{name}.game').read_bytes()
+            assert game[0]==3, (name,'renderer harness requires playing/debug profile')
+            lives,weapon,stock=game[2:5]
+            shots,dropped,impacts=struct.unpack_from('<HHH',combat,152)
+            snapshots[name].update(stock=stock,weapon=weapon,lives=lives,shots=shots,dropped=dropped,impacts=impacts,
+                                   projectiles=projectiles,flash=combat[158],aim_pitch=combat[151])
+            assert stock+dropped==30 and lives==3
 
             regs = (output / f'{name}.regs').read_bytes()
             assert regs[0] & 14 == 6 and regs[1] & 64 and regs[9] & 128, (name, 'SCREEN 5 display/212-line mode')
@@ -304,23 +294,17 @@ def main():
             assert regs[26] == (((camera & 255) + 7) // 8) & 63 and regs[27] == (-camera) % 8, name
             assert (output / f'{name}.palette').read_bytes() == scene.palette, name
             vram = (output / f'{name}.vram').read_bytes()
-            if terrain:
-                assert (output / f'{name}.rom').read_bytes() == rom_bytes[:32768], (name, 'cartridge bank restoration')
-                tiles = (folder / 'tiles.sc5').read_bytes()
-                size = terrain['selected']['size']
-                per_row = 256 // size
-                per_page = terrain['vram'].get('tiles_per_page', 64)
-                tile_bytes = size * size // 2
-                for tile in range(terrain['selected']['tile_count']):
-                    sy = (tile // per_page + 2) * 256 + 180 + (tile % per_page // per_row) * size
-                    sx = (tile % per_row) * size
-                    if mission:
-                        sy = (tile // 288 + 2) * 256 + 180 + (tile % 9) * 8
-                        sx = (tile % 288 // 9) * 8
-                    for row in range(size):
-                        address = (sy + row) * 128 + sx // 2
-                        stride = size // 2
-                        assert vram[address:address + stride] == tiles[tile * tile_bytes + row * stride:tile * tile_bytes + (row + 1) * stride], (name, 'terrain cache corrupted')
+            assert (output / f'{name}.rom').read_bytes() == rom_bytes[:32768], (name, 'cartridge bank restoration')
+            tiles = (folder / 'tiles.sc5').read_bytes()
+            size = terrain['selected']['size']
+            tile_bytes = size * size // 2
+            for tile in range(terrain['selected']['tile_count']):
+                sy = (tile // 288 + 2) * 256 + 180 + (tile % 9) * 8
+                sx = (tile % 288 // 9) * 8
+                for row in range(size):
+                    address = (sy + row) * 128 + sx // 2
+                    stride = size // 2
+                    assert vram[address:address + stride] == tiles[tile * tile_bytes + row * stride:tile * tile_bytes + (row + 1) * stride], (name, 'terrain cache corrupted')
             for shape in scene.frames:
                 if shape.get('streamed'):continue
                 source = (scene.folder / shape['file']).read_bytes()
@@ -328,67 +312,66 @@ def main():
                 for row in range(shape['height']):
                     address = (shape['atlas_y'] + row) * 128 + shape['atlas_x'] // 2
                     assert vram[address:address + stride] == source[row * stride:(row + 1) * stride], (name, 'atlas corrupted')
-            if mission:
-                far_meta = json.loads((ROOT / 'assets_src/dashboard/manifest.json').read_text())
-                water = (ROOT/'assets_msx/dashboard/waves.sc5').read_bytes()
-                for phase in range(12):
-                    for row in range(11):
-                        if (phase & 3) == 3 and row >= 9:
-                            sx,sy = far_meta['wave_tail_slots'][phase >> 2]; sy += row-9
-                        else:
-                            sx = 144 if 4 <= phase < 8 else 48
-                            sy = 212+(phase&3)*11+(256 if phase >= 8 else 0)+row
-                        address=sy*128+sx//2
-                        offset=phase*528+row*48
-                        assert vram[address:address+48] == water[offset:offset+48], (name,'wave cache',phase,row)
-                for display_page in (0,1):
-                    assert not any(vram[(display_page*256+254)*128:(display_page*256+256)*128]), (name,'heave wrap rows')
-                ship_meta=json.loads((ROOT/'assets_msx/ship/manifest.json').read_text())
-                ship_pixels=(ROOT/'assets_msx/ship/frames.indices').read_bytes()
-                for phase,record in enumerate(ship_meta['frames']):
-                    for piece,(sx,sy) in enumerate(record['parts']):
-                        for row in range(14):
-                            offset=phase*1344+((piece//2)*14+row)*32+(piece&1)*16
-                            line=ship_pixels[offset:offset+16]
-                            packed=bytes((line[x]<<4)|line[x+1] for x in range(0,16,2))
-                            address=(sy+row)*128+sx//2
-                            assert vram[address:address+8] == packed, (name,'ship cache',phase,piece,row)
-                bomb_pixels = (ROOT/'assets_msx/dashboard/bombs.indices').read_bytes()
-                for index,(sx,sy) in enumerate(far_meta['bomb_slots']):
-                    for row in range(8):
-                        line=bomb_pixels[index*64+row*8:index*64+(row+1)*8]
-                        packed=bytes((line[x]<<4)|line[x+1] for x in range(0,8,2))
+            far_meta = json.loads((ROOT / 'assets_src/dashboard/manifest.json').read_text())
+            water = (ROOT/'assets_msx/dashboard/waves.sc5').read_bytes()
+            for phase in range(12):
+                for row in range(11):
+                    if (phase & 3) == 3 and row >= 9:
+                        sx,sy = far_meta['wave_tail_slots'][phase >> 2]; sy += row-9
+                    else:
+                        sx = 144 if 4 <= phase < 8 else 48
+                        sy = 212+(phase&3)*11+(256 if phase >= 8 else 0)+row
+                    address=sy*128+sx//2
+                    offset=phase*528+row*48
+                    assert vram[address:address+48] == water[offset:offset+48], (name,'wave cache',phase,row)
+            for display_page in (0,1):
+                assert not any(vram[(display_page*256+254)*128:(display_page*256+256)*128]), (name,'heave wrap rows')
+            ship_meta=json.loads((ROOT/'assets_msx/ship/manifest.json').read_text())
+            ship_pixels=(ROOT/'assets_msx/ship/frames.indices').read_bytes()
+            for phase,record in enumerate(ship_meta['frames']):
+                for piece,(sx,sy) in enumerate(record['parts']):
+                    for row in range(14):
+                        offset=phase*1344+((piece//2)*14+row)*32+(piece&1)*16
+                        line=ship_pixels[offset:offset+16]
+                        packed=bytes((line[x]<<4)|line[x+1] for x in range(0,16,2))
                         address=(sy+row)*128+sx//2
-                        assert vram[address:address+4]==packed,(name,'bomb atlas',index,row)
-                far_pixels = (ROOT / 'assets_msx/dashboard/far-plane.indices').read_bytes()
-                for index, pose in enumerate(far_meta['far_poses']):
-                    for row in range(5):
-                        address = (pose['atlas_y'] + row)*128 + pose['atlas_x']//2
-                        pixels = far_pixels[index*80+row*16:index*80+(row+1)*16]
-                        packed = bytes((pixels[x]<<4)|pixels[x+1] for x in range(0,16,2))
-                        assert vram[address:address+8] == packed, (name,'reduced aircraft atlas',pose['name'])
-            expected = expected_pixels(scene, frame, world, y, camera, (folder / 'far.indices').read_bytes() if mission and scale == 8 else background, terrain['far_width'] if mission and scale == 8 else terrain['width'] if terrain else 4096, mission, scale, wave, pilot, heave, ship_frame, projectiles, stock, weapon, lives, flash=snapshots[name].get('flash', 0))
-            if mission:
-                assert regs[0] & 16 and regs[19] == (169-heave if heave else 170), (name, 'dashboard split IRQ')
+                        assert vram[address:address+8] == packed, (name,'ship cache',phase,piece,row)
+            bomb_pixels = (ROOT/'assets_msx/dashboard/bombs.indices').read_bytes()
+            for index,(sx,sy) in enumerate(far_meta['bomb_slots']):
+                for row in range(8):
+                    line=bomb_pixels[index*64+row*8:index*64+(row+1)*8]
+                    packed=bytes((line[x]<<4)|line[x+1] for x in range(0,8,2))
+                    address=(sy+row)*128+sx//2
+                    assert vram[address:address+4]==packed,(name,'bomb atlas',index,row)
+            far_pixels = (ROOT / 'assets_msx/dashboard/far-plane.indices').read_bytes()
+            for index, pose in enumerate(far_meta['far_poses']):
+                for row in range(5):
+                    address = (pose['atlas_y'] + row)*128 + pose['atlas_x']//2
+                    pixels = far_pixels[index*80+row*16:index*80+(row+1)*16]
+                    packed = bytes((pixels[x]<<4)|pixels[x+1] for x in range(0,16,2))
+                    assert vram[address:address+8] == packed, (name,'reduced aircraft atlas',pose['name'])
+            expected = expected_pixels(scene, frame, world, y, camera, (folder / 'far.indices').read_bytes() if scale == 8 else background, terrain['far_width'] if scale == 8 else terrain['width'], scale, wave, pilot, heave, ship_frame, projectiles, stock, weapon, lives, flash=snapshots[name].get('flash', 0))
+            assert regs[0] & 16 and regs[19] == (169-heave if heave else 170), (name, 'dashboard split IRQ')
             for row in range(212):
                 for col in range(8, 256):
-                    ring = (col if mission and row >= 172 else camera + col) % 256
-                    source_row = (row-heave)&255 if mission and row < 172 else row
+                    ring = (col if row >= 172 else camera + col) % 256
+                    source_row = (row-heave)&255 if row < 172 else row
                     address = pair * 32768 + source_row * 128 + (ring % 256) // 2
                     actual = vram[address] & 15 if ring % 2 else vram[address] >> 4
                     assert actual == expected[row][col], (name, 'VRAM', col, row, actual, expected[row][col])
             if args.headless:
-                vram_image(vram, scene.palette, camera, pair, mission, heave).save(output / f'{name}-vram.png')
+                vram_image(vram, scene.palette, camera, pair, heave).save(output / f'{name}-vram.png')
                 continue
             image = Image.open(output / f'{name}.png').convert('RGB')
             assert image.size == (320, 240), (name, image.size)
             pixels = image.load()
             for row in range(212):
                 for col in range(256):
-                    index = expected[row][col] if col >= 8 else 0
+                    # The 8-pixel scroll mask shows the border colour (R#7 = 1, TP set).
+                    index = expected[row][col] if col >= 8 else 1
                     rgb = pixels[32 + col, 14 + row]
                     palette = scene.palette
-                    if mission and row >= 176:
+                    if row >= 176:
                         palette = instrument_palette
                     # A palette entry can have different colors above/below
                     # the split. Track actual RGB3 values across both rasters.
@@ -403,47 +386,43 @@ def main():
     assert required <= snapshots.keys(), required - snapshots.keys()
     assert snapshots['initial']['world'] == initial_x
     assert snapshots['initial']['camera'] == max(0, min(world_width - 256, initial_x - 128))
-    assert snapshots['terrain_flight']['y'] == (1200 if mission else 180)
+    assert snapshots['terrain_flight']['y'] == 1200
     assert snapshots['right_bound']['world'] == world_width - 1
     assert snapshots['left_bound']['world'] == 0
     assert snapshots['top_clipped']['y'] == 0
-    assert snapshots['reset']['world'] == (world_width - 1 if mission else 0) and snapshots['reset']['y'] == (1108 if mission else 88)
+    assert snapshots['reset']['world'] == world_width - 1 and snapshots['reset']['y'] == 1108
     assert {s['pair'] for s in snapshots.values()} == {0, 1}
-    if terrain and not mission:
-        assert any(s['turning'] and 128 < s['world'] < 3900 and s['y'] == 180 for s in snapshots.values()), 'missing terrain-overlap turn'
-    if mission:
-        assert {'carrier_tower', 'dugout_1', 'hut_1', 'hut_2', 'dugout_2', 'island_coast','distant_island'} <= snapshots.keys(), 'missing source-backed map landmarks'
-    if mission:
-        assert {s['scale'] for s in snapshots.values()} == {1,8}
-        assert snapshots['distant_island']['scale']==8
-        assert 3880<=snapshots['distant_island']['world']<=4100
-        assert {s['heave'] for s in snapshots.values()} == {0,1,2}
-        assert {s['ship_frame'] for s in snapshots.values()} == {0,1,2,3}
-        # At 24 PAL simulation steps/presentation, the 12-step wave clock
-        # advances exactly two phases: six displayed phases, all twelve cached.
-        assert len({s['wave'] for s in snapshots.values()}) >= (6 if args.machine == 'C-BIOS_MSX2+_EU' else 8)
-        assert {'distant_climb','distant_bank_1','distant_bank_2','distant_bank_3'} <= snapshots.keys()
-        assert all(snapshots[n]['scale'] == 8 for n in ('distant_bank_1','distant_bank_2','distant_bank_3'))
-        assert len({far_meta['far_pose_for_frame'][snapshots[n]['frame']] for n in
-                    ('distant_bank_1','distant_bank_2','distant_bank_3')}) >= 2
-        for s in snapshots.values():
-            assert s['scale'] == (8 if 1200-s['y'] > 186 else 1)
-            assert s['pilot'] % 8 == min(255,1200-s['y']) // 32
-        source = json.loads((ROOT / 'assets_src/missions/a-map.json').read_text())
-        surfaces = {p[1]: int(p[2]) for line in report.splitlines()
-                    if (p := line.split()) and p[0] == 'surface'}
-        assert surfaces.keys() == snapshots.keys()
-        for name, snapshot in snapshots.items():
-            expected_word = source['cells'][snapshot['world'] // 8]['raw_word'] & 0x7ff
-            assert surfaces[name] == expected_word, (name, 'source surface/object query')
-            snapshot['surface'] = surfaces[name] & 3
-            snapshot['object_id'] = surfaces[name] >> 2
-        assert {s['surface'] for s in snapshots.values()} == {0, 1, 2}
+    assert {'carrier_tower', 'dugout_1', 'hut_1', 'hut_2', 'dugout_2', 'island_coast','distant_island'} <= snapshots.keys(), 'missing source-backed map landmarks'
+    assert {s['scale'] for s in snapshots.values()} == {1,8}
+    assert snapshots['distant_island']['scale']==8
+    assert 3880<=snapshots['distant_island']['world']<=4100
+    assert {s['heave'] for s in snapshots.values()} == {0,1,2}
+    assert {s['ship_frame'] for s in snapshots.values()} == {0,1,2,3}
+    # At 24 PAL simulation steps/presentation, the 12-step wave clock
+    # advances exactly two phases: six displayed phases, all twelve cached.
+    assert len({s['wave'] for s in snapshots.values()}) >= (6 if args.machine == 'C-BIOS_MSX2+_EU' else 8)
+    assert {'distant_climb','distant_bank_1','distant_bank_2','distant_bank_3'} <= snapshots.keys()
+    assert all(snapshots[n]['scale'] == 8 for n in ('distant_bank_1','distant_bank_2','distant_bank_3'))
+    assert len({far_meta['far_pose_for_frame'][snapshots[n]['frame']] for n in
+                ('distant_bank_1','distant_bank_2','distant_bank_3')}) >= 2
+    for s in snapshots.values():
+        assert s['scale'] == (8 if 1200-s['y'] > 186 else 1)
+        assert s['pilot'] % 8 == min(255,1200-s['y']) // 32
+    source = json.loads((ROOT / 'assets_src/missions/a-map.json').read_text())
+    surfaces = {p[1]: int(p[2]) for line in report.splitlines()
+                if (p := line.split()) and p[0] == 'surface'}
+    assert surfaces.keys() == snapshots.keys()
+    for name, snapshot in snapshots.items():
+        expected_word = source['cells'][snapshot['world'] // 8]['raw_word'] & 0x7ff
+        assert surfaces[name] == expected_word, (name, 'source surface/object query')
+        snapshot['surface'] = surfaces[name] & 3
+        snapshot['object_id'] = surfaces[name] >> 2
+    assert {s['surface'] for s in snapshots.values()} == {0, 1, 2}
     pal = bool((output / 'initial.regs').read_bytes()[9] & 2)
-    period_ticks = 8 if mission else 2
+    period_ticks = 8
     target_fps = (50 if pal else 60) / period_ticks
     target = 1000 / target_fps
-    assert len(intervals) > (int(target_fps * 110) if mission else 1800) and len(renders) > (int(target_fps * 90) if mission else 1000)
+    assert len(intervals) > int(target_fps * 110) and len(renders) > int(target_fps * 90)
     assert hidden_checks == len(renders) + len(transitions)
     periods=[1000*(period_ticks+extra)/(50 if pal else 60) for extra in ((0,2) if args.weapons else (0,))]
     assert all(any(abs(interval-period)<2 for period in periods) for interval in intervals), (min(intervals),max(intervals),periods)
@@ -459,18 +438,15 @@ def main():
                            'aircraft page/ring seams', 'turns and vertical clipping',
                            'both world bounds and reset', 'immutable visible page during every redraw',
                            'immutable aircraft atlas', f'{target_fps:g} Hz VBlank publication'])
-    if terrain:
-        summary['terrain_bundle_sha256'] = terrain['bundle_sha256']
-        summary['checks'] += ['immutable terrain tile cache', 'actual mapper-bank restoration',
-                              'original-art authored scene at every visible pixel']
-    if mission:
-        summary['source_map_sha256'] = terrain['source_sha256']
-        summary['checks'] += ['source-backed a.map landmarks and reset position', 'compressed 16-bit tile-ID columns', 'runtime source surface/object queries',
-                              'fixed original-art dashboard and split scrolling', 'aircraft clipped above dashboard',
-                              'startup aircraft banks 8-10 and wave bank 11', 'altitude-selected 1:8 original scenery',
-                              'original twelve-frame water animation', 'forward pilot display with fixed reticle']
+    summary['terrain_bundle_sha256'] = terrain['bundle_sha256']
+    summary['checks'] += ['immutable terrain tile cache', 'actual mapper-bank restoration',
+                          'original-art authored scene at every visible pixel']
+    summary['source_map_sha256'] = terrain['source_sha256']
+    summary['checks'] += ['source-backed a.map landmarks and reset position', 'compressed 16-bit tile-ID columns', 'runtime source surface/object queries',
+                          'fixed original-art dashboard and split scrolling', 'aircraft clipped above dashboard',
+                          'aircraft banks 8-10 and 14, wave bank 11', 'altitude-selected 1:8 original scenery',
+                          'original twelve-frame water animation', 'forward pilot display with fixed reticle']
     if args.weapons:
-        assert mission, '--weapons requires mission-flight'
         assert {'weapon_2','weapon_3','weapon_2_far'} <= snapshots.keys(), 'missing weapon coverage'
         flash_shots = [n for n in ('gun_flash_1', 'gun_flash_2') if n in snapshots]
         assert flash_shots, 'no cannon flash snapshot'

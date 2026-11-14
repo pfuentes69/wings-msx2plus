@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 cd "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-case "${1:-wings}" in
+# Default: the game (mission ROM). "wings" is the original 32 KiB viewer.
+case "${1:-mission-flight}" in
     wings)
         ./build.sh
         rom=out/wings.rom
@@ -11,11 +12,11 @@ case "${1:-wings}" in
         rom="out/$1/$1.rom"
         ;;
     *)
-        echo "Usage: $0 [wings|hardware-scroll|mission-flight|mission-flight-debug]" >&2
+        echo "Usage: $0 [mission-flight|mission-flight-debug|wings|hardware-scroll]" >&2
         exit 2
         ;;
 esac
-if [ "${1:-wings}" = mission-flight ] || [ "${1:-wings}" = mission-flight-debug ]; then
+if [ "${1:-mission-flight}" = mission-flight ] || [ "${1:-mission-flight}" = mission-flight-debug ]; then
     exec openmsx -machine Panasonic_FS-A1WX-512K -cart "$rom" -romtype ASCII8 -script tools/pixel_display.tcl
 fi
 exec openmsx -machine Panasonic_FS-A1WX-512K -cart "$rom" -script tools/pixel_display.tcl

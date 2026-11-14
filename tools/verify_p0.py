@@ -71,7 +71,7 @@ def main():
             ground=stage!=1 or name.startswith(('taxi_','lift_')) or name in {'start','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','ground_roll'}
             expected=expected_pixels(scene,int(pose),int(world),int(y),int(camera),
                 (ROOT/'assets_msx/mission_a'/('far.indices' if scale==8 else 'scene.indices')).read_bytes(),
-                terrain['far_width'] if scale==8 else terrain['width'],True,scale,int(wave),pilot,int(heave),int(ship),
+                terrain['far_width'] if scale==8 else terrain['width'],scale,int(wave),pilot,int(heave),int(ship),
                 projectiles,game[4],game[3],game[2],crew,ground,depth,stage!=1,flash=combat[158])
             for row in range(212):
                 for col in range(8,256):
@@ -99,7 +99,7 @@ def main():
                 assert ((vram[at]>>(0 if x&1 else 4))&15)==icon[row*22+col],(name,'weapon icon')
         palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
         # Host reconstruction verifies readable source pixels; it is not raster proof.
-        preview=vram_image(vram,palette,int(camera),page,True,int(heave))
+        preview=vram_image(vram,palette,int(camera),page,int(heave))
         preview.save(out/f'{name}-vram.png')
         shots,secondary,impacts=struct.unpack_from('<HHH',combat,152)
         snapshots[name]=dict(phase=game[0],rank=game[1],lives=game[2],weapon=game[3],stock=game[4],invert=game[5],

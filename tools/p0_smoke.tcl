@@ -46,6 +46,7 @@ proc finish {name then} {
     if {$::env(WINGS_HEADLESS) eq "0"} {
         screenshot -raw [file join $::out $name.png]
         if {$name in {rank loadout start paused}} {screenshot [file join $::out $name-display.png]}
+        set ::throttle false
     }
     unset ::capturing
     if {[string match "taxi_pose *" $then] || [string match "lift_pose *" $then]} {
@@ -93,6 +94,9 @@ proc publishing {} {
     dump $name.rom [debug read_block memory 16384 32768]
     puts $::report "snapshot $name [value g_DisplayPage] [word g_DisplayWorld] [word g_DisplayY] [value g_SelectedFrame] [value g_DisplayWave] [value g_DisplayHeave] [value g_DisplayShipFrame] [word g_DisplayCamera]"
     debug write memory $::addr(g_HoldFlight) 1
+    # Unthrottled openMSX skips rendering; let real frames render before the
+    # raster screenshot (emulated timing is unaffected).
+    if {$::env(WINGS_HEADLESS) eq "0"} {set ::throttle true}
     after time 0.08 [list finish $name $then]
 }
 proc rendering {} {
