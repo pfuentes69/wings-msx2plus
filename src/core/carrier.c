@@ -7,7 +7,7 @@ void Carrier_Reset(CarrierState* state)
 void Carrier_Raise(CarrierState* state) { state->stage=CARRIER_RAISING;state->tick=0; }
 uint8_t Carrier_Request(CarrierState* state,const FlightState* flight,uint16_t world)
 {
-    if (state->stage!=CARRIER_DECK || flight->mode!=FLIGHT_GROUND || flight->vx || flight->turn_ticks ||
+    if (state->stage!=CARRIER_DECK || flight->mode!=FLIGHT_GROUND || flight->speed || flight->turn ||
         world<CARRIER_X-6 || world>CARRIER_X+6) return 0;
     state->stage=CARRIER_LOWERING;state->tick=0;return 1;
 }

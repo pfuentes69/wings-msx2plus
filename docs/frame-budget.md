@@ -41,6 +41,24 @@ profiler after each phase. The plan's rule applies: optimise transitions and
 rendering before increasing active combat load, and never miss a deadline
 silently. The verifiers fail on any missed frame.
 
+## Flight speed and the carrier (2026-11-14)
+
+The [rebuilt flight model](flight-model.md) flies at the original's speed:
+10–14 px per tick, about 23 px per NTSC frame at full speed. The P1 tuning
+model managed about 16. Each page now draws about six new terrain columns per
+redraw instead of four. The mean over the carrier did not change (55.5 ms
+render), but the low pass over the carrier with the elevator coming into view
+measured 137–148 ms against the 133 ms deadline (111–114 ms render).
+
+Until the carrier render is reworked (candidates below), frames with the
+carrier in the near view at speed 1000 or more get 2 extra VBlanks, as bomb
+frames already do. That gives 6 fps there instead of 7.5 on NTSC; simulation
+and game speed are unchanged. This makes candidate 1 more urgent.
+
+Flight costs under the rebuilt model: the tick takes about 0.35 ms (12.5 Hz);
+the Z80 step takes 0.21 ms (150 Hz), down from 0.475 ms. Simulation averages
+22 ms per NTSC frame in the P0 run.
+
 ## Where render time goes
 
 Render is mostly CPU-bound: the VDP command engine is busy for only about 46%
@@ -107,3 +125,4 @@ and restore, 96-pixel wave segments, transparent top rows via LMMM).
 | Z80 flight step ([flight-step-z80.md](flight-step-z80.md)) | 1.16 → 0.475 ms per step, ~12 ms per NTSC frame |
 | Gun reservation removed | firing at 8 VBlanks (7.5 fps NTSC) |
 | `column_ops` decode/compare helpers | 4.5 → 2.2 ms per terrain column; worst weapons redraw 101–107 → ~81 ms |
+| Flight model rebuilt from the original | step 0.475 → 0.21 ms; faster flight adds terrain columns; 2-VBlank reservation for fast carrier frames |

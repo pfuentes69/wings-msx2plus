@@ -55,6 +55,9 @@ volatile u8 g_DisplayGauges[3] = {16, 22, 0};
 
 volatile u8 g_ScrollFine, g_ScrollCoarse, g_VerticalOffset, g_LineSplit;
 static u8 s_RenderHeave;
+#ifdef WINGS_P1_FLIGHT
+static u8 s_CarrierView; /* the near view shows the carrier */
+#endif
 volatile u8 g_DashboardSplit;
 volatile u16 g_DisplaySurfaceWord;
 volatile u8 g_DisplayScale, g_DisplayWave, g_DisplayPilot, g_ViewChange;
@@ -351,7 +354,7 @@ static const AircraftShape* GunFlash(u8 frame)
     u8 i, slot, index = 255;
     if (!g_Combat.flash || g_TerrainFar) return 0;
 #ifdef WINGS_P1_FLIGHT
-    if (s_World.flight.mode == FLIGHT_GROUND) return 0;
+    if (FLIGHT_ON_DECK(&s_World.flight)) return 0;
 #endif
     for (i = 0; i < 10; ++i)
     {
@@ -427,7 +430,7 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     dy = (g_TerrainFar ? 161 - ((WINGS_FLIGHT_MAX_Y - y) >> 3) :
           WINGS_FLIGHT_MAX_Y - y > 131 ? 14 : 145 - (WINGS_FLIGHT_MAX_Y - y)) + shape->dy;
 #ifdef WINGS_P1_FLIGHT
-    if (s_World.flight.mode == FLIGHT_GROUND && s_CrashFrame == 255)
+    if (FLIGHT_ON_DECK(&s_World.flight) && s_CrashFrame == 255)
         dy = 129 - shape->height + g_Carrier.depth; /* Tire contact stays on deck across both ground poses. */
     else
 #endif
@@ -597,6 +600,12 @@ static void LosePlane(void)
 }
 #endif
 
+#ifdef WINGS_P1_FLIGHT
+/* Directions pressed since the last frame. A tap that starts and ends
+ * between two frames still drives the flight model for this frame's ticks:
+ * one tick of DOWN alone, for instance, starts a dive that then holds. */
+static u8 s_Tapped;
+#endif
 static u8 ReadActions(void)
 {
     u8 reset_weapons=0, result, action, old_phase, old_cursor, old_notice, old_invert;
@@ -646,16 +655,11 @@ static u8 ReadActions(void)
 #endif
             )
         {
-#ifdef WINGS_P1_FLIGHT
-            /* Preserve a vertical tap sampled by VBlank even if it ended
-             * before this foreground update. UP also cancels a latched dive. */
-            if (s_World.flight.mode && (pressed & (ACTION_UP|ACTION_DOWN)) &&
-                !(event.state & (ACTION_LEFT|ACTION_RIGHT)))
-                s_World.flight.mode=(event.state & (ACTION_UP|ACTION_DOWN))==ACTION_DOWN ?
-                    FLIGHT_STALL_DIVE : FLIGHT_AIRBORNE;
-#endif
             if (pressed & ACTION_SECONDARY) g_Combat.secondary_pending=1;
             if (pressed & ACTION_PRIMARY) g_Combat.primary_pending=1;
+#ifdef WINGS_P1_FLIGHT
+            s_Tapped|=(u8)(pressed & (ACTION_UP|ACTION_RIGHT|ACTION_DOWN|ACTION_LEFT));
+#endif
 #ifdef WINGS_DEBUG_CONTROLS
             if (pressed & ACTION_DEBUG_RESET)
             {
@@ -778,6 +782,13 @@ void main(void)
         // strike marks) fits the base presentation period.
         if (g_Combat.count>COMBAT_GUN_COUNT || g_Combat.secondary_cooldown ||
             g_Combat.secondary_pending || Weapons_PendingRestore()) present_ticks+=2;
+#ifdef WINGS_P1_FLIGHT
+        /* At flying speed (the original's 10-14 px per tick) each page
+         * redraws about six new terrain columns, and over the carrier they
+         * are the costliest: reserve the same extra time there. Provisional
+         * until the carrier render is reworked (docs/frame-budget.md). */
+        else if (s_CarrierView && s_World.flight.speed>=1000) present_ticks+=2;
+#endif
         steps=(g_VDP_REGSAV[9]&2) ? present_ticks*3 : present_ticks*5/2;
         weapons=reset_weapons=0; input=0; turn=0;
         if (!g_HoldFlight)
@@ -785,12 +796,16 @@ void main(void)
             reset_weapons=ReadActions();
             if (g_Game.phase==GAME_PLAY)
             {
+#ifdef WINGS_P1_FLIGHT
+                input=(u8)(s_Latest|s_Tapped) & 15; s_Tapped=0;
+#else
                 input=s_Latest & 15;
+#endif
                 weapons=((s_Latest & ACTION_PRIMARY) ? COMBAT_FIRE : 0) |
                         ((s_Latest & ACTION_SECONDARY) ? COMBAT_BOMB : 0);
 #ifdef WINGS_P1_FLIGHT
                 if (reset_weapons) steps=0; /* Publish the fully lowered platform first. */
-                if (s_World.flight.mode!=FLIGHT_GROUND && s_World.flight.y>LANDING_CHECK_Y)
+                if (s_World.flight.mode==FLIGHT_AIRBORNE && s_World.flight.y>LANDING_CHECK_Y)
                     Landing_Prepare(&s_World.flight,s_World.x>>8,&s_ContactBottom,&s_ContactSurface);
                 else s_ContactBottom=0, s_ContactSurface=0;
 #endif
@@ -813,12 +828,12 @@ void main(void)
                                 CRASH_EXPLOSION_FIRST + (u8)((150u - s_CrashSteps) * CRASH_EXPLOSION_COUNT / 150u);
                             goto advance_clocks;
                         }
-                        /* Throttle: pushing in the direction of flight (oil reads higher). */
+                        /* Throttle (the flight model's flag): oil reads higher. */
                         if (++s_EngineSteps==ENGINE_TICK_STEPS)
                         {
                             s_EngineSteps=0;
-                            Engine_Tick(&g_Engine,&g_Game.sortie,s_World.flight.mode!=FLIGHT_GROUND,
-                                (input&(FLIGHT_LEFT|FLIGHT_RIGHT))==(s_World.flight.facing_left?FLIGHT_LEFT:FLIGHT_RIGHT),1);
+                            Engine_Tick(&g_Engine,&g_Game.sortie,s_World.flight.mode==FLIGHT_AIRBORNE,
+                                s_World.flight.throttle,1);
                         }
                         if (g_Engine.failed)
                         {
@@ -833,7 +848,7 @@ void main(void)
                         /* Contact needs the plane near the surface; skip the call otherwise
                          * (nearly every step), which keeps it off the frame budget. */
                         contact=LANDING_NONE;
-                        if (s_World.flight.mode!=FLIGHT_GROUND)
+                        if (s_World.flight.mode==FLIGHT_AIRBORNE)
                         {
                             /* Cheap gate on the frame's cached bottom/surface; the exact
                              * (banked) check runs only when the plane may be touching. */
@@ -886,6 +901,9 @@ advance_clocks:
           camera = camera < 128 ? 0 : camera - 128; if (camera > maximum) camera = maximum; }
         g_ViewChange = 0;
         s_RenderHeave = !g_TerrainFar && camera + 256 > 6592 && camera < 7368 ? g_ShipHeave : 0;
+#ifdef WINGS_P1_FLIGHT
+        s_CarrierView = !g_TerrainFar && camera + 256 > 6592 && camera < 7368;
+#endif
         frame = s_Aircraft.shape;
         page = g_DisplayPage ^ 1;
         if (g_Game.phase!=GAME_PLAY)

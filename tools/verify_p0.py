@@ -69,9 +69,9 @@ def main():
         projectiles=[]
         if game[0]==3:
             projectiles=[dict(zip(('x','y','vx','vy','life','kind'),struct.unpack_from('<HHbbBB',combat,i*8))) for i in range(18)]
-            # On the deck (ground mode, flight byte 12) or riding the elevator.
+            # On the deck (flight byte 12: 0 deck, 2 cable arrest) or riding the elevator.
             flight=(out/f'{name}.flight').read_bytes()
-            ground=stage!=1 or flight[12]==0
+            ground=stage!=1 or flight[12]!=1
             expected=expected_pixels(scene,int(pose),int(world),int(y),int(camera),
                 (ROOT/'assets_msx/mission_a'/('far.indices' if scale==8 else 'scene.indices')).read_bytes(),
                 terrain['far_width'] if scale==8 else terrain['width'],scale,int(wave),pilot,int(heave),int(ship),
@@ -107,12 +107,11 @@ def main():
                             shots=shots,secondary=secondary,impacts=impacts,projectiles=projectiles,flash=combat[158])
         if not args.headless:
             assert Image.open(out/f'{name}.png').size==(320,240)
-    required={'lift_paused','lift_pause_wait','lift_start','lift_rise_24','lift_rise_16','lift_rise_8','lift_left_down_8','lift_left_down_16','lift_left_down_24','lift_left_inside','service_left','lift_left_return','lift_right_down_8','lift_right_down_24','lift_right_inside','service_right','lift_right_return','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','approach','climb_gear_up','rank','load_menu','briefing','rockets','torpedo','loadout','start','guns','aliases','short_press','paused',
+    required={'lift_paused','lift_pause_wait','lift_start','lift_rise_24','lift_rise_16','lift_rise_8','lift_left_down_8','lift_left_down_16','lift_left_down_24','lift_left_inside','service_left','lift_left_return','lift_right_down_8','lift_right_down_24','lift_right_inside','service_right','lift_right_return','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','approach','rank','load_menu','briefing','rockets','torpedo','loadout','start','guns','aliases','short_press','paused',
               'pause_wait','inverted','resumed','no_debug','restart','ground_roll','takeoff','turn','turn_complete','compensated_turn','joystick_guns','joystick_secondary','joystick_inverted','in_game_load','in_game_save'}
-    required|={f'cannon_{pitch}_{heading}' for pitch in ('stall','level','dive') for heading in ('left','right')}
+    required|={f'cannon_{pitch}_{heading}' for pitch in ('climb','level','dive') for heading in ('left','right')}
     required|={'stall_held','stall_released','dive_released','dive_persistent','dive_recovered'}
-    required|={f'taxi_right_{i}' for i in range(10)}|{f'taxi_left_{i}' for i in range(10,0,-1)}
-    required|={'taxi_right_stop','taxi_right_hold','taxi_left_stop','taxi_left_hold'}
+    required|={'taxi_right_stop','taxi_left_stop'}
     required|={'engine_low_fuel','engine_failed','engine_next_plane','game_over'}
     required|={'landed','landed_service','deck_bounce','sea_splash','sea_crash_next','engine_splash'}
     assert required<=snapshots.keys(),required-snapshots.keys()
@@ -120,17 +119,23 @@ def main():
     for key in ('world','y','pose','wave','heave','ship','crew','depth','stage'):
         assert snapshots['paused'][key]==snapshots['pause_wait'][key],('Pause advanced',key)
     assert {snapshots[f'deck_{i}']['heave'] for i in range(3)}=={0,1,2}
-    assert snapshots['start']['pose']==52 and snapshots['approach']['pose']==50
+    # Shape ids: 0..9 pitch poses facing right (4 level), 10..39 air-turn
+    # frames, 40..48 left pitch poses (16 = hc28 is level left), 49/50 wheels
+    # down right/left, 51/52 tail down right/left.
+    assert snapshots['start']['pose']==52 and snapshots['approach']['pose']==49
     assert snapshots['accelerating_roll']['pose']==52 and snapshots['slow_roll']['pose']==52 and snapshots['ground_roll']['pose']==50
-    assert snapshots['takeoff']['pose'] not in (49,50)
+    assert 6609<snapshots['ground_roll']['world']<7032
+    assert snapshots['takeoff']['pose'] not in (49,50,51,52) and snapshots['takeoff']['world']<6593
+    assert 10<=snapshots['turn']['pose']<40
     assert snapshots['stall_held']['pose']==43 and snapshots['stall_released']['pose']==16
-    assert snapshots['dive_released']['pose']==snapshots['dive_persistent']['pose']==45
+    assert snapshots['dive_released']['pose']==snapshots['dive_persistent']['pose'] in (44,45,46)
     assert snapshots['dive_persistent']['y']>snapshots['dive_released']['y']
     assert snapshots['dive_recovered']['pose']==16
+    assert snapshots['landed']['y']==1160 and 7038<snapshots['landed']['world']<7345
     for heading in ('left','right'):
-        for attitude in ('stall','level','dive'):
+        for attitude in ('climb','level','dive'):
             snapshot=snapshots[f'cannon_{attitude}_{heading}']
-            expected_pose={'left':{'stall':43,'level':16,'dive':45},'right':{'stall':3,'level':4,'dive':6}}[heading][attitude]
+            expected_pose={'left':{'climb':41,'level':16,'dive':46},'right':{'climb':1,'level':4,'dive':7}}[heading][attitude]
             assert snapshot['pose']==expected_pose,(heading,attitude,'aircraft pose',snapshot['pose'])
             # The original draws a per-pose flash/tracer overlay, not travelling rounds.
             assert snapshot['flash'] in (1,2),(heading,attitude,'no cannon flash overlay')
@@ -139,13 +144,17 @@ def main():
             if attitude!='dive':assert not strikes,(heading,attitude,'level/climbing fire struck the surface')
             for p in strikes:
                 assert (p['x']//4<snapshot['world'])==(heading=='left'),(heading,attitude,p)
+    # Turning round on the deck at rest: the captured poses walk the taxi
+    # sequence in order (left rest 0 .. front 5 .. right rest 10), in place.
     taxi=scene.metadata['taxi_turn']
-    for i in range(10):assert snapshots[f'taxi_right_{i}']['pose']==taxi[i]
-    for i in range(10,0,-1):assert snapshots[f'taxi_left_{i}']['pose']==taxi[i]
-    for direction,x in (('left',6617),('right',7336)):
-        for suffix in ('stop','hold'):
-            assert snapshots[f'taxi_{direction}_{suffix}']['world']==x
-            assert snapshots[f'taxi_{direction}_{suffix}']['y']==1160
+    for direction,step in (('right',1),('left',-1)):
+        seen=[snapshots[k]['pose'] for k in sorted((k for k in snapshots if k.startswith(f'taxi_{direction}_') and k[len(f'taxi_{direction}_'):].isdigit()),
+                                                    key=lambda k:int(k.rsplit('_',1)[1]))]
+        assert len(seen)>=4 and all(p in taxi[1:10] for p in seen),(direction,seen)
+        order=[taxi.index(p) for p in seen]
+        assert all((b-a)*step>0 for a,b in zip(order,order[1:])),(direction,order)
+        stop=snapshots[f'taxi_{direction}_stop']
+        assert stop['world']==7032 and stop['y']==1160 and stop['pose']==(51 if direction=='right' else 52)
     assert snapshots['lift_start']['depth']==31
     assert snapshots['lift_left_inside']['depth']==snapshots['lift_right_inside']['depth']==32
     assert snapshots['lift_left_return']['pose']==52 and snapshots['lift_right_return']['pose']==51
@@ -161,11 +170,11 @@ def main():
     lift_timing=dict(presentation_vblanks=6,samples=len(cadence),median_publication_ms=median,
         max_regular_redraw_ms=max(r for i,r in cadence),simulation_ticks_per_pixel=18,travel_ticks=576)
     summary=dict(lift_timing=lift_timing,machine=args.machine,rom_sha256=hashlib.sha256(data).hexdigest(),raster_captured=not args.headless,
-                 snapshots=snapshots,checks=['original elevator platform and hull occlusion at multiple depths','initial leftward emergence and two heading-preserving service cycles','primary/secondary elevator activation with held-confirmation consumption','real bomb expenditure then reload without a game reset','bidirectional taxi with five angular steps per quarter turn','both temporary deck end stops under sustained input','streamed ground-turn artwork and noncontiguous bank restoration','gear-down deck start and inbound approach; automatic retraction','full visible composite pixels including both original signalmen and deck heave','leftward deck roll and ordinary takeoff','simulation-driven turn and altitude loss','release boot and seven-rank/load shells','context edge consumption',
+                 snapshots=snapshots,checks=['original elevator platform and hull occlusion at multiple depths','initial leftward emergence and two heading-preserving service cycles','primary/secondary elevator activation with held-confirmation consumption','real bomb expenditure then reload without a game reset','turning round on the deck at rest in both directions, in place','streamed ground-turn artwork and noncontiguous bank restoration','gear-down deck start; gear down near the carrier in either direction','full visible composite pixels including both original signalmen and deck heave','original flight model (12.5 Hz): deck roll, tail up, rolling off the bow and climbing away','original turn: height lost, regained by climbing through the turn','stall flare keeps airspeed and sinks nose up; a Down tap starts a held dive','release boot and seven-rank/load shells','context edge consumption',
                     '30/15/1 stock previews and three lives','unlimited provisional guns do not spend secondary stock',
                     'N/GRAPH alias overlap and short press buffering','PSG-boundary injection of both joystick triggers and inversion','in-game save/load shells return without state mutation','Esc-only pause freezes gameplay clocks',
                     'Ctrl-F settings and Ctrl-R restart','release profile ignores debug R/T',
-                    'cannon muzzle and shot direction follow nose-up, level and dive attitudes in both headings','HUD digit pixels match state','bank-zero ISR and RAM palettes','bank-12 asset/mapper restoration',
+                    'cannon muzzle and shot direction follow climb, level and dive attitudes in both headings','HUD digit pixels match state','bank-zero ISR and RAM palettes','bank-12 asset/mapper restoration',
                     'hidden-page immutability','zero normal input overflows'])
     (out/'verification.json').write_text(json.dumps(summary,indent=2)+'\n')
     print(f'PASS: P0/P1 {len(snapshots)} snapshots; {args.machine}')

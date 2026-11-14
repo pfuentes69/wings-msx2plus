@@ -31,15 +31,22 @@ uint8_t Landing_Contact(const FlightState* flight, uint16_t world, uint8_t engin
 {
     /* The plane's bottom above the sea, Q8 pixels. */
     int32_t base = (int32_t)FLIGHT_MAX_Y - (int32_t)flight->y - (int32_t)bottom * 256;
-    if (flight->mode == FLIGHT_GROUND) return LANDING_NONE;
+    if (FLIGHT_ON_DECK(flight)) return LANDING_NONE;
     if (world >= FLIGHT_DECK_LEFT && world <= FLIGHT_DECK_RIGHT)
     {
         if (base >= (int32_t)LANDING_DECK_HEIGHT * 256) return LANDING_NONE;
+        /* Leaving over a deck end (a takeoff below flying speed sinks a
+         * little): the MSX lets the plane clear the last 16 px. The
+         * original's bow and stern geometry is not mapped. */
+        if (flight->facing_left ? world < FLIGHT_DECK_LEFT + LANDING_EDGE : world > FLIGHT_DECK_RIGHT - LANDING_EDGE)
+            return base < (int32_t)(LANDING_DECK_HEIGHT - LANDING_DEPTH) * 256 ? LANDING_CRASH : LANDING_NONE;
         if (base < (int32_t)(LANDING_DECK_HEIGHT - LANDING_DEPTH) * 256 ||
             world < FLIGHT_DECK_LEFT + LANDING_EDGE || world > FLIGHT_DECK_RIGHT - LANDING_EDGE ||
             engine_failed)
             return LANDING_CRASH;   /* hull, deck end, or no power */
-        return flight->mode == FLIGHT_STALL && flight->facing_left ? LANDING_LANDED : LANDING_BOUNCE;
+        /* 0xba80: holding the stall flare facing left, not turning. Any other
+         * deck contact bounces: heading right, the hook cannot catch. */
+        return flight->landing && flight->facing_left && !flight->turn ? LANDING_LANDED : LANDING_BOUNCE;
     }
     /* Sea or scenery: below its static height, or the bottom at the sea. */
     return base < (int32_t)height * 256 || base <= 0 ? LANDING_CRASH : LANDING_NONE;
@@ -53,19 +60,20 @@ void Landing_Prepare(const FlightState* flight, uint16_t world, uint8_t* bottom,
 
 void Landing_Apply(FlightState* flight, uint8_t contact) WINGS_BANKED
 {
+    /* The original applies contact at the end of its tick, after the
+     * move, so the rest of this tick's vertical motion is dropped. */
+    flight->vy = 0;
+    flight->yrem = 0;
     if (contact == LANDING_LANDED)
     {
-        /* Caught: on the deck facing left. The ground model brakes the plane
-         * to a stop (provisional arrest; no cable geometry in the original). */
+        /* On deck at flying speed: the plane rolls on, and holding UP lets
+         * the hook catch a cable (Flight_Tick). */
         flight->mode = FLIGHT_GROUND;
         flight->y = (FlightVertical)FLIGHT_DECK_Y * 256u;
-        flight->vy = 0;
-        flight->facing_left = flight->target_left = 1;
-        flight->turn_ticks = flight->ground_tick = 0;
     }
     else if (contact == LANDING_BOUNCE)
     {
-        flight->vy = (int16_t)-flight->vy;
+        flight->climb = -flight->climb;
         flight->y -= (FlightVertical)LANDING_BOUNCE_LIFT * 256u;
     }
 }

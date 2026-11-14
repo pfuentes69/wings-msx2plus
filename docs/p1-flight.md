@@ -1,5 +1,9 @@
 # P1: flight semantics and leftward takeoff
 
+**Superseded 2026-11-14:** the tuning model below was replaced by the
+[flight model rebuilt from the original](flight-model.md). This page records
+the P1 milestone.
+
 Follow-up: the [carrier elevator and service increment](carrier-elevator.md)
 now replaces the direct deck start with an emergence animation. Its report
 contains current validation and memory measurements; the P1 evidence below

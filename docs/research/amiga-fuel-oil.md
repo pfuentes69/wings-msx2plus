@@ -101,13 +101,12 @@ Recovered 2026-11-14 with the same method.
 | 0x5710 | Surface height from the map word's object id (`(word >> 2) & 0x1ff`): static classes ids 6 / 7 / 8, 11 / 3 / 4 / 15..30 have heights 36 / 35 / 35 / 9 / 13 / 12 (table `-$583c`), minus word bits 11..13. Carrier ids `$1f`..`$27` and `$9f`, and ships, read live object records (deck = record `$e` − `$14` − bob − heave). All other ids are 0 | Established |
 | 0xb8c4 | Contact when `altitude − bottom < surface` (strictly below) or ≤ 0. Resting exactly on the surface is not contact, so takeoff is safe | Established |
 | 0xb7bc | Landing range = carrier map extents × 4, 16 px inward at each end | Established |
-| 0xc2ce | While UP (input bit 0) is held facing left, horizontal speed approaches 600 and flag `-$5554` is set; facing right clears it | Established; bit-0 = UP inferred from the horizontal mask `$0c` |
-| 0xba80, mode 0 contact | **Landed (mode 1)** when inside the landing range, at most 4 px into the deck, `-$5b22` set, facing left and `-$5554` set: altitude snaps onto the deck. Inside the range otherwise: **bounce** (vertical velocity negated, +6 px). Outside the range: **crash** (mode 4, explosion via 0xafba) | Established control flow; `-$5b22` is only read (probably "carrier present") |
+| 0xc2ce | While UP alone (input bit 0) is held facing left, the commanded climb approaches +600 (6°) and flag `-$5554` is set; facing right clears it (corrected 2026-11-14: an earlier reading had horizontal speed) | Established |
+| 0xba80, mode 0 contact | **Landed (mode 1)** when inside the landing range, at most 4 px into the deck, not turning (`-$5bf0` = 0), `-$5b22` set, facing left and `-$5554` set: altitude snaps onto the deck; speed is unchanged. Inside the range otherwise: **bounce** (vertical velocity negated, +6 px). Outside the range: **crash** (mode 4, explosion via 0xafba) | Established control flow; `-$5b22` is only read (probably "carrier present") |
 | 0xc6de | Altitude ≤ −7 (into the sea) → mode 6, crash sound | Established |
 
-There is no cable geometry in the capture rule. The manual's "four arresting
-cables" are scenery as far as this code is concerned: a stall onto the deck,
-facing left, is a landing.
+There is no cable geometry in the touchdown rule itself, but the cables do
+matter after it: see "On the deck" below (0xb92e).
 
 ## Flight model (0xbff4 controls, 0xbdfa integration, 0xc378/0xabde pose)
 
@@ -132,7 +131,7 @@ Acceleration step `-$50e8` = 600 (DATA; debug keys change it by 50).
 | DOWN alone | −1200; min −4500 |
 | Horizontal alone, or nothing | a positive climb decays by 600 to 0; a dive is kept. While turning: −150 per tick down to −2250. Small climbs (0..500) are cancelled out of the flight path (`-$5bf6`) |
 | UP alone, facing left (stall) | approaches +600 by 600 per tick; landing flag `-$5554` set |
-| UP alone, facing right | −600 per tick; below −600 it eases toward about −600 − 2 × 600 (nose down); landing flag cleared |
+| UP alone, facing right | −600 per tick; below −600, climb −= (climb + 600) / 2, which converges on −1200 (nose down); landing flag cleared |
 
 **Flight path `-$555c`** moves a quarter of the way to (climb + `-$5bf6`)
 each tick. Stalling facing left at exactly +600 makes it approach −800
@@ -161,6 +160,86 @@ instead: the flare is nose up (pose) but sinking at 8°.
 9, 9, 8, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1. Pose 5 is level (`hc05`),
 10 the steepest dive and 1 the steepest climb. A stall at +600 shows pose 4.
 
+Vertical input alone (Up or Down without a direction) changes neither the
+airspeed nor the acceleration counter; only the no-input branch bleeds speed.
+Down alone sets the throttle flag (engine note).
+
 **Landing direction:** the landing flag is set only facing left, and the
 landing check (0xba80) requires facing left, so this executable lands right
-to left only.
+to left only. The gear comes down either way (0xb45a), so a left-to-right
+approach looks like a landing but bounces, as players of the DOS and Amiga
+versions report.
+
+### Clock (confirmed)
+
+The logic tick 0x1386 reads the joystick (0x1714 → `-$42bc`) and calls the
+A4 jump-table entry `-$7e00`, which is `jmp $c660`, the flight handler.
+Flight therefore runs once per 4 VBlanks with the fuel and oil logic.
+
+### Mode dispatch (0xc94c)
+
+| Mode | Handler | Meaning |
+| --- | --- | --- |
+| 0 | 0xc6a0 | Flying: engine checks, sea crash (altitude ≤ −7), then controls 0xbff4, integration 0xbdfa, contact 0xba80 |
+| 1 | 0xc736 | On deck: 0xc4e8 controls, 0xbdba roll, 0xc5f4 deck ends, 0xb92e cables |
+| 4 | 0xc74e | Engine failure: crash routine 0xafba |
+| 6 | 0xc78c | Sinking: altitude −1 every 3 ticks, climb −250 per tick |
+| 7 | 0xc882 | Cable arrest: speed −110 per tick; at 0, mode 1 |
+| 8 | 0xc7c6 | Crashed on a surface (`hcr5`/`hcrf`) |
+| 2, 3, 5, 10, 11 | 0xc8f0 | Altitude held on the surface; mode 1 when carrier record field 2 is 0 (probably the elevator) |
+| 9 | 0xc8ee | Nothing |
+
+### Turns (0xab80)
+
+- **Turn frame `-$5bf0`** (0..25): advances one frame per 2 ticks (clock
+  `-$555e`, DATA 2).
+- The heading (`$14`) flips at frame 14; the turn ends after frame 25.
+- Past frame 19, unless the new heading is held, the frame becomes
+  26 − frame and unwinds one per tick.
+- Called with the "forward" argument 1 when pushing the new heading, 0
+  otherwise.
+- Early in a turn (frame ≤ 6) any input other than pushing the other way
+  unwinds it one frame per tick.
+- 0xaa6e pauses turns while a particular object (record type 2/1/3,
+  animation frame 13) is active; not identified.
+
+0xb1bc is a second turn stepper (±2 frames per tick) inside the crash
+routine 0xafba, not the player's controls.
+
+### Pose and shapes (0xc378, 0xabde)
+
+| Situation | Shape table |
+| --- | --- |
+| Flying | `-$521e[(climb + 5000) / 500]`: `hc0a` … `hc01` (bottom-offset pose from `-$5526`) |
+| Turning, facing left | `-$52ee[frame]`: `hc28`..`hc32`, `hc32` ×2, `hc3b` ×2, `hc3c`..`hc3f`, `hc2d`..`hc28` |
+| Turning, facing right | `-$5286[frame]`: `hc22`..`hc27`, `hc37`..`hc3b`, `hc3b` ×2, `hc32` ×2, `hc33`..`hc36`, `hc27`..`hc22` |
+| On deck, `-$5562` set | `hc05` (level) |
+| On deck otherwise | `-$531e[frame]`: `hc21` at rest, `hc20`..`hc1b` while turning |
+
+The heading flips at frame 14, so a turn plays frames 1..13 of one table and
+14..25 of the other. Wheels are a separate overlay: `-$51ac` (`wh0b`..`wh14`,
+facing left) and `-$515c` (`wh01`..`wh0a`) by pose index. A turning pose
+reports bottom pose 0.
+
+### On the deck (0xc4e8, 0xbdba, 0xc5f4, 0xb92e)
+
+- **Pushing the way the plane faces:** throttle on; the counter `-$3214`
+  rises 1 per tick to 8 (or a deck-turn frame unwinds instead); speed +=
+  counter.
+- **Pushing back:** counter 0; at speed 0 the deck-turn frame advances, and
+  past 6 the heading flips with frame 5. Speed −8.
+- **No input:** counter 0, speed −8. Speed is kept within 0..1400.
+- **Tail up:** `-$5562` = speed > 600 and Up not held.
+- **Roll (0xbdba):** (speed + 50) / 100 px per tick.
+- **Deck ends (0xc5f4):** outside the landing range the plane is flying
+  (mode 0): this is the takeoff. There is no separate lift-off rule.
+- **Cables (0xb92e):** at speed ≥ 600 with `-$5562` clear (Up held),
+  hook = x + 24 facing left (x − 24 facing right). The hook catches cable *k*
+  when it is within 8 px of carrier x + 70 + 56*k* (*k* = 0..3). Then mode 7.
+- **Carrier x** (`-$5c6c`, from the mission file × 4 − 8) is also where a new
+  plane starts (0x35dc): the elevator.
+
+### Gear (0xb45a)
+
+Mode 0: gear 5 when |x − carrier x| < 1280 (`-$50fc`) and `-$5b22` is set;
+modes 1, 7 and 11: gear on; otherwise off. No heading or altitude condition.

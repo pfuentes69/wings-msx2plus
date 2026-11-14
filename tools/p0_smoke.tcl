@@ -49,7 +49,7 @@ proc finish {name then} {
         set ::throttle false
     }
     unset ::capturing
-    if {[string match "taxi_pose *" $then] || [string match "lift_pose *" $then]} {
+    if {[string match "taxi_more *" $then] || [string match "lift_pose *" $then]} {
         uplevel #0 $then
         debug write memory $::addr(g_HoldFlight) 0
     } else {
@@ -74,9 +74,19 @@ proc publishing {} {
         if {[value g_DisplayHeave]!=$::wanted_height} {return}
         unset ::wanted_height
     }
-    if {[info exists ::wanted_pose]} {
-        if {![value g_Turning] || [value g_SelectedFrame]!=$::wanted_pose} {return}
-        unset ::wanted_pose
+    if {[info exists ::wanted_frame]} {
+        if {[value g_SelectedFrame] ni $::wanted_frame} {return}
+        unset ::wanted_frame
+    }
+    if {[info exists ::wanted_turn]} {
+        # Capture each new deck-turn pose; when the turn ends, drop the
+        # pending capture and continue.
+        if {![value g_Turning]} {
+            if {$::turn_seen} {unset ::pending ::wanted_turn;after time 0.05 $::turn_done}
+            return
+        }
+        if {[value g_SelectedFrame]==$::last_turn_pose} {return}
+        set ::last_turn_pose [value g_SelectedFrame];set ::turn_seen 1
     }
     if {[info exists ::wanted_depth]} {
         if {[value g_DisplayElevator]!=$::wanted_depth || [value g_Carrier]!=$::wanted_stage} {return}
@@ -90,7 +100,7 @@ proc publishing {} {
     dump $name.view [debug read_block memory $::addr(g_DisplayScale) 3]
     dump $name.crew [debug read_block memory $::addr(g_CrewFrame) 1]
     dump $name.gauges [debug read_block memory $::addr(g_DisplayGauges) 3]
-    dump $name.flight [debug read_block memory $::addr(s_World) 22]
+    dump $name.flight [debug read_block memory $::addr(s_World) 37]
     dump $name.crash [debug read_block memory $::addr(g_DisplayCrash) 1]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
@@ -228,96 +238,114 @@ proc service_turn_left {} {
     after time 0.3 taxi_start
 }
 proc taxi_start {} {
+    # Turn round on the deck at rest (the original's on-deck turn): capture
+    # each new pose, then stop facing right; then the same back to the left.
+    set ::taxi_n 0;set ::last_turn_pose -1;set ::turn_seen 0
+    set ::wanted_turn 1;set ::turn_done taxi_right_end
     keymatrixdown 8 128
-    taxi_pose right 0
+    taxi_more right
 }
-proc taxi_pose {direction index} {
-    set ::wanted_pose [debug read memory [expr {$::addr(g_TaxiTurn)+$index}]]
-    if {$direction eq "right"} {
-        set then [expr {$index<9 ? "taxi_pose right [expr {$index+1}]" : "taxi_right_end"}]
-    } else {
-        set then [expr {$index>1 ? "taxi_pose left [expr {$index-1}]" : "taxi_left_end"}]
-    }
-    snap taxi_${direction}_$index $then
+proc taxi_more {direction} {
+    snap taxi_${direction}_[incr ::taxi_n] [list taxi_more $direction]
 }
 proc taxi_right_end {} {
-    if {[word g_DisplayWorld]!=7336 || [value g_Turning]} {after time 0.025 taxi_right_end;return}
-    require [expr {[word g_DisplayY]==1160}] "Ground turn changed height"
-    snap taxi_right_stop {after time 0.8 {snap taxi_right_hold {keymatrixup 8 128;keymatrixdown 8 16;taxi_pose left 10}}}
+    keymatrixup 8 128
+    wait_for {[world_byte 13]==0 && [speed]==0} {
+        require [expr {[word g_DisplayY]==1160 && ![world_byte 11]}] "Deck turn changed height or heading"
+        set ::wanted_frame 51
+        snap taxi_right_stop {
+            set ::taxi_n 0;set ::last_turn_pose -1;set ::turn_seen 0
+            set ::wanted_turn 1;set ::turn_done taxi_left_end
+            keymatrixdown 8 16
+            taxi_more left
+        }
+    } "deck turn right" 5
 }
 proc taxi_left_end {} {
-    if {[word g_DisplayWorld]!=6617 || [value g_Turning]} {after time 0.025 taxi_left_end;return}
-    require [expr {[word g_DisplayY]==1160}] "Ground roll changed height"
-    snap taxi_left_stop {after time 0.8 {snap taxi_left_hold taxi_restart}}
+    keymatrixup 8 16
+    wait_for {[world_byte 13]==0 && [speed]==0} {
+        require [expr {[word g_DisplayY]==1160 && [world_byte 11]}] "Deck turn changed height or heading"
+        set ::wanted_frame 52
+        snap taxi_left_stop taxi_restart
+    } "deck turn left" 5
 }
 proc taxi_restart {} {
-    keymatrixup 8 16
     keymatrixdown 6 2;keymatrixdown 4 128
     after time 0.15 {keymatrixup 4 128;keymatrixup 6 2}
     phase 0 {pulse 7 128 {phase 1 {pulse 7 128 {phase 2 {pulse 7 128 {phase 3 {wait_lift_up launch_roll}}}}}}}
 }
+# Flight from the release controls; the original model runs once per 12
+# simulation steps (12.5 Hz). Keyboard row 8: 1 space, 16 left, 32 up,
+# 64 down, 128 right.
 proc launch_roll {} {
     require [expr {[word g_DisplayWorld]==7032 && [word g_DisplayY]==1160}] "Deck start placement"
-    keymatrixdown 8 16
+    fly 16
     snap slow_roll {after time 4.1 accelerating_roll}
 }
 proc accelerating_roll {} {
-    require [expr {[value g_SelectedFrame]==52}] "Tail lifted before five-second acceleration"
-    snap accelerating_roll {after time 1.3 launch_climb}
+    require [expr {[value g_SelectedFrame]==52 && [speed]<600 && [speed]>200}] "Tail down while accelerating: speed=[speed]"
+    snap accelerating_roll {wait_for {[world_byte 17]} {set ::wanted_frame 50;snap ground_roll lift_off} "tail up" 5}
 }
-proc launch_climb {} {
-    require [expr {[word g_DisplayWorld]<7032 && [word g_DisplayWorld]>6657 && [word g_DisplayY]==1160}] "Ground roll left"
-    snap ground_roll {keymatrixdown 8 32;after time 3.5 airborne}
+proc lift_off {} {
+    # Rolled off the bow below flying speed: climb away; the plane dips first.
+    wait_for {[world_byte 12]==1} {set ::lowest_y 0;fly 48;takeoff_watch} "leave the deck" 8
 }
-proc airborne {} {
-    require [expr {[word g_DisplayWorld]<6593 && [word g_DisplayY]<1160}] "Normal leftward takeoff"
-    keymatrixup 8 48
-    after time 0.6 {snap takeoff {set ::turn_y [word g_DisplayY];keymatrixdown 8 128;after time 0.3 turning}}
+proc takeoff_watch {} {
+    if {[world_y]>$::lowest_y} {set ::lowest_y [world_y]}
+    if {[world_y]>=1150} {after time 0.01 takeoff_watch;return}
+    require [expr {$::lowest_y<1180 && [world_x]<6593}] "Takeoff dipped too low: y=$::lowest_y"
+    puts $::report "takeoff lowest_y=$::lowest_y speed=[speed]"
+    snap takeoff {pilot 16 800;wait_for {[world_x]<5900 && abs([world_y]-800)<12} turn_start "climb out" 20}
 }
-proc turning {} {
-    require [expr {[value g_Turning]}] "Reversal did not bank"
-    snap turn {after time 1.2 turn_end}
+proc turn_start {} {
+    pilot_off
+    set ::turn_y [world_y]
+    fly 128
+    wait_for {[world_byte 13]>2} {set ::wanted_frame [turn_shapes];snap turn turn_wait} "bank" 3
+}
+proc turn_wait {} {
+    wait_for {![world_byte 13] && ![world_byte 11]} turn_end "turn right" 8
 }
 proc turn_end {} {
-    require [expr {![value g_Turning] && [word g_DisplayY]>$::turn_y}] "Turn clock or altitude loss"
-    keymatrixup 8 128
-    snap turn_complete {set ::compensate_y [word g_DisplayY];keymatrixdown 8 48;after time 1.3 compensated_turn}
+    require [expr {[world_y]>$::turn_y}] "A turn must lose height: y=[world_y] before=$::turn_y"
+    snap turn_complete {set ::compensate_y [world_y];fly 48;wait_for {[world_byte 13]>2} compensated_wait "bank back" 3}
+}
+proc compensated_wait {} {
+    wait_for {![world_byte 13] && [world_byte 11]} compensated_turn "turn left" 8
 }
 proc compensated_turn {} {
-    require [expr {![value g_Turning] && [word g_DisplayY]<$::compensate_y}] "Climb did not compensate turn loss"
-    keymatrixup 8 48
-    after time 0.5 {snap compensated_turn {keymatrixdown 8 32;after time 0.8 held_stall}}
+    require [expr {[world_y]<$::compensate_y}] "Climbing through the turn must gain height"
+    snap compensated_turn {pilot 16 700;wait_for {abs([world_y]-700)<10 && [climb]==0} stall_start "level off" 10}
 }
-proc held_stall {} {
-    require [expr {[value g_SelectedFrame]==43 && ![value g_Turning]}] "Stall must raise the nose"
-    set ::stall_y [word g_DisplayY]
-    snap stall_held {after time 0.4 stall_sink}
+proc stall_start {} {
+    pilot_off
+    require [expr {[world_x]<5700}] "Stall test too close to the carrier: x=[world_x]"
+    fly 32
+    set ::wanted_frame 43
+    snap stall_held {set ::stall_y [world_y];after time 0.4 stall_sink}
 }
 proc stall_sink {} {
-    require [expr {[word g_DisplayY]>$::stall_y}] "Held stall must descend smoothly"
-    keymatrixup 8 32
-    after time 0.4 {snap stall_released {
-        require [expr {[value g_SelectedFrame]==16}] "Releasing Up must level the plane"
-        # A complete tap while the foreground is held must still latch a dive.
+    require [expr {[world_y]>$::stall_y && [speed]>=1000}] "Held stall must sink with the nose up, keeping airspeed"
+    fly 0
+    set ::wanted_frame 16
+    snap stall_released {
+        # A complete tap while the foreground is held must still start a dive.
         debug write memory $::addr(g_HoldFlight) 1
         keymatrixdown 8 64
         after time 0.06 {keymatrixup 8 64}
         after time 0.12 {debug write memory $::addr(g_HoldFlight) 0}
         after time 0.7 dive_latched
-    }}
+    }
 }
 proc dive_latched {} {
-    require [expr {[value g_SelectedFrame]==45}] "Brief Down must retain nose-down art"
-    set ::dive_y [word g_DisplayY]
+    set ::dive_pose [value g_SelectedFrame]
+    require [expr {$::dive_pose in {44 45 46} && [climb]<0}] "A Down tap must start a dive: pose=$::dive_pose climb=[climb]"
+    set ::dive_y [world_y]
     snap dive_released {after time 0.5 dive_persists}
 }
 proc dive_persists {} {
-    require [expr {[value g_SelectedFrame]==45 && [word g_DisplayY]>$::dive_y}] "Dive did not persist after release"
-    snap dive_persistent {keymatrixdown 8 32;after time 0.3 {keymatrixup 8 32};after time 0.7 dive_recover}
-}
-proc dive_recover {} {
-    require [expr {[value g_SelectedFrame]==16}] "Up then release must recover level attitude"
-    snap dive_recovered {keymatrixdown 8 48;after time 2 {keymatrixup 8 48};after time 2.5 {pulse 7 128 enter_in_flight}}
+    require [expr {[value g_SelectedFrame]==$::dive_pose && [world_y]>$::dive_y}] "Dive did not persist after release"
+    snap dive_persistent {fly 32;wait_for {[climb]>=0} {fly 0;set ::wanted_frame 16;snap dive_recovered {fly 48;wait_for {[world_y]<400} head_right "climb" 15}} "recover" 3}
 }
 proc enter_in_flight {} {
     require [expr {[stat 32]==0 && [stat 30]==0 && [view 4]==30}] "Enter fired a weapon"
@@ -360,7 +388,7 @@ proc inverted {} {
 }
 proc resumed {} {
     set ::climb_y [word g_DisplayY]
-    snap resumed {keymatrixdown 8 48; after time 0.45 {keymatrixup 8 48};after time 1.1 debug_keys}
+    snap resumed {keymatrixdown 8 160; after time 0.45 {keymatrixup 8 160};after time 1.6 debug_keys}
 }
 proc debug_keys {} {
     set ::before_y [word g_DisplayY]
@@ -404,50 +432,50 @@ proc in_game_save {} {
     require [expr {[view 4]==$::joy_stock}] "Save shell changed stock"
     snap in_game_save {pulse 7 128 {phase 3 prepare_approach}}
 }
+proc head_right {} {
+    # The gun, pause and joystick tests fly level for a long while: head
+    # right so the plane stays inside the map.
+    pilot 128 400
+    wait_for {![world_byte 11] && ![world_byte 13] && abs([world_y]-400)<8 && [climb]==0} {pilot_off;after time 1 {pulse 7 128 enter_in_flight}} "head right" 20
+}
 proc prepare_approach {} {
-    # Recover the dive entered by the inverted joystick test, then descend
-    # toward the carrier with the rightward turn already complete.
-    keymatrixdown 8 160
-    after time 2.5 {keymatrixup 8 32;keymatrixdown 8 64;approach_height}
+    # Recover the dive from the inverted joystick test and fly back left.
+    # Cannon tests fly low (the flash is drawn only in the near view, below
+    # 186 px) over open sea: islands end at x 3928 and the gear comes down
+    # past 5752.
+    pilot 16 1060
+    wait_for {[world_x]<5600 && [world_byte 11] && ![world_byte 13] && abs([world_y]-1060)<9 && abs([climb])<=600} {pilot_off;cannon 41 cannon_climb_left} "recover for cannon tests" 40
 }
-proc approach_height {} {
-    if {[word g_DisplayY]<1090} {after time 0.025 approach_height;return}
-    keymatrixup 8 64
-    approach_right
+# Fire in a climb (pitch 1), level and in a dive (pitch 7), each heading.
+proc cannon {pose name} {
+    set heading [expr {[world_byte 11] ? 16 : 128}]
+    set attitude [lindex [split $name _] 1]
+    if {$attitude eq "climb"} {fly [expr {$heading|32|1}]} elseif {$attitude eq "level"} {fly 1} else {fly [expr {$heading|64|1}]}
+    set ::wanted_frame $pose
+    snap $name [list cannon_next $name]
 }
-proc approach_right {} {
-    if {[word g_DisplayWorld]<7500} {after time 0.025 approach_right;return}
-    keymatrixup 8 128;keymatrixdown 8 16
-    approach_left
+proc cannon_next {name} {
+    switch $name {
+        cannon_climb_left {cannon 16 cannon_level_left}
+        cannon_level_left {cannon 46 cannon_dive_left}
+        cannon_dive_left {cannon_settle 16 {pilot 128 1060;wait_for {![world_byte 11] && ![world_byte 13] && abs([world_y]-1060)<9 && abs([climb])<=600} {pilot_off;cannon 1 cannon_climb_right} "turn for cannon tests" 15}}
+        cannon_climb_right {cannon 4 cannon_level_right}
+        cannon_level_right {cannon 7 cannon_dive_right}
+        cannon_dive_right {cannon_settle 128 approach}
+    }
 }
-proc approach_left {} {
-    if {[word g_DisplayWorld]>7440 || [value g_Turning]} {after time 0.025 approach_left;return}
-    require [expr {[value g_SelectedFrame]==50}] "Gear did not extend on inbound approach: x=[word g_DisplayWorld] y=[word g_DisplayY] pose=[value g_SelectedFrame]"
-    snap approach {keymatrixdown 8 32;after time 1 retract_climb}
+proc cannon_settle {heading then} {
+    pilot $heading 1060
+    wait_for {abs([world_y]-1060)<9 && abs([climb])<=600} "pilot_off;$then" "level after firing" 15
 }
-proc retract_climb {} {
-    require [expr {[value g_SelectedFrame]!=50}] "Gear did not retract when climbing away"
-    keymatrixup 8 48
-    snap climb_gear_up {keymatrixdown 8 48;after time 1 {keymatrixup 8 16;keymatrixdown 8 1};after time 1.7 cannon_stall_left}
+proc approach {} {
+    # Gear comes down within 1280 px of the carrier, in either direction.
+    pilot 128 1060
+    wait_for {[world_x]>5800} {set ::wanted_frame 49;snap approach {pilot_off;fly 1;keymatrixup 8 1;after time 0.3 restart_game}} "fly to the carrier" 60
 }
-proc cannon_stall_left {} {
-    snap cannon_stall_left {keymatrixup 8 32;after time 0.5 cannon_level_left}
-}
-proc cannon_level_left {} {
-    snap cannon_level_left {keymatrixdown 8 64;after time 0.08 {keymatrixup 8 64};after time 0.7 cannon_dive_left}
-}
-proc cannon_dive_left {} {
-    snap cannon_dive_left {keymatrixdown 8 160;after time 1.1 cannon_right}
-}
-proc cannon_right {} {
-    keymatrixup 8 128
-    after time 0.7 {snap cannon_stall_right {keymatrixup 8 32;after time 0.5 cannon_level_right}}
-}
-proc cannon_level_right {} {
-    snap cannon_level_right {keymatrixdown 8 64;after time 0.08 {keymatrixup 8 64};after time 0.7 cannon_dive_right}
-}
-proc cannon_dive_right {} {
-    snap cannon_dive_right {keymatrixup 8 1;keymatrixdown 6 2;keymatrixdown 4 136;after time 0.4 {keymatrixup 4 136;keymatrixup 6 2};phase 0 restarted}
+proc restart_game {} {
+    fly 0
+    keymatrixdown 6 2;keymatrixdown 4 136;after time 0.4 {keymatrixup 4 136;keymatrixup 6 2};phase 0 restarted
 }
 proc restarted {} {
     require [expr {[view 2]==3 && [view 4]==30 && [view 5]==1 && [stat 30]==0 && [stat 32]==0}] "Ctrl-R game reset or setting retention"
@@ -461,13 +489,17 @@ proc engine_new_game {} {
     pulse 7 128 {phase 1 {pulse 7 128 {phase 2 {pulse 7 128 {phase 3 {wait_lift_up {engine_takeoff engine_low_fuel}}}}}}}
 }
 proc engine_takeoff {then} {
-    keymatrixdown 8 16
-    after time 5.4 [list keymatrixdown 8 32]
-    after time 8.9 [list engine_airborne $then]
+    # Roll off the bow, then climb away.
+    fly 16
+    wait_for {[world_byte 12]==1} [list engine_climb $then] "engine takeoff roll" 15
+}
+proc engine_climb {then} {
+    fly 48
+    wait_for {[world_y]<1100} [list engine_airborne $then] "engine takeoff climb" 10
 }
 proc engine_airborne {then} {
-    keymatrixup 8 48
-    require [expr {[word g_DisplayY]<1160 && [engine_byte 3]==0}] "Engine scenario takeoff"
+    fly 16
+    require [expr {[engine_byte 3]==0}] "Engine scenario takeoff"
     uplevel #0 $then
 }
 proc engine_low_fuel {} {
@@ -506,106 +538,140 @@ proc engine_wait_respawn {} {
     require [expr {[debug read memory [expr {$::addr(g_Game)+15}]]==192 && [debug read memory [expr {$::addr(g_Game)+14}]]==128 && [engine_byte 3]==0}] "Next plane not refuelled and repaired"
     snap engine_next_plane {wait_lift_up {engine_takeoff land_circuit}}
 }
-# P2 landing: a closed-loop autopilot flies the circuit from the real state.
-# s_World: flight y (Q8 u32) +2, vx +6, facing_left +11, mode +12; world x (Q8 u32) +16.
+# Closed-loop flying from the real flight state (s_World, SDCC layout):
+# y (Q8 u32) +2, vx +6, facing_left +11, mode +12 (0 deck, 1 air, 2 arrest),
+# turn +13, fast_roll +17, speed +21, climb +23; world x (Q8 u32) +31.
 proc world_byte {offset} {debug read memory [expr {$::addr(s_World)+$offset}]}
-proc world_x {} {expr {[world_byte 17]+256*[world_byte 18]}}
+proc world_s16 {offset} {set v [expr {[world_byte $offset]+256*[world_byte [expr {$offset+1}]]}]; expr {$v>=32768 ? $v-65536 : $v}}
+proc world_x {} {expr {[world_byte 32]+256*[world_byte 33]}}
 proc world_y {} {expr {[world_byte 3]+256*[world_byte 4]+65536*[world_byte 5]}}
-proc world_vx {} {set v [expr {[world_byte 6]+256*[world_byte 7]}]; expr {$v>=32768 ? $v-65536 : $v}}
-proc fly {mask} {keymatrixup 8 [expr {240 & ~$mask}]; if {$mask} {keymatrixdown 8 $mask}}
-proc fly_hold {mask target} {
-    # Hold a heading; trim toward a target altitude (screen y grows downward).
-    set y [world_y]
-    if {$y < $target - 2} {fly [expr {$mask|64}]} elseif {$y > $target + 2} {fly [expr {$mask|32}]} else {fly $mask}
+proc world_vx {} {world_s16 6}
+proc speed {} {world_s16 21}
+proc climb {} {world_s16 23}
+proc turn_shapes {} {set l {};for {set i 10} {$i<40} {incr i} {lappend l $i};return $l}
+proc fly {mask} {keymatrixup 8 [expr {241 & ~$mask}]; if {$mask} {keymatrixdown 8 $mask}}
+proc wait_for {cond then what {limit 30}} {
+    set ::wait_deadline [expr {[machine_info time]+$limit}]
+    wait_poll $cond $then $what
 }
-proc circuit_deadline {seconds} {set ::circuit_deadline [expr {[machine_info time]+$seconds}]}
-proc circuit_check {what} {require [expr {[machine_info time]<$::circuit_deadline}] "Circuit timeout: $what x=[world_x] y=[world_y]"}
-proc circuit_out {then} {
-    # From takeoff (flying left off the bow): turn right, fly past the carrier.
-    circuit_deadline 30
+proc wait_poll {cond then what} {
+    if {[uplevel #0 [list expr $cond]]} {after time 0.02 $then;return}
+    require [expr {[machine_info time]<$::wait_deadline}] "Timeout: $what x=[world_x] y=[world_y] mode=[world_byte 12] speed=[speed] climb=[climb] turn=[world_byte 13]"
+    after time 0.01 [list wait_poll $cond $then $what]
+}
+# Autopilot: hold a horizontal direction (which also turns the plane round)
+# and trim the commanded climb toward a target altitude (screen y).
+proc pilot {heading target} {
+    set running [info exists ::pilot]
+    set ::pilot [list $heading $target]
+    if {!$running} {pilot_tick}
+}
+proc pilot_off {} {unset -nocomplain ::pilot;fly 0}
+proc pilot_tick {} {
+    if {![info exists ::pilot]} {return}
+    lassign $::pilot heading target
+    # Input is sampled once per frame (1.7 ticks NTSC, 2 PAL) and Up/Down
+    # move the climb 600 per tick (300 diving in a turn), so trim within a
+    # band of one step around the wanted climb. Without Up or Down a climb
+    # decays to level but a dive holds. Heading 0 coasts (no power, airspeed
+    # bleeds toward 1000); corrections then use the facing key.
+    set error [expr {[world_y]-$target}]
+    set want [expr {$error>40 ? 2400 : $error>2 ? 1200 : $error<-150 ? -3600 : $error<-40 ? -2400 : $error<-2 ? -1200 : 0}]
+    set key [expr {$heading ? $heading : [world_byte 11] ? 16 : 128}]
+    set c [climb]
+    set mask $heading
+    if {$want==0} {
+        if {$c<0} {set mask [expr {$key|32}]}
+    } elseif {$c<$want-600} {set mask [expr {$key|32}]} elseif {$c>$want+600} {set mask [expr {$key|64}]}
+    fly $mask
+    after time 0.02 pilot_tick
+}
+proc circuit {then} {
+    # From takeoff (flying left off the bow): out to the left and back past
+    # the carrier, low (y 1140, 60 px up); coast downwind to bleed speed so
+    # the cable arrest is short; turn onto final just inside the map's
+    # right end, descending to 5 px above deck contact.
     set ::circuit_then $then
-    fly 128
-    after time 1.0 circuit_outbound
+    pilot 16 1140
+    wait_for {[world_x]<6000} {pilot 128 1140;wait_for {![world_byte 11] && ![world_byte 13]} circuit_downwind "turn downwind" 10} "outbound" 15
 }
-proc circuit_outbound {} {
-    circuit_check outbound
-    if {[world_byte 11]} {after time 0.05 circuit_outbound;return}
-    fly_hold 128 1100
-    if {[world_x] < 7560} {after time 0.025 circuit_outbound;return}
-    fly 16
-    after time 1.0 circuit_inbound
+proc circuit_downwind {} {
+    pilot 128 1140
+    wait_for {(abs([world_y]-1140)<=4 && [climb]==0) || [world_x]>6400} {pilot 0 1140;wait_for {[world_x]>=7380} circuit_turn_final "downwind" 25} "settle downwind" 15
 }
-proc circuit_inbound {} {
-    circuit_check inbound
-    if {![world_byte 11]} {after time 0.05 circuit_inbound;return}
-    fly_hold 16 1150
-    if {[world_x] > 7280 || abs([world_y]-1150) > 3} {
-        require [expr {[world_x] > 7200}] "Approach not stabilised over the deck: x=[world_x] y=[world_y]"
-        after time 0.01 circuit_inbound;return
-    }
-    puts $::report "approach x=[world_x] y=[world_y] vx=[world_vx]"
+proc circuit_turn_final {} {
+    pilot 16 1155
+    wait_for {[world_byte 11] && ![world_byte 13] && ([world_y]>=1150 || [world_x]<7330)} circuit_final "turn onto final" 10
+}
+proc circuit_final {} {
+    puts $::report "final x=[world_x] y=[world_y] speed=[speed]"
+    require [expr {[world_x]>7300 && [world_y]>=1144 && [world_y]<=1158}] "Final approach not set up: x=[world_x] y=[world_y]"
+    pilot_off
     uplevel #0 $::circuit_then
 }
-proc land_circuit {} {set ::contact_before [value g_LastContact]; circuit_out land_stall}
-proc land_stall {} {
+proc land_circuit {} {circuit land_flare}
+proc land_flare {} {
+    # The stall flare (Up alone, facing left) onto the deck; keep Up held so
+    # the hook catches a cable.
     debug write memory $::addr(g_LastContact) 0
     fly 32
-    circuit_deadline 6
-    land_touch
+    wait_for {[value g_LastContact]!=0} land_touch "touchdown" 6
 }
 proc land_touch {} {
-    circuit_check touchdown
-    if {[value g_LastContact]==0} {after time 0.025 land_touch;return}
-    require [expr {[value g_LastContact]==1 && [world_byte 12]==0 && [world_y]==1160 && [world_byte 11]}] "Stall onto the deck must land: contact=[value g_LastContact] mode=[world_byte 12] y=[world_y]"
+    require [expr {[value g_LastContact]==1 && [world_byte 12]!=1 && [world_y]==1160 && [world_byte 11]}] "Stall onto the deck must land: contact=[value g_LastContact] mode=[world_byte 12] y=[world_y]"
+    puts $::report "touchdown x=[world_x] speed=[speed]"
+    wait_for {[world_byte 12]==2} {wait_for {[world_byte 12]==0 && [speed]==0} land_stopped "arrest" 3} "cable catch" 2
+}
+proc land_stopped {} {
     fly 0
-    after time 0.6 {require [expr {[world_vx]==0}] "Landed plane did not stop"; snap landed land_taxi}
+    require [expr {[world_x]>7038 && [world_y]==1160}] "Arrested past the elevator: x=[world_x]"
+    snap landed land_taxi
 }
 proc land_taxi {} {
-    circuit_deadline 20
-    require [expr {[world_x] > 7038}] "Landed past the elevator: x=[world_x]"
-    fly 16
+    set ::wait_deadline [expr {[machine_info time]+30}]
     land_taxi_wait
 }
+# Distance rolled while braking from a deck speed: 8 per tick, (speed + 50) / 100 px.
+proc braking_distance {speed} {
+    set d 0
+    while {$speed>0} {incr speed -8;if {$speed<0} {set speed 0};incr d [expr {($speed+50)/100}]}
+    return $d
+}
 proc land_taxi_wait {} {
-    circuit_check taxi
-    # Release when the remaining distance equals the braking distance (the
-    # ground model sheds 5 Q8 units of speed per 150 Hz step).
-    set v [expr {abs([world_vx])}]
-    if {[world_x] - 7032 > $v*$v/2560 + 1} {after time 0.01 land_taxi_wait;return}
-    fly 0
-    after time 0.5 {
-        require [expr {[world_vx]==0 && abs([world_x]-7032)<=6}] "Taxi did not stop on the elevator: x=[world_x]"
+    # Power while the distance left exceeds the braking distance plus one
+    # tick of input latency; creep the last pixels.
+    set d [expr {[world_x]-7032}]
+    if {[speed]==0 && abs($d)<=6} {
+        fly 0
+        require [expr {abs([world_x]-7032)<=6}] "Taxi did not stop on the elevator: x=[world_x]"
         pulse 8 1 {phase 7 {snap landed_service {pulse 7 128 {phase 3 {wait_lift_up {engine_takeoff bounce_circuit}}}}}}
+        return
     }
+    require [expr {$d>-6 && [machine_info time]<$::wait_deadline}] "Taxi overshot or timed out: x=[world_x]"
+    set v [expr {[speed]+8}]
+    # Below speed 50 the plane does not move (whole pixels per tick).
+    if {$d>6 && [braking_distance $v]+($v+50)/100 < $d-2} {fly 16} else {fly 0}
+    after time 0.01 land_taxi_wait
 }
-proc bounce_circuit {} {circuit_out bounce_dive}
+proc bounce_circuit {} {circuit bounce_dive}
 proc bounce_dive {} {
+    # Under power into the deck: no flare, so the plane bounces.
     debug write memory $::addr(g_LastContact) 0
-    fly 80
-    circuit_deadline 6
-    bounce_wait
+    pilot 16 1166
+    wait_for {[value g_LastContact]!=0} bounce_check "powered touchdown" 6
 }
-proc bounce_wait {} {
-    circuit_check bounce
-    if {[value g_LastContact]==0} {after time 0.01 bounce_wait;return}
-    require [expr {[value g_LastContact]==2 && [world_byte 12]!=0}] "Powered deck contact must bounce: contact=[value g_LastContact] x=[world_x] y=[world_y]"
-    fly 48
+proc bounce_check {} {
+    require [expr {[value g_LastContact]==2 && [world_byte 12]==1}] "Powered deck contact must bounce: contact=[value g_LastContact] x=[world_x] y=[world_y]"
+    pilot 16 1120
     snap deck_bounce {after time 1.5 sea_dive}
 }
 proc sea_dive {} {
+    pilot_off
     debug write memory $::addr(g_LastContact) 0
     set ::lives_before [view 2]
-    fly 80
-    circuit_deadline 15
-    sea_splash
-}
-proc sea_splash {} {
-    circuit_check splash
-    if {[value g_LastContact]!=3} {after time 0.01 sea_splash;return}
-    after time 0.2 {snap sea_splash sea_wait}
+    wait_for {[world_x]<6560} {fly 80;wait_for {[value g_LastContact]==3} {after time 0.2 {snap sea_splash sea_wait}} "sea crash" 10} "clear the bow" 6
 }
 proc sea_wait {} {
-    circuit_check sea
     if {[view 2]==$::lives_before || [word g_DisplayWorld]!=7032 || [word g_DisplayY]!=1160} {after time 0.05 sea_wait;return}
     require [expr {[value g_LastContact]==3 && [view 2]==$::lives_before-1}] "Powered sea dive must crash and cost a plane"
     fly 0
@@ -630,4 +696,4 @@ proc done {} {
 }
 debug watchpoint create -type write_mem -address $addr(g_MissedFrames) -command {guard missed_frame}
 after time 1 {guard ready}
-after time 480 {bgerror "P0 scenario timeout"}
+after time 1500 {bgerror "P0 scenario timeout"}

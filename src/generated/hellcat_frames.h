@@ -21,6 +21,7 @@ extern const AircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT];
 extern const unsigned char g_PitchRight[10], g_PitchLeft[10];
 extern const unsigned char g_GearFrame[2], g_TailDownFrame[2];
 extern const unsigned char g_TaxiTurn[11];
+extern const unsigned char g_AirTurnLeft[26], g_AirTurnRight[26];
 extern const unsigned char g_TurnLeftToRight[AIRCRAFT_TURN_STEPS];
 extern const unsigned char g_TurnRightToLeft[AIRCRAFT_TURN_STEPS];
 /* Original cannon flash/tracer overlays: variant * 20 + (left ? 10 : 0) + pitch.

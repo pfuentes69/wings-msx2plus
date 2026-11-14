@@ -1,14 +1,5 @@
 #include "flight.h"
-
-/* SDCC builds of the P1 flight step use the hand-written Z80 version below
- * (see docs/flight-step-z80.md); host builds, and SDCC builds with
- * WINGS_FLIGHT_C, use the C reference. tests/test_flight_z80.py checks the
- * two against each other on an emulated Z80. */
-#if defined(__SDCC) && defined(WINGS_P1_FLIGHT) && !defined(WINGS_FLIGHT_C)
-#define WINGS_FLIGHT_Z80 1
-#else
-#define WINGS_FLIGHT_Z80 0
-#endif
+#include "flight_model.h"
 
 #ifndef WINGS_P1_FLIGHT
 static int16_t Accelerate(int16_t velocity, uint8_t negative, uint8_t positive, int16_t limit)
@@ -26,9 +17,6 @@ static int16_t Accelerate(int16_t velocity, uint8_t negative, uint8_t positive, 
     return velocity;
 }
 
-#endif
-
-#if !defined(WINGS_P1_FLIGHT) || WINGS_FLIGHT_MAX_Y <= 255
 static uint16_t Move(uint16_t position, int16_t* velocity, uint16_t limit)
 {
     if (*velocity < 0 && position < (uint16_t)(-*velocity))
@@ -43,7 +31,6 @@ static uint16_t Move(uint16_t position, int16_t* velocity, uint16_t limit)
     }
     return position + *velocity;
 }
-
 #endif
 
 void Flight_Reset(FlightState* state)
@@ -54,124 +41,167 @@ void Flight_Reset(FlightState* state)
     state->frame = 1;
     state->facing_left = 0;
 #ifdef WINGS_P1_FLIGHT
+    /* A new plane (0xb7ec): on deck, at rest, facing left. */
     state->y = (FlightVertical)FLIGHT_DECK_Y * 256u;
-    state->facing_left = state->target_left = 1;
+    state->frame = 4;
+    state->facing_left = 1;
     state->mode = FLIGHT_GROUND;
-    state->turn_ticks = state->ground_tick = 0;
+    state->turn = state->step = state->landing = state->fast_roll = state->throttle = 0;
+    state->turn_clock = 2;
+    state->xrem = state->yrem = 0;
+    state->speed = state->climb = state->path = state->cancel = state->boost = 0;
 #endif
 }
-
-#if defined(WINGS_P1_FLIGHT) && !WINGS_FLIGHT_Z80
-static int16_t Approach(int16_t value, int16_t target)
-{
-    if (value < target) return target - value < 5 ? target : value + 5;
-    if (value > target) return value - target < 5 ? target : value - 5;
-    return value;
-}
-#endif
 
 #ifdef WINGS_P1_FLIGHT
-#if !WINGS_FLIGHT_Z80
-/* The 150 Hz step works on a file-static copy of the state. SDCC addresses
- * a static field directly (ld a,(nn)); through a pointer, each access
- * reloads the pointer from the IX frame and adds the offset, which made this
- * step cost ~2,500 T-states. Not reentrant: called only from the main loop. */
-static FlightState s_Work;
-
-static void StepControls(uint8_t input)
+/* Every simulation step: run the original's tick on the first step of each
+ * group of FLIGHT_TICK_STEPS, then move by this tick's per-step share. The
+ * share is vx/vy plus one Q8 unit on the first |xrem|/|yrem| steps, so a tick
+ * moves exactly the original's whole-pixel step. Flight_Tick keeps the motion
+ * inside the world and the sky, so no clamping is needed here.
+ *
+ * SDCC builds use the Z80 version below (150 calls a second); host builds
+ * use the C reference, and tests/test_flight_step_z80.py compares them. */
+#if defined(__SDCC) && !defined(WINGS_FLIGHT_C)
+/* Offsets in FlightState (SDCC packs it): y 2, vx 6, vy 8, step 15, xrem 19, yrem 20. */
+typedef char FlightStepCheckLayout[(sizeof(FlightState) == 31) ? 1 : -1];
+void Flight_StepWorldSample(FlightState* state, uint32_t* x, uint8_t input, uint8_t sample_pose) __naked
 {
-    uint8_t horizontal = input & (FLIGHT_LEFT | FLIGHT_RIGHT);
-    uint8_t vertical = input & (FLIGHT_UP | FLIGHT_DOWN);
-    uint8_t mode = s_Work.mode, turn = s_Work.turn_ticks, left = s_Work.facing_left;
-    int16_t speed = s_Work.vx, vy, target = 154, climb = 0;
-    if (speed < 0) speed = -speed;
-    if (horizontal == (FLIGHT_LEFT | FLIGHT_RIGHT)) horizontal = 0;
-    if (vertical == (FLIGHT_UP | FLIGHT_DOWN)) vertical = 0;
-    if (mode == FLIGHT_GROUND)
-    {
-        s_Work.vy = 0;
-        if (turn)
-        {
-            s_Work.vx = 0;
-            if (!--turn) s_Work.facing_left = s_Work.target_left;
-            s_Work.turn_ticks = turn;
-            return;
-        }
-        if (horizontal && ((horizontal == FLIGHT_LEFT) != left))
-        {
-            speed = Approach(speed, 0);
-            s_Work.ground_tick = 0;
-            if (!speed)
-            {
-                s_Work.target_left = horizontal == FLIGHT_LEFT;
-                s_Work.turn_ticks = FLIGHT_TAXI_TURN_TICKS;
-            }
-        }
-        else if (horizontal && speed < 205)
-        {
-            /* Retain fractional ground acceleration on the fixed simulation
-             * clock; rounding each tick to Q8 would otherwise give zero. */
-            if (++s_Work.ground_tick == FLIGHT_GROUND_ACCEL_TICKS)
-            {
-                s_Work.ground_tick = 0;
-                ++speed;
-            }
-        }
-        else
-        {
-            s_Work.ground_tick = 0;
-            if (!horizontal) speed = Approach(speed, 0);
-        }
-        s_Work.vx = left ? -speed : speed;
-        return;
-    }
-    if (horizontal)
-    {
-        target = 205;
-        if (!turn && (horizontal == FLIGHT_LEFT) != left)
-        {
-            s_Work.target_left = !left;
-            turn = FLIGHT_TURN_TICKS;
-        }
-        climb = vertical == FLIGHT_UP ? -96 : vertical == FLIGHT_DOWN ? 96 : 0;
-        mode = FLIGHT_AIRBORNE;
-    }
-    else if (vertical == FLIGHT_UP)
-    {
-        target = 32;
-        climb = 32;
-        mode = FLIGHT_STALL;
-    }
-    else if (vertical || mode == FLIGHT_STALL_DIVE)
-    {
-        climb = 48;
-        mode = FLIGHT_STALL_DIVE;
-    }
-    else mode = FLIGHT_AIRBORNE;
-    s_Work.mode = mode;
-    if (turn)
-    {
-        climb += 64;
-        if (!--turn) left = s_Work.facing_left = s_Work.target_left;
-        s_Work.turn_ticks = turn;
-    }
-    speed = Approach(speed, target);
-    s_Work.vx = left ? -speed : speed;
-    s_Work.vy = vy = Approach(s_Work.vy, climb);
-#if WINGS_FLIGHT_MAX_Y > 255
-    {
-        /* Same clamps as the unsigned form: y + vy below 0 or, while
-         * climbing down the screen, above FLIGHT_MAX_Y. */
-        int32_t y = (int32_t)s_Work.y + vy;
-        if (y < 0) { s_Work.y = 0; s_Work.vy = 0; }
-        else if (vy > 0 && y > (int32_t)FLIGHT_MAX_Y) { s_Work.y = FLIGHT_MAX_Y; s_Work.vy = 0; }
-        else s_Work.y = (FlightVertical)y;
-    }
+    (void)state; (void)x; (void)input; (void)sample_pose;
+    __asm
+        ; sdcccall(1): HL = state, DE = x; stack: return, input, sample_pose.
+        ; The callee removes the two argument bytes. IX is preserved.
+        push    iy
+        push    de                      ; [x][iy][ret][input][pose]
+        push    hl
+        pop     iy                      ; IY = state
+        ld      a, 15 (iy)
+        or      a, a
+        jr      nz, fss_move$
+        ; Flight_Tick(state, world, input): banked, arguments on the stack.
+        ld      hl, #6
+        add     hl, sp
+        ld      a, (hl)                 ; input
+        pop     hl
+        push    hl
+        inc     hl
+        ld      e, (hl)
+        inc     hl
+        ld      d, (hl)                 ; DE = world pixel (x >> 8)
+        push    iy
+        push    af
+        inc     sp
+        push    de
+        push    iy
+        ld      e, #b_Flight_Tick
+        ld      hl, #_Flight_Tick
+        call    ___sdcc_bcall_ehl
+        pop     af
+        pop     af
+        inc     sp
+        pop     iy
+        ld      a, 15 (iy)
+    fss_move$:
+        ld      c, a                    ; C = step
+        ld      l, 6 (iy)
+        ld      h, 7 (iy)
+        ld      a, 19 (iy)
+        call    fss_rem$                ; HL = dx
+        ex      de, hl
+        ld      a, d
+        add     a, a
+        sbc     a, a
+        ld      b, a                    ; B = sign extension of dx
+        pop     hl                      ; HL = x pointer
+        ld      a, (hl)
+        add     a, e
+        ld      (hl), a
+        inc     hl
+        ld      a, (hl)
+        adc     a, d
+        ld      (hl), a
+        inc     hl
+        ld      a, (hl)
+        adc     a, b
+        ld      (hl), a
+        inc     hl
+        ld      a, (hl)
+        adc     a, b
+        ld      (hl), a
+        ld      l, 8 (iy)
+        ld      h, 9 (iy)
+        ld      a, 20 (iy)
+        call    fss_rem$                ; HL = dy
+        ex      de, hl
+        ld      a, d
+        add     a, a
+        sbc     a, a
+        ld      b, a
+        ld      a, 2 (iy)
+        add     a, e
+        ld      2 (iy), a
+        ld      a, 3 (iy)
+        adc     a, d
+        ld      3 (iy), a
+        ld      a, 4 (iy)
+        adc     a, b
+        ld      4 (iy), a
+        ld      a, 5 (iy)
+        adc     a, b
+        ld      5 (iy), a
+        ld      a, c
+        inc     a
+        cp      a, #12                  ; FLIGHT_TICK_STEPS
+        jr      c, fss_step$
+        xor     a, a
+    fss_step$:
+        ld      15 (iy), a
+        pop     iy
+        pop     hl                      ; return address
+        pop     af                      ; drop input and sample_pose
+        jp      (hl)
+    fss_rem$:                           ; HL += sign(A) when step C < |A|
+        or      a, a
+        ret     z
+        jp      p, fss_rem_up$
+        neg
+        cp      a, c
+        ret     c
+        ret     z
+        dec     hl
+        ret
+    fss_rem_up$:
+        cp      a, c
+        ret     c
+        ret     z
+        inc     hl
+        ret
+    __endasm;
+}
+typedef char FlightStepCheckTick[(FLIGHT_TICK_STEPS == 12u) ? 1 : -1];
 #else
-    s_Work.y = Move(s_Work.y, &s_Work.vy, FLIGHT_MAX_Y);
-#endif
+void Flight_StepWorldSample(FlightState* state, uint32_t* x, uint8_t input, uint8_t sample_pose)
+{
+    int16_t dx, dy;
+    uint8_t step = state->step;
+    (void)sample_pose; /* the pose comes from the tick's pitch (Aircraft_SyncFlight) */
+    if (!step) Flight_Tick(state, (uint16_t)(*x >> 8), input), step = state->step;
+    dx = state->vx; dy = state->vy;
+    if (state->xrem > 0) { if (step < (uint8_t)state->xrem) ++dx; }
+    else if (step < (uint8_t)-state->xrem) --dx;
+    if (state->yrem > 0) { if (step < (uint8_t)state->yrem) ++dy; }
+    else if (step < (uint8_t)-state->yrem) --dy;
+    state->step = step + 1 == FLIGHT_TICK_STEPS ? 0 : step + 1;
+    *x += (uint32_t)(int32_t)dx;
+    state->y += (FlightVertical)(int32_t)dy;
 }
 #endif
+
+uint8_t Flight_GearDown(const FlightState* state, uint16_t world)
+{
+    if (FLIGHT_ON_DECK(state)) return 1;
+    return world > FLIGHT_CARRIER_X - FLIGHT_GEAR_RANGE && world < FLIGHT_CARRIER_X + FLIGHT_GEAR_RANGE;
+}
 #else
 static void StepControls(FlightState* state, uint8_t input)
 {
@@ -187,9 +217,7 @@ static void StepControls(FlightState* state, uint8_t input)
     state->y = Move(state->y, &state->vy, FLIGHT_MAX_Y);
 #endif
 }
-#endif
 
-#ifndef WINGS_P1_FLIGHT
 static void Orient(FlightState* state)
 {
     if (state->vx < 0) state->facing_left = 1;
@@ -204,42 +232,6 @@ void Flight_Step(FlightState* state, uint8_t input)
     Orient(state);
 }
 
-#endif
-
-#if defined(WINGS_P1_FLIGHT) && WINGS_FLIGHT_Z80
-#include "flight_z80.inc"
-#elif defined(WINGS_P1_FLIGHT)
-void Flight_StepWorldSample(FlightState* state, uint32_t* x, uint8_t input, uint8_t sample_pose)
-{
-    int32_t next;
-    (void)sample_pose; /* P1 attitude and committed facing are sampled by Aircraft_SyncFlight. */
-    s_Work = *state;
-    StepControls(input);
-    if (s_Work.mode == FLIGHT_GROUND && !s_Work.turn_ticks && s_Work.facing_left &&
-        (*x >> 8) <= FLIGHT_LAUNCH_ZONE && s_Work.vx <= -FLIGHT_TAKEOFF_SPEED &&
-        (input & (FLIGHT_LEFT | FLIGHT_RIGHT)) == FLIGHT_LEFT &&
-        (input & (FLIGHT_UP | FLIGHT_DOWN)) == FLIGHT_UP)
-        s_Work.mode = FLIGHT_AIRBORNE;
-    next = (int32_t)*x + s_Work.vx;
-    if (s_Work.mode == FLIGHT_GROUND)
-    {
-        /* Temporary safety stops. P2 will replace these with deck departure
-         * and crash handling; takeoff is already airborne before this clamp. */
-        if (next < (int32_t)FLIGHT_TAXI_MIN_X * 256)
-        { next = (int32_t)FLIGHT_TAXI_MIN_X * 256; s_Work.vx = 0; s_Work.ground_tick = 0; }
-        if (next > (int32_t)FLIGHT_TAXI_MAX_X * 256)
-        { next = (int32_t)FLIGHT_TAXI_MAX_X * 256; s_Work.vx = 0; s_Work.ground_tick = 0; }
-    }
-    if (next < 0) { next = 0; s_Work.vx = 0; }
-    if (next > (int32_t)(WINGS_WORLD_WIDTH - 1) * 256)
-    {
-        next = (int32_t)(WINGS_WORLD_WIDTH - 1) * 256;
-        s_Work.vx = 0;
-    }
-    *x = next;
-    *state = s_Work;
-}
-#else
 void Flight_StepWorldSample(FlightState* state, uint32_t* x, uint8_t input, uint8_t sample_pose)
 {
     int32_t next;
@@ -260,25 +252,9 @@ void Flight_StepWorldSample(FlightState* state, uint32_t* x, uint8_t input, uint
         else if (state->vx > 0) state->facing_left = 0;
     }
 }
-#endif
 
-#ifndef WINGS_P1_FLIGHT
 void Flight_StepWorld(FlightState* state, uint32_t* x, uint8_t input)
 {
     Flight_StepWorldSample(state, x, input, 1);
-}
-
-#endif
-
-#ifdef WINGS_P1_FLIGHT
-uint8_t Flight_GearDown(const FlightState* state, uint16_t world)
-{
-    if (state->mode == FLIGHT_GROUND) return 1;
-    /* Keep departure clear of the approach region so wheels retract on lift-off.
-     * Inbound distance/height thresholds are explicit MSX tuning for now. */
-    return state->facing_left && !state->turn_ticks && state->vy >= 0 &&
-        world >= FLIGHT_DECK_LEFT + 128u && world <= FLIGHT_DECK_RIGHT + 192u &&
-        state->y >= (FlightVertical)(FLIGHT_DECK_Y - 80u) * 256u &&
-        state->y <= (FlightVertical)FLIGHT_DECK_Y * 256u;
 }
 #endif

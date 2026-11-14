@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-GROUND, AIRBORNE, STALL, STALL_DIVE = 0, 1, 2, 3
+GROUND, AIRBORNE, ARREST = 0, 1, 2
 NONE, LANDED, BOUNCE, CRASH = 0, 1, 2, 3
 DECK_LEFT, DECK_RIGHT, DECK_Y, SEA_Y = 6593, 7361, 1160, 1200
 
@@ -15,7 +15,11 @@ DECK_LEFT, DECK_RIGHT, DECK_Y, SEA_Y = 6593, 7361, 1160, 1200
 class Flight(C.Structure):
     _fields_ = [('x', C.c_uint16), ('y', C.c_uint32), ('vx', C.c_int16), ('vy', C.c_int16),
                 ('frame', C.c_uint8), ('facing_left', C.c_uint8), ('mode', C.c_uint8),
-                ('turn_ticks', C.c_uint8), ('target_left', C.c_uint8), ('ground_tick', C.c_uint8)]
+                ('turn', C.c_uint8), ('turn_clock', C.c_uint8), ('step', C.c_uint8),
+                ('landing', C.c_uint8), ('fast_roll', C.c_uint8), ('throttle', C.c_uint8),
+                ('xrem', C.c_int8), ('yrem', C.c_int8),
+                ('speed', C.c_int16), ('climb', C.c_int16), ('path', C.c_int16),
+                ('cancel', C.c_int16), ('boost', C.c_int16)]
 
 
 class LandingTests(unittest.TestCase):
@@ -26,7 +30,7 @@ class LandingTests(unittest.TestCase):
         subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
                         '-DWINGS_P1_FLIGHT', '-DMISSION_TERRAIN', '-DWINGS_FLIGHT_MAX_Y=1200u',
                         '-DWINGS_WORLD_WIDTH=7608u', '-DWINGS_WORLD_START=7032u',
-                        *[str(ROOT / 'src' / p) for p in ('core/landing.c', 'core/flight.c',
+                        *[str(ROOT / 'src' / p) for p in ('core/landing.c', 'core/flight.c', 'core/flight_model.c',
                           'core/aircraft.c', 'generated/hellcat_frames.c')], '-o', str(lib)],
                        check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))
@@ -37,24 +41,30 @@ class LandingTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def contact(self, x, y, mode=STALL, left=1, failed=0, sub=0, bottom=7, height=0):
+    def contact(self, x, y, mode=AIRBORNE, left=1, failed=0, sub=0, bottom=7, height=0, landing=1, turn=0):
         # bottom 7 = a resting plane (pose 0 with gear), which puts the deck
-        # boundary exactly at the port's deck row 1160.
-        flight = Flight(y=y * 256 + sub, vx=-40, vy=48, mode=mode, facing_left=left, target_left=left)
+        # boundary exactly at the port's deck row 1160. landing=1: the stall
+        # flare (UP alone facing left).
+        flight = Flight(y=y * 256 + sub, vx=-40, vy=48, yrem=-3, mode=mode, facing_left=left,
+                        landing=landing, turn=turn, speed=1000, climb=600)
         return self.core.Landing_Contact(C.byref(flight), x, failed, bottom, height), flight
 
     def test_stall_facing_left_onto_the_deck_lands(self):
         result, flight = self.contact(7000, DECK_Y + 1)
         self.assertEqual(result, LANDED)
         self.core.Landing_Apply(C.byref(flight), result)
-        self.assertEqual((flight.mode, flight.y, flight.vy, flight.facing_left), (GROUND, DECK_Y * 256, 0, 1))
+        # On deck at flying speed: the cable catch follows in the flight model.
+        self.assertEqual((flight.mode, flight.y, flight.vy, flight.yrem, flight.facing_left, flight.speed),
+                         (GROUND, DECK_Y * 256, 0, 0, 1, 1000))
 
     def test_other_deck_contact_bounces(self):
-        for mode, left in ((AIRBORNE, 1), (STALL_DIVE, 1), (STALL, 0)):
-            result, flight = self.contact(7000, DECK_Y + 2, mode, left)
-            self.assertEqual(result, BOUNCE, (mode, left))
+        # Powered or diving (no flare flag), heading right (the hook cannot
+        # catch), or mid-turn.
+        for left, landing, turn in ((1, 0, 0), (0, 1, 0), (0, 0, 0), (1, 1, 3)):
+            result, flight = self.contact(7000, DECK_Y + 2, left=left, landing=landing, turn=turn)
+            self.assertEqual(result, BOUNCE, (left, landing, turn))
             self.core.Landing_Apply(C.byref(flight), result)
-            self.assertEqual((flight.vy, flight.y), (-48, (DECK_Y + 2 - 6) * 256))
+            self.assertEqual((flight.vy, flight.yrem, flight.climb, flight.y), (0, 0, -600, (DECK_Y + 2 - 6) * 256))
 
     def test_resting_at_deck_height_or_above_is_not_contact(self):
         self.assertEqual(self.contact(7000, DECK_Y)[0], NONE)   # takeoff from the deck
@@ -62,13 +72,18 @@ class LandingTests(unittest.TestCase):
         self.assertEqual(self.contact(7000, DECK_Y + 1, mode=GROUND)[0], NONE)
 
     def test_deck_ends_hull_and_dead_engine_crash(self):
-        self.assertEqual(self.contact(DECK_LEFT + 15, DECK_Y + 1)[0], CRASH)
+        self.assertEqual(self.contact(DECK_LEFT + 15, DECK_Y + 1, left=0)[0], CRASH)  # flying into the bow
         self.assertEqual(self.contact(DECK_LEFT + 16, DECK_Y + 1)[0], LANDED)
         self.assertEqual(self.contact(DECK_RIGHT - 16, DECK_Y + 1)[0], LANDED)
-        self.assertEqual(self.contact(DECK_RIGHT - 15, DECK_Y + 1)[0], CRASH)
+        self.assertEqual(self.contact(DECK_RIGHT - 15, DECK_Y + 1)[0], CRASH)       # short of the stern
         self.assertEqual(self.contact(7000, DECK_Y + 4)[0], LANDED)
         self.assertEqual(self.contact(7000, DECK_Y + 4, sub=1)[0], CRASH)  # more than 4 px in: the hull
         self.assertEqual(self.contact(7000, DECK_Y + 1, failed=1)[0], CRASH)
+
+    def test_leaving_over_a_deck_end_may_sink_a_little(self):
+        self.assertEqual(self.contact(DECK_LEFT + 15, DECK_Y + 4, landing=0)[0], NONE)
+        self.assertEqual(self.contact(DECK_LEFT + 15, DECK_Y + 4, sub=1, landing=0)[0], CRASH)
+        self.assertEqual(self.contact(DECK_RIGHT - 15, DECK_Y + 2, left=0, landing=0)[0], NONE)
 
     def test_the_sea_crashes_when_the_bottom_reaches_it(self):
         self.assertEqual(self.contact(4000, SEA_Y, bottom=0)[0], CRASH)

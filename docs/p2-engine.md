@@ -11,7 +11,7 @@ Implemented 2026-11-14. The evidence is in
 | Fuel burn | 1 unit per 28 ticks of flight: a full tank lasts ~7.2 min | Executable (0x1386, 0xb8b4) |
 | Oil | stays at 128 until damaged; then leaks 1 per 80 ticks (6.4 s) | Executable (0x1386) |
 | Engine failure | oil < 96 or the tank runs dry; no power, no guns | Executable (0xc6a0, mode 4) |
-| OIL needle | `(oil − 96) / 2`; +6 frames under throttle (pushing the way you fly) | Executable (0xee5e) |
+| OIL needle | `(oil − 96) / 2`; +6 frames under throttle (the flight model's flag: pushing the way you fly, or Down alone) | Executable (0xee5e, 0xbff4) |
 | FUEL needle | `fuel / 8`, at most frame 22; twitches at empty | Executable (0xef2a) |
 | Lamps | oil < 116 and fuel ≤ 64; the original blink counters (10 and 8) | Executable |
 | Needle motion | one frame per tick toward the target | Executable |

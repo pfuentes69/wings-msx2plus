@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from test_p1_flight import Flight
+from test_flight_model import Flight
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -20,7 +20,7 @@ class CarrierTests(unittest.TestCase):
         cls.temp=tempfile.TemporaryDirectory();lib=Path(cls.temp.name)/'carrier.so'
         subprocess.run([shutil.which('cc') or 'cc','-std=c99','-Wall','-Wextra','-Werror','-shared','-fPIC',
             '-DWINGS_P1_FLIGHT','-DWINGS_FLIGHT_MAX_Y=1200u',
-            str(ROOT/'src/core/carrier.c'),str(ROOT/'src/core/flight.c'),'-o',str(lib)],check=True,capture_output=True)
+            str(ROOT/'src/core/carrier.c'),str(ROOT/'src/core/flight.c'),str(ROOT/'src/core/flight_model.c'),'-o',str(lib)],check=True,capture_output=True)
         cls.core=C.CDLL(str(lib))
         cls.core.Carrier_Reset.argtypes=[C.POINTER(Carrier)]
         cls.core.Carrier_Raise.argtypes=[C.POINTER(Carrier)]
@@ -46,10 +46,10 @@ class CarrierTests(unittest.TestCase):
             s,f=self.state();f.facing_left=left;self.steps(s,576)
             for _ in range(2):
                 before=bytes(s)
-                for x,mode,vx,turn in ((7000,0,0,0),(7032,1,0,0),(7032,0,1,0),(7032,0,0,10)):
-                    f.mode=mode;f.vx=vx;f.turn_ticks=turn
+                for x,mode,speed,turn in ((7000,0,0,0),(7032,1,0,0),(7032,2,0,0),(7032,0,1,0),(7032,0,0,3)):
+                    f.mode=mode;f.speed=speed;f.turn=turn
                     self.assertFalse(self.core.Carrier_Request(C.byref(s),C.byref(f),x));self.assertEqual(bytes(s),before)
-                f.mode=f.vx=f.turn_ticks=0
+                f.mode=f.speed=f.turn=0
                 self.assertTrue(self.core.Carrier_Request(C.byref(s),C.byref(f),7032))
                 self.assertFalse(self.core.Carrier_Request(C.byref(s),C.byref(f),7032))
                 self.steps(s,575);self.assertEqual((s.stage,s.depth),(2,31))

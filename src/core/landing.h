@@ -6,7 +6,8 @@
 
 /* Contact with the carrier, the sea or the ground, after the Amiga rules in
  * docs/research/amiga-fuel-oil.md (0xba80/0xb8c4/0x5710): touching the deck
- * from above while stalling facing left lands; other deck contact bounces;
+ * from above in the stall flare (Up alone) facing left, not turning, lands;
+ * other deck contact bounces;
  * the sea, scenery at its static height, deck ends and the hull crash.
  * Resting exactly at deck height is not contact. */
 #define LANDING_NONE 0

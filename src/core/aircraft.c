@@ -71,46 +71,39 @@ void Aircraft_Step(AircraftState* state, int16_t vx, int16_t vy)
 
 #endif
 
-#ifdef WINGS_P1_FLIGHT
-/* P1 attitude is independent of descent: a stall sinks with its nose raised. */
-static const uint8_t s_ModePitch[4] = {4,4,3,6};
-#endif
 uint8_t Aircraft_FlightPitch(const FlightState* flight)
 {
 #ifdef WINGS_P1_FLIGHT
-    if (flight->mode!=FLIGHT_AIRBORNE) return s_ModePitch[flight->mode];
-#endif
+    return flight->frame; /* the original's pose for the commanded climb */
+#else
     return Aircraft_Pitch(flight->vx,flight->vy);
+#endif
 }
 #ifdef WINGS_P1_FLIGHT
-/* Presentation samples the simulation turn clock; it never starts a second turn. */
+/* Deck turn frame 0..6 (the original's hc21, hc20..hc1b) to the MSX taxi
+ * sequence, 5 steps from a resting side view to the front view. */
+static const uint8_t s_DeckTurn[7] = {0, 1, 2, 3, 3, 4, 5};
+/* The original picks the shape from the flight state (0xc378, 0xabde). */
 void Aircraft_SyncFlight(AircraftState* state, const FlightState* flight, uint16_t world)
 {
-    state->facing_left = flight->facing_left;
-    state->target_left = flight->target_left;
-    state->turning = flight->turn_ticks != 0;
-    if (state->turning)
+    uint8_t left = flight->facing_left, pitch = flight->frame;
+    state->facing_left = state->target_left = left;
+    state->turning = flight->turn != 0;
+    state->step = flight->turn;
+    if (FLIGHT_ON_DECK(flight))
     {
-        if (flight->mode == FLIGHT_GROUND)
-        {
-            state->step = (FLIGHT_TAXI_TURN_TICKS - flight->turn_ticks) / FLIGHT_TAXI_STEP_TICKS;
-            state->shape = g_TaxiTurn[flight->facing_left ? state->step : 10-state->step];
-        }
-        else
-        {
-            state->step = (FLIGHT_TURN_TICKS - flight->turn_ticks) / 5;
-            state->shape = flight->facing_left ? g_TurnLeftToRight[state->step] : g_TurnRightToLeft[state->step];
-        }
+        /* Tail down, turning on the spot, or tail up on its wheels when
+         * rolling fast. */
+        if (flight->fast_roll) state->shape = g_GearFrame[left];
+        else if (flight->turn)
+            state->shape = g_TaxiTurn[left ? s_DeckTurn[flight->turn] : 10 - s_DeckTurn[flight->turn]];
+        else state->shape = g_TailDownFrame[left];
     }
-    else
-    {
-        uint8_t pitch = Aircraft_FlightPitch(flight);
-        if (flight->mode == FLIGHT_GROUND &&
-            flight->vx > -FLIGHT_TAKEOFF_SPEED && flight->vx < FLIGHT_TAKEOFF_SPEED)
-            state->shape = g_TailDownFrame[flight->facing_left];
-        else state->shape = Flight_GearDown(flight, world) ?
-            (flight->mode == FLIGHT_STALL ? g_TailDownFrame[flight->facing_left] : g_GearFrame[flight->facing_left]) :
-            flight->facing_left ? g_PitchLeft[pitch] : g_PitchRight[pitch];
-    }
+    else if (flight->turn) state->shape = left ? g_AirTurnLeft[flight->turn] : g_AirTurnRight[flight->turn];
+    else if (Flight_GearDown(flight, world) && pitch == 4) state->shape = g_GearFrame[left];
+    /* The flare with the gear down: the original adds wheels to the
+     * nose-up pose; the MSX atlas has them only on the tail-down view. */
+    else if (Flight_GearDown(flight, world) && pitch == 3 && flight->landing) state->shape = g_TailDownFrame[left];
+    else state->shape = left ? g_PitchLeft[pitch] : g_PitchRight[pitch];
 }
 #endif

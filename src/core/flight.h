@@ -12,25 +12,31 @@
 #define WINGS_P1_FLIGHT 1
 #endif
 
-/* P1 values are tuning data, not recovered Amiga physics. Deck bounds follow
- * fcar/mcar/rcar drawing extents; Y rests the level crop above viewport row 129.
- * Reset X is a provisional parking point, not a recovered elevator location. */
+/* Carrier geometry. Deck bounds follow the fcar/mcar/rcar drawing extents
+ * (the original's landing range is the carrier map extents x 4, 16 px inward
+ * at each end); the deck row rests a plane on its wheels at deck height. */
 #define FLIGHT_DECK_LEFT 6593u
 #define FLIGHT_DECK_RIGHT 7361u
-#define FLIGHT_TAXI_MIN_X (FLIGHT_DECK_LEFT + 24u)
-#define FLIGHT_TAXI_MAX_X (FLIGHT_DECK_RIGHT - 25u)
-#define FLIGHT_TAXI_STEP_TICKS 24u
-#define FLIGHT_TAXI_TURN_TICKS (10u * FLIGHT_TAXI_STEP_TICKS)
+#define FLIGHT_DECK_EDGE 16u
 #define FLIGHT_DECK_Y 1160u
-#define FLIGHT_TAKEOFF_SPEED 154
-/* 154 speed steps * 5 ticks / 150 Hz = 5.13 seconds from rest. */
-#define FLIGHT_GROUND_ACCEL_TICKS 5u
-#define FLIGHT_LAUNCH_ZONE (FLIGHT_DECK_LEFT + 64u)
-#define FLIGHT_GROUND 0
-#define FLIGHT_AIRBORNE 1
-#define FLIGHT_STALL 2
-#define FLIGHT_STALL_DIVE 3 /* Latched nose-down dive; cleared by Up or horizontal input. */
-#define FLIGHT_TURN_TICKS 110u
+/* The original's carrier position (-$5c6c): the elevator, where a new plane
+ * starts. Gear comes down within FLIGHT_GEAR_RANGE of it, and the four
+ * arresting cables lie at +70, +126, +182, +238 (0xb92e). */
+#define FLIGHT_CARRIER_X 7032u
+#define FLIGHT_GEAR_RANGE 1280u
+#define FLIGHT_CABLE_FIRST 70u
+#define FLIGHT_CABLE_SPACING 56u
+#define FLIGHT_CABLE_REACH 8u
+#define FLIGHT_HOOK 24u
+/* The original runs its logic once per 4 PAL VBlanks (12.5 Hz): one tick is
+ * 12 steps of the port's 150 Hz simulation clock. */
+#define FLIGHT_TICK_STEPS 12u
+
+/* Modes (the original's player mode in brackets). */
+#define FLIGHT_GROUND 0   /* on deck: taxi, takeoff roll [1] */
+#define FLIGHT_AIRBORNE 1 /* [0] */
+#define FLIGHT_ARREST 2   /* caught by a cable, braking to a stop [7] */
+#define FLIGHT_ON_DECK(f) ((f)->mode != FLIGHT_AIRBORNE)
 
 #define FLIGHT_UP 1
 #define FLIGHT_RIGHT 2
@@ -50,22 +56,37 @@ typedef uint32_t FlightVertical;
 typedef uint16_t FlightVertical;
 #endif
 
-/* Positions are unsigned Q8 pixels. Velocities are signed Q8 pixels/tick.
- * One simulation tick is 1/150 second, independent of the video standard. */
+/* Positions are unsigned Q8 pixels. Velocities are signed Q8 pixels/step.
+ * One simulation step is 1/150 second, independent of the video standard. */
 typedef struct FlightState {
     uint16_t x;
     FlightVertical y;
     int16_t vx, vy;
-    uint8_t frame; /* 0 climb, 1 level, 2 dive */
+    uint8_t frame; /* legacy: 0 climb, 1 level, 2 dive. P1: pitch pose 0..9 (4 level) */
     uint8_t facing_left;
 #ifdef WINGS_P1_FLIGHT
-    uint8_t mode, turn_ticks, target_left, ground_tick;
+    /* The original's flight variables (docs/research/amiga-fuel-oil.md),
+     * in its units: speed 0..1400 (100 = 1 px per tick), angles in
+     * hundredths of a degree. */
+    uint8_t mode;
+    uint8_t turn;       /* turn frame: 0..25 in the air, 0..6 on deck (-$5bf0) */
+    uint8_t turn_clock; /* ticks to the next air-turn frame (-$555e) */
+    uint8_t step;       /* simulation step within the original tick */
+    uint8_t landing;    /* UP alone facing left: the stall flare (-$5554) */
+    uint8_t fast_roll;  /* on deck above speed 600 without UP: tail up (-$5562) */
+    uint8_t throttle;   /* pushing the way the plane flies (-$3216) */
+    int8_t xrem, yrem;  /* steps of this tick that move one extra Q8 unit */
+    int16_t speed;      /* -$5bea */
+    int16_t climb;      /* commanded climb angle (-$5bfc) */
+    int16_t path;       /* flight path angle, lags the climb (-$555c) */
+    int16_t cancel;     /* small-climb correction (-$5bf6) */
+    int16_t boost;      /* acceleration counter (-$3214) */
 #endif
 } FlightState;
 
 #ifdef WINGS_P1_FLIGHT
-/* Gear is automatic: ground support or a low, inbound carrier approach.
- * This is presentation eligibility, not hook capture or landing collision. */
+/* Gear: always on deck; in the air within FLIGHT_GEAR_RANGE of the carrier,
+ * in either direction (0xb45a). */
 uint8_t Flight_GearDown(const FlightState* state, uint16_t world);
 #endif
 

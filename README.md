@@ -13,14 +13,15 @@ Enter is reserved for menus/text. [P0 controls and state](docs/p0-foundation.md)
 are implemented; the release starts at rank selection.
 [P1 flight and takeoff](docs/p1-flight.md) now starts with the
 [carrier elevator](docs/carrier-elevator.md) raising the plane from inside the ship.
-Once on deck, hold
-Left to roll, then Up+Left near the bow to climb. Neutral maintains 3/4 throttle
-in flight. Hold Up alone for a nose-up, gently descending stall; release Up to
-level out. Cannon shots follow the nose angle and heading. A Down tap latches a nose-down dive until Up or horizontal steering
-changes it. Left/Right also taxi on deck, with an animated turn
-on reversal and temporary stops at both deck ends. Stop over the platform and
-press either logical Fire button to enter the hold, reload and emerge with the
-same heading. The
+The [flight model is rebuilt from the original](docs/flight-model.md):
+hold Left to roll along the deck and off the bow, then Up+Left to climb away.
+In flight, a direction with Up or Down steps through the climb and dive
+angles; a dive holds until you pull out; pushing the other way flies the
+original's turn. To land, approach from the right low over the sea and hold
+Up alone (the stall flare) onto the deck, and keep holding it so the hook
+catches a cable. Left/Right also taxi on deck and turn the plane round at
+rest. Stop over the platform and press either logical Fire button to enter the
+hold, reload and emerge with the same heading. The
 [original handoff](CODEX_HANDOFF_PROMPT.md) is historical research context.
 
 The project follows MSXgl's [alternative file layout](https://aoineko.org/msxgl/index.php?title=Alternative_file_layout),

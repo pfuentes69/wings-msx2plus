@@ -10,15 +10,17 @@ step in which the plane is below deck height:
 
 | Situation | Result | Original |
 | --- | --- | --- |
-| Touching the deck from above (at most 4 px in), more than 16 px from both ends, **stalling while facing left** | **Landed**: on deck, facing left; the ground model brakes it to a stop | 0xba80 → mode 1 |
-| The same deck contact any other way (powered, diving, facing right) | **Bounce**: vertical speed reversed, 6 px lift | 0xba80 |
-| Deck ends, below deck level (the hull), or any contact with a dead engine | **Crash** | 0xba80 → mode 4 |
+| Touching the deck from above (at most 4 px in), more than 16 px from both ends, **in the stall flare (Up alone) facing left, not turning** | **Landed**: on deck at flying speed. Keep Up held and the hook catches a cable, which stops the plane ([flight-model.md](flight-model.md#landing)) | 0xba80 → mode 1, 0xb92e → mode 7 |
+| The same deck contact any other way (powered, diving, facing right, turning) | **Bounce**: climb reversed, 6 px lift | 0xba80 |
+| Deck ends (flying in), below deck level (the hull), or any contact with a dead engine | **Crash** | 0xba80 → mode 4 |
+| Leaving over a deck end, at most 4 px below the deck | No contact (MSX choice: a takeoff below flying speed sinks a little) | |
 | Reaching the sea or an island | **Crash** | 0xc6de (sea) |
 | Resting exactly at deck height | No contact, so takeoff works | 0xb8c4 |
 
 As the manual says, you approach from the right toward the carrier and stall
-onto the deck. The original has no cable geometry in its capture rule, so the
-four cables are scenery.
+onto the deck. The touchdown rule has no cable geometry. The cables come into
+play afterwards: the hook catches one only while Up is held. The gear comes
+down in either direction, but a left-to-right touchdown always bounces.
 
 A crash holds the scene for one second while the original crash art plays
 at the plane: the sea splash `spl0`..`spl6` over water, and the explosion
@@ -45,11 +47,10 @@ in frames over the carrier.
 
 **Provisional:**
 
-- The arrest after touchdown uses the existing ground braking (5 units per
-  step). The original's mode-1 deceleration is not mapped.
 - One original altitude unit is taken as one pixel (altitude = 1200 − y).
-- After engine failure the plane noses down. The original hands the descent
-  to its crash routine; its arithmetic is not mapped yet.
+- After engine failure the plane noses down (forced Down input). The
+  original hands the descent to its crash routine; its arithmetic is not
+  mapped yet.
 - The crash art frame timing (spread evenly over the 1-second hold) is an
   MSX choice.
 
@@ -61,10 +62,11 @@ in frames over the carrier.
   tables, and earlier deck contact when the nose is up.
 - The P0 smoke run flies a closed-loop autopilot from the real flight state
   (`s_World`; `g_LastContact` records each contact):
-  1. Take off, turn, pass the carrier, turn back and stabilise at y 1150
-     over the deck.
-  2. Stall: it must land, facing left at deck height, and stop.
-  3. Taxi, releasing at the braking distance, and stop on the elevator
+  1. Take off, fly out low, turn, coast past the carrier, and turn onto final
+     just inside the map's right end, 5 px above deck contact.
+  2. Flare (Up alone): it must land facing left at deck height, catch a cable
+     and stop short of the elevator.
+  3. Taxi, cutting power at the braking distance, and stop on the elevator
      (7032 ± 6).
   4. Fire to go down to the hold (service menu), confirm, return to the
      deck and launch again.
@@ -75,4 +77,4 @@ in frames over the carrier.
      pixel-checked.
 - The oracle draws the plane in its on-deck pose from the dumped flight
   mode rather than from snapshot names.
-- 99 snapshots pass on NTSC and on PAL.
+- 89 snapshots pass on NTSC and 86 on PAL (PAL captures fewer intermediate deck-turn poses).

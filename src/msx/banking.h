@@ -17,6 +17,7 @@
 
 #define WINGS_SEGMENT_HUD 3     /* dashboard, weapons */
 #define WINGS_SEGMENT_SCENE 16  /* menu, ship, carrier elevator, engine, landing */
+#define WINGS_SEGMENT_FLIGHT 21 /* flight model */
 
 #if defined(WINGS_BANKED_CODE) && defined(__SDCC)
 #define WINGS_BANKED __banked
