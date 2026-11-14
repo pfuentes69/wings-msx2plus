@@ -14,15 +14,17 @@ from aircraft_scene import AircraftScene
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def vram_image(vram, palette, camera, page, heave=0):
+def vram_image(vram, palette, camera, page, heave=0, y=1200, scale=8):
     """A linear RGB3 preview reconstructed from VRAM, not a rendered raster check."""
     indices = bytearray(256 * 212)
     for row in range(212):
         for col in range(8, 256):
             ring = (col if row >= 172 else camera + col) % 256
-            source_row = (row-heave)&255 if row < 172 else row
+            source_row = vram_row(row, y, scale, heave) if row < 172 else row
             packed = vram[page * 32768 + source_row * 128 + ring // 2]
             indices[row * 256 + col] = packed & 15 if ring % 2 else packed >> 4
+            # The split shows the dashboard's solid top rows below the play area.
+            if split_line(y, scale, heave) < row < 172: indices[row * 256 + col] = 1
     image = Image.frombytes('P', (256, 212), bytes(indices))
     colors = bytes(channel * 255 // 7 for i in range(16)
                    for channel in ((palette[i * 2] >> 4) & 7, palette[i * 2 + 1] & 7, palette[i * 2] & 7))
@@ -96,6 +98,25 @@ def island_background(background, scale, island):
     return bytes(pixels)
 
 
+def pan_of(y, scale):
+    """The close-view pan (original 0x26e): above altitude 131 the scene
+    moves down with the plane, up to 55 px before the distant view."""
+    return max(0, 1200 - y - 131) if scale == 1 else 0
+
+
+def split_line(y, scale, heave):
+    """The last play line before the dashboard's dark top rows."""
+    return 169 if heave + (pan_of(y, scale) & 7) else 170
+
+
+def vram_row(row, y, scale, heave):
+    """The VRAM row a play-area screen row shows: the top s lines keep the
+    heave scroll, the rest add the fine pan (whole tile rows of pan are drawn
+    in VRAM)."""
+    scroll = heave + (pan_of(y, scale) & 7)
+    return (row - heave) % 256 if row < scroll else row - scroll
+
+
 def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True, smoke=(), score=0):
     # World x is a 16-bit ring read as signed; beyond the map the MSX draws a
     # column of open sea (map x 5000 near, far x 624 in the distant view).
@@ -104,7 +125,11 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
     sea = 5000 if scale == 1 else 624
     def source_x(wx):
         return wx if 0 <= wx < background_width else sea + (wx & 7)
-    pixels = [[background[row * background_width + source_x(camera + x)] for x in range(256)] for row in range(212)]
+    pan = pan_of(y, scale)
+    scroll = heave + (pan & 7)
+    def background_row(row):   # rows above the image are sky
+        return max(row, 0) * background_width
+    pixels = [[background[background_row(row - pan) + source_x(camera + x)] for x in range(256)] for row in range(212)]
     from convert_dashboard import compose, waves, pilot_frame, layout, PILOT_WIDTH
     # gauges: oil needle frame, fuel needle frame, lamp bits (1 oil, 2 fuel) as published.
     dashboard = compose(ammo=stock, weapon=weapon, lives=lives, oil=gauges[0], fuel=gauges[1],
@@ -115,12 +140,12 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             wx = camera + x
             if 6592 <= wx < 7368:
                 for row in range(172):
-                    pixels[row][x] = background[(row+40-heave)*background_width+source_x(wx)]
+                    pixels[row][x] = background[background_row(row+40-heave-pan)+source_x(wx)]
         ship = (ROOT/'assets_msx/ship/frames.indices').read_bytes()[ship_frame*1344:(ship_frame+1)*1344]
         for row in range(42):
             for col in range(32):
                 x = 6906 + col - camera
-                if 0 <= x < 256: pixels[46+heave+row][x] = ship[row*32+col]
+                if 0 <= x < 256: pixels[46+heave+pan+row][x] = ship[row*32+col]
         if crew_phase is not None:
             crew=(ROOT/'assets_msx/ship/crew.indices').read_bytes()
             for man,anchor in enumerate((6968,7344)):
@@ -129,7 +154,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
                 for row in range(14):
                     for col in range(22):
                         x=anchor-10+col-camera
-                        if 0<=x<256:pixels[116+heave+row][x]=patch[row*22+col]
+                        if 0<=x<256 and 116+row+pan<172:pixels[116+heave+pan+row][x]=patch[row*22+col]
         if elevator_depth is not None:
             from unpack_shapes import read_ppkc,unpack_rpck
             from decode_shapes import decode_record
@@ -137,21 +162,21 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             platform,_=decode_record(records['elev'],plane_constants=True)
             mapping=json.loads((ROOT/'assets_msx/terrain/manifest.json').read_text())['source_to_msx_index']
             for row in range(13):
-                dy=129+elevator_depth+row+heave
-                if dy>=142+heave:continue  # the well's lower edge (CARRIER_WELL_BOTTOM)
+                dy=129+elevator_depth+row+heave+pan
+                if dy>=min(142+pan,172)+heave:continue  # the well's lower edge (CARRIER_WELL_BOTTOM)
                 for col in range(64):
                     x=7004+col-camera;v=platform[row*64+col]
                     if v and 0<=x<256:pixels[dy][x]=mapping[str(v)]
         water = waves()[wave]
         water_bands = json.loads((ROOT / 'assets_src/missions/a-scene.json').read_text())['water_bands']
-        for x in range(256):
+        for x in range(256 if pan < 8 else 0):   # panned a tile row: no waves
             wx = camera + x
             for band in water_bands:
                 # Bands reaching either end of the map run on over the sea.
                 if not (band['start'] <= wx or band['start'] == 0) or not (wx < band['end'] or band['end'] >= 7608): continue
                 for row in range(band['row'], band['row'] + band['height']):
                     color = water[row * 96 + wx % 96]
-                    if color: pixels[161 + row][x] = color
+                    if color and 161 + row + pan < 172: pixels[161 + row + pan][x] = color
     cockpit = pilot_frame(pilot // 8, pilot % 8)
     hud = layout()
     for row in range(24):
@@ -176,10 +201,10 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             bank = record['data_offset'] // 8192
             data = (scene.folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
             packed = data[record['data_offset'] % 8192:record['data_offset'] % 8192 + record['bytes']]
-            vram_limit = min(142 if elevator_active else 172, 159)
+            vram_limit = min(142 if elevator_active else 172, 159 if pan < 8 else 172)
             for yy in range(record['height']):
                 r = row + record['dy'] + yy
-                if not 0 <= r - heave < vram_limit or r >= 172: continue
+                if not 0 <= r - scroll < vram_limit or r >= 172: continue
                 for xx in range(record['width']):
                     wx = sx_ + record['dx'] + xx
                     if not camera + 8 <= wx < camera + 256: continue
@@ -250,7 +275,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             for wx in range(max(start, left), min(end, right)):
                 pixels[row][wx - camera] = 13
     def mark(x,y,w,h,color):
-        for yy in range(max(0,y),min(171,y+h)):
+        for yy in range(max(0,y),min(171+scroll,172,y+h)):   # VRAM rows < 171
             for xx in range(max(camera+8,x),min(camera+256,x+w)):
                 pixels[yy][xx-camera] = color
     for p in projectiles:
@@ -258,15 +283,15 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
         if not kind: continue
         x,y=p['x']//4,p['y']//4
         if scale == 8: x//=8; y=161-((1200-y)>>3)
-        else: y=y-1039
+        else: y=y-1039+pan
         if scale == 8: mark(x,y,1,2 if kind>=3 else 1,11)
         elif kind == 2:
             from convert_dashboard import bomb_frames
-            pixels,pivots=bomb_frames()
+            bomb_art,pivots=bomb_frames()
             # The original tumble: bom3 moving left, bom9 right, a frame per
             # 4 weapon ticks of age (COMBAT_BOMB_LIFE 255).
             pose=((3 if p['vx']<0 else 9)+((255-p['life'])>>2))%12
-            source=pixels[pose*48:(pose+1)*48]   # 8 x 6 cells
+            source=bomb_art[pose*48:(pose+1)*48]   # 8 x 6 cells
             px,py=pivots[pose]
             for row in range(6):
                 for col in range(8):
@@ -276,7 +301,6 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             mark(x-3,y,7,1,5 if kind==4 else 14)
             mark(x,y-3,1,7,5 if kind==4 else 14)
             mark(x-1,y-1,3,3,11)
-    pixels[171] = [1]*256
     return pixels
 
 
@@ -455,16 +479,17 @@ def main():
                     packed = bytes((pixels[x]<<4)|pixels[x+1] for x in range(0,16,2))
                     assert vram[address:address+8] == packed, (name,'reduced aircraft atlas',pose['name'])
             expected = expected_pixels(scene, frame, world, y, camera, (folder / 'far.indices').read_bytes() if scale == 8 else background, terrain['far_width'] if scale == 8 else terrain['width'], scale, wave, pilot, heave, ship_frame, projectiles, stock, weapon, lives, flash=snapshots[name].get('flash', 0))
-            assert regs[0] & 16 and regs[19] == (169-heave if heave else 170), (name, 'dashboard split IRQ')
+            fine = pan_of(y, scale) & 7
+            assert regs[0] & 16 and regs[19] in ({169-heave-fine if heave+fine else 170, 174} | ({fine} if fine else set())), (name, 'dashboard split IRQ', regs[19])
             for row in range(212):
                 for col in range(8, 256):
                     ring = (col if row >= 172 else camera + col) % 256
-                    source_row = (row-heave)&255 if row < 172 else row
+                    source_row = vram_row(row, y, scale, heave) if row < 172 else row
                     address = pair * 32768 + source_row * 128 + (ring % 256) // 2
                     actual = vram[address] & 15 if ring % 2 else vram[address] >> 4
                     assert actual == expected[row][col], (name, 'VRAM', col, row, actual, expected[row][col])
             if args.headless:
-                vram_image(vram, scene.palette, camera, pair, heave).save(output / f'{name}-vram.png')
+                vram_image(vram, scene.palette, camera, pair, heave, y, scale).save(output / f'{name}-vram.png')
                 continue
             image = Image.open(output / f'{name}.png').convert('RGB')
             assert image.size == (320, 240), (name, image.size)

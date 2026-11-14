@@ -89,6 +89,13 @@ proc publishing {} {
         if {[value g_DisplaySmoke]<$::wanted_smoke} {return}
         unset ::wanted_smoke
     }
+    if {[info exists ::wanted_y]} {
+        # A published close-view altitude band (the close-view pan).
+        lassign $::wanted_y low high
+        set yy [word g_DisplayY]
+        if {[value g_DisplayScale]!=1 || $yy<$low || $yy>$high} {return}
+        unset ::wanted_y
+    }
     if {[info exists ::wanted_rope]} {
         # Mid-arrest, so the rope is well stretched.
         if {[value g_DisplayRope]==255 || [speed]>700} {return}
@@ -143,7 +150,18 @@ proc rendering {} {
         set ::pixels [debug read_block VRAM $::visible_base 27136]
     } elseif {[info exists ::pixels]} {
         set ::last_render [expr {1000*([machine_info time]-$::render_start)}]
-        require [expr {$::pixels eq [debug read_block VRAM $::visible_base 27136]}] "Visible page changed during redraw"
+        set now [debug read_block VRAM $::visible_base 27136]
+        if {$::pixels ne $now} {
+            set rows {}
+            for {set r 0} {$r<212} {incr r} {
+                if {[string range $::pixels [expr {$r*128}] [expr {$r*128+127}]] ne [string range $now [expr {$r*128}] [expr {$r*128+127}]]} {lappend rows $r}
+            }
+            set r [lindex $rows 0];set diff {}
+            binary scan [string range $::pixels [expr {$r*128}] [expr {$r*128+127}]] cu* before
+            binary scan [string range $now [expr {$r*128}] [expr {$r*128+127}]] cu* after
+            for {set i 0} {$i<128} {incr i} {if {[lindex $before $i]!=[lindex $after $i]} {lappend diff "x[expr {$i*2}]:[lindex $before $i]>[lindex $after $i]"}}
+            error "Visible page changed during redraw: rows [lrange $rows 0 20] page=[value g_DisplayPage] render=[value g_RenderPage] y=[word g_DisplayY] world=[word g_DisplayWorld] camera=[word g_DisplayCamera] diff=[lrange $diff 0 30]"
+        }
         unset ::pixels
     }
 }
@@ -558,7 +576,21 @@ proc island_hit {} {
     # The bomb bursts well behind the plane: turn back over the hut and
     # capture it wrecked and smoking.
     pilot 128 1060
-    wait_for {![world_byte 11] && abs([world_x]-2400)<60} {set ::wanted_smoke 1;snap island_bombed {wait_for {[world_x]>5000} approach "fly back from the island" 90}} "turn back over the hut" 20
+    wait_for {![world_byte 11] && abs([world_x]-2400)<60} {set ::wanted_smoke 1;snap island_bombed {wait_for {[world_x]>5000} pan_climb "fly back from the island" 90}} "turn back over the hut" 20
+}
+# The close-view pan (original 0x26e): between altitudes 131 and 186 the
+# scene moves down with the plane. Climb into the distant view, then come
+# down through the band over the carrier, dropping a bomb on the way.
+proc pan_climb {} {
+    pilot 128 990
+    wait_for {[world_x]>6520 && [world_y]<1010} pan_descend "climb above the close view" 30
+}
+proc pan_descend {} {
+    pilot 128 1062
+    keymatrixdown 4 8;after time 0.05 {keymatrixup 4 8}
+    # y 1014..1024: pan 45..55 (5..6 tile rows plus a fine scroll).
+    set ::wanted_y {1014 1024}
+    snap pan_high {set ::wanted_y {1040 1052};snap pan_mid approach}
 }
 proc approach {} {
     # Gear comes down within 1280 px of the carrier, in either direction.

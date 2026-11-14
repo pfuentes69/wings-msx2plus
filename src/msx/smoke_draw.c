@@ -138,7 +138,7 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, u8 heave, i16 limit) WIN
     u8 i, k, frame, drawn = 0;
     s_Page = page;
     s_Left = (i16)camera + 8; s_Right = (i16)camera + 256;
-    s_Limit = limit > WAVE_TOP ? WAVE_TOP : limit;
+    s_Limit = limit > WAVE_TOP && !g_PanRows ? WAVE_TOP : limit;
     for (i = 0; i < SMOKE_COUNT; ++i, ++p)
     {
         if (!p->stage) continue;

@@ -1,6 +1,7 @@
 #include "weapons.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_HUD)
 #include "dashboard.h"
+extern u8 g_PanRows;   /* terrain_renderer.h */
 #include "vdp.h"
 #include "vdp_inl.h"
 
@@ -81,7 +82,7 @@ void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* stat
         x = p->x >> 2;
         y = p->y >> 2;
         if (far) { x >>= 3; y = 161-((1200-y)>>3); }
-        else y = y-1039-heave;
+        else y = y-1039-heave+g_PanRows;
         // Back up only the affected pixels (plus byte alignment). Small
         // rounds must not pay for a full impact cross on every page restore.
         if (far) { left=x&~1; right=left+2; top=y; bottom=y+(kind>=COMBAT_IMPACT ? 2 : 1); }

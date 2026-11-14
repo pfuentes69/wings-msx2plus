@@ -5,6 +5,7 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_HUD)
 #include "scenery_load.h"
 #include "../generated/dashboard.h"
 #include "../generated/mission_surfaces.h"
+extern u8 g_PanRows;   /* terrain_renderer.h */
 
 static u8 s_Row[128], s_Count, s_Value, s_Pilot[2];
 static u8 s_WaveBackdropValid[2], s_WaveHeave[2];
@@ -186,6 +187,9 @@ void Dashboard_Waves(u8 page, u16 camera, u8 frame, u8 heave) WINGS_BANKED
     int16_t visible_left = (int16_t)((camera + 8) & 65534u);
     int16_t visible_right = (int16_t)((camera + 257) & 65534u);
     s_WaveHeave[page] = heave;
+    /* Panned a tile row or more, the wave strip (rows 161..171) is below
+     * the view (docs/altitude-view.md). */
+    if (g_PanRows) { s_WaveBackdropValid[page] = 0; return; }
     if (heave)
         VDP_CommandHMMM(0, (u16)page * 256 + 159, 0, g_WaveBackdropY[page], 256, 4);
     else

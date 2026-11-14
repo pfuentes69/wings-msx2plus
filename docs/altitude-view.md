@@ -40,8 +40,8 @@ The workload currently needs eight VBlanks per presentation: 7.5 fps NTSC /
 The former six-VBlank cadence missed an NTSC deadline at a shoreline crossing.
 At PAL's 24 steps per presentation, the 12-step wave clock samples six of the
 twelve phases; all twelve original frames remain loaded. View changes still
-rebuild hidden pages and pause simulation. Continuous close-view vertical
-scenery panning and faster rendering remain planned work.
+rebuild hidden pages and pause simulation. Faster rendering remains planned
+work; the close-view pan is described below.
 
 ![Distant sea and carrier](mission/scenery-distant.png)
 
@@ -70,3 +70,48 @@ hashes: [release NTSC](sand/release-ntsc.json), [release PAL](sand/release-pal.j
 The image below is a VRAM reconstruction, not a raster or hardware capture.
 
 ![Continuous sand beneath distant palms](sand/distant-island-vram.png)
+
+## Close-view pan
+
+The original's render loop (CODE 0x26e) places the close view's baseline
+at 151 + max(0, altitude − 131). Above altitude 131 the whole scene moves
+down with the plane, which stays at its pinned row. The distant view takes
+over above altitude 186 (0xc966 sets the view to 1 above 0xba). Between the
+two, the ground slides out of the bottom of the view and back as the plane
+climbs and descends. The port used to pin the plane without moving the
+scene, so in that band the plane seemed not to descend and bombs appeared
+above it.
+
+The port now pans by p = altitude − 131 (0..55) in two parts.
+
+- **Whole tile rows, in software (`g_PanRows` = 8 × (p / 8)).** Every
+  scenery layer is drawn that many rows lower. The terrain shifts each
+  decoded column down by p / 8 sky tiles before the tile-cache diff, and
+  the column cache key carries the shift in its top 3 bits. The other
+  layers add `g_PanRows` to their rows: the ship, signalmen, elevator
+  and well edge (clipped at row 172), bombs and smoke. Overlay rows
+  marked for repaint move with it too. Waves are skipped once the strip
+  (rows 161..171) is a tile row or more below the view. A change of p / 8
+  rebuilds that page like a view change, at most 7 times across the band.
+- **The last 0..7 px, in hardware (`s_RenderFine`).** R23 already scrolls
+  the scene by the carrier's heave. Wrapped top rows would show VRAM rows
+  248..255, which hold cached wave frames, so the top lines keep the
+  heave-only offset (they show sky). A line interrupt at line s = heave +
+  fine (R19 = fine, counted in the top offset) switches to the full offset
+  (`pan_split$` in `VDP_HBlankHandler`). The plane, drawn at its screen
+  row, subtracts the full scroll.
+
+The bottom split no longer relies on a dark guard line drawn into the play
+area. That line moved with the scroll and left stale rows when the scroll
+shrank, and repainting them cost about 40 ms a frame. Instead, the first
+dashboard interrupt sets R23 = +2: the last play lines then show the
+dashboard's top rows, VRAM 172..175, which are solid colour 1. The second
+interrupt, at line 172, restores R23 = 0 and finishes the palette. The
+split is two-stage in every view now.
+
+Verification: `tools/p0_smoke.tcl` climbs into the distant view after the
+island run. It comes down through the band over the carrier with a bomb
+falling, and captures `pan_high` (pan 45..55) and `pan_mid` (17..29). The
+cannon tests also fly in the band (pans 7..38). `verify_world_flight.pan_of`,
+`vram_row` and `split_line` model the pan, the two scroll regions and the
+split in the oracle. NTSC and PAL run with no missed frame deadline.

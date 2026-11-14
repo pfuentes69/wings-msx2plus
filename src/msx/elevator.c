@@ -31,10 +31,13 @@ static void Copy(u8 page,u16 camera,u8 index,u16 origin,u8 y,u8 height,u8 width)
     if (left<origin) left=origin;
     if (right>origin+width) right=origin+width;
     if (left>=right) return;
-    if (index)
+    /* The close-view pan moves the carrier down; the view ends at row 172. */
+    y+=g_PanRows;
     {
-        if (y>=CARRIER_WELL_BOTTOM) return;
-        if (y+height>CARRIER_WELL_BOTTOM) height=CARRIER_WELL_BOTTOM-y;
+        u8 bottom=index ? CARRIER_WELL_BOTTOM+g_PanRows : 172;
+        if (bottom>172) bottom=172;
+        if (y>=bottom) return;
+        if (y+height>bottom) height=bottom-y;
     }
     sx=g_ElevatorX[index]+left-origin;
     if (index) VDP_CommandLMMM(sx,g_ElevatorY[index],left&255,(u16)page*256+y,right-left,height,VDP_OP_TIMP);

@@ -84,7 +84,7 @@ void Ship_Draw(u8 page, u16 camera) WINGS_BANKED
         {
             part = width; if (part > 256 - ring) part = 256 - ring;
             VDP_CommandHMMM(sx, g_ShipY[index], ring,
-                (u16)page * 256 + 46 + (piece >> 1) * 14, part, 14);
+                (u16)page * 256 + 46 + g_PanRows + (piece >> 1) * 14, part, 14);
             sx += part; width -= part; ring = 0;
         }
     }
@@ -96,7 +96,7 @@ void Ship_Draw(u8 page, u16 camera) WINGS_BANKED
 static u16 s_CrewCamera[2] = {65535u, 65535u};
 void Ship_DrawCrew(u8 page, u16 camera, u8 cleared) WINGS_BANKED
 {
-    u8 piece, index, mark;
+    u8 piece, index, mark, y, height;
     u16 origin, left, right, sx, ring, width, part, column;
     /* Terrain columns are only redrawn when the camera moves or the page is
      * rebuilt, so the overlay rows need re-marking only then (per page). */
@@ -115,10 +115,14 @@ void Ship_DrawCrew(u8 page, u16 camera, u8 cleared) WINGS_BANKED
         if (piece<2 && g_Carrier.stage!=CARRIER_DECK) index=CREW_IDLE_PIECE+(piece&1);
         sx = g_CrewX[index] + left-origin;
         ring=left&255; width=right-left;
+        /* Panned down, the lower figure rows leave the view at row 172. */
+        y=116+g_PanRows+(piece&1)*7; height=7;
+        if (y>=172) continue;
+        if (y+height>172) height=172-y;
         while (width)
         {
             part=width; if (ring+part>256) part=256-ring;
-            VDP_CommandHMMM(sx,g_CrewY[index],ring,(u16)page*256+116+(piece&1)*7,part,7);
+            VDP_CommandHMMM(sx,g_CrewY[index],ring,(u16)page*256+y,part,height);
             width-=part; sx+=part; ring=0;
         }
     }

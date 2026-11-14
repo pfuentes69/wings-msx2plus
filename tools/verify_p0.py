@@ -10,7 +10,7 @@ import struct
 import statistics
 import subprocess
 from PIL import Image
-from verify_world_flight import vram_image, expected_pixels, gun_flash_shape, island_background
+from verify_world_flight import vram_image, expected_pixels, gun_flash_shape, island_background, vram_row
 from convert_dashboard import compose, layout, PILOT_WIDTH
 from aircraft_scene import AircraftScene
 
@@ -93,7 +93,7 @@ def main():
             for row in range(212):
                 for col in range(8,256):
                     ring=col if row>=172 else (int(camera)+col)%256
-                    sy=row if row>=172 else (row-int(heave))%256
+                    sy=row if row>=172 else vram_row(row,int(y),scale,int(heave))
                     value=vram[page*32768+sy*128+ring//2]
                     value=(value>>(0 if ring%2 else 4))&15
                     assert value==expected[row][col],(name,'composite',col,row,value,expected[row][col])
@@ -113,7 +113,7 @@ def main():
                 assert value==hud[row*256+col],(name,'dashboard',col,172+row,value,hud[row*256+col])
         palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
         # Host reconstruction verifies readable source pixels; it is not raster proof.
-        preview=vram_image(vram,palette,int(camera),page,int(heave))
+        preview=vram_image(vram,palette,int(camera),page,int(heave),int(y),scale)
         preview.save(out/f'{name}-vram.png')
         shots,secondary,impacts=struct.unpack_from('<HHH',combat,152)
         snapshots[name]=dict(phase=game[0],rank=game[1],lives=game[2],weapon=game[3],stock=game[4],invert=game[5],
@@ -130,7 +130,7 @@ def main():
     required|={'taxi_right_stop','taxi_left_stop'}
     required|={'engine_low_fuel','engine_smoke','engine_failed','engine_next_plane','game_over'}
     required|={'landed','landed_service','deck_bounce','sea_splash','sea_crash_next','engine_splash','arrest'}
-    required|={'island_bombed'}
+    required|={'island_bombed','pan_high','pan_mid'}
     assert required<=snapshots.keys(),required-snapshots.keys()
     assert (out/'paused.combat').read_bytes()==(out/'pause_wait.combat').read_bytes(),'Pause advanced weapons'
     for key in ('world','y','pose','wave','heave','ship','crew','depth','stage'):
@@ -163,6 +163,12 @@ def main():
     assert island[3]==1 and island[0]==0 and island[1]==5,('wrecked hut',list(island[:8]))
     assert score==150*sum(island[8*i+3] for i in range(2))+200*sum(island[64+8*i]==0 for i in range(2)),('island score',score)
     assert snapshots['island_bombed']['smoke']>=1
+    # The close-view pan, with the carrier in view and a bomb falling.
+    for name,low,high in (('pan_high',45,55),('pan_mid',17,29)):
+        snapshot=snapshots[name]
+        assert snapshot['scale']==1 and low<=1200-snapshot['y']-131<=high,(name,snapshot['y'])
+        assert snapshot['camera']+256>6592 and snapshot['camera']<7368,(name,'carrier not in view',snapshot['camera'])
+    assert any(p['kind'] in (2,3,4) for p in snapshots['pan_mid']['projectiles'][2:]),'no bomb in the panned view'
     for heading in ('left','right'):
         for attitude in ('climb','level','dive'):
             snapshot=snapshots[f'cannon_{attitude}_{heading}']

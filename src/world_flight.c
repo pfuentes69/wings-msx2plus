@@ -76,6 +76,14 @@ volatile u8 g_DisplayGauges[3] = {16, 22, 0};
 #include "msx/scenery_load.h"
 
 volatile u8 g_ScrollFine, g_ScrollCoarse, g_VerticalOffset, g_LineSplit;
+/* Close-view pan (docs/altitude-view.md): above altitude 131 the original
+ * scrolls the scene down with the plane. Whole tile rows are drawn lower in
+ * software (g_PanRows); the last 0..7 px are a hardware scroll from line s =
+ * heave + fine down, the top lines keeping the heave-only offset (sky).
+ * g_FirstSplit/g_FirstState: the first line interrupt and the HBlank state
+ * the VBlank ISR arms (2: top split pending). */
+volatile u8 g_PlayOffset, g_FirstSplit, g_FirstState;
+static u8 s_ViewKey, s_RenderFine;   /* view: 8 distant, else pan rows / 8 */
 static u8 s_RenderHeave;
 /* Far view x: an arithmetic shift, so the sea left of the map (negative x)
  * stays continuous with the map. */
@@ -136,9 +144,9 @@ void VDP_InterruptHandler(void)
 {
     // The CRT saves all registers; direct writes leave interrupts disabled.
     __asm
-        xor a
+        ld a, (_g_FirstState)
         ld (_g_DashboardSplit), a
-        inc a
+        ld a, #1
         out (0x99), a
         ld a, #0x90
         out (0x99), a
@@ -186,7 +194,7 @@ void VDP_InterruptHandler(void)
         out (0x99), a
         ld a, #0x97
         out (0x99), a
-        ld a, (_g_LineSplit)
+        ld a, (_g_FirstSplit)
         out (0x99), a
         ld a, #0x93
         out (0x99), a
@@ -200,9 +208,14 @@ void VDP_HBlankHandler(void) __naked
 {
     __asm
         ld a, (_g_DashboardSplit)
+        cp #2
+        jr z, pan_split$
         or a
         jr nz, dashboard_low_palette$
-        xor a
+        // The last play lines show the dashboard's top rows (VRAM 172..175,
+        // solid colour 1) through a +2 scroll: a dark separator that is
+        // never drawn into the play area, whatever its scroll.
+        ld a, #2
         out (0x99), a
         ld a, #0x97
         out (0x99), a
@@ -214,18 +227,15 @@ void VDP_HBlankHandler(void) __naked
         out (0x99), a
         ld a, #0x9a
         out (0x99), a
-        ld a, (_g_LineSplit)
-        cp #170
-        jr z, dashboard_palette$
         ld a, #1
         ld (_g_DashboardSplit), a
-        // Leave time to return from this ISR before requesting the next.
+        // Line 172 in the +2 scroll; leave time to return before it.
         ld a, #174
         out (0x99), a
         ld a, #0x93
         out (0x99), a
-        // Ocean pixels use only 0..5: stage the upper dashboard colors
-        // during early scroll restoration, leaving a short final transfer.
+        // Stage the upper dashboard colors now, leaving a short final
+        // transfer before the icons at 183.
         ld a, #6
         out (0x99), a
         ld a, #0x90
@@ -253,51 +263,32 @@ void VDP_HBlankHandler(void) __naked
         outi
         outi
         ret
+    pan_split$:
+        // Top lines done: scroll the play area by heave + fine pan, and
+        // request the dashboard split (counted in the new scroll).
+        xor a
+        ld (_g_DashboardSplit), a
+        ld a, (_g_PlayOffset)
+        out (0x99), a
+        ld a, #0x97
+        out (0x99), a
+        ld a, (_g_LineSplit)
+        out (0x99), a
+        ld a, #0x93
+        out (0x99), a
+        ret
     dashboard_low_palette$:
+        // Still on the solid top rows: back to the dashboard's own scroll.
+        xor a
+        out (0x99), a
+        ld a, #0x97
+        out (0x99), a
         ld a, #1
         out (0x99), a
         ld a, #0x90
         out (0x99), a
         ld hl, #_g_BottomPalette+2
         ld c, #0x9a
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        WINGS_LINE_ISR_TAIL
-    dashboard_palette$:
-        ld a, #1
-        out (0x99), a
-        ld a, #0x90
-        out (0x99), a
-        ld hl, #_g_BottomPalette+2
-        ld c, #0x9a
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
-        outi
         outi
         outi
         outi
@@ -310,6 +301,20 @@ void VDP_HBlankHandler(void) __naked
         outi
         WINGS_LINE_ISR_TAIL
     __endasm;
+}
+/* The vertical scroll and line splits for the page being published. */
+static void PublishScroll(void)
+{
+    u8 scroll = s_RenderHeave + s_RenderFine;
+    g_VerticalOffset = 0 - s_RenderHeave;
+    g_PlayOffset = 0 - scroll;
+    g_LineSplit = scroll ? 169 - scroll : 170;
+    /* R19 counts scrolled lines: line s with the top region's -heave. */
+    g_FirstSplit = s_RenderFine ? s_RenderFine : g_LineSplit;
+    g_FirstState = s_RenderFine ? 2 : 0;
+    g_DashboardSplit = g_FirstState;
+    VDP_SetVerticalOffset(g_VerticalOffset);
+    VDP_SetHBlankLine(g_FirstSplit);
 }
 static void WaitVBlank(void)
 {
@@ -329,6 +334,8 @@ static void DrawView(u16 camera, u8 page)
     camera &= 65528u;
     do { DrawColumn(camera, page); camera += 8; } while (--count);
 }
+
+
 
 // Save/restore the clean, byte-aligned footprint, splitting at the page seam.
 // Backups live at x=0,y=212 in each page, never displayed.
@@ -517,7 +524,7 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     }
     else
 #endif
-    dy -= s_RenderHeave;
+    dy -= s_RenderHeave + s_RenderFine;
 #ifdef WINGS_P1_FLIGHT
     if (g_Carrier.stage != CARRIER_DECK) limit = CARRIER_WELL_BOTTOM;
 #endif
@@ -583,7 +590,8 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
 {
     u16 previous, next;
     g_RenderPage = page;
-    g_ViewChange = s_PageScale[page] != g_TerrainFar;
+    g_ViewChange = s_PageScale[page] != s_ViewKey;
+    g_PanRows = s_ViewKey == 8 ? 0 : s_ViewKey << 3;
     g_Rendering = 1;
     if (g_ViewChange)
     {
@@ -592,7 +600,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
         Terrain_InitPage(page);
         DrawView(camera, page);
         s_Camera[page] = camera;
-        s_PageScale[page] = g_TerrainFar;
+        s_PageScale[page] = s_ViewKey;
     }
     Weapons_Restore(page, g_ViewChange);
 #ifdef WINGS_P1_FLIGHT
@@ -652,7 +660,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
      * top rows; the smoke follows it down by the same amount. */
     Smoke_Draw(page, camera, g_TerrainFar,
                !g_TerrainFar && WINGS_FLIGHT_MAX_Y - y > 131 ? (int16_t)(WINGS_FLIGHT_MAX_Y - y) - 131 : 0,
-               s_RenderHeave, g_Carrier.stage != CARRIER_DECK ? CARRIER_WELL_BOTTOM : 172);
+               s_RenderHeave + s_RenderFine, g_Carrier.stage != CARRIER_DECK ? CARRIER_WELL_BOTTOM : 172);
     s_RenderSmokePage = page;
 #endif
     DrawAircraft(page, frame, world, y, camera);
@@ -672,10 +680,6 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
                      0
 #endif
                      ); /* now holds what this page shows */
-    // A uniform guard line lets the raster reset settle before the panel.
-    // Both old and new vertical offsets read the same dark separator pixel.
-    VDP_CommandHMMV(0, (u16)page * 256 + 171 - s_RenderHeave,
-                    256, s_RenderHeave + 1, 0x11);
     {
         u16 ahead = s_Aircraft.facing_left ? world - 128 : world + 128;
         u16 altitude = WINGS_FLIGHT_MAX_Y - y;
@@ -857,6 +861,7 @@ void main(void)
     Weapons_Init();
     g_TerrainFar = g_ViewChange = s_PageScale[0] = s_PageScale[1] = 0;
     g_VerticalOffset = s_RenderHeave = 0; g_LineSplit = 170;
+    g_PlayOffset = g_FirstState = s_RenderFine = s_ViewKey = g_PanRows = 0; g_FirstSplit = 170;
     g_DisplayPage = 0;
     s_Valid[0] = s_Valid[1] = 0;
     World_Reset(&s_World);
@@ -1083,6 +1088,9 @@ advance_clocks:
 #endif
         g_ViewChange = 0;
         s_RenderHeave = !g_TerrainFar && (u16)(camera + 256) > 6592 && camera < 7368 ? g_ShipHeave : 0;
+        { int16_t altitude = (int16_t)(WINGS_FLIGHT_MAX_Y - y);
+          u8 pan = !g_TerrainFar && altitude > 131 ? (u8)(altitude - 131) : 0;  /* original 0x26e */
+          s_ViewKey = g_TerrainFar ? 8 : pan >> 3; s_RenderFine = pan & 7; }
 #ifdef WINGS_P1_FLIGHT
         s_CarrierView = !g_TerrainFar && (u16)(camera + 256) > 6592 && camera < 7368;
 #endif
@@ -1106,7 +1114,7 @@ advance_clocks:
 #ifdef WINGS_P1_FLIGHT
             g_DisplayElevator!=g_Carrier.depth ||
 #endif
-            reset_weapons || s_PageScale[page] != g_TerrainFar ||
+            reset_weapons || s_PageScale[page] != s_ViewKey ||
 #ifdef WINGS_P1_FLIGHT
             g_DisplayGauges[0] != g_Engine.oil_needle || g_DisplayGauges[1] != g_Engine.fuel_needle ||
             g_DisplayGauges[2] != g_Engine.lamps || g_DisplayCrash != s_CrashFrame ||
@@ -1133,14 +1141,11 @@ advance_clocks:
         }
         else while ((u8)(g_VBlankTicks - tick) < present_ticks) WaitVBlank();
         tick = g_VBlankTicks;
-        if (g_Game.phase!=GAME_PLAY) { camera=0; s_RenderHeave=0; }
+        if (g_Game.phase!=GAME_PLAY) { camera=0; s_RenderHeave=0; s_RenderFine=0; }
         g_ScrollFine = (-camera) & 7;
         g_ScrollCoarse = ((camera & 255) + 7) >> 3;
         VDP_SetPage(page);
-        g_VerticalOffset = 0 - s_RenderHeave;
-        VDP_SetVerticalOffset(g_VerticalOffset);
-        g_LineSplit = s_RenderHeave ? 169 - s_RenderHeave : 170;
-        VDP_SetHBlankLine(g_LineSplit);
+        PublishScroll();
         VDP_SetHorizontalOffset(camera & 255);
         g_DisplayPage = page;
         g_DisplayCamera = camera;
