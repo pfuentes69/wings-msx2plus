@@ -1,5 +1,15 @@
 #include "flight.h"
 
+/* SDCC builds of the P1 flight step use the hand-written Z80 version below
+ * (see docs/flight-step-z80.md); host builds, and SDCC builds with
+ * WINGS_FLIGHT_C, use the C reference. tests/test_flight_z80.py checks the
+ * two against each other on an emulated Z80. */
+#if defined(__SDCC) && defined(WINGS_P1_FLIGHT) && !defined(WINGS_FLIGHT_C)
+#define WINGS_FLIGHT_Z80 1
+#else
+#define WINGS_FLIGHT_Z80 0
+#endif
+
 #ifndef WINGS_P1_FLIGHT
 static int16_t Accelerate(int16_t velocity, uint8_t negative, uint8_t positive, int16_t limit)
 {
@@ -51,7 +61,7 @@ void Flight_Reset(FlightState* state)
 #endif
 }
 
-#ifdef WINGS_P1_FLIGHT
+#if defined(WINGS_P1_FLIGHT) && !WINGS_FLIGHT_Z80
 static int16_t Approach(int16_t value, int16_t target)
 {
     if (value < target) return target - value < 5 ? target : value + 5;
@@ -61,6 +71,7 @@ static int16_t Approach(int16_t value, int16_t target)
 #endif
 
 #ifdef WINGS_P1_FLIGHT
+#if !WINGS_FLIGHT_Z80
 /* The 150 Hz step works on a file-static copy of the state. SDCC addresses
  * a static field directly (ld a,(nn)); through a pointer, each access
  * reloads the pointer from the IX frame and adds the offset, which made this
@@ -160,6 +171,7 @@ static void StepControls(uint8_t input)
     s_Work.y = Move(s_Work.y, &s_Work.vy, FLIGHT_MAX_Y);
 #endif
 }
+#endif
 #else
 static void StepControls(FlightState* state, uint8_t input)
 {
@@ -194,7 +206,9 @@ void Flight_Step(FlightState* state, uint8_t input)
 
 #endif
 
-#ifdef WINGS_P1_FLIGHT
+#if defined(WINGS_P1_FLIGHT) && WINGS_FLIGHT_Z80
+#include "flight_z80.inc"
+#elif defined(WINGS_P1_FLIGHT)
 void Flight_StepWorldSample(FlightState* state, uint32_t* x, uint8_t input, uint8_t sample_pose)
 {
     int32_t next;
