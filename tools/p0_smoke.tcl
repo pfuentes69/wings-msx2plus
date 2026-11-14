@@ -59,7 +59,14 @@ proc finish {name then} {
 }
 proc publishing {} {
     if {![info exists ::armed]} {return}
-    if {[word g_MissedFrames]} {error "Frame deadline missed: stage=[value g_Carrier] depth=[value g_DisplayElevator] pose=[value g_SelectedFrame] render=$::last_render"}
+    if {[word g_MissedFrames]} {
+        # Profiling aid (WINGS_ALLOW_MISSED=1): log misses instead of failing.
+        if {[info exists ::env(WINGS_ALLOW_MISSED)]} {
+            puts $::report "missed world=[word g_DisplayWorld] y=[word g_DisplayY] render=$::last_render"
+            debug write memory $::addr(g_MissedFrames) 0
+            debug write memory [expr {$::addr(g_MissedFrames)+1}] 0
+        } else {error "Frame deadline missed: stage=[value g_Carrier] depth=[value g_DisplayElevator] pose=[value g_SelectedFrame] render=$::last_render"}
+    }
     set now [machine_info time]
     set ::last_publish $now
     set stage [value g_Carrier]

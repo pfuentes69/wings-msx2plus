@@ -72,3 +72,230 @@ unsigned char Column_Equal(const unsigned short* a, const unsigned short* b) __n
         ret
     __endasm;
 }
+
+/* The rest of Terrain_DrawColumn: walk a decoded column against the page's
+ * tile cache and redraw each changed run of tiles with one VDP command.
+ * Same behaviour as the C loop it replaced (kept in mission_streamer.c as
+ * the reference under WINGS_TERRAIN_C):
+ *
+ *   row = 0
+ *   loop: skip rows equal to the cache (the decoded sentinel stops it);
+ *         if row >= ROWS return
+ *         tile = decoded[0]; count = 1; color = g_MissionTileColors[tile]
+ *         solid colour (color != 255): extend over equal tiles
+ *         atlas tile: extend over tile+1, tile+2 ... up to g_MissionTileLimit
+ *         height = count * 8, cut at playfield row 172
+ *         HMMV x, y, 8, height, color * 17   or
+ *         HMMM tileX, tileY, x, y, 8, height
+ *         copy the run into the cache; row += count
+ *
+ * In: HL = cache (TERRAIN_MAP_ROWS words), DE = decoded column (plus the
+ * 65534 sentinel), g_ColumnX = destination x (ring), g_ColumnY = y of row 0.
+ * Writes MSXgl's g_VDP_Command and calls VDP_CommandSetupR32/R36 (which
+ * clobber A, B, C, HL). tests/test_column_runs_z80.py checks it against a
+ * model of the C loop on an emulated Z80. */
+unsigned char g_ColumnX;
+unsigned short g_ColumnY;
+static unsigned char s_Row, s_Count, s_Color, s_Limit;
+static unsigned short s_Tile;
+#define COLUMN_CMD_HMMM 0xD0
+#define COLUMN_CMD_HMMV 0xC0
+void Column_Runs(unsigned short* cache, const unsigned short* decoded) __naked
+{
+    (void)cache; (void)decoded;
+    __asm
+        xor     a, a
+        ld      (_s_Row), a
+    column_runs_loop$:
+        ; Skip rows equal to the cache: B counts them.
+        ld      b, #0
+    column_runs_equal$:
+        ld      a, (de)
+        cp      a, (hl)
+        jr      nz, column_runs_differ$
+        inc     hl
+        inc     de
+        ld      a, (de)
+        cp      a, (hl)
+        jr      nz, column_runs_differ_high$
+        inc     hl
+        inc     de
+        inc     b
+        jr      column_runs_equal$
+    column_runs_differ_high$:
+        dec     hl
+        dec     de
+    column_runs_differ$:
+        ld      a, (_s_Row)
+        add     a, b
+        ld      (_s_Row), a
+        cp      a, #TERRAIN_MAP_ROWS
+        ret     nc
+        ; y += skipped * 8
+        push    hl
+        ld      l, b
+        ld      h, #0
+        add     hl, hl
+        add     hl, hl
+        add     hl, hl
+        ld      bc, (_g_ColumnY)
+        add     hl, bc
+        ld      (_g_ColumnY), hl
+        ; tile = decoded[0]; color = g_MissionTileColors[tile]
+        ex      de, hl                  ; HL = decoded
+        ld      e, (hl)
+        inc     hl
+        ld      d, (hl)
+        dec     hl
+        ld      (_s_Tile), de
+        push    hl                      ; [decoded][cache]
+        ld      hl, #_g_MissionTileColors
+        add     hl, de
+        ld      a, (hl)
+        ld      (_s_Color), a
+        ld      b, #1                   ; count
+        inc     a
+        jr      z, column_runs_atlas$
+        ; Solid colour: extend while decoded[count] == tile.
+        pop     hl
+        push    hl
+        inc     hl
+        inc     hl
+    column_runs_solid$:
+        ld      a, (_s_Row)
+        add     a, b
+        cp      a, #TERRAIN_MAP_ROWS
+        jr      nc, column_runs_counted$
+        ld      a, (hl)
+        cp      a, e
+        jr      nz, column_runs_counted$
+        inc     hl
+        ld      a, (hl)
+        cp      a, d
+        jr      nz, column_runs_counted$
+        inc     hl
+        inc     b
+        jr      column_runs_solid$
+    column_runs_atlas$:
+        ; Atlas tile: extend while count < limit and decoded[count] == tile + count.
+        ld      hl, #_g_MissionTileLimit
+        add     hl, de
+        ld      a, (hl)
+        ld      (_s_Limit), a
+        pop     hl
+        push    hl
+        inc     hl
+        inc     hl
+        inc     de                      ; expected = tile + 1
+    column_runs_stack$:
+        ld      a, (_s_Row)
+        add     a, b
+        cp      a, #TERRAIN_MAP_ROWS
+        jr      nc, column_runs_counted$
+        ld      a, (_s_Limit)
+        cp      a, b
+        jr      z, column_runs_counted$
+        jr      c, column_runs_counted$
+        ld      a, (hl)
+        cp      a, e
+        jr      nz, column_runs_counted$
+        inc     hl
+        ld      a, (hl)
+        cp      a, d
+        jr      nz, column_runs_counted$
+        inc     hl
+        inc     b
+        inc     de
+        jr      column_runs_stack$
+    column_runs_counted$:
+        ld      a, b
+        ld      (_s_Count), a
+        ; height = count * 8, cut at playfield row 172.
+        add     a, a
+        add     a, a
+        add     a, a
+        ld      c, a                    ; C = height
+        ld      a, (_g_ColumnY)         ; y % 256
+        add     a, c
+        jr      c, column_runs_cut$
+        cp      a, #173
+        jr      c, column_runs_command$
+    column_runs_cut$:
+        ld      a, (_g_ColumnY)
+        neg
+        add     a, #172
+        ld      c, a
+    column_runs_command$:
+        ld      hl, (_g_ColumnY)
+        ld      (_g_VDP_Command + 6), hl  ; DY
+        ld      a, (_g_ColumnX)
+        ld      l, a
+        ld      h, #0
+        ld      (_g_VDP_Command + 4), hl  ; DX
+        ld      l, #8
+        ld      (_g_VDP_Command + 8), hl  ; NX
+        ld      l, c
+        ld      (_g_VDP_Command + 10), hl ; NY
+        xor     a, a
+        ld      (_g_VDP_Command + 13), a  ; ARG
+        ld      a, (_s_Color)
+        cp      a, #255
+        jr      z, column_runs_copy$
+        ld      c, a                    ; CLR = color * 17
+        add     a, a
+        add     a, a
+        add     a, a
+        add     a, a
+        add     a, c
+        ld      (_g_VDP_Command + 12), a
+        ld      a, #COLUMN_CMD_HMMV
+        ld      (_g_VDP_Command + 14), a
+        call    _VDP_CommandSetupR36
+        jr      column_runs_cache$
+    column_runs_copy$:
+        ld      de, (_s_Tile)
+        ld      hl, #_g_MissionTileX
+        add     hl, de
+        ld      a, (hl)
+        ld      (_g_VDP_Command + 0), a   ; SX
+        xor     a, a
+        ld      (_g_VDP_Command + 1), a
+        ld      hl, #_g_MissionTileY
+        add     hl, de
+        add     hl, de
+        ld      a, (hl)
+        inc     hl
+        ld      h, (hl)
+        ld      l, a
+        ld      (_g_VDP_Command + 2), hl  ; SY
+        ld      a, #COLUMN_CMD_HMMM
+        ld      (_g_VDP_Command + 14), a
+        call    _VDP_CommandSetupR32
+    column_runs_cache$:
+        ; Copy the run into the cache; both pointers advance past it.
+        pop     hl                      ; HL = decoded
+        pop     de                      ; DE = cache
+        ld      a, (_s_Count)
+        ld      c, a
+        ld      a, (_s_Row)
+        add     a, c
+        ld      (_s_Row), a
+        ld      b, #0
+        push    hl                      ; y += count * 8
+        ld      l, c
+        ld      h, b
+        add     hl, hl
+        add     hl, hl
+        add     hl, hl
+        push    de
+        ld      de, (_g_ColumnY)
+        add     hl, de
+        ld      (_g_ColumnY), hl
+        pop     de
+        pop     hl
+        sla     c                       ; bytes = count * 2
+        ldir
+        ex      de, hl                  ; HL = cache, DE = decoded
+        jp      column_runs_loop$
+    __endasm;
+}

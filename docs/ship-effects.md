@@ -22,8 +22,9 @@ frame. The generator and host tests check them against aircraft, terrain,
 pilot, wave-tail and background caches.
 
 The flag/radar playback advances every 30 simulation ticks (5 Hz). Carrier
-heave advances every 45 ticks through offsets 0,1,2,1, giving one-pixel steps
-and a two-pixel total excursion. These timing intervals are explicit MSX
+heave advances every 90 ticks (0.6 s) through offsets 0,1,2,1, giving one-pixel
+steps and a two-pixel total excursion. It was 45 ticks until 2026-11-14, when
+side-by-side play against the original showed the bob twice as fast. These timing intervals are explicit MSX
 adaptations; the original combined artwork and observed displacement are
 retained, without claiming exact original animation timing.
 

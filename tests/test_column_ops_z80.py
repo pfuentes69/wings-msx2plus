@@ -17,7 +17,7 @@ ROWS = 19
 RUN, OUT, CACHE, STACK, SENTINEL = 0xD000, 0xD100, 0xD200, 0xF000, 0x3000
 
 
-@unittest.skipUnless(z80 and shutil.which('sdcc'), 'needs the z80 package and SDCC')
+@unittest.skipUnless(z80 and shutil.which('sdcc') and shutil.which('sdasz80'), 'needs the z80 package and SDCC')
 class ColumnOpsZ80Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -26,8 +26,24 @@ class ColumnOpsZ80Tests(unittest.TestCase):
         sdcc = shutil.which('sdcc')
         subprocess.run([sdcc, '-mz80', f'-DTERRAIN_MAP_ROWS={ROWS}', '-c', str(ROOT / 'src/msx/column_ops.c'),
                         '-o', str(work) + '/'], check=True, capture_output=True)
+        # Column_Runs (tested in test_column_runs_z80.py) needs these symbols.
+        (work / 'stub.s').write_text('''
+    .module stub
+    .globl _g_MissionTileColors, _g_MissionTileLimit, _g_MissionTileX, _g_MissionTileY
+    .globl _g_VDP_Command, _VDP_CommandSetupR32, _VDP_CommandSetupR36
+    _g_MissionTileColors = 0xD400
+    _g_MissionTileLimit = 0xD600
+    _g_MissionTileX = 0xD800
+    _g_MissionTileY = 0xDA00
+    _g_VDP_Command = 0xC800
+    .area _CODE
+_VDP_CommandSetupR32:
+_VDP_CommandSetupR36:
+    ret
+''')
+        subprocess.run([shutil.which('sdasz80'), '-o', 'stub.rel', 'stub.s'], cwd=work, check=True, capture_output=True)
         subprocess.run([sdcc, '-mz80', '--no-std-crt0', '--code-loc', '0x4000', '--data-loc', '0xC000',
-                        'column_ops.rel', '-o', 'column_ops.ihx'], cwd=work, check=True, capture_output=True)
+                        'column_ops.rel', 'stub.rel', '-o', 'column_ops.ihx'], cwd=work, check=True, capture_output=True)
         cls.symbols = dict((n, int(a, 16)) for a, n in
                            re.findall(r'^\s+([0-9A-F]{8})\s+(_\w+)', (work / 'column_ops.map').read_text(), re.M))
         cls.machine = z80.Z80Machine()

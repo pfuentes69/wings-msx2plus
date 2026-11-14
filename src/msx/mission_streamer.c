@@ -79,6 +79,13 @@ void Terrain_DrawColumn(u16 world, u8 page)
     Column_Decode(s_Map + offset, s_Decoded);
     cached = s_Cached[page][slot];
     decoded = s_Decoded;
+#ifndef WINGS_TERRAIN_C
+    /* Hand-written Z80 (column_ops.c): SDCC's version of the loop below cost
+     * ~900 T-states per tile run before the VDP setup. */
+    g_ColumnX = world & 255; g_ColumnY = dest_y;
+    Column_Runs(cached, decoded);
+    (void)row; (void)count; (void)height; (void)color; (void)i; (void)tile; (void)source_y;
+#else
     row = 0;
     for (;;)
     {
@@ -115,7 +122,12 @@ void Terrain_DrawColumn(u16 world, u8 page)
         row += count;
         dest_y += count * 8;
     }
+#endif
 }
+
+/* Column_Runs writes these directly. */
+typedef char ColumnRunsCommands[(VDP_CMD_HMMM == 0xD0 && VDP_CMD_HMMV == 0xC0) ? 1 : -1];
+typedef char ColumnRunsLayout[(sizeof(VDP_Command) == 15 && sizeof(g_VDP_Command.SX) == 2) ? 1 : -1];
 
 void Terrain_DirtyOverlayColumn(u8 page, u16 world, u8 first, u8 last)
 {

@@ -123,11 +123,9 @@ The contact rules are in [p2-landing.md](p2-landing.md).
 - Step: 744 T-states (0.21 ms), down from the old step's 0.475 ms.
 - Simulation: 22 ms mean per NTSC frame.
 - **Presentation:** at flying speed each page draws about six new terrain
-  columns. Over the carrier those columns are the costliest, and the low pass
-  measured 137–148 ms against the 133 ms deadline. Until the carrier render
-  is reworked ([frame-budget.md](frame-budget.md)), frames with the carrier in
-  the near view at speed 1000 or more get 2 extra VBlanks, as bomb frames
-  already do: 6 fps there instead of 7.5 on NTSC. Game speed is unaffected.
+  columns. With the terrain column loop in Z80 and dial redraws held in fast
+  carrier frames, the worst frame over the carrier is 117 ms against the
+  133 ms deadline ([frame-budget.md](frame-budget.md)).
 
 ## Verification
 

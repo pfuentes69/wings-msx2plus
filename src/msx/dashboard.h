@@ -17,4 +17,6 @@ void Dashboard_CopyPalette(u8* destination) WINGS_BANKED;
 void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives) WINGS_BANKED;
 /* gauges: in {oil frame, fuel frame, lamps (bit 0 oil, bit 1 fuel)} wanted;
  * out: what the page shows (at most one dial changes per call). */
-void Dashboard_Gauges(u8 page, u8* gauges) WINGS_BANKED;
+/* hold: redraw nothing this page (a heavy frame); gauges still reports what
+ * the page shows. */
+void Dashboard_Gauges(u8 page, u8* gauges, u8 hold) WINGS_BANKED;

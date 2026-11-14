@@ -12,6 +12,10 @@ extern CarrierState g_Carrier;
 #include "terrain_renderer.h"
 
 u8 g_ShipHeave, g_ShipFrame;
+/* Heave step: one pixel every 90 simulation ticks (0.6 s), a full 0,1,2,1
+ * cycle in 2.4 s. Halved from 45 ticks on the user's comparison with the
+ * original (2026-11-14); the original's own timing is not recovered. */
+#define SHIP_BOB_TICKS 90
 static u8 s_BobTick, s_BobPhase, s_FlagTick;
 #ifdef WINGS_P1_FLIGHT
 u8 g_CrewFrame;
@@ -55,9 +59,9 @@ void Ship_Advance(u8 ticks) WINGS_BANKED
     s_FlagTick += ticks;
     while (s_FlagTick >= 30) { s_FlagTick -= 30; g_ShipFrame = (g_ShipFrame + 1) & 3; }
     s_BobTick += ticks;
-    if (s_BobTick >= 45)
+    if (s_BobTick >= SHIP_BOB_TICKS)
     {
-        s_BobTick -= 45; s_BobPhase = (s_BobPhase + 1) & 3;
+        s_BobTick -= SHIP_BOB_TICKS; s_BobPhase = (s_BobPhase + 1) & 3;
         g_ShipHeave = s_BobPhase == 3 ? 1 : s_BobPhase;
     }
 }

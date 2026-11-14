@@ -267,10 +267,10 @@ static u8 GaugeKey(u8 frame, u8 lit)
     return lit ? frame + HUD_LIT : frame;
 }
 
-void Dashboard_Gauges(u8 page, u8* gauges) WINGS_BANKED
+void Dashboard_Gauges(u8 page, u8* gauges, u8 hold) WINGS_BANKED
 {
     u8 oil = GaugeKey(gauges[0], gauges[2] & 1), fuel = GaugeKey(gauges[1], gauges[2] & 2);
-    u8 change_oil = s_Hud[page][HUD_OIL_DIAL] != oil, change_fuel = s_Hud[page][HUD_FUEL_DIAL] != fuel;
+    u8 change_oil = !hold && s_Hud[page][HUD_OIL_DIAL] != oil, change_fuel = !hold && s_Hud[page][HUD_FUEL_DIAL] != fuel;
     if (change_oil && change_fuel) { s_GaugeTurn ^= 1; change_oil = s_GaugeTurn; change_fuel = !s_GaugeTurn; }
     if (change_oil)
     {

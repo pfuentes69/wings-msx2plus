@@ -46,18 +46,30 @@ silently. The verifiers fail on any missed frame.
 The [rebuilt flight model](flight-model.md) flies at the original's speed:
 10–14 px per tick, about 23 px per NTSC frame at full speed. The P1 tuning
 model managed about 16. Each page now draws about six new terrain columns per
-redraw instead of four. The mean over the carrier did not change (55.5 ms
-render), but the low pass over the carrier with the elevator coming into view
-measured 137–148 ms against the 133 ms deadline (111–114 ms render).
+redraw instead of four, and a low pass over the carrier first measured
+137–148 ms against the 133 ms deadline. A temporary 2-VBlank reservation for
+those frames has since been removed by two changes:
 
-Until the carrier render is reworked (candidates below), frames with the
-carrier in the near view at speed 1000 or more get 2 extra VBlanks, as bomb
-frames already do. That gives 6 fps there instead of 7.5 on NTSC; simulation
-and game speed are unchanged. This makes candidate 1 more urgent.
+- **Terrain columns in Z80.** `Column_Runs` (`src/msx/column_ops.c`) replaces
+  SDCC's version of the per-run loop in `Terrain_DrawColumn` (about 900
+  T-states per run before the VDP setup). `tests/test_column_runs_z80.py`
+  checks every VDP command and the tile cache against a model of the C loop.
+  Resident code also shrank by about 600 bytes.
+- **Dial redraws wait out fast frames over the carrier.** Needles move one
+  step per tick, so a short delay is not visible; the published gauge state
+  still matches the page.
+
+Result in the P0 run (NTSC):
+- the worst frame over the carrier is 117 ms (33 ms simulation, 84 ms render),
+  down from 127 ms at the old speed: 16 ms spare;
+- all gameplay frames: p99 113 ms, render mean 43 ms.
+
+The profiler now also breaks down renders over 85 ms on their own
+(`render heavy`). The remaining heavy frames stream art from ROM (deck-turn
+poses, crash art), not carrier passes.
 
 Flight costs under the rebuilt model: the tick takes about 0.35 ms (12.5 Hz);
-the Z80 step takes 0.21 ms (150 Hz), down from 0.475 ms. Simulation averages
-22 ms per NTSC frame in the P0 run.
+the Z80 step takes 0.21 ms (150 Hz), down from 0.475 ms.
 
 ## Where render time goes
 
@@ -111,8 +123,8 @@ and restore, 96-pixel wave segments, transparent top rows via LMMM).
    crossed the strip, and merge LMMM bands further.
 3. **Carrier overlays.** Skip unchanged crew and elevator redraws, and mark
    overlay columns dirty once per column reuse instead of every frame.
-4. Hand-written Z80 for the remaining `Terrain_DrawColumn` C path
-   (mismatch runs and cache update).
+4. ~~Hand-written Z80 for the remaining `Terrain_DrawColumn` C path~~:
+   done (`Column_Runs`, 2026-11-14).
 5. **Dial redraws.** The generic `VDP_WriteVRAM` costs about 5 ms per dial
    patch: 20 rows of 13–14 bytes, with an address set per row. Options:
    per-frame minimal rectangles, or a row blit tuned to V9938 timing.
@@ -126,3 +138,4 @@ and restore, 96-pixel wave segments, transparent top rows via LMMM).
 | Gun reservation removed | firing at 8 VBlanks (7.5 fps NTSC) |
 | `column_ops` decode/compare helpers | 4.5 → 2.2 ms per terrain column; worst weapons redraw 101–107 → ~81 ms |
 | Flight model rebuilt from the original | step 0.475 → 0.21 ms; faster flight adds terrain columns; 2-VBlank reservation for fast carrier frames |
+| `Column_Runs` in Z80; dial redraws held in fast carrier frames | worst carrier frame 148 → 117 ms at the original's speed; reservation removed |

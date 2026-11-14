@@ -12,6 +12,7 @@ foreach n {g_Bank3Segment g_Rendering g_GameView g_Combat g_FramePublished VDP_I
     set prof_addr($n) [expr {$a}]
 }
 array set prof_hist {}
+set prof_render_samples {}
 array set prof_calls {}
 proc prof_guns {} {
     expr {[debug read memory [expr {$::prof_addr(g_Combat)+145}]] || [debug read memory [expr {$::prof_addr(g_Combat)+159}]]}
@@ -55,6 +56,15 @@ proc prof_rendering {} {
         if {$kind eq "frame" && $cwx >= 6500 && $cwx <= 7450} {incr ::prof_calls([list carrier_frames 0])}
         incr ::prof_calls([list ${kind}_cost_${sim}_${draw} [prof_guns]])
         # Where the heaviest gameplay frames happen (world x, y of the last publication).
+        # Renders over 85 ms: file their samples as a separate group (carrier
+        # tag 2) so the worst frames can be broken down.
+        set heavy [expr {$kind eq "frame" && $draw > 85 && $sim > 10}]
+        if {$heavy} {incr ::prof_calls([list heavyrender_frames 0])}
+        foreach key $::prof_render_samples {
+            if {$heavy} {lset key 6 2}
+            incr ::prof_hist($key)
+        }
+        set ::prof_render_samples {}
         if {$kind eq "frame" && $sim + $draw > 110} {
             set wx [expr {[debug read memory $::prof_addr(g_DisplayWorld)]+256*[debug read memory [expr {$::prof_addr(g_DisplayWorld)+1}]]}]
             set wy [expr {[debug read memory $::prof_addr(g_DisplayY)]+256*[debug read memory [expr {$::prof_addr(g_DisplayY)+1}]]}]
@@ -78,7 +88,9 @@ proc prof_sample {} {
         # Carrier scene: published world x inside the ship's span (heaviest render).
         set wx [expr {[debug read memory $::prof_addr(g_DisplayWorld)]+256*[debug read memory [expr {$::prof_addr(g_DisplayWorld)+1}]]}]
         set carrier [expr {$wx >= 6500 && $wx <= 7450}]
-        incr ::prof_hist([list $pc $bank $render $guns $ret $vdp $carrier])
+        if {$render} {lappend ::prof_render_samples [list $pc $bank $render $guns $ret $vdp $carrier]} else {
+            incr ::prof_hist([list $pc $bank $render $guns $ret $vdp $carrier])
+        }
     }
     after time $::prof_period prof_sample
 }

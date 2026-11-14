@@ -602,7 +602,15 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     s_RenderGauges[0] = g_Engine.oil_needle; s_RenderGauges[1] = g_Engine.fuel_needle;
     s_RenderGauges[2] = g_Engine.lamps;
 #endif
-    Dashboard_Gauges(page, s_RenderGauges); /* now holds what this page shows */
+    /* Dial redraws wait out fast frames over the carrier (the heaviest
+     * render): needles move one step per tick, so a short delay is not seen. */
+    Dashboard_Gauges(page, s_RenderGauges,
+#ifdef WINGS_P1_FLIGHT
+                     s_CarrierView && s_World.flight.speed >= 1000
+#else
+                     0
+#endif
+                     ); /* now holds what this page shows */
     // A uniform guard line lets the raster reset settle before the panel.
     // Both old and new vertical offsets read the same dark separator pixel.
     VDP_CommandHMMV(0, (u16)page * 256 + 171 - s_RenderHeave,
@@ -860,13 +868,6 @@ void main(void)
         // strike marks) fits the base presentation period.
         if (g_Combat.count>COMBAT_GUN_COUNT || g_Combat.secondary_cooldown ||
             g_Combat.secondary_pending || Weapons_PendingRestore()) present_ticks+=2;
-#ifdef WINGS_P1_FLIGHT
-        /* At flying speed (the original's 10-14 px per tick) each page
-         * redraws about six new terrain columns, and over the carrier they
-         * are the costliest: reserve the same extra time there. Provisional
-         * until the carrier render is reworked (docs/frame-budget.md). */
-        else if (s_CarrierView && s_World.flight.speed>=1000) present_ticks+=2;
-#endif
         steps=(g_VDP_REGSAV[9]&2) ? present_ticks*3 : present_ticks*5/2;
         weapons=reset_weapons=0; input=0; turn=0;
         if (!g_HoldFlight)
@@ -1003,7 +1004,7 @@ advance_clocks:
                 g_RenderPage=page; g_Rendering=1;
                 Menu_Draw(page,&g_Game);
                 Dashboard_Status(page,g_Game.sortie.weapon,g_Game.sortie.stock,g_Game.progress.lives);
-                Dashboard_Gauges(page,s_RenderGauges);
+                Dashboard_Gauges(page,s_RenderGauges,0);
                 VDP_CommandWait(); g_Rendering=0;
                 s_PageScale[page]=255; s_UiDirty=0;
             }

@@ -100,7 +100,8 @@ def main():
             continue
         pc, bank, render, guns, ret, vdp, carrier, count = map(int, line.split())
         group = ('render' if render else 'sim/idle') + (' +guns' if guns else '')
-        if carrier and render: group = 'render over carrier'
+        if carrier == 2 and render: group = 'render heavy (>85 ms)'
+        elif carrier and render: group = 'render over carrier'
         name = resolve(keys, names, pc, bank)
         groups[group][name] += count
         totals[group] += count
@@ -110,15 +111,17 @@ def main():
         if name.startswith('__') or name in LEAF_HELPERS:
             callers[(group, name)][resolve(keys, names, ret, bank)] += count
     carrier_frames = sum(c for (n, g), c in counted.items() if n == 'carrier_frames')
+    heavy_frames = sum(c for (n, g), c in counted.items() if n == 'heavyrender_frames')
+    per_frame = {'render over carrier': carrier_frames, 'render heavy (>85 ms)': heavy_frames}
     for group in sorted(groups):
         total = totals[group]
-        if group == 'render over carrier' and carrier_frames:
-            print(f'\n(render over carrier: {carrier_frames} frames, {total * args.period * 1000 / carrier_frames:.1f} ms each)')
+        if per_frame.get(group):
+            print(f'\n({group}: {per_frame[group]} frames, {total * args.period * 1000 / per_frame[group]:.1f} ms each)')
         print(f'\n== {group}: {total} samples = {total * args.period * 1000:.0f} ms emulated, '
               f'VDP command engine busy {100 * busy[group] / total:.1f}%')
         for name, count in groups[group].most_common(args.top):
-            if group == 'render over carrier' and carrier_frames:
-                name = f'{name} ({count * args.period * 1000 / carrier_frames:.2f} ms/frame)'
+            if per_frame.get(group):
+                name = f'{name} ({count * args.period * 1000 / per_frame[group]:.2f} ms/frame)'
             extra = ''
             if (group, name) in callers:
                 top = callers[(group, name)].most_common(3)
@@ -147,7 +150,7 @@ def main():
         if heavy:
             print('\n== heaviest gameplay frames (sim+render ms, location):')
             for total, n in heavy[:12]: print(f'{total:5d}  {n}')
-        for name in sorted({n for n, _ in counted if not n.startswith(('frame_cost_', 'rebuild_cost_', 'publish_tstates_', 'heavy_', 'carrier_frames'))}):
+        for name in sorted({n for n, _ in counted if not n.startswith(('frame_cost_', 'rebuild_cost_', 'publish_tstates_', 'heavy_', 'heavyrender_', 'carrier_frames'))}):
             print(f'{name:28} {counted[(name, 0)]:8d} {counted[(name, 1)]:8d}')
 
 
