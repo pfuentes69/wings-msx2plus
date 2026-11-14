@@ -189,12 +189,18 @@ pointer offset, geometry and atlas coordinates against the source manifest.
 The release occupies 32,473/32,768 resident bytes; SDCC static data plus
 initializers occupy 11,071 bytes before stack, IM2 and BIOS workspace.
 
-Firing still reserves four additional VBlanks, sized for the former tracers; bomb workload independently reserves two. Both flight profiles normally
-present every eight VBlanks, use twelve while firing guns, ten for bombs, and
-fourteen when both workloads are active. Thus gun rendering runs at 5 fps NTSC /
-4.17 fps PAL; simulation remains 150 Hz, so flight speed and weapon release rates
-are retained. The six-VBlank elevator cadence is unchanged. With hit-scan strikes this reservation is probably larger than needed;
-reducing it is separate optimization work.
+Firing reserves two additional VBlanks (four before hit-scan strikes replaced
+the tracers); bomb workload independently reserves two. Both flight profiles
+normally present every eight VBlanks, use ten while firing guns or for bombs,
+and twelve when both workloads are active. Thus gun rendering runs at 6 fps
+NTSC / 5 fps PAL; simulation remains 150 Hz, so flight speed and weapon release
+rates are retained. The six-VBlank elevator cadence is unchanged.
+
+Removing the gun reservation entirely misses the NTSC deadline in the
+cannon-dive-over-carrier scenario: 51 ms of simulation (20 steps) plus an
+86 ms redraw is 137.8 ms against 133.3 ms. Simulation costs about 2 ms per
+150 Hz step while firing (1.5-2 ms otherwise), so reaching the base cadence
+needs profiling of the step and redraw paths.
 
 Validation (2026-11-13): 134 host tests pass. They include tracer slopes
 recomputed from the original art, strikes for every downward pose in both

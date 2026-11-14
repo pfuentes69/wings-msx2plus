@@ -445,7 +445,7 @@ def main():
     target = 1000 / target_fps
     assert len(intervals) > (int(target_fps * 110) if mission else 1800) and len(renders) > (int(target_fps * 90) if mission else 1000)
     assert hidden_checks == len(renders) + len(transitions)
-    periods=[1000*(period_ticks+extra)/(50 if pal else 60) for extra in ((0,2,4,6) if args.weapons else (0,))]
+    periods=[1000*(period_ticks+extra)/(50 if pal else 60) for extra in ((0,2,4) if args.weapons else (0,))]
     assert all(any(abs(interval-period)<2 for period in periods) for interval in intervals), (min(intervals),max(intervals),periods)
     assert max(renders) < target
     summary = dict(machine=args.machine, project=args.project, debug_profile=args.debug_profile, raster_checked=not args.headless, rom_sha256=hashlib.sha256(rom_bytes).hexdigest(),
