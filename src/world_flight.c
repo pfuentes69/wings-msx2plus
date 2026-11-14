@@ -702,12 +702,11 @@ void main(void)
         steps = base_steps;
         if (!(g_VDP_REGSAV[9] & 2)) { steps += core_phase; core_phase ^= 1; }
 #endif
-        // Reserve draw time independently for bombs and hit-scan gunfire while
-        // retaining the 150 Hz flight and weapon simulation clock.
+        // Reserve draw time for bombs while retaining the 150 Hz flight and
+        // weapon simulation clock. Hit-scan gunfire (flash overlay plus short
+        // strike marks) fits the base presentation period.
         if (g_Combat.count>COMBAT_GUN_COUNT || g_Combat.secondary_cooldown ||
             g_Combat.secondary_pending || Weapons_PendingRestore()) present_ticks+=2;
-        if (g_Combat.projectile[0].kind || g_Combat.projectile[1].kind ||
-            (g_Controls.latest & ACTION_PRIMARY)) present_ticks+=2;
         steps=(g_VDP_REGSAV[9]&2) ? present_ticks*3 : present_ticks*5/2;
         weapons=reset_weapons=0; input=0; turn=0;
         if (!g_HoldFlight)

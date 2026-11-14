@@ -189,22 +189,24 @@ pointer offset, geometry and atlas coordinates against the source manifest.
 The release occupies 32,473/32,768 resident bytes; SDCC static data plus
 initializers occupy 11,071 bytes before stack, IM2 and BIOS workspace.
 
-Firing reserves two additional VBlanks (four before hit-scan strikes replaced
-the tracers); bomb workload independently reserves two. Both flight profiles
-normally present every eight VBlanks, use ten while firing guns or for bombs,
-and twelve when both workloads are active. Thus gun rendering runs at 6 fps
-NTSC / 5 fps PAL; simulation remains 150 Hz, so flight speed and weapon release
-rates are retained. The six-VBlank elevator cadence is unchanged.
+Hit-scan gunfire needs no presentation reservation (2026-11-14). It was four
+extra VBlanks while tracers travelled, then two. Bomb workload still reserves
+two. Both flight profiles present every eight VBlanks, including while firing
+(7.5 fps NTSC / 6.25 fps PAL), and ten while bombs are active. Simulation
+stays at 150 Hz, so flight speed and weapon release rates are unaffected. The
+six-VBlank elevator cadence is unchanged.
 
-Removing the gun reservation entirely still misses one NTSC deadline after
-the 2026-11-14 SDCC loop fix ([sdcc-pitfalls.md](sdcc-pitfalls.md)). The fix
-cut firing simulation from 51 to 41 ms per 20-step frame, but a frame turning
-over the carrier while firing then takes 41 ms of simulation plus a 96 ms
-redraw: 137.8 ms against 133.3 ms. `tools/profile_p0.py` samples the release
-ROM during the P0 smoke run. It shows `StepControls` (~0.7 ms per 150 Hz step,
-spread evenly over IX-indexed code) as the largest simulation cost, and
-`Terrain_DrawColumn`, `VDP_CommandWait` and the dashboard wave restore/draw
-as the largest render costs.
+Three changes made the eight-VBlank cadence fit while firing, measured with
+`tools/profile_p0.py` and including the 3,000 T-state per-field
+[sound budget](sound-budget.md):
+- the SDCC loop workaround in `Combat_Advance` ([sdcc-pitfalls.md](sdcc-pitfalls.md));
+- the hand-written Z80 flight step ([flight-step-z80.md](flight-step-z80.md)), 1.16 to 0.475 ms per step;
+- the sound budget moved out of the VBlank window.
+
+Before these changes, a frame turning over the carrier while firing needed
+41 ms of simulation plus a 96 ms redraw, against 133.3 ms. The largest render
+costs remain `Terrain_DrawColumn`, `VDP_CommandWait` and the dashboard wave
+restore/draw.
 
 Validation (2026-11-13): 134 host tests pass. They include tracer slopes
 recomputed from the original art, strikes for every downward pose in both
