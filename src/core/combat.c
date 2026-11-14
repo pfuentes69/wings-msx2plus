@@ -104,7 +104,10 @@ void Combat_Advance(CombatState* state, SortieState* sortie, uint16_t x, uint16_
     if (state->flash_ticks && !--state->flash_ticks) state->flash = 0;
     if (state->cooldown) --state->cooldown;
     if (state->secondary_cooldown) --state->secondary_cooldown;
-    for (i = 0; i < state->count; ++i) Advance(state, &state->projectile[i]);
+    // Walk a pointer with a local count: SDCC 4.6.0 #16555 miscompiled the
+    // indexed form, re-adding the count offset to HL every iteration and so
+    // reading the loop bound from unrelated RAM (see docs/sdcc-pitfalls.md).
+    for (i = state->count, p = state->projectile; i; --i, ++p) Advance(state, p);
     while (state->count>COMBAT_GUN_COUNT && !state->projectile[state->count-1].kind) --state->count;
     if (fire && !state->cooldown && x < WINGS_WORLD_WIDTH)
     {

@@ -196,11 +196,15 @@ and twelve when both workloads are active. Thus gun rendering runs at 6 fps
 NTSC / 5 fps PAL; simulation remains 150 Hz, so flight speed and weapon release
 rates are retained. The six-VBlank elevator cadence is unchanged.
 
-Removing the gun reservation entirely misses the NTSC deadline in the
-cannon-dive-over-carrier scenario: 51 ms of simulation (20 steps) plus an
-86 ms redraw is 137.8 ms against 133.3 ms. Simulation costs about 2 ms per
-150 Hz step while firing (1.5-2 ms otherwise), so reaching the base cadence
-needs profiling of the step and redraw paths.
+Removing the gun reservation entirely still misses one NTSC deadline after
+the 2026-11-14 SDCC loop fix ([sdcc-pitfalls.md](sdcc-pitfalls.md)). The fix
+cut firing simulation from 51 to 41 ms per 20-step frame, but a frame turning
+over the carrier while firing then takes 41 ms of simulation plus a 96 ms
+redraw: 137.8 ms against 133.3 ms. `tools/profile_p0.py` samples the release
+ROM during the P0 smoke run. It shows `StepControls` (~0.7 ms per 150 Hz step,
+spread evenly over IX-indexed code) as the largest simulation cost, and
+`Terrain_DrawColumn`, `VDP_CommandWait` and the dashboard wave restore/draw
+as the largest render costs.
 
 Validation (2026-11-13): 134 host tests pass. They include tracer slopes
 recomputed from the original art, strikes for every downward pose in both
