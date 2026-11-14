@@ -6,6 +6,7 @@
 #include "core/aircraft.h"
 #ifdef WINGS_P1_FLIGHT
 #include "core/carrier.h"
+#include "msx/rope.h"
 #include "msx/elevator.h"
 CarrierState g_Carrier;
 volatile u8 g_DisplayElevator;
@@ -47,6 +48,9 @@ volatile u8 g_DisplayCrash = 255;
 /* Landing gear: the overlay sprite drawn (255 none) and its slide 0..5
  * (5 = down), as the original animates it toward the gear state (0x0550). */
 static u8 s_Wheel = 255, s_GearPos = 5, s_RenderWheel = 255, s_RenderGear = 5;
+/* The arresting rope (src/msx/rope.c): the cable drawn, 255 none. */
+volatile u8 g_DisplayRope = 255;
+static u8 s_RenderRope = 255;
 volatile u8 g_DisplayWheel = 255, g_DisplayGear = 5;
 #endif
 #ifdef WINGS_P1_FLIGHT
@@ -414,6 +418,23 @@ static void CopyShape(u8 page, const AircraftShape* shape, int16_t dx, int16_t d
     }
 }
 
+#ifdef WINGS_P1_FLIGHT
+/* The plane's origin row on screen, set by DrawAircraft. A static keeps the
+ * call below from holding DrawAircraft's locals live (SDCC then spills
+ * through the whole function: ~900 bytes). */
+static int16_t s_OriginRow;
+/* The arresting rope while the cable holds the plane (src/msx/rope.c). */
+static void DrawArrest(u8 page, u16 world, u16 camera, int16_t limit)
+{
+    s_RenderRope = 255;
+    if (s_World.flight.mode != FLIGHT_ARREST || g_TerrainFar || s_CrashFrame != 255) return;
+    s_RenderRope = g_FlightCable;
+    Rope_Draw(page, (int16_t)FLIGHT_CABLE_X(g_FlightCable),
+              s_World.flight.facing_left ? (int16_t)world + 16 : (int16_t)world - 16,
+              s_OriginRow, camera, limit);
+}
+#endif
+
 static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
 {
     const AircraftShape* shape = &g_AircraftShapes[frame];
@@ -463,6 +484,9 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     left = dx; right = dx + shape->width;
     top = dy; bottom = dy + shape->height;
 #ifdef WINGS_P1_FLIGHT
+    s_OriginRow = dy - shape->dy + 16;
+#endif
+#ifdef WINGS_P1_FLIGHT
     if (!g_TerrainFar && s_CrashFrame == 255) wheel = s_Wheel;
     s_RenderWheel = wheel; s_RenderGear = s_GearPos;
     if (wheel != 255)
@@ -510,6 +534,9 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
 #endif
     CopyShape(page, shape, dx, dy, camera, limit);
     if (flash) CopyShape(page, flash, fx, fy, camera, limit);
+#ifdef WINGS_P1_FLIGHT
+    DrawArrest(page, world, camera, limit);
+#endif
 }
 
 static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
@@ -530,6 +557,9 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
         s_PageScale[page] = g_TerrainFar;
     }
     Weapons_Restore(page, g_ViewChange);
+#ifdef WINGS_P1_FLIGHT
+    Rope_Restore(page, g_ViewChange);
+#endif
     if (s_Valid[page]) Background(page, 0);
     Dashboard_RestoreWaves(page, g_ViewChange);
     /* Signed differences: the camera may cross 0 into the open sea. */
@@ -1047,7 +1077,7 @@ advance_clocks:
         g_DisplayGauges[0]=s_RenderGauges[0]; g_DisplayGauges[1]=s_RenderGauges[1];
         g_DisplayGauges[2]=s_RenderGauges[2]; g_DisplayCrash=s_RenderCrash;
 #ifdef WINGS_P1_FLIGHT
-        g_DisplayWheel=s_RenderWheel; g_DisplayGear=s_RenderGear;
+        g_DisplayWheel=s_RenderWheel; g_DisplayGear=s_RenderGear; g_DisplayRope=s_RenderRope;
 #endif
         g_FramePublished ^= 1;
     }

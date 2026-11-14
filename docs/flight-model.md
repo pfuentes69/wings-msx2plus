@@ -91,6 +91,15 @@ about speed 780, below flying speed, so it dips (10 px below deck level,
   from the elevator) when it passes within 8 px. The cable then brakes it 110
   per tick to a stop, about 50 px at speed 1100. Without Up, the plane rolls
   off the bow.
+- **The rope:** while the cable holds the plane, the original (0x05c0) draws
+  one line, colour 3 (red), from the caught cable on the deck (6 px below the
+  plane's origin) to the hook (16 px behind the plane, 5 px below the
+  origin). The slack cables are never drawn: the deck art has none.
+  `src/msx/rope.c` draws the same line as two one-pixel runs: the half
+  nearer the cable on the lower row, as a line draw steps. It saves and
+  restores the 2-row strip under the rope in hidden 128×2 atlas strips. The
+  16-colour playfield palette has no red, so the rope uses the nearest
+  entry, the dark orange-brown (index 13).
 
 The contact rules are in [p2-landing.md](p2-landing.md).
 

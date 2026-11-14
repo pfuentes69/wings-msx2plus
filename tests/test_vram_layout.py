@@ -46,6 +46,8 @@ class VramLayoutTests(unittest.TestCase):
         pieces = {}
         for r in meta['wheels']:
             pieces[(r['atlas_x'], r['atlas_y'])] = (r['width'], r['height'])
+        for x, y in meta['rope_backups']:   # arresting-rope strip backups
+            pieces[(x, y)] = (128, 2)
         for (x, y), (w, h) in pieces.items():
             self.assertEqual(x % 2, 0)
             self.assertIn(y // 256, (2, 3))

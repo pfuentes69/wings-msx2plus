@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -78,6 +78,11 @@ proc publishing {} {
         if {[value g_SelectedFrame] ni $::wanted_frame} {return}
         unset ::wanted_frame
     }
+    if {[info exists ::wanted_rope]} {
+        # Mid-arrest, so the rope is well stretched.
+        if {[value g_DisplayRope]==255 || [speed]>700} {return}
+        unset ::wanted_rope
+    }
     if {[info exists ::wanted_turn]} {
         # Capture each new deck-turn pose; when the turn ends, drop the
         # pending capture and continue.
@@ -102,7 +107,7 @@ proc publishing {} {
     dump $name.gauges [debug read_block memory $::addr(g_DisplayGauges) 3]
     dump $name.flight [debug read_block memory $::addr(s_World) 37]
     dump $name.crash [debug read_block memory $::addr(g_DisplayCrash) 1]
-    dump $name.wheel [binary format cc [value g_DisplayWheel] [value g_DisplayGear]]
+    dump $name.wheel [binary format ccc [value g_DisplayWheel] [value g_DisplayGear] [value g_DisplayRope]]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
     dump $name.rom [debug read_block memory 16384 32768]
@@ -632,7 +637,8 @@ proc land_flare {} {
 proc land_touch {} {
     require [expr {[value g_LastContact]==1 && [world_byte 12]!=1 && [world_y]==1160 && [world_byte 11]}] "Stall onto the deck must land: contact=[value g_LastContact] mode=[world_byte 12] y=[world_y]"
     puts $::report "touchdown x=[world_x] speed=[speed]"
-    wait_for {[world_byte 12]==2} {wait_for {[world_byte 12]==0 && [speed]==0} land_stopped "arrest" 3} "cable catch" 2
+    # Caught: the original draws the stretched rope while the cable holds.
+    wait_for {[world_byte 12]==2} {set ::wanted_rope 1;snap arrest {wait_for {[world_byte 12]==0 && [speed]==0} land_stopped "arrest" 3}} "cable catch" 2
 }
 proc land_stopped {} {
     fly 0

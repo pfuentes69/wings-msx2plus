@@ -75,7 +75,7 @@ def crash_shape(scene, index):
     return record, data[offset:offset + record['bytes']]
 
 
-def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False):
+def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True):
     # World x is a 16-bit ring read as signed; beyond the map the MSX draws a
     # column of open sea (map x 5000 near, far x 624 in the distant view).
     signed = lambda v: v - 65536 if v >= 32768 else v
@@ -189,6 +189,26 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
                 packed = source[sy * (record['width']//2) + sx//2]
                 pixel = packed & 15 if sx%2 else packed >> 4
                 if pixel: pixels[dy][dx] = pixel
+    if rope != 255 and scale == 1 and crash == 255:
+        # The arresting rope (Amiga 0x05c0): cable on the deck to the hook,
+        # 16 px behind the plane; cable half one row lower. Colour 13 is the
+        # nearest playfield entry to the original's red.
+        cable = 7032 + 70 + 56 * rope
+        hook = world + 16 if facing_left else world - 16
+        low, high = min(cable, hook), max(cable, hook)
+        half = (high - low) // 2
+        left, right = max(low & ~1, camera + 8), min((high + 2) & ~1, camera + 256)
+        right = min(right, left + 128)
+        origin = pivot + 16
+        limit = 145 + heave if elevator_active else 172
+        if cable >= hook:
+            runs = ((cable - half, cable + 1, origin + 6), (hook, cable - half, origin + 5))
+        else:
+            runs = ((cable, cable + half + 1, origin + 6), (cable + half + 1, hook + 1, origin + 5))
+        for start, end, row in runs:
+            if not 0 <= row < limit: continue
+            for wx in range(max(start, left), min(end, right)):
+                pixels[row][wx - camera] = 13
     def mark(x,y,w,h,color):
         for yy in range(max(0,y),min(171,y+h)):
             for xx in range(max(camera+8,x),min(camera+256,x+w)):

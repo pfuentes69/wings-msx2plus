@@ -93,6 +93,10 @@ typedef struct FlightState {
 /* Gear: always on deck; in the air within FLIGHT_GEAR_RANGE of the carrier,
  * in either direction (0xb45a). */
 uint8_t Flight_GearDown(const FlightState* state, uint16_t world);
+/* The cable (0..3) holding the plane during the arrest (the original's
+ * -$42c4); drawn as the stretched rope. Its x is FLIGHT_CABLE_X(cable). */
+extern uint8_t g_FlightCable;
+#define FLIGHT_CABLE_X(cable) (FLIGHT_CARRIER_X + FLIGHT_CABLE_FIRST + (cable) * FLIGHT_CABLE_SPACING)
 #endif
 
 void Flight_Reset(FlightState* state);

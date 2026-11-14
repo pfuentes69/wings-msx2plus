@@ -49,3 +49,10 @@ extern const AircraftShape g_CrashShapes[13];
 extern const AircraftShape g_WheelPieces[WHEEL_PIECE_COUNT];
 #endif
 extern const unsigned char g_WheelFirst[21];
+/* Hidden 128x2 strips (atlas pages 2/3) that save the playfield under the
+ * arresting rope, one per display page. */
+#define ROPE_BACKUP_WIDTH 128
+#define ROPE_BACKUP0_X 0
+#define ROPE_BACKUP0_Y 1020
+#define ROPE_BACKUP1_X 0
+#define ROPE_BACKUP1_Y 1022

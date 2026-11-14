@@ -389,7 +389,7 @@ def bomb_pixels():
             result[frame*64+y*8+x]=mapping[str(color)]
     return bytes(result)
 
-def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=False, reserve_crew=False, frames=None, reserve_wheels=()):
+def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=False, reserve_crew=False, frames=None, reserve_wheels=(), reserve_rope=False):
     if frames is None: frames=json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
     tiles=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']
     occupied=[bytearray(256) for _ in range(512)]
@@ -433,6 +433,9 @@ def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=F
                                     order=sorted(range(len(reserve_wheels)),key=lambda i:-reserve_wheels[i][0]*reserve_wheels[i][1])
                                     cells=[None]*len(reserve_wheels)
                                     for i in order:cells[i]=allocate(1,*reserve_wheels[i])[0]
+                                    if reserve_rope:
+                                        # Arresting-rope strip backups, one per display page.
+                                        return slots,backups,ships,tails,weapons,crew,bombs,cells,allocate(2,128,2)
                                     return slots,backups,ships,tails,weapons,crew,bombs,cells
                                 return slots,backups,ships,tails,weapons,crew,bombs
                             return slots,backups,ships,tails,allocate(36,8,8)

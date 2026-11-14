@@ -54,6 +54,8 @@ void Flight_Reset(FlightState* state)
 }
 
 #ifdef WINGS_P1_FLIGHT
+uint8_t g_FlightCable;
+
 /* Every simulation step: run the original's tick on the first step of each
  * group of FLIGHT_TICK_STEPS, then move by this tick's per-step share. The
  * share is vx/vy plus one Q8 unit on the first |xrem|/|yrem| steps, so a tick

@@ -324,6 +324,7 @@ void Flight_Tick(FlightState* f, uint16_t world, uint8_t input) WINGS_BANKED
                 if (hook + FLIGHT_CABLE_REACH >= cable && hook <= cable + FLIGHT_CABLE_REACH)
                 {
                     f->mode = FLIGHT_ARREST;
+                    g_FlightCable = i;
                     break;
                 }
         }
