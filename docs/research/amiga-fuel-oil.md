@@ -108,3 +108,59 @@ Recovered 2026-11-14 with the same method.
 There is no cable geometry in the capture rule. The manual's "four arresting
 cables" are scenery as far as this code is concerned: a stall onto the deck,
 facing left, is a landing.
+
+## Flight model (0xbff4 controls, 0xbdfa integration, 0xc378/0xabde pose)
+
+Recovered 2026-11-14. All per 12.5 Hz logic tick. Input bits (`-$42bc`):
+0 UP, 1 DOWN, 2 RIGHT, 3 LEFT. Facing `$14(player)`: −1 left, +1 right.
+Acceleration step `-$50e8` = 600 (DATA; debug keys change it by 50).
+
+**Airspeed `-$5bea`** (1000..1400):
+
+- Pushing in the facing direction: counter `-$3214` += 1 (max 8), speed +=
+  counter, at most 1400; throttle flag set.
+- Pushing the other way starts a turn (0xab80).
+- No horizontal input: counter −= 1 (min 4), speed −= counter while above
+  1000.
+
+**Commanded climb `-$5bfc`**, in hundredths of a degree (−4500..+3000):
+
+| Input | Change per tick |
+| --- | --- |
+| Horizontal + UP | +600 above speed 1000; +150 facing right / +75 facing left below it; max +3000 |
+| Horizontal + DOWN | −600 (−300 while turning); min −4500 |
+| DOWN alone | −1200; min −4500 |
+| Horizontal alone, or nothing | a positive climb decays by 600 to 0; a dive is kept. While turning: −150 per tick down to −2250. Small climbs (0..500) are cancelled out of the flight path (`-$5bf6`) |
+| UP alone, facing left (stall) | approaches +600 by 600 per tick; landing flag `-$5554` set |
+| UP alone, facing right | −600 per tick; below −600 it eases toward about −600 − 2 × 600 (nose down); landing flag cleared |
+
+**Flight path `-$555c`** moves a quarter of the way to (climb + `-$5bf6`)
+each tick. Stalling facing left at exactly +600 makes it approach −800
+instead: the flare is nose up (pose) but sinking at 8°.
+
+**Integration (0xbdfa)**, with angle a = |path| / 100 degrees:
+
+- horizontal step (`$16`) = fix((speed × turn[t] × cos a + 50) / 100);
+  x += step × facing;
+- vertical step (`$18`) = fix(speed × sin a / 100), negative when the path is
+  down; altitude += step.
+- Below speed 1000 (mode 0): if UP is not held, climb −= 300 (min −4500), and
+  the vertical step −= (1000 − speed) / 100.
+- Ceiling: altitude 1100 (clamp; climb negated; vertical step −half).
+  Floor: −4.
+- sin/cos come from a 91-entry table by degree (`-$548a`). Entries 1..4 all
+  equal sin 4° (0.0698), so the smallest nonzero angle acts like 4°; the rest
+  is sin(degree) to four decimals.
+- Turn factor `-$54f2` by turn frame 0..25: 1.0, 0.98, 0.95, 0.91, 0.86,
+  0.81, 0.75, 0.70, 0.60, 0.50, 0.40, 0.30, 0.23, 0.20, 0.0, 0.05, 0.25,
+  0.45, 0.60, 0.70, 0.75, 0.81, 0.86, 0.91, 0.95, 0.98.
+- At speed 1000–1400 the horizontal step is 10–14 px per tick
+  (125–175 px/s).
+
+**Pose:** index = (climb + 5000) / 500 selects a pose from `-$5526`: 10, 10,
+9, 9, 8, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1. Pose 5 is level (`hc05`),
+10 the steepest dive and 1 the steepest climb. A stall at +600 shows pose 4.
+
+**Landing direction:** the landing flag is set only facing left, and the
+landing check (0xba80) requires facing left, so this executable lands right
+to left only.
