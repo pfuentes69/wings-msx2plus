@@ -122,6 +122,7 @@ proc publishing {} {
     dump $name.smoke [debug read_block memory $::addr(g_DisplaySmoke) 41]
     dump $name.score [debug read_block memory $::addr(g_DisplayScore) 4]
     dump $name.island [debug read_block memory $::addr(g_Island) 136]
+    dump $name.palette [debug read_block {VDP palette} 0 32]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
     dump $name.rom [debug read_block memory 16384 32768]

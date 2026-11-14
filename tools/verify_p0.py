@@ -62,6 +62,9 @@ def main():
         _,name,page,world,y,pose,wave,heave,ship,camera=line.split();page=int(page)
         game=list((out/f'{name}.game').read_bytes());combat=(out/f'{name}.combat').read_bytes()
         assert (out/f'{name}.rom').read_bytes()==data[:32768],(name,'mapper restoration')
+        # Colour 0 (the sky) is set once at boot and never by the ISR.
+        terrain_palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
+        assert (out/f'{name}.palette').read_bytes()[:2]==terrain_palette[:2],(name,'sky colour 0',(out/f'{name}.palette').read_bytes()[:2])
         vram=(out/f'{name}.vram').read_bytes()
         scale,wave_view,pilot=(out/f'{name}.view').read_bytes()
         stage,depth,lift_tick=(out/f'{name}.lift').read_bytes()

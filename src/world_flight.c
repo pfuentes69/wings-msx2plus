@@ -879,6 +879,11 @@ void main(void)
     VDP_EnableTransparency(FALSE);
     VDP_SetColor(1);
     VDP_SetPalette(g_TerrainPalette);
+    /* VDP_SetPalette enables interrupts before its 32 data bytes. A line
+     * interrupt in between rewrites colours 1..15 and leaves the palette
+     * pointer wrapped to 0, so the rest of this write lands on colour 0
+     * (the sky), which the ISR never rewrites. Set colour 0 atomically. */
+    VDP_SetPaletteEntry(0, g_TerrainPalette[0] | ((u16)g_TerrainPalette[1] << 8));
     VDP_FillVRAM(0, 0, 0, 0);
     VDP_FillVRAM(0, 0, 1, 0);
     LoadCaches();
