@@ -7,7 +7,8 @@
 #include "column_ops.h"
 
 u8 g_TerrainFar;
-static u8 s_Map[TERRAIN_MAP_BYTES];
+/* Column offsets then runs; terrain_patch.c rewrites column offsets. */
+u8 g_TerrainMap[TERRAIN_MAP_BYTES];
 /* The tile ids each page shows per ring column, and the map column drawn
  * there (65535: invalid). Shared with the smoke eraser (smoke_draw.c). */
 u16 g_TerrainCached[2][32][TERRAIN_MAP_ROWS];
@@ -39,7 +40,7 @@ void Terrain_Load(void)
     {
         count = TERRAIN_MAP_BYTES - i > 64 ? 64 : TERRAIN_MAP_BYTES - i;
         offset = TERRAIN_MAP_OFFSET + i;
-        Scenery_Read(4 + (offset >> 13), offset & 8191, s_Map + i, count);
+        Scenery_Read(4 + (offset >> 13), offset & 8191, g_TerrainMap + i, count);
     }
 }
 
@@ -67,10 +68,10 @@ void Terrain_DrawColumn(u16 world, u8 page)
     u8 slot = (world & 255) >> 3;
     u16 column = world >> 3;
     if (g_TerrainFar)
-        column = (column < TERRAIN_MAP_COLUMNS - TERRAIN_FAR_COLUMN ? column : TERRAIN_FAR_SEA_COLUMN) + TERRAIN_FAR_COLUMN;
+        column = (column < TERRAIN_FAR_COLUMNS ? column : TERRAIN_FAR_SEA_COLUMN) + TERRAIN_FAR_COLUMN;
     else if (column >= TERRAIN_FAR_COLUMN) column = TERRAIN_SEA_COLUMN;
     column *= 2;
-    u16 offset = s_Map[column] | ((u16)s_Map[column + 1] << 8);
+    u16 offset = g_TerrainMap[column] | ((u16)g_TerrainMap[column + 1] << 8);
     u16* cached;
     u16* decoded;
     u16 tile, source_y, dest_y = (u16)page * 256 + 24;
@@ -78,7 +79,7 @@ void Terrain_DrawColumn(u16 world, u8 page)
     if (g_TerrainColumns[page][slot] == offset) return;
     g_TerrainColumns[page][slot] = offset;
     // All runs/offsets are bounded and round-trip checked during generation.
-    Column_Decode(s_Map + offset, s_Decoded);
+    Column_Decode(g_TerrainMap + offset, s_Decoded);
     cached = g_TerrainCached[page][slot];
     decoded = s_Decoded;
 #ifndef WINGS_TERRAIN_C

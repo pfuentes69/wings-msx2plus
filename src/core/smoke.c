@@ -31,6 +31,15 @@ void Smoke_Reset(void) WINGS_BANKED
     s_Phase = 0;
 }
 
+static void Puff(SmokePuff* p, uint16_t x, uint16_t y)
+{
+    p->x = x; p->y = y;
+    p->xf = p->yf = 0;
+    p->vx = Random(); p->vy = Random();
+    p->stage = SMOKE_STAGES;
+    p->life = SMOKE_STAGE_TICKS - 1;
+}
+
 /* 0x54e0 / 0x5460: a puff 10 px ahead of the plane's origin and 13 px above
  * it (at least 16 px above the sea), drifting 1-2 px right and up a tick. */
 static void Spawn(const FlightState* f, uint16_t world)
@@ -48,12 +57,15 @@ static void Spawn(const FlightState* f, uint16_t world)
     }
     altitude = (int16_t)WINGS_FLIGHT_MAX_Y - (int16_t)(f->y >> 8) + 13;
     if (altitude < 16) altitude = 16;
-    p->x = world + dx;
-    p->y = (uint16_t)((int16_t)WINGS_FLIGHT_MAX_Y - altitude);
-    p->xf = p->yf = 0;
-    p->vx = Random(); p->vy = Random();
-    p->stage = SMOKE_STAGES;
-    p->life = SMOKE_STAGE_TICKS - 1;
+    Puff(p, world + dx, (uint16_t)((int16_t)WINGS_FLIGHT_MAX_Y - altitude));
+}
+
+void Smoke_Emit(uint16_t x, uint16_t y) WINGS_BANKED
+{
+    SmokePuff* p = g_Smoke;
+    uint8_t i;
+    for (i = 0; i < SMOKE_COUNT && p->stage; ++i, ++p) {}
+    if (i < SMOKE_COUNT) Puff(p, x, y);
 }
 
 void Smoke_Tick(const FlightState* flight, uint16_t world, uint8_t oil, uint8_t emit) WINGS_BANKED

@@ -8,6 +8,9 @@ from PIL import Image, ImageOps
 from map_aircraft import mapping
 
 FRAMES = ('hc01', 'hc05', 'hc09')
+# Kept in the record list so shape numbers stay put, but given no atlas space:
+# the wheel overlays (wh01..wh14) replaced these wheels-down views at runtime.
+UNUSED_FRAMES = ('hc40', 'hc41')
 AIR_TURN_LEFT = ('hc28 hc29 hc2a hc2b hc2c hc2d hc2e hc2f hc30 hc31 hc32 hc32 hc32 '
                  'hc3b hc3b hc3c hc3d hc3e hc3f hc2d hc2c hc2b hc2a hc29 hc28').split()
 AIR_TURN_RIGHT = ('hc22 hc23 hc24 hc25 hc26 hc27 hc37 hc38 hc39 hc3a hc3b hc3b hc3b '
@@ -310,7 +313,7 @@ def crash_assets(pixels, frames):
         decoded.append((name, path, raw, indices, meta))
     need_w = max(m['width'] for *_, m in decoded)
     need_h = max(m['height'] for *_, m in decoded)
-    hosts = [(i, f) for i, f in enumerate(frames[:53]) if not f.get('streamed')]
+    hosts = [(i, f) for i, f in enumerate(frames[:53]) if not f.get('streamed') and not f.get('unused')]
     host_index, host = min(((i, f) for i, f in hosts if f['width'] >= need_w and f['height'] >= need_h),
                            key=lambda item: item[1]['width'] * item[1]['height'])
     records = []
@@ -341,7 +344,7 @@ def animation_assets(source, destination, base_manifest):
     original = {r['name']: r for r in json.loads((source / 'manifest.json').read_text())['records']}
     names = [f'hc{n:02x}' for n in range(1, 11)] + [f'hc{n:02x}' for n in range(0x22, 0x40)]
     names += [f'hc{n:02x}-left' for n in range(1, 11) if n != 5]
-    names += ['hc40', 'hc41']  # Original right/left wheels-down side views.
+    names += ['hc40', 'hc41']  # Original right/left wheels-down side views (unused: see UNUSED_FRAMES).
     names += ['hc21', 'hcoc']  # Tail-down resting / slow ground-roll poses.
     names += ['hc1b','hc1c','hc1d','hc1e','hc1f']
     names += ['hc1c-left','hc1d-left','hc1e-left','hc1f-left']
@@ -386,10 +389,13 @@ def animation_assets(source, destination, base_manifest):
             width=width, height=height, data_offset=len(pixels), bytes=len(packed),
             file=filename, packed_sha256=hashlib.sha256(packed).hexdigest()))
         pixels.extend(packed)
+    for record in records:
+        if record['name'] in UNUSED_FRAMES:
+            record['unused'] = True
     pitch_right = [index[f'hc{n:02x}'] for n in range(1, 11)]
     # Pages 2/3: reserve rows 180..211 for the clean scenery strip.
     ax, ay, shelf, page = 0, 0, 0, 2
-    for record in (r for r in records if r['name'] not in ('hc21', 'hcoc','hc1b','hc1c','hc1d','hc1e','hc1f','hc1c-left','hc1d-left','hc1e-left','hc1f-left')):
+    for record in (r for r in records if r['name'] not in ('hc21', 'hcoc','hc1b','hc1c','hc1d','hc1e','hc1f','hc1c-left','hc1d-left','hc1e-left','hc1f-left')+UNUSED_FRAMES):
         if ax + record['width'] > 256:
             ax, ay, shelf = 0, ay + shelf, 0
         if ay + record['height'] > 180:
@@ -402,7 +408,7 @@ def animation_assets(source, destination, base_manifest):
     # Fill shelf gaps without displacing the shared cockpit/effects caches.
     # Starting another shelf would fragment the remaining cockpit atlas space.
     occupied=set()
-    for record in (r for r in records if r['name'] not in ('hc21', 'hcoc','hc1b','hc1c','hc1d','hc1e','hc1f','hc1c-left','hc1d-left','hc1e-left','hc1f-left')):
+    for record in (r for r in records if r['name'] not in ('hc21', 'hcoc','hc1b','hc1c','hc1d','hc1e','hc1f','hc1c-left','hc1d-left','hc1e-left','hc1f-left')+UNUSED_FRAMES):
         occupied.update((x,y) for y in range(record['atlas_y'],record['atlas_y']+record['height'])
                         for x in range(record['atlas_x'],record['atlas_x']+record['width']))
     for record in (r for r in records if r['name'] in ('hc21', 'hcoc')):
@@ -518,7 +524,10 @@ extern const signed char g_SmokeBox[28];   /* per frame: dx, dy, width, height *
         files[destination / f'mission_bank_{bank if bank < 11 else bank + 3}.bin'] = bytes(pixels[offset:offset + 8192])
     code += '#ifdef MISSION_TERRAIN\n' + '\n#define AIRCRAFT_DATA(offset) ((const unsigned char*)(offset))\n#else\n' + c_array('g_AircraftPixels', pixels, f'[{len(pixels)}]') + '\n#define AIRCRAFT_DATA(offset) (g_AircraftPixels + (offset))\n#endif\n'
     code += '#ifdef MISSION_TERRAIN\nAircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT];\n#else\nconst AircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT] = {\n'
-    code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in records) + '\n};\n#endif\n'
+    for r in records:
+        if r.get('unused'):
+            r['atlas_x'] = r['atlas_y'] = 0
+    code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {0 if r.get('unused') else r['width']}, {0 if r.get('unused') else r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']}{' (unused)' if r.get('unused') else ''} */" for r in records) + '\n};\n#endif\n'
     code += '#ifdef MISSION_TERRAIN\nconst AircraftShape g_GunFlash[GUN_FLASH_COUNT] = {\n'
     code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in flashes) + '\n};\n#endif\n'
     code += f'#ifdef MISSION_TERRAIN\nconst AircraftShape g_CrashShapes[{len(crashes)}] = {{\n'

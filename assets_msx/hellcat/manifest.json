@@ -173,8 +173,8 @@
   },
   "animation": {
     "taxi_cache": {
-      "x": 184,
-      "y": 989,
+      "x": 192,
+      "y": 965,
       "width": 46,
       "height": 15
     },
@@ -1440,8 +1440,9 @@
         "bytes": 336,
         "file": "animation/hc40.sc5",
         "packed_sha256": "d47d8a923f929bc80b20b6f63ded697690fe641192864cbb9cd153d8b95756c8",
-        "atlas_x": 110,
-        "atlas_y": 797
+        "unused": true,
+        "atlas_x": 0,
+        "atlas_y": 0
       },
       {
         "id": 50,
@@ -1465,8 +1466,9 @@
         "bytes": 336,
         "file": "animation/hc41.sc5",
         "packed_sha256": "4772d0feffceceacb07948dc08f5a0606d5944afa7f8b901abe2ab7922c2c7f0",
-        "atlas_x": 152,
-        "atlas_y": 797
+        "unused": true,
+        "atlas_x": 0,
+        "atlas_y": 0
       },
       {
         "id": 51,
@@ -1540,8 +1542,8 @@
         "bytes": 345,
         "file": "animation/hc1b.sc5",
         "packed_sha256": "d240919a8c2148aea8ba366d19c1594c846a0ceb107db19b1e47dd30b16d4b83",
-        "atlas_x": 184,
-        "atlas_y": 989,
+        "atlas_x": 192,
+        "atlas_y": 965,
         "streamed": true
       },
       {
@@ -1566,8 +1568,8 @@
         "bytes": 330,
         "file": "animation/hc1c.sc5",
         "packed_sha256": "fa8adc10a55c9b872a7c94d62f77e289ced03b22ae636cf9af65f44a77b19bda",
-        "atlas_x": 184,
-        "atlas_y": 989,
+        "atlas_x": 192,
+        "atlas_y": 965,
         "streamed": true
       },
       {
@@ -1592,8 +1594,8 @@
         "bytes": 330,
         "file": "animation/hc1d.sc5",
         "packed_sha256": "3a5918dd82bbc595188e09f216a99203c46bade924531957afc9a546eb64a150",
-        "atlas_x": 184,
-        "atlas_y": 989,
+        "atlas_x": 192,
+        "atlas_y": 965,
         "streamed": true
       },
       {
@@ -1618,8 +1620,8 @@
         "bytes": 285,
         "file": "animation/hc1e.sc5",
         "packed_sha256": "9cdcc502791cbdbf1585893b08f1440a8ac66e64b6563721975aead969576d8e",
-        "atlas_x": 184,
-        "atlas_y": 989,
+        "atlas_x": 192,
+        "atlas_y": 965,
         "streamed": true
       },
       {
@@ -1644,8 +1646,8 @@
         "bytes": 285,
         "file": "animation/hc1f.sc5",
         "packed_sha256": "18a5ce31910febd5665118f3cd7490116c6d21d323cd679194f809fc518ca956",
-        "atlas_x": 184,
-        "atlas_y": 989,
+        "atlas_x": 192,
+        "atlas_y": 965,
         "streamed": true
       },
       {
@@ -1670,8 +1672,8 @@
         "bytes": 330,
         "file": "animation/hc1c-left.sc5",
         "packed_sha256": "3847472c09bdbc2f41498b26d7857c31cf79ca586e017e408232a68074a2d8b6",
-        "atlas_x": 184,
-        "atlas_y": 989,
+        "atlas_x": 192,
+        "atlas_y": 965,
         "streamed": true
       },
       {
@@ -1696,8 +1698,8 @@
         "bytes": 330,
         "file": "animation/hc1d-left.sc5",
         "packed_sha256": "f6b453a2b0ea4bd8f60b7cf2dfc8c6831e05a623cf759ebff683d2e30cf93dcc",
-        "atlas_x": 184,
-        "atlas_y": 989,
+        "atlas_x": 192,
+        "atlas_y": 965,
         "streamed": true
       },
       {
@@ -1722,8 +1724,8 @@
         "bytes": 285,
         "file": "animation/hc1e-left.sc5",
         "packed_sha256": "9c30f5529aa92d8c75694548ed0e4ba3dbb8ccb01a5f1b55b696fe44675237f3",
-        "atlas_x": 184,
-        "atlas_y": 989,
+        "atlas_x": 192,
+        "atlas_y": 965,
         "streamed": true
       },
       {
@@ -1748,8 +1750,8 @@
         "bytes": 285,
         "file": "animation/hc1f-left.sc5",
         "packed_sha256": "9651c7035444faa8c2706a85aeb457775604cb29556236e374d33e4ae5137b9b",
-        "atlas_x": 184,
-        "atlas_y": 989,
+        "atlas_x": 192,
+        "atlas_y": 965,
         "streamed": true
       }
     ],
@@ -2528,12 +2530,12 @@
     ],
     "rope_backups": [
       [
-        0,
-        1020
+        30,
+        943
       ],
       [
-        0,
-        1022
+        30,
+        945
       ]
     ],
     "smoke": [
@@ -2583,8 +2585,8 @@
         "dy": -4,
         "width": 14,
         "height": 8,
-        "atlas_x": 240,
-        "atlas_y": 1015,
+        "atlas_x": 214,
+        "atlas_y": 1011,
         "data_offset": 28458,
         "bytes": 56,
         "packed_sha256": "e17b29f117a36882386462aad125c2dd8130b5c16f28b87ebe39f682103c7b31"

@@ -394,7 +394,7 @@ def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=F
     tiles=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']
     occupied=[bytearray(256) for _ in range(512)]
     for f in frames:
-        if f.get('streamed'): continue
+        if f.get('streamed') or f.get('unused'): continue
         for y in range(f['atlas_y']-512,f['atlas_y']-512+f['height']):
             occupied[y][f['atlas_x']:f['atlas_x']+f['width']]=bytes([1])*f['width']
     for tile in range(tiles):
@@ -566,7 +566,9 @@ def artifacts():
     code+=f'#define AIRCRAFT_TABLE_OFFSET {len(tables)}\n'
     table_offsets['g_AircraftShapes']=len(tables)
     for frame in animation['frames']:
-        tables.extend(struct.pack('<HbbBBBH',frame['data_offset'],frame['dx'],frame['dy'],frame['width'],frame['height'],frame['atlas_x'],frame['atlas_y']))
+        # Unused frames have no atlas slot: no size, so LoadShape skips them.
+        size=(0,0) if frame.get('unused') else (frame['width'],frame['height'])
+        tables.extend(struct.pack('<HbbBBBH',frame['data_offset'],frame['dx'],frame['dy'],*size,frame['atlas_x'],frame['atlas_y']))
     if len(tables)>8192:raise ValueError('dashboard tables exceed bank 7')
     files[ROOT/'assets_msx/dashboard/bank_7.bin']=bytes(tables)
     files[ROOT/'assets_msx/dashboard/bombs.indices']=bomb_pixels()

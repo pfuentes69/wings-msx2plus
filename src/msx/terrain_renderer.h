@@ -6,6 +6,7 @@ void Terrain_LoadEnd(void);
 void Terrain_InitPage(u8 page);
 void Terrain_DrawColumn(u16 world, u8 page);
 extern u8 g_TerrainFar;
+extern u8 g_TerrainMap[TERRAIN_MAP_BYTES];
 
 /* Dynamic overlays mark their affected tile rows for repaint on ring reuse.
  * Requires first <= last. */

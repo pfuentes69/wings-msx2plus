@@ -52,10 +52,10 @@ extern const unsigned char g_WheelFirst[21];
 /* Hidden 128x2 strips (atlas pages 2/3) that save the playfield under the
  * arresting rope, one per display page. */
 #define ROPE_BACKUP_WIDTH 128
-#define ROPE_BACKUP0_X 0
-#define ROPE_BACKUP0_Y 1020
-#define ROPE_BACKUP1_X 0
-#define ROPE_BACKUP1_Y 1022
+#define ROPE_BACKUP0_X 30
+#define ROPE_BACKUP0_Y 943
+#define ROPE_BACKUP1_X 30
+#define ROPE_BACKUP1_Y 945
 /* Original engine smoke frames as atlas pieces, offsets from the puff's
  * origin: frame = stage - 1 (near smk0..smk4) or 5 + (far smk0/smk1);
  * pieces g_SmokePieces[g_SmokeFirst[frame] .. g_SmokeFirst[frame + 1]). */

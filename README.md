@@ -21,7 +21,9 @@ original's turn. To land, approach from the right low over the sea and hold
 Up alone (the stall flare) onto the deck, and keep holding it so the hook
 catches a cable. Left/Right also taxi on deck and turn the plane round at
 rest. Stop over the platform and press either logical Fire button to enter the
-hold, reload and emerge with the same heading. The
+hold, reload and emerge with the same heading.
+[Island combat](docs/island-combat.md) has begun: bombs wreck the island's
+huts (150 points, then they smoke) and empty its manned dugouts (200). The
 [original handoff](CODEX_HANDOFF_PROMPT.md) is historical research context.
 
 The project follows MSXgl's [alternative file layout](https://aoineko.org/msxgl/index.php?title=Alternative_file_layout),

@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_HudScore g_DisplayScore g_DisplaySmoke g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_HudScore g_DisplayScore g_DisplaySmoke g_Island g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -121,6 +121,7 @@ proc publishing {} {
     dump $name.wheel [binary format ccc [value g_DisplayWheel] [value g_DisplayGear] [value g_DisplayRope]]
     dump $name.smoke [debug read_block memory $::addr(g_DisplaySmoke) 41]
     dump $name.score [debug read_block memory $::addr(g_DisplayScore) 4]
+    dump $name.island [debug read_block memory $::addr(g_Island) 136]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
     dump $name.rom [debug read_block memory 16384 32768]
@@ -480,12 +481,31 @@ proc cannon_next {name} {
         cannon_dive_left {cannon_settle 16 {pilot 128 1060;wait_for {![world_byte 11] && ![world_byte 13] && abs([world_y]-1060)<9 && abs([climb])<=600} {pilot_off;cannon 1 cannon_climb_right} "turn for cannon tests" 15}}
         cannon_climb_right {cannon 4 cannon_level_right}
         cannon_level_right {cannon 7 cannon_dive_right}
-        cannon_dive_right {cannon_settle 128 approach}
+        cannon_dive_right {cannon_settle 128 island_run}
     }
 }
 proc cannon_settle {heading then} {
     pilot $heading 1060
     wait_for {abs([world_y]-1060)<9 && abs([climb])<=600} "pilot_off;$then" "level after firing" 15
+}
+# P3 island targets: fly left over island A low and carpet-bomb until the
+# hut at x 2392 is wrecked (g_Island: hut records of 8 bytes, wrecked +3).
+proc island_wrecked {hut} {debug read memory [expr {$::addr(g_Island)+8*$hut+3}]}
+proc island_run {} {
+    game_byte 13 30;game_byte 15 192
+    set ::score_before [expr {[value g_DisplayScore]}]
+    pilot 16 1100
+    wait_for {[world_x]<2800 && [world_byte 11] && abs([world_y]-1100)<9} island_bomb "fly to the island" 90
+}
+proc island_bomb {} {
+    keymatrixdown 4 8
+    wait_for {[island_wrecked 0] || [world_x]<2200} island_hit "bomb the huts" 20
+}
+proc island_hit {} {
+    keymatrixup 4 8
+    require [island_wrecked 0] "Bombs missed the hut at 2392: x=[world_x]"
+    set ::wanted_smoke 1
+    snap island_bombed {pilot 128 1060;wait_for {[world_x]>5000} approach "fly back from the island" 90}
 }
 proc approach {} {
     # Gear comes down within 1280 px of the carrier, in either direction.

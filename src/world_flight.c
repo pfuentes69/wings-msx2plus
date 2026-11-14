@@ -9,6 +9,8 @@
 #include "msx/rope.h"
 #include "msx/smoke_draw.h"
 #include "core/smoke.h"
+#include "core/island.h"
+#include "msx/terrain_patch.h"
 #include "core/flight_model.h"
 #include "msx/elevator.h"
 CarrierState g_Carrier;
@@ -320,6 +322,14 @@ static void DrawColumn(u16 world, u8 page)
     Terrain_DrawColumn(world, page);
 }
 
+/* Every column a page shows from this camera (unchanged ones cost a check). */
+static void DrawView(u16 camera, u8 page)
+{
+    u8 count = 33;
+    camera &= 65528u;
+    do { DrawColumn(camera, page); camera += 8; } while (--count);
+}
+
 // Save/restore the clean, byte-aligned footprint, splitting at the page seam.
 // Backups live at x=0,y=212 in each page, never displayed.
 static void Background(u8 page, u8 save)
@@ -572,7 +582,6 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
 static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
 {
     u16 previous, next;
-    u8 count;
     g_RenderPage = page;
     g_ViewChange = s_PageScale[page] != g_TerrainFar;
     g_Rendering = 1;
@@ -581,8 +590,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
         s_Valid[page] = 0;
         VDP_CommandHMMV(0, (u16)page * 256, 256, 172, 0);
         Terrain_InitPage(page);
-        for (previous = camera & 65528u, count = 33; count; --count, previous += 8)
-            DrawColumn(previous, page);
+        DrawView(camera, page);
         s_Camera[page] = camera;
         s_PageScale[page] = g_TerrainFar;
     }
@@ -619,6 +627,15 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
         }
     }
     s_Camera[page] = camera;
+#ifdef WINGS_P1_FLIGHT
+    /* A wrecked hut changed map columns: redraw what this page shows (the
+     * renderer skips columns whose runs did not change). */
+    if (g_TerrainDirty & (page + 1))
+    {
+        g_TerrainDirty &= ~(page + 1);
+        DrawView(camera, page);
+    }
+#endif
     if (!g_TerrainFar)
     {
 #ifdef WINGS_P1_FLIGHT
@@ -772,7 +789,13 @@ static u8 ReadActions(void)
         action=Game_HandleAction(&g_Game,pressed);
         g_InputInvert=g_Game.invert;
         if (old_phase!=g_Game.phase || old_cursor!=g_Game.cursor || old_notice!=g_Game.notice || old_invert!=g_Game.invert) s_UiDirty=1;
-        if (action & GAME_RESTARTED) Combat_Reset(&g_Combat);
+        if (action & GAME_RESTARTED)
+        {
+            Combat_Reset(&g_Combat);
+#ifdef WINGS_P1_FLIGHT
+            Island_Reset();
+#endif
+        }
         if (action & GAME_START_SORTIE) { NewPlane(); reset_weapons=1; }
 #ifdef WINGS_P1_FLIGHT
         if (action & GAME_LEAVE_SERVICE) {Carrier_Raise(&g_Carrier);Combat_Reset(&g_Combat);reset_weapons=1;}
@@ -808,8 +831,7 @@ static u8 ReadActions(void)
 
 void main(void)
 {
-    u16 column, camera, world, y;
-    u8 columns;
+    u16 camera, world, y;
     u16 surface;
     u8 weapons, reset_weapons, i;
 #ifdef WINGS_P1_FLIGHT
@@ -866,11 +888,13 @@ void main(void)
     Elevator_Load();
 #endif
     Terrain_Load();
+#ifdef WINGS_P1_FLIGHT
+    Island_Reset(); g_TerrainDirty = 0;
+#endif
     for (page = 0; page < 2; ++page)
     {
         Terrain_InitPage(page);
-        for (column = camera & 65528u, columns = 33; columns; --columns, column += 8)
-            DrawColumn(column, page);
+        DrawView(camera, page);
     }
     Render(0, camera, world, s_World.flight.y >> 8, s_Aircraft.shape);
     VDP_SetPage(0);
@@ -1003,6 +1027,9 @@ void main(void)
                             s_Aircraft.facing_left,
 #endif
                             weapons);
+#ifdef WINGS_P1_FLIGHT
+                        Island_Impacts(&g_Combat, &g_Game.progress.score);
+#endif
                     }
                     }
 #ifdef WINGS_P1_FLIGHT
@@ -1015,6 +1042,7 @@ advance_clocks:
                         /* One original tick: smoke drifts on through a crash; only
                          * a running sortie puts out new puffs. */
                         Smoke_Tick(&s_World.flight, s_World.x >> 8, g_Game.sortie.oil, !s_CrashSteps);
+                        Island_Tick();
 #endif
                     }
 #ifdef WINGS_P1_FLIGHT
@@ -1075,7 +1103,7 @@ advance_clocks:
             g_DisplayGauges[0] != g_Engine.oil_needle || g_DisplayGauges[1] != g_Engine.fuel_needle ||
             g_DisplayGauges[2] != g_Engine.lamps || g_DisplayCrash != s_CrashFrame ||
             g_DisplayWheel != (g_TerrainFar || s_CrashFrame != 255 ? 255 : s_Wheel) || g_DisplayGear != s_GearPos ||
-            SmokeActive() || g_DisplaySmoke[0] ||
+            SmokeActive() || g_DisplaySmoke[0] || g_TerrainDirty ||
 #endif
             g_DisplayWave != s_Wave || g_DisplayHeave != s_RenderHeave || camera != g_DisplayCamera || world != g_DisplayWorld || y != g_DisplayY || frame != g_SelectedFrame)
             Render(page, camera, world, y, frame);

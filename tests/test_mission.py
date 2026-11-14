@@ -107,9 +107,17 @@ class MissionTests(unittest.TestCase):
         tiles = self.files[folder / 'tiles.sc5']
         mapping = self.files[folder / 'map.bin']
         expected = self.files[folder / 'scene.indices']
-        width, height = self.metadata['width'] + self.metadata['far_width'], self.metadata['height']
+        variants = self.metadata['hut_variants']
+        stripes = [8 * v['near_count'] for v in variants] + [8 * v['far_count'] for v in variants]
+        width, height = self.metadata['width'] + self.metadata['far_width'] + sum(stripes), self.metadata['height']
         far = self.files[folder / 'far.indices']
-        expected = b''.join(expected[y*self.metadata['width']:(y+1)*self.metadata['width']] + far[y*self.metadata['far_width']:(y+1)*self.metadata['far_width']] for y in range(height))
+        wrecked, at = self.files[folder / 'hut-variants.indices'], []
+        for w in stripes:
+            at.append(wrecked[:w * height]); wrecked = wrecked[w * height:]
+        self.assertEqual(wrecked, b'')
+        expected = b''.join(expected[y*self.metadata['width']:(y+1)*self.metadata['width']] + far[y*self.metadata['far_width']:(y+1)*self.metadata['far_width']]
+                            + b''.join(s[y*w:(y+1)*w] for s, w in zip(at, stripes)) for y in range(height))
+        self.assertEqual(width // 8, self.metadata['selected']['columns'])
         selected = self.metadata['selected']
         actual = bytearray(width * height)
         for col in range(selected['columns']):

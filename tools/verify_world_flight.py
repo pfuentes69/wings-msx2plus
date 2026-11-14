@@ -75,6 +75,27 @@ def crash_shape(scene, index):
     return record, data[offset:offset + record['bytes']]
 
 
+def island_background(background, scale, island):
+    """The scene with wrecked huts (g_Island dump: 8-byte hut records,
+    wrecked at +3) showing the converter's variant columns."""
+    meta = json.loads((ROOT / 'assets_msx/mission_a/manifest.json').read_text())
+    variants, height = meta['hut_variants'], meta['height']
+    width = meta['width'] if scale == 1 else meta['far_width']
+    stripes, data = [], (ROOT / 'assets_msx/mission_a/hut-variants.indices').read_bytes()
+    for key in ('near_count', 'far_count'):
+        for v in variants:
+            size = 8 * v[key] * height
+            stripes.append(data[:size]); data = data[size:]
+    pixels = bytearray(background)
+    for i, v in enumerate(variants):
+        if not island[8 * i + 3]: continue
+        first, count = (v['near_first'], v['near_count']) if scale == 1 else (v['far_first'], v['far_count'])
+        stripe, w = stripes[i if scale == 1 else len(variants) + i], 8 * count
+        for y in range(height):
+            pixels[y * width + first * 8:y * width + first * 8 + w] = stripe[y * w:(y + 1) * w]
+    return bytes(pixels)
+
+
 def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True, smoke=(), score=0):
     # World x is a 16-bit ring read as signed; beyond the map the MSX draws a
     # column of open sea (map x 5000 near, far x 624 in the distant view).
@@ -386,7 +407,7 @@ def main():
                     stride = size // 2
                     assert vram[address:address + stride] == tiles[tile * tile_bytes + row * stride:tile * tile_bytes + (row + 1) * stride], (name, 'terrain cache corrupted')
             for shape in scene.frames:
-                if shape.get('streamed'):continue
+                if shape.get('streamed') or shape.get('unused'):continue
                 source = (scene.folder / shape['file']).read_bytes()
                 stride = shape['width'] // 2
                 for row in range(shape['height']):

@@ -10,7 +10,7 @@ import struct
 import statistics
 import subprocess
 from PIL import Image
-from verify_world_flight import vram_image, expected_pixels, gun_flash_shape
+from verify_world_flight import vram_image, expected_pixels, gun_flash_shape, island_background
 from convert_dashboard import compose, layout, PILOT_WIDTH
 from aircraft_scene import AircraftScene
 
@@ -79,7 +79,8 @@ def main():
             raw=(out/f'{name}.smoke').read_bytes()
             smoke=[struct.unpack_from('<HhB',raw,1+5*i) for i in range(raw[0])]
             expected=expected_pixels(scene,int(pose),int(world),int(y),int(camera),
-                (ROOT/'assets_msx/mission_a'/('far.indices' if scale==8 else 'scene.indices')).read_bytes(),
+                island_background((ROOT/'assets_msx/mission_a'/('far.indices' if scale==8 else 'scene.indices')).read_bytes(),
+                                  scale,(out/f'{name}.island').read_bytes()),
                 terrain['far_width'] if scale==8 else terrain['width'],scale,int(wave),pilot,int(heave),int(ship),
                 projectiles,game[4],game[3],game[2],crew,ground,depth,stage!=1,flash=combat[158],
                 gauges=tuple((out/f'{name}.gauges').read_bytes()),crash=(out/f'{name}.crash').read_bytes()[0],
@@ -126,6 +127,7 @@ def main():
     required|={'taxi_right_stop','taxi_left_stop'}
     required|={'engine_low_fuel','engine_smoke','engine_failed','engine_next_plane','game_over'}
     required|={'landed','landed_service','deck_bounce','sea_splash','sea_crash_next','engine_splash','arrest'}
+    required|={'island_bombed'}
     assert required<=snapshots.keys(),required-snapshots.keys()
     assert (out/'paused.combat').read_bytes()==(out/'pause_wait.combat').read_bytes(),'Pause advanced weapons'
     for key in ('world','y','pose','wave','heave','ship','crew','depth','stage'):
@@ -151,6 +153,13 @@ def main():
     assert snapshots['arrest']['rope'] in (0,1,2,3) and snapshots['landed']['rope']==255
     assert snapshots['engine_smoke']['smoke']>=2 and snapshots['start']['smoke']==0
     assert struct.unpack('<I',(out/'engine_smoke.score').read_bytes())[0]==20160
+    # P3: the bombed hut at 2392 is wrecked (the one at 2712 and the dugouts
+    # may be too): 150 a hut, 200 a manned dugout.
+    island=(out/'island_bombed.island').read_bytes()
+    score=struct.unpack('<I',(out/'island_bombed.score').read_bytes())[0]
+    assert island[3]==1 and island[0]==0 and island[1]==5,('wrecked hut',list(island[:8]))
+    assert score==150*sum(island[8*i+3] for i in range(2))+200*sum(island[64+8*i]==0 for i in range(2)),('island score',score)
+    assert snapshots['island_bombed']['smoke']>=1
     for heading in ('left','right'):
         for attitude in ('climb','level','dive'):
             snapshot=snapshots[f'cannon_{attitude}_{heading}']

@@ -11,7 +11,7 @@ class VramLayoutTests(unittest.TestCase):
         frames = json.loads((ROOT / 'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
         occupied = set()
         for frame in frames:
-            if frame.get('streamed'):continue
+            if frame.get('streamed') or frame.get('unused'):continue
             x, y = frame['atlas_x'], frame['atlas_y']
             width, height = frame['width'], frame['height']
             self.assertIn(y // 256, (2, 3))
@@ -23,7 +23,7 @@ class VramLayoutTests(unittest.TestCase):
                          for column in range(x // 2, (x + width) // 2)}
             self.assertTrue(occupied.isdisjoint(addresses), frame['name'])
             occupied.update(addresses)
-        self.assertEqual(len(occupied), sum(f['bytes'] for f in frames if not f.get('streamed')))
+        self.assertEqual(len(occupied), sum(f['bytes'] for f in frames if not f.get('streamed') and not f.get('unused')))
 
     def test_wheel_pieces_use_free_atlas_gaps(self):
         import sys
@@ -36,7 +36,7 @@ class VramLayoutTests(unittest.TestCase):
             for x, y in group:
                 taken |= {(xx, yy) for yy in range(y, y + h) for xx in range(x, x + w)}
         for f in meta['frames']:
-            if not f.get('streamed'):
+            if not f.get('streamed') and not f.get('unused'):
                 taken |= {(xx, yy) for yy in range(f['atlas_y'], f['atlas_y'] + f['height'])
                           for xx in range(f['atlas_x'], f['atlas_x'] + f['width'])}
         tiles = json.loads((ROOT / 'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']

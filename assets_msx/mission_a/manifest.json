@@ -1654,18 +1654,18 @@
   ],
   "selected": {
     "size": 8,
-    "tile_count": 493,
-    "tile_bytes": 15776,
-    "columns": 1072,
+    "tile_count": 503,
+    "tile_bytes": 16096,
+    "columns": 1084,
     "rows": 19,
-    "unique_columns": 229,
-    "dense_map_bytes": 40736,
-    "compressed_map_bytes": 6377,
-    "total_bytes": 22153
+    "unique_columns": 235,
+    "dense_map_bytes": 41192,
+    "compressed_map_bytes": 6470,
+    "total_bytes": 22566
   },
-  "bundle_bytes": 22153,
-  "tile_map_offset": 15776,
-  "bundle_sha256": "0cac84babd730c02e7b46fc0d75e002f99be745f608f707a6816fb6b95384748",
+  "bundle_bytes": 22566,
+  "tile_map_offset": 16096,
+  "bundle_sha256": "8a578ec51066f1d5a1b5f674f95812cc0b92b302fc7f904edb50721133e2a5f4",
   "palette_sha256": "0b37b14c0c7d721406951e121885f75479ae3d439bd8429cee8bb2986e7715f9",
   "ocean_palette_sha256": "701a351ccfbae78c8285f9d7ffab0d532dcaf6716395930b7055e2bfc4d70902",
   "palette_rgb3": [
@@ -1763,5 +1763,63 @@
     "ordering": "column-major groups of 9 tiles"
   },
   "map_format": "u16le column offsets, deduplicated count:u8/tile:u16le runs; exactly 19 tile rows",
-  "map_and_cache_ram_bytes": 8975
+  "map_and_cache_ram_bytes": 9068,
+  "island": {
+    "islands": [
+      {
+        "left": 32,
+        "right": 3952,
+        "bonus": 450
+      }
+    ],
+    "huts": [
+      {
+        "x": 2392,
+        "island": 0
+      },
+      {
+        "x": 2712,
+        "island": 0
+      }
+    ],
+    "dugouts": [
+      {
+        "x": 1736,
+        "island": 0,
+        "leftmost": true
+      },
+      {
+        "x": 3224,
+        "island": 0,
+        "rightmost": true
+      }
+    ],
+    "guns": [],
+    "flags": [
+      {
+        "x": 2408,
+        "island": 0
+      }
+    ]
+  },
+  "hut_variants": [
+    {
+      "x": 2392,
+      "near_first": 297,
+      "near_count": 5,
+      "far_first": 37,
+      "far_count": 1,
+      "near_variant": 1072,
+      "far_variant": 1082
+    },
+    {
+      "x": 2712,
+      "near_first": 337,
+      "near_count": 5,
+      "far_first": 42,
+      "far_count": 1,
+      "near_variant": 1077,
+      "far_variant": 1083
+    }
+  ]
 }

@@ -30,7 +30,7 @@ class ShipTests(unittest.TestCase):
             area={row*128+col for row in range(y,y+h) for col in range(x//2,(x+w)//2)}
             self.assertTrue(occupied.isdisjoint(area));occupied.update(area)
         for f in json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']:
-            if not f.get('streamed'):add(f['atlas_x'],f['atlas_y'],f['width'],f['height'])
+            if not f.get('streamed') and not f.get('unused'):add(f['atlas_x'],f['atlas_y'],f['width'],f['height'])
         count=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']
         for t in range(count):add(t%288//9*8,692+t%9*8+t//288*256,8,8)
         cockpit=json.loads((ROOT/'assets_src/dashboard/manifest.json').read_text())

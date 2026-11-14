@@ -5060,7 +5060,7 @@
       "g_FarPoseForFrame": 453,
       "g_AircraftShapes": 576
     },
-    "sha256": "f860fc62a8f97e3466d1c6b392dcfec2348bba58d3cd3a0da3f0edf6388a5575"
+    "sha256": "98ec1c72adb21169f5ffe4ddbf9ac6e0f04e4083ecf65157104cdec70c68a4b7"
   },
   "asset_bank": {
     "bank": 12,
@@ -5075,24 +5075,24 @@
   },
   "bomb_slots": [
     [
-      200,
-      1015
+      236,
+      993
     ],
     [
-      208,
-      1015
+      244,
+      993
     ],
     [
-      216,
-      1015
+      236,
+      1001
     ],
     [
-      224,
-      1015
+      244,
+      1001
     ],
     [
-      232,
-      1015
+      236,
+      1009
     ]
   ],
   "bomb_names": [
@@ -5111,12 +5111,16 @@
   "bomb_timing": "MSX adaptation: horizontal 200 ms, diagonal 120 ms, then vertical; 25 Hz weapon clock",
   "pilot_slots": [
     [
-      194,
+      124,
+      785
+    ],
+    [
+      172,
       791
     ],
     [
       110,
-      813
+      809
     ],
     [
       158,
@@ -5136,7 +5140,7 @@
     ],
     [
       96,
-      837
+      833
     ],
     [
       144,
@@ -5156,7 +5160,7 @@
     ],
     [
       96,
-      861
+      857
     ],
     [
       144,
@@ -5176,7 +5180,7 @@
     ],
     [
       96,
-      885
+      881
     ],
     [
       144,
@@ -5196,22 +5200,18 @@
     ],
     [
       96,
-      909
+      905
     ],
     [
       144,
-      911
-    ],
-    [
-      192,
       911
     ]
   ],
   "far_poses": [
     {
       "name": "lpn0",
-      "atlas_x": 184,
-      "atlas_y": 935,
+      "atlas_x": 192,
+      "atlas_y": 911,
       "sha256": "58cfbe65b40d551110bb29beed23f0828fc7d6a88966a139f867fc4b76114ade",
       "width": 16,
       "height": 2,
@@ -5237,8 +5237,8 @@
     },
     {
       "name": "lpn1",
-      "atlas_x": 200,
-      "atlas_y": 935,
+      "atlas_x": 208,
+      "atlas_y": 911,
       "sha256": "a4601e874a084cb3ba622556980e6e2a319d7d7aa0b0475ec6e2c980579ab7fc",
       "width": 16,
       "height": 2,
@@ -5264,8 +5264,8 @@
     },
     {
       "name": "lpn2",
-      "atlas_x": 216,
-      "atlas_y": 935,
+      "atlas_x": 224,
+      "atlas_y": 911,
       "sha256": "63e1395538698d90dde4b77155d1b2cebf85f511f1d27517e1250f3e3d97a0dc",
       "width": 16,
       "height": 3,
@@ -5291,8 +5291,8 @@
     },
     {
       "name": "lpn3",
-      "atlas_x": 184,
-      "atlas_y": 940,
+      "atlas_x": 192,
+      "atlas_y": 916,
       "sha256": "f5566edfd49c802fbe8dfa0f35d0b1d5346b650d203502d415b450eac75b020c",
       "width": 16,
       "height": 3,
@@ -5318,8 +5318,8 @@
     },
     {
       "name": "lpn4",
-      "atlas_x": 200,
-      "atlas_y": 940,
+      "atlas_x": 208,
+      "atlas_y": 916,
       "sha256": "475d7239be6717afbd887e06989b5e07c2cf130a6db33a6129f97a837f351e8f",
       "width": 16,
       "height": 4,
@@ -5345,8 +5345,8 @@
     },
     {
       "name": "lpn5",
-      "atlas_x": 216,
-      "atlas_y": 940,
+      "atlas_x": 224,
+      "atlas_y": 916,
       "sha256": "1c0141bc030d9982ff6e4124cf613381fd5d7ec76e1ff9c17faf8f2ab101e055",
       "width": 16,
       "height": 5,
@@ -5372,8 +5372,8 @@
     },
     {
       "name": "lpn6",
-      "atlas_x": 184,
-      "atlas_y": 945,
+      "atlas_x": 192,
+      "atlas_y": 921,
       "sha256": "f17a820935c160b405242e97472141aedbfbbf6a2c6b03820cd1a914411e1863",
       "width": 16,
       "height": 5,
@@ -5400,8 +5400,8 @@
     },
     {
       "name": "lpn7",
-      "atlas_x": 200,
-      "atlas_y": 945,
+      "atlas_x": 208,
+      "atlas_y": 921,
       "sha256": "9ecfca9ebffa2f2692bf73b09be0b8bb3c73eb6559a41c92269617ab8a89a8ad",
       "width": 16,
       "height": 5,
@@ -5427,8 +5427,8 @@
     },
     {
       "name": "lpn8",
-      "atlas_x": 216,
-      "atlas_y": 945,
+      "atlas_x": 224,
+      "atlas_y": 921,
       "sha256": "44d0fcbd247128fa05b13bb37d0ec310b03bf75787e52cbb280b52fd335b2f19",
       "width": 16,
       "height": 5,
@@ -5454,8 +5454,8 @@
     },
     {
       "name": "lpn9",
-      "atlas_x": 184,
-      "atlas_y": 950,
+      "atlas_x": 192,
+      "atlas_y": 926,
       "sha256": "178d0633595157fa956fbdef2a5e2ccd10fce0b73929233642ef6f47b6003fda",
       "width": 16,
       "height": 5,
@@ -5481,8 +5481,8 @@
     },
     {
       "name": "lpna",
-      "atlas_x": 200,
-      "atlas_y": 950,
+      "atlas_x": 208,
+      "atlas_y": 926,
       "sha256": "42c8276acb3dcaec22b618434f5fe0fbb736d5a3ec2c298003f215234b4e5e80",
       "width": 16,
       "height": 5,
@@ -5509,8 +5509,8 @@
     },
     {
       "name": "lpnb",
-      "atlas_x": 216,
-      "atlas_y": 950,
+      "atlas_x": 224,
+      "atlas_y": 926,
       "sha256": "a9738a0ee0469f5c79e00771c376a8a087479157fc43b4cd852e4346e15d58d0",
       "width": 16,
       "height": 5,
@@ -5537,8 +5537,8 @@
     },
     {
       "name": "lpnc",
-      "atlas_x": 184,
-      "atlas_y": 959,
+      "atlas_x": 192,
+      "atlas_y": 935,
       "sha256": "1cfab2cc944f42599dd3db77d8b8fc4726e6f8607df0297e0529731b2f9de4ce",
       "width": 16,
       "height": 5,
@@ -5565,8 +5565,8 @@
     },
     {
       "name": "lpnd",
-      "atlas_x": 200,
-      "atlas_y": 959,
+      "atlas_x": 208,
+      "atlas_y": 935,
       "sha256": "5553ea5f9c79a9de1debc62deca9f50f931b1d2b9a075fb6b780d642a574f41a",
       "width": 16,
       "height": 5,
@@ -5592,8 +5592,8 @@
     },
     {
       "name": "lpne",
-      "atlas_x": 216,
-      "atlas_y": 959,
+      "atlas_x": 224,
+      "atlas_y": 935,
       "sha256": "09ab37580f039a8ea712d3e761f8161d257dcd5001f50101a4ab0e2cb1bff64b",
       "width": 16,
       "height": 5,
@@ -5619,8 +5619,8 @@
     },
     {
       "name": "lpnf",
-      "atlas_x": 184,
-      "atlas_y": 964,
+      "atlas_x": 192,
+      "atlas_y": 940,
       "sha256": "958f631293f502e615ea88aadc4657d4ef1076eb4e4349651ed9f6c74a3d128f",
       "width": 16,
       "height": 5,
@@ -5646,8 +5646,8 @@
     },
     {
       "name": "lpng",
-      "atlas_x": 200,
-      "atlas_y": 964,
+      "atlas_x": 208,
+      "atlas_y": 940,
       "sha256": "9cb1d6d034d5718383a976379e84db1c98d69da931f9d0af0f2044d0d7253a72",
       "width": 16,
       "height": 5,
@@ -5673,8 +5673,8 @@
     },
     {
       "name": "lpnh",
-      "atlas_x": 216,
-      "atlas_y": 964,
+      "atlas_x": 224,
+      "atlas_y": 940,
       "sha256": "a570f88d5045e5d3278b771b012dcc7c12157f81cc3bacba53ffd3b04405ff44",
       "width": 16,
       "height": 5,
@@ -5700,8 +5700,8 @@
     },
     {
       "name": "lpni",
-      "atlas_x": 184,
-      "atlas_y": 969,
+      "atlas_x": 192,
+      "atlas_y": 945,
       "sha256": "b0e1ace6ecf40311c5e6c80283b9221e6704f3d4982966afee9a139319a82160",
       "width": 16,
       "height": 5,
@@ -5727,8 +5727,8 @@
     },
     {
       "name": "lpnj",
-      "atlas_x": 200,
-      "atlas_y": 969,
+      "atlas_x": 208,
+      "atlas_y": 945,
       "sha256": "87e05192304ea2466cee579c79250cd1c5dad7131d142adf59631ebfdbf75962",
       "width": 16,
       "height": 5,
@@ -5755,8 +5755,8 @@
     },
     {
       "name": "lpnk",
-      "atlas_x": 216,
-      "atlas_y": 969,
+      "atlas_x": 224,
+      "atlas_y": 945,
       "sha256": "4511130a27f1c3209b72e87e596fadfa0fb0e78b1d68339bb9892eb5fed4aecf",
       "width": 16,
       "height": 5,
@@ -5783,8 +5783,8 @@
     },
     {
       "name": "lpnn",
-      "atlas_x": 184,
-      "atlas_y": 974,
+      "atlas_x": 192,
+      "atlas_y": 950,
       "sha256": "7d96499a943eae007f7238d2346b4be0544166bb252f482ff79938d221ada944",
       "width": 16,
       "height": 2,
@@ -5810,8 +5810,8 @@
     },
     {
       "name": "lpno",
-      "atlas_x": 200,
-      "atlas_y": 974,
+      "atlas_x": 208,
+      "atlas_y": 950,
       "sha256": "d974a312ebd358cd9fd826e64feccafaa43d1774b1d73007cd98cff469af4e24",
       "width": 16,
       "height": 2,
@@ -5837,8 +5837,8 @@
     },
     {
       "name": "lpnp",
-      "atlas_x": 216,
-      "atlas_y": 974,
+      "atlas_x": 224,
+      "atlas_y": 950,
       "sha256": "153e0ea57b1514efb45a1c60f07eb4f6bf45fe497c09f21350a13c40303ba36b",
       "width": 16,
       "height": 3,
@@ -5864,8 +5864,8 @@
     },
     {
       "name": "lpnq",
-      "atlas_x": 184,
-      "atlas_y": 983,
+      "atlas_x": 192,
+      "atlas_y": 959,
       "sha256": "28704ce88a9e2093452dcf8c72a005b46107e734d2926d12366d2d6dc2cc2df9",
       "width": 16,
       "height": 3,
@@ -5891,8 +5891,8 @@
     },
     {
       "name": "lpnr",
-      "atlas_x": 200,
-      "atlas_y": 983,
+      "atlas_x": 208,
+      "atlas_y": 959,
       "sha256": "1efeefb8b4165463539454d562b1c1a0e57641360faced6876d96698e3888759",
       "width": 16,
       "height": 4,
@@ -5918,8 +5918,8 @@
     },
     {
       "name": "lpns",
-      "atlas_x": 216,
-      "atlas_y": 983,
+      "atlas_x": 224,
+      "atlas_y": 959,
       "sha256": "38b9f180c7d915beb201759ef3d9fdee0a302c11a0d55437aaf6bfb4a6aa2ed3",
       "width": 16,
       "height": 5,
@@ -6365,72 +6365,72 @@
       789
     ],
     [
-      242,
-      791
+      110,
+      797
     ],
     [
       242,
-      799
-    ],
-    [
-      242,
-      807
-    ],
-    [
-      174,
-      935
-    ],
-    [
-      176,
-      1004
-    ],
-    [
-      184,
-      1007
-    ],
-    [
-      192,
-      1007
-    ],
-    [
-      200,
-      1007
-    ],
-    [
-      208,
-      1007
-    ],
-    [
-      216,
-      1007
-    ],
-    [
-      224,
-      1007
-    ],
-    [
-      232,
-      1007
+      805
     ],
     [
       240,
-      1007
+      937
     ],
     [
       248,
-      1007
+      937
     ],
     [
-      176,
-      1012
+      22,
+      939
     ],
     [
-      184,
-      1015
+      240,
+      945
     ],
     [
-      192,
-      1015
+      248,
+      945
+    ],
+    [
+      240,
+      953
+    ],
+    [
+      248,
+      953
+    ],
+    [
+      240,
+      961
+    ],
+    [
+      248,
+      961
+    ],
+    [
+      240,
+      969
+    ],
+    [
+      248,
+      969
+    ],
+    [
+      240,
+      977
+    ],
+    [
+      248,
+      977
+    ],
+    [
+      236,
+      985
+    ],
+    [
+      244,
+      985
     ]
   ],
   "wave_names": [

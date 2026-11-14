@@ -24,4 +24,6 @@ void Smoke_Reset(void) WINGS_BANKED;
 /* One original 12.5 Hz tick: advance the puffs, then (when emit) let an
  * engine with oil below 128 put out a puff at the nose. */
 void Smoke_Tick(const FlightState* flight, uint16_t world, uint8_t oil, uint8_t emit) WINGS_BANKED;
+/* A puff at world (x, y) if the pool has room (wrecked huts, 0x4e18). */
+void Smoke_Emit(uint16_t x, uint16_t y) WINGS_BANKED;
 #endif
