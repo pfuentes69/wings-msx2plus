@@ -6,5 +6,6 @@ void Terrain_InitPage(u8 page);
 void Terrain_DrawColumn(u16 world, u8 page);
 extern u8 g_TerrainFar;
 
-/* Dynamic overlays mark their affected tile rows for repaint on ring reuse. */
+/* Dynamic overlays mark their affected tile rows for repaint on ring reuse.
+ * Requires first <= last. */
 void Terrain_DirtyOverlayColumn(u8 page, u16 world, u8 first, u8 last);

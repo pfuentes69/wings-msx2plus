@@ -299,6 +299,9 @@ input sampling, safe bank calls, draw budgets, VBlank publication and sound.
 Sound has a reserved CPU budget of 3,000 T-states per field, which runs
 outside the VBlank publication window. A placeholder load consumes it from P1
 onwards ([sound budget](sound-budget.md)).
+The measured [frame budget](frame-budget.md) leaves about 26 ms of the
+133 ms NTSC worst-case frame for enemy work. Budget P3–P5 entities
+against it.
 The Python pipeline owns source decoding, manifests and reproducible conversion.
 
 After P1 the four resident segments were full (32,472 of 32,768 bytes). The

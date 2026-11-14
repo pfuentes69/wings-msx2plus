@@ -4,18 +4,24 @@
 #include "system.h"
 #include "scenery_load.h"
 #include "../generated/mission_tiles.h"
+#include "column_ops.h"
 
 u8 g_TerrainFar;
 static u8 s_Map[TERRAIN_MAP_BYTES];
 static u16 s_Cached[2][32][TERRAIN_MAP_ROWS];
 static u16 s_ColumnOffsets[2][32];
-static u16 s_Decoded[TERRAIN_MAP_ROWS];
+// One extra entry holds a sentinel (65534) that never matches the cache,
+// which only holds tile IDs or 65535; Column_Equal stops there.
+#define TERRAIN_SENTINEL 65534u
+typedef char TerrainSentinelFree[(TERRAIN_TILE_COUNT < TERRAIN_SENTINEL) ? 1 : -1];
+static u16 s_Decoded[TERRAIN_MAP_ROWS + 1];
 
 // Scenery_Read restores the resident bank before each upload call.
 void Terrain_Load(void)
 {
     u16 tile, offset, address, i;
     u8 row, scratch[64], count;
+    s_Decoded[TERRAIN_MAP_ROWS] = TERRAIN_SENTINEL;
     for (tile = 0; tile < TERRAIN_TILE_COUNT; ++tile)
     {
         offset = tile * 32;
@@ -50,37 +56,29 @@ void Terrain_InitPage(u8 page)
 
 void Terrain_DrawColumn(u16 world, u8 page)
 {
+    u8 slot = (world & 255) >> 3;
     u16 column = ((world >> 3) + (g_TerrainFar ? TERRAIN_FAR_COLUMN : 0)) * 2;
     u16 offset = s_Map[column] | ((u16)s_Map[column + 1] << 8);
-    const u8* run = s_Map + offset;
-    u16* cached = s_Cached[page][(world & 255) >> 3];
-    u16* decoded = s_Decoded;
+    u16* cached;
+    u16* decoded;
     u16 tile, source_y, dest_y = (u16)page * 256 + 24;
-    u8 row = 0, count, height, color, i;
-    if (s_ColumnOffsets[page][(world & 255) >> 3] == offset) return;
-    s_ColumnOffsets[page][(world & 255) >> 3] = offset;
+    u8 row, count, height, color, i;
+    if (s_ColumnOffsets[page][slot] == offset) return;
+    s_ColumnOffsets[page][slot] = offset;
     // All runs/offsets are bounded and round-trip checked during generation.
-    while (decoded < s_Decoded + TERRAIN_MAP_ROWS)
-    {
-        count = *run++;
-        tile = *run++;
-        tile |= (u16)*run++ << 8;
-        while (count--)
-            *decoded++ = tile;
-    }
-    row = 0;
+    Column_Decode(s_Map + offset, s_Decoded);
+    cached = s_Cached[page][slot];
     decoded = s_Decoded;
-    while (row < TERRAIN_MAP_ROWS)
+    row = 0;
+    for (;;)
     {
+        count = Column_Equal(cached, decoded); // unchanged rows; stops at the sentinel
+        row += count;
+        if (row >= TERRAIN_MAP_ROWS) break;
+        cached += count;
+        decoded += count;
+        dest_y += count * 8;
         tile = *decoded;
-        if (*cached == tile)
-        {
-            ++cached;
-            ++decoded;
-            ++row;
-            dest_y += 8;
-            continue;
-        }
         count = 1;
         color = g_MissionTileColors[tile];
         if (color != 255)
@@ -111,7 +109,8 @@ void Terrain_DrawColumn(u16 world, u8 page)
 
 void Terrain_DirtyOverlayColumn(u8 page, u16 world, u8 first, u8 last)
 {
-    u8 slot=(world&255)>>3, row;
+    u8 slot=(world&255)>>3, count=last-first+1;
+    u16* cached=&s_Cached[page][slot][first]; // index once; SDCC re-multiplies per row otherwise
     s_ColumnOffsets[page][slot]=65535u;
-    for (row=first; row<=last; ++row) s_Cached[page][slot][row]=65535u;
+    do *cached++=65535u; while (--count);
 }

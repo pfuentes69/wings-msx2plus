@@ -7,7 +7,7 @@ set prof_period $env(WINGS_PROFILE_PERIOD)
 set prof_file [file join $env(WINGS_TEST_OUT) profile.txt]
 set prof_noi [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set prof_syms [read $prof_noi];close $prof_noi
-foreach n {g_Bank3Segment g_Rendering g_GameView g_Combat g_FramePublished VDP_InterruptHandler} {
+foreach n {g_Bank3Segment g_Rendering g_GameView g_Combat g_FramePublished VDP_InterruptHandler g_ViewChange} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $prof_syms -> a]} {error "Missing $n"}
     set prof_addr($n) [expr {$a}]
 }
@@ -37,6 +37,25 @@ proc prof_publish {} {
     incr ::prof_calls([list publish_tstates_$t [prof_guns]])
 }
 debug watchpoint create -type write_mem -address $prof_addr(g_FramePublished) -command prof_publish
+# Per-frame cost: simulation (publish -> render start) and render duration, ms.
+set prof_last_publish 0
+proc prof_publish_time {} {set ::prof_last_publish [machine_info time]}
+debug watchpoint create -type write_mem -address $prof_addr(g_FramePublished) -command prof_publish_time
+proc prof_rendering {} {
+    if {[debug read memory $::prof_addr(g_GameView)]!=3} return
+    if {[debug read memory $::prof_addr(g_Rendering)]} {
+        set ::prof_render_start [machine_info time]
+    } elseif {[info exists ::prof_render_start] && $::prof_last_publish} {
+        set end [machine_info time]
+        set sim [expr {int(($::prof_render_start-$::prof_last_publish)*1000)}]
+        set draw [expr {int(($end-$::prof_render_start)*1000)}]
+        # View changes (altitude scale switch, full page rebuild) are exempt from deadlines.
+        set kind [expr {[debug read memory $::prof_addr(g_ViewChange)] ? "rebuild" : "frame"}]
+        incr ::prof_calls([list ${kind}_cost_${sim}_${draw} [prof_guns]])
+        unset ::prof_render_start
+    }
+}
+debug watchpoint create -type write_mem -address $prof_addr(g_Rendering) -command prof_rendering
 proc prof_sample {} {
     if {[debug read memory $::prof_addr(g_GameView)]==3} {
         set pc [reg pc]
@@ -46,7 +65,9 @@ proc prof_sample {} {
         set render [debug read memory $::prof_addr(g_Rendering)]
         # CombatState: cooldown at +145, flash_ticks at +159.
         set guns [prof_guns]
-        incr ::prof_hist([list $pc $bank $render $guns $ret])
+        # VDP command engine busy (S#2 bit 0): shows whether rendering is CPU- or VDP-bound.
+        set vdp [expr {[debug read {VDP status regs} 2] & 1}]
+        incr ::prof_hist([list $pc $bank $render $guns $ret $vdp])
     }
     after time $::prof_period prof_sample
 }
