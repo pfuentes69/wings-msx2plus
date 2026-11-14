@@ -296,6 +296,9 @@ video standards and physical FS-A1WX hardware before release compatibility claim
 Keep portable C simulation independent of VDP/ROM access. Separate game, mission
 and sortie lifetimes; feed all HUD values from those states. The MSX layer owns
 input sampling, safe bank calls, draw budgets, VBlank publication and sound.
+Sound has a reserved CPU budget of 3,000 T-states per field, which runs
+outside the VBlank publication window. A placeholder load consumes it from P1
+onwards ([sound budget](sound-budget.md)).
 The Python pipeline owns source decoding, manifests and reproducible conversion.
 
 After P1 the four resident segments were full (32,472 of 32,768 bytes). The

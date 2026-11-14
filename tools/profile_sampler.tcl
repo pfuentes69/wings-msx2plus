@@ -7,7 +7,7 @@ set prof_period $env(WINGS_PROFILE_PERIOD)
 set prof_file [file join $env(WINGS_TEST_OUT) profile.txt]
 set prof_noi [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set prof_syms [read $prof_noi];close $prof_noi
-foreach n {g_Bank3Segment g_Rendering g_GameView g_Combat g_FramePublished} {
+foreach n {g_Bank3Segment g_Rendering g_GameView g_Combat g_FramePublished VDP_InterruptHandler} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $prof_syms -> a]} {error "Missing $n"}
     set prof_addr($n) [expr {$a}]
 }
@@ -26,7 +26,17 @@ if {[info exists env(WINGS_PROFILE_CALLS)]} {
         debug set_bp $address {} [list prof_count $name]
     }
 }
-debug watchpoint create -type write_mem -address $prof_addr(g_FramePublished) -command {prof_count frame}
+# Publication latency: T-states from VBlank ISR entry to the publish write,
+# which must land while the VDP still reports vertical retrace.
+set prof_vblank 0
+debug set_bp $prof_addr(VDP_InterruptHandler) {} {set ::prof_vblank [machine_info time]}
+proc prof_publish {} {
+    prof_count frame
+    if {[debug read memory $::prof_addr(g_GameView)]!=3} return
+    set t [expr {int(([machine_info time]-$::prof_vblank)*3579545.0/250)*250}]
+    incr ::prof_calls([list publish_tstates_$t [prof_guns]])
+}
+debug watchpoint create -type write_mem -address $prof_addr(g_FramePublished) -command prof_publish
 proc prof_sample {} {
     if {[debug read memory $::prof_addr(g_GameView)]==3} {
         set pc [reg pc]

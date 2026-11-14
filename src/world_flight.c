@@ -55,6 +55,34 @@ static u8 s_OldY[2], s_OldWidth[2], s_OldHeight[2], s_Valid[2];
 static u8 s_Keyboard;
 static u8 s_Joystick;
 
+/* Reserved once-per-frame CPU budget for the future PSG music + effects
+ * driver (docs/sound-budget.md). It runs at the end of the dashboard line
+ * interrupt (line ~174, active display), never inside the VBlank window that
+ * page publication needs. Until the driver exists, a calibrated busy loop
+ * consumes the budget so every frame-deadline check already includes it.
+ * 30 T-states per iteration including MSX M1 wait states; the -30 covers
+ * entry, setup and return (measured on openMSX). 0 disables it. */
+#ifndef WINGS_SOUND_TSTATES
+#define WINGS_SOUND_TSTATES 3000
+#endif
+#if WINGS_SOUND_TSTATES
+#define WINGS_LINE_ISR_TAIL jp _SoundBudget
+static void SoundBudget(void) __naked
+{
+    __asm
+        ld de, #(WINGS_SOUND_TSTATES - 30) / 30
+    sound_budget_loop$:
+        dec de
+        ld a, d
+        or e
+        jr nz, sound_budget_loop$
+        ret
+    __endasm;
+}
+#else
+#define WINGS_LINE_ISR_TAIL ret
+#endif
+
 void VDP_InterruptHandler(void)
 {
     // The CRT saves all registers; direct writes leave interrupts disabled.
@@ -193,7 +221,7 @@ void VDP_HBlankHandler(void) __naked
         outi
         outi
         outi
-        ret
+        WINGS_LINE_ISR_TAIL
     dashboard_palette$:
         ld a, #1
         out (0x99), a
@@ -231,7 +259,7 @@ void VDP_HBlankHandler(void) __naked
         outi
         outi
         outi
-        ret
+        WINGS_LINE_ISR_TAIL
     __endasm;
 }
 static void WaitVBlank(void)
