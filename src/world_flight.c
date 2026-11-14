@@ -614,7 +614,10 @@ void main(void)
 #endif
     VDP_SetMode(VDP_MODE_SCREEN5);
     VDP_EnableDisplay(FALSE);
-    VDP_SetColor(0);
+    /* Border uses index 1 (dark navy, identical in playfield and dashboard
+       palettes); TP=1 keeps index-0 sky pixels from showing the border. */
+    VDP_EnableTransparency(FALSE);
+    VDP_SetColor(1);
     VDP_SetPalette(g_TerrainPalette);
     VDP_FillVRAM(0, 0, 0, 0);
     VDP_FillVRAM(0, 0, 1, 0);
