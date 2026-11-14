@@ -62,7 +62,7 @@ class RomLayoutTests(unittest.TestCase):
 
     def test_banked_entry_points_match_header_declarations(self):
         """Every banked module declares its segment and marks its prototypes."""
-        for module in ('msx/dashboard', 'msx/weapons', 'msx/menu', 'msx/ship', 'msx/elevator', 'core/engine'):
+        for module in ('msx/dashboard', 'msx/weapons', 'msx/menu', 'msx/ship', 'msx/elevator', 'core/engine', 'core/landing'):
             source = (ROOT / f'src/{module}.c').read_text()
             header = (ROOT / f'src/{module}.h').read_text()
             self.assertIn('WINGS_CODE_SEGMENT(WINGS_SEGMENT_', source, module)

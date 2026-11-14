@@ -37,6 +37,7 @@ EngineState g_Engine;
 static u8 s_CrashSteps;          /* 1-second hold after a crash */
 u8 g_LastContact;                /* latest LANDING_* contact, for verification */
 static u8 s_CrashSplash;         /* crash art: 0 explosion (deck, island), 1 sea splash */
+static u8 s_ContactBottom, s_ContactSurface; /* per-frame contact gate (Landing_Prepare) */
 #endif
 /* Crash art frame drawn instead of the plane (255 = none); the frame shown
  * on the published page, and the frame loaded into the host atlas slot. */
@@ -789,6 +790,9 @@ void main(void)
                         ((s_Latest & ACTION_SECONDARY) ? COMBAT_BOMB : 0);
 #ifdef WINGS_P1_FLIGHT
                 if (reset_weapons) steps=0; /* Publish the fully lowered platform first. */
+                if (s_World.flight.mode!=FLIGHT_GROUND && s_World.flight.y>LANDING_CHECK_Y)
+                    Landing_Prepare(&s_World.flight,s_World.x>>8,&s_ContactBottom,&s_ContactSurface);
+                else s_ContactBottom=0, s_ContactSurface=0;
 #endif
                 for (step=0; step<steps; ++step)
                 {
@@ -826,10 +830,18 @@ void main(void)
 #endif
                         World_StepSample(&s_World,input,step==steps-1);
 #ifdef WINGS_P1_FLIGHT
-                        /* Contact needs the plane below deck height; skip the call otherwise
+                        /* Contact needs the plane near the surface; skip the call otherwise
                          * (nearly every step), which keeps it off the frame budget. */
-                        contact=s_World.flight.y>(FlightVertical)FLIGHT_DECK_Y*256u ?
-                            Landing_Contact(&s_World.flight,s_World.x>>8,g_Engine.failed) : LANDING_NONE;
+                        contact=LANDING_NONE;
+                        if (s_World.flight.mode!=FLIGHT_GROUND)
+                        {
+                            /* Cheap gate on the frame's cached bottom/surface; the exact
+                             * (banked) check runs only when the plane may be touching. */
+                            int16_t base=(int16_t)WINGS_FLIGHT_MAX_Y-(int16_t)(s_World.flight.y>>8)-s_ContactBottom;
+                            if (base<(int16_t)s_ContactSurface+1 || base<=0)
+                                contact=Landing_Contact(&s_World.flight,s_World.x>>8,g_Engine.failed,
+                                    s_ContactBottom,Landing_Height(s_World.x>>8));
+                        }
                         if (contact) g_LastContact=contact;
                         if (contact==LANDING_CRASH) { StartCrash(); goto advance_clocks; }
                         if (contact) Landing_Apply(&s_World.flight,contact);

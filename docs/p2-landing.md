@@ -27,18 +27,27 @@ outcome by surface (0xafba). The frames stream into the atlas slot of a large
 static aircraft frame, which is reloaded when the next plane launches. Then the plane is lost
 ([p2-engine.md](p2-engine.md)): the next one starts on deck, or GAME OVER.
 
-The check runs only while the plane is below deck height, so it costs
-nothing in normal flight. Without that guard, the per-step call added about
-9 ms to the worst frame.
+**Heights.** Contact uses the plane's bottom, not its origin, as the original
+does (0xb8c4): altitude − bottom offset is compared with the surface.
+
+- **Bottom offsets:** per pose 2, 12, 10, 6, 4, 2, 5, 7, 9, 12, 14, plus
+  5, 4, 3, 3, 3, 5, 3, 2, 1, 0, 0 with gear down (0xaaea).
+- **Static scenery heights:** 36, 35, 35, 9, 13, 12 by object class, minus
+  map-word bits 11..13 (0x5710). `tools/convert_mission.py` emits them as 74
+  runs for mission A (`src/generated/mission_heights.h`).
+- **Carrier:** every carrier id has one deck height (33 px), so the original
+  does not collide with the carrier's tower, and neither does the port.
+
+**Cost.** `Landing_Prepare` computes the bottom offset and the surface height
+once per frame. A cheap resident compare gates each step, and only a likely
+hit calls the banked `Landing_Contact`. Unguarded per-step checks cost 9–17 ms
+in frames over the carrier.
 
 **Provisional:**
 
 - The arrest after touchdown uses the existing ground braking (5 units per
   step). The original's mode-1 deceleration is not mapped.
-- Islands are flat ground at sea level. The original reads per-object surface
-  heights (0x5710), and the per-pose bottom offsets (0xaaea), from tables not
-  yet extracted. Flying through the carrier's island superstructure does not
-  collide yet.
+- One original altitude unit is taken as one pixel (altitude = 1200 − y).
 - After engine failure the plane noses down. The original hands the descent
   to its crash routine; its arithmetic is not mapped yet.
 - The crash art frame timing (spread evenly over the 1-second hold) is an
@@ -48,7 +57,8 @@ nothing in normal flight. Without that guard, the per-step call added about
 
 - `tests/test_landing.py` covers: landing, the bounce variants, deck-height
   takeoff, the 16 px deck ends, the 4 px depth limit, the hull, a dead
-  engine, and sea and open-air contact.
+  engine, the sea at the bottom offset, scenery height, the original bottom
+  tables, and earlier deck contact when the nose is up.
 - The P0 smoke run flies a closed-loop autopilot from the real flight state
   (`s_World`; `g_LastContact` records each contact):
   1. Take off, turn, pass the carrier, turn back and stabilise at y 1150

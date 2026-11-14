@@ -29,14 +29,17 @@ class LandingTests(unittest.TestCase):
                        check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))
         cls.core.Landing_Contact.restype = C.c_uint8
+        cls.core.Landing_Bottom.restype = C.c_uint8
 
     @classmethod
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def contact(self, x, y, mode=STALL, left=1, failed=0, sub=0):
+    def contact(self, x, y, mode=STALL, left=1, failed=0, sub=0, bottom=7, height=0):
+        # bottom 7 = a resting plane (pose 0 with gear), which puts the deck
+        # boundary exactly at the port's deck row 1160.
         flight = Flight(y=y * 256 + sub, vx=-40, vy=48, mode=mode, facing_left=left, target_left=left)
-        return self.core.Landing_Contact(C.byref(flight), x, failed), flight
+        return self.core.Landing_Contact(C.byref(flight), x, failed, bottom, height), flight
 
     def test_stall_facing_left_onto_the_deck_lands(self):
         result, flight = self.contact(7000, DECK_Y + 1)
@@ -65,10 +68,28 @@ class LandingTests(unittest.TestCase):
         self.assertEqual(self.contact(7000, DECK_Y + 4, sub=1)[0], CRASH)  # more than 4 px in: the hull
         self.assertEqual(self.contact(7000, DECK_Y + 1, failed=1)[0], CRASH)
 
-    def test_the_sea_crashes_and_open_air_does_not(self):
-        self.assertEqual(self.contact(4000, SEA_Y)[0], CRASH)
-        self.assertEqual(self.contact(4000, SEA_Y - 1, sub=255)[0], NONE)
-        self.assertEqual(self.contact(DECK_LEFT - 1, DECK_Y + 10)[0], NONE)
+    def test_the_sea_crashes_when_the_bottom_reaches_it(self):
+        self.assertEqual(self.contact(4000, SEA_Y, bottom=0)[0], CRASH)
+        self.assertEqual(self.contact(4000, SEA_Y - 1, sub=255, bottom=0)[0], NONE)
+        self.assertEqual(self.contact(4000, SEA_Y - 7, bottom=7)[0], CRASH)       # bottom at the sea
+        self.assertEqual(self.contact(4000, SEA_Y - 8, sub=255, bottom=7)[0], NONE)
+        self.assertEqual(self.contact(DECK_LEFT - 1, DECK_Y + 10, bottom=2)[0], NONE)
+
+    def test_scenery_crashes_below_its_static_height(self):
+        # Amiga 0x5710: an island hill 30 px high, level plane (bottom 2).
+        self.assertEqual(self.contact(3000, SEA_Y - 32, bottom=2, height=30)[0], NONE)
+        self.assertEqual(self.contact(3000, SEA_Y - 31, bottom=2, height=30)[0], CRASH)
+
+    def test_bottom_offsets_follow_the_original_pose_tables(self):
+        bottom = self.core.Landing_Bottom
+        self.assertEqual([bottom(p, 0) for p in range(10)], [12, 10, 6, 4, 2, 5, 7, 9, 12, 14])
+        self.assertEqual([bottom(p, 1) for p in range(10)], [16, 13, 9, 7, 7, 8, 9, 10, 12, 14])
+        self.assertEqual(bottom(255, 1), 7)  # resting pose 0 with gear
+
+    def test_a_nose_up_plane_touches_the_deck_earlier(self):
+        # Stall pose (pitch 0) with gear: bottom 16 -> contact 9 px above row 1160.
+        self.assertEqual(self.contact(7000, DECK_Y - 9, bottom=16)[0], NONE)
+        self.assertEqual(self.contact(7000, DECK_Y - 9, sub=1, bottom=16)[0], LANDED)
 
 
 if __name__ == '__main__':

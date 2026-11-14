@@ -97,8 +97,8 @@ Recovered 2026-11-14 with the same method.
 
 | Evidence | Meaning | Confidence |
 | --- | --- | --- |
-| 0xaaea | The plane's bottom offset below its origin: a per-pose table (`-$5552`, indexed by pose `-$5a6c`), plus a gear-down table (`-$553c`) while gear `-$5bf4` is down; turn frames use `-$54fe` | Established control flow; table values not yet extracted |
-| 0x5710 | Surface height from the map word's object id (`(word >> 2) & 0x1ff`) | Established; heights per id not extracted |
+| 0xaaea | The plane's bottom offset below its origin: per pose (`-$5552`): 2, 12, 10, 6, 4, 2, 5, 7, 9, 12, 14; plus gear down (`-$553c`): 5, 4, 3, 3, 3, 5, 3, 2, 1, 0, 0; turn frames use `-$54fe` (2, 2, 4, 6, 10, 11) | Established (DATA values) |
+| 0x5710 | Surface height from the map word's object id (`(word >> 2) & 0x1ff`): static classes ids 6 / 7 / 8, 11 / 3 / 4 / 15..30 have heights 36 / 35 / 35 / 9 / 13 / 12 (table `-$583c`), minus word bits 11..13. Carrier ids `$1f`..`$27` and `$9f`, and ships, read live object records (deck = record `$e` − `$14` − bob − heave). All other ids are 0 | Established |
 | 0xb8c4 | Contact when `altitude − bottom < surface` (strictly below) or ≤ 0. Resting exactly on the surface is not contact, so takeoff is safe | Established |
 | 0xb7bc | Landing range = carrier map extents × 4, 16 px inward at each end | Established |
 | 0xc2ce | While UP (input bit 0) is held facing left, horizontal speed approaches 600 and flag `-$5554` is set; facing right clears it | Established; bit-0 = UP inferred from the horizontal mask `$0c` |

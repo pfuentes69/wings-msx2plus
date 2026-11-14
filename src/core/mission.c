@@ -13,3 +13,4 @@ uint16_t Mission_Query(int16_t x)
     }
     return g_MissionSurfaceRuns[low].word;
 }
+
