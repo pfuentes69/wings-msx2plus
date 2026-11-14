@@ -262,7 +262,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
         if scale == 8: mark(x,y,1,2 if kind>=3 else 1,11)
         elif kind == 2:
             from convert_dashboard import bomb_pixels
-            pose=0 if p['life']>95 else 1 if p['life']>92 else 2
+            pose=0 if p['life']>250 else 1 if p['life']>247 else 2   # COMBAT_BOMB_LIFE 255
             if pose!=2 and p['vx']>0:pose+=3
             source=bomb_pixels()[pose*64:(pose+1)*64]
             for row in range(8):

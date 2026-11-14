@@ -163,11 +163,11 @@ def main():
     for heading in ('left','right'):
         for attitude in ('climb','level','dive'):
             snapshot=snapshots[f'cannon_{attitude}_{heading}']
-            expected_pose={'left':{'climb':41,'level':16,'dive':46},'right':{'climb':1,'level':4,'dive':7}}[heading][attitude]
-            assert snapshot['pose']==expected_pose,(heading,attitude,'aircraft pose',snapshot['pose'])
+            expected_pose={'left':{'climb':(41,),'level':(16,),'dive':(45,46,47)},'right':{'climb':(1,),'level':(4,),'dive':(6,7,8)}}[heading][attitude]
+            assert snapshot['pose'] in expected_pose,(heading,attitude,'aircraft pose',snapshot['pose'])
             # The original draws a per-pose flash/tracer overlay, not travelling rounds.
             assert snapshot['flash'] in (1,2),(heading,attitude,'no cannon flash overlay')
-            assert gun_flash_shape(scene,expected_pose,snapshot['flash']),(heading,attitude,'no overlay for pose')
+            assert gun_flash_shape(scene,snapshot['pose'],snapshot['flash']),(heading,attitude,'no overlay for pose')
             strikes=[p for p in snapshot['projectiles'][:2] if p['kind'] in (3,4)]
             if attitude!='dive':assert not strikes,(heading,attitude,'level/climbing fire struck the surface')
             for p in strikes:

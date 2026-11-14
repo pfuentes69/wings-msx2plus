@@ -117,7 +117,7 @@ class CombatTests(unittest.TestCase):
         self.assertEqual([events[i+1]-events[i] for i in range(8)],[36,36,36,42]*2)
         self.assertEqual(s.sortie.stock,14)
         self.assertGreater(sum(p.kind==2 for p in s.projectile),10)
-        self.advance(s,600,x=5000,y=0)
+        self.advance(s,1200,x=5000,y=0)            # a 1188 px fall takes about 6 s
         self.assertEqual(s.secondary_fired,16)
         self.assertTrue(all(p.kind==0 for p in s.projectile))
 
@@ -207,6 +207,44 @@ class CombatTests(unittest.TestCase):
             self.assertEqual((p.kind,p.y,s.impacts),(kind,floor*4,1))
             self.advance(s,60,x=x,y=floor-8)
             self.assertEqual(p.kind,0)
+
+    def original_bomb(self,x,y,vx,vy,ticks):
+        """The Amiga update (0x0b58) in 16.16, per 12.5 Hz tick; y is the
+        port's (down), vx/vy in pixels per original tick."""
+        X,Y,VX,VY=x*65536,y*65536,round(vx*65536),round(vy*65536)
+        path=[]
+        for _ in range(ticks):
+            whole=VX>>16
+            q=abs(whole)//10*(1 if whole>=0 else -1)
+            VX-=q*65536;X+=VX
+            VY+=0x6000;Y+=VY
+            path.append((X/65536,Y/65536))
+        return path
+
+    def test_bombs_fall_with_the_original_gravity_and_drag(self):
+        # 1493 Q8 per 150 Hz step is 14 px per original tick: drag applies.
+        # Sampling at 25 Hz trails the original's 12.5 Hz step (velocity
+        # first, then position) by 3/32 px per original tick, plus rounding.
+        for vx,vy in ((1493,0),(-1493,0),(533,-213)):
+            s=self.state();self.advance(s,6,2,x=3000,y=200,vx=vx,vy=vy)
+            p=s.projectile[2]
+            start=(p.x/4,p.y/4,p.vx/2,p.vy/2)
+            model=self.original_bomb(*start,40)
+            for tick in range(40):
+                self.advance(s,12,x=3000,y=200)
+                self.assertEqual(p.kind,2)
+                mx,my=model[tick]
+                self.assertLess(abs(p.x/4-mx),2,(vx,tick))
+                self.assertLess(abs(p.y/4-my),1.5+3/32*(tick+1),(vx,tick))
+
+    def test_bombs_burst_12_px_above_the_sea_and_11_above_the_deck(self):
+        for x,burst,floor,kind in ((4500,1188,1200,4),(1000,1188,1200,3),(7032,1156,1168,3)):
+            s=self.state();self.advance(s,6,2,x=x,y=burst-40)
+            p=s.projectile[2];lowest=0
+            while p.kind==2:
+                lowest=p.y;self.advance(s,6,x=x,y=burst-40)
+            self.assertLess(lowest,burst*4)
+            self.assertEqual((p.kind,p.y),(kind,floor*4),x)
 
     def test_pal_ntsc_grouping_and_pause_are_deterministic(self):
         ntsc,pal=self.state(),self.state()

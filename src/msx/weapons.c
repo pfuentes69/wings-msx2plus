@@ -100,7 +100,7 @@ void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* stat
         else if (kind == COMBAT_FALLING_BOMB)
         {
             // Two discrete rotations after release: horizontal, diagonal, down.
-            s_BombPose = p->life > 95 ? 0 : p->life > 92 ? 1 : 2;
+            s_BombPose = p->life > COMBAT_BOMB_LIFE - 5 ? 0 : p->life > COMBAT_BOMB_LIFE - 8 ? 1 : 2;
             if (s_BombPose != 2 && p->vx > 0) s_BombPose += 3;
             Mark(x-4, y-4, 8, 8, 0);
         }

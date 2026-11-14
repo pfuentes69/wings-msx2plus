@@ -150,7 +150,7 @@ proc publication {} {
                 if {![info exists ::weapon($name)] && [snapshot $name]} { set ::weapon($name) 1 }
                 if {$kind == 2 && [value g_DisplayScale] == 1} {
                     set life [debug read memory [expr {$::addr(g_Combat)+$i*8+6}]]
-                    set pose [expr {$life>95 ? 0 : $life>92 ? 1 : 2}]
+                    set pose [expr {$life>250 ? 0 : $life>247 ? 1 : 2}]
                     set name bomb_pose_$pose
                     if {![info exists ::weapon($name)] && [snapshot $name]} { set ::weapon($name) 1 }
                 }

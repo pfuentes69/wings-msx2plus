@@ -19,7 +19,7 @@
 #define WINGS_SEGMENT_SCENE 16  /* menu, ship, carrier elevator, engine, landing */
 #define WINGS_SEGMENT_FLIGHT 21 /* flight model, arresting rope */
 #define WINGS_SEGMENT_EFFECTS 22 /* engine smoke */
-#define WINGS_SEGMENT_ISLAND 23 /* island targets */
+#define WINGS_SEGMENT_COMBAT 23 /* weapons, island targets */
 
 #if defined(WINGS_BANKED_CODE) && defined(__SDCC)
 #define WINGS_BANKED __banked

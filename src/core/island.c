@@ -3,7 +3,7 @@
 #include "../msx/terrain_patch.h"
 #include "../generated/mission_tiles.h"
 #include "../generated/mission_island.h"
-WINGS_CODE_SEGMENT(WINGS_SEGMENT_ISLAND)
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
 
 #ifdef WINGS_P1_FLIGHT  /* smoke.h: the debug ROM keeps the P0 flight */
 

@@ -1,6 +1,7 @@
 #include "combat.h"
 #include "flight.h"
 #include "mission.h"
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
 #if WINGS_WORLD_WIDTH > 8191
 #error Combat Q2 coordinates require a world no wider than 8191 pixels
 #endif
@@ -11,7 +12,7 @@
 static const uint8_t s_TracerX[10]={10,10,10,10,11,11,10,10,9,5};
 static const int8_t s_TracerY[10]={-6,-4,-3,-3,0,3,5,7,8,9};
 
-void Combat_Reset(CombatState* state)
+void Combat_Reset(CombatState* state) WINGS_BANKED
 {
     uint8_t i;
     for (i = 0; i < COMBAT_COUNT; ++i)
@@ -67,6 +68,21 @@ static void Strike(CombatState* state, uint16_t x, uint16_t y, uint8_t left)
     }
 }
 
+/* The original's bomb (0x0b58), each 12.5 Hz tick: vx -= trunc(whole
+ * pixels of vx / 10), x += vx; vy += 0.375 (down), y += vy. At the 25 Hz
+ * weapon tick the Q2 velocity units are half-pixels per original tick:
+ * gravity is 3/8 of a unit a tick, drag applies every second tick. */
+static void Fall(CombatProjectile* p)
+{
+    uint8_t age = COMBAT_BOMB_LIFE - p->life, q = 0;
+    int8_t v;
+    p->vy += (uint8_t)(((age + 1) * 3) >> 3) - (uint8_t)((age * 3) >> 3);
+    if (!(age & 1)) return;
+    v = p->vx >> 1;                       /* whole pixels per original tick */
+    if (v < 0) { while (v <= -10) { v += 10; ++q; } p->vx += 2 * q; }
+    else { while (v >= 10) { v -= 10; ++q; } p->vx -= 2 * q; }
+}
+
 static void Advance(CombatState* state, CombatProjectile* p)
 {
     int16_t next;
@@ -75,20 +91,21 @@ static void Advance(CombatState* state, CombatProjectile* p)
     if (!p->kind) return;
     if (!--p->life) { p->kind = 0; return; }
     if (p->kind >= COMBAT_IMPACT) return;
+    Fall(p);
     next = (int16_t)p->x + p->vx;
     if (next < 0 || (uint16_t)next >= (WINGS_WORLD_WIDTH * 4u)) { p->kind = 0; return; }
     p->x = next;
-    if (p->kind == COMBAT_FALLING_BOMB && p->vy < 64) p->vy += 4;
     next = (int16_t)p->y + p->vy;
     if (next < 0) { p->kind = 0; return; }
     p->y = next;
-    // Flat training surfaces only: visual deck is 32 pixels above sea/soil.
-    // This is not the original collision solver or the carrier landing model.
-    if (p->y < 1168u * 4) return;
+    /* 0x0bf0: it bursts 12 px above the sea or island (it falls through
+     * huts and trees), or 11 above the deck. The burst is drawn on the
+     * surface (32 px up on the carrier). */
+    if (p->y < COMBAT_DECK_BURST_Y * 4) return;
     surface = Mission_Surface(p->x >> 2);
-    floor = surface == MISSION_CARRIER ? 1168u * 4 : 1200u * 4;
-    if (p->y >= floor)
+    if (p->y >= (surface == MISSION_CARRIER ? COMBAT_DECK_BURST_Y : COMBAT_BURST_Y) * 4u)
     {
+        floor = surface == MISSION_CARRIER ? 1168u * 4 : 1200u * 4;
         p->y = floor; p->life = 6;
         p->kind = surface == MISSION_SEA ? COMBAT_SPLASH : COMBAT_IMPACT;
         if (state->impacts != 65535u) ++state->impacts;
@@ -96,7 +113,7 @@ static void Advance(CombatState* state, CombatProjectile* p)
 }
 
 void Combat_Advance(CombatState* state, SortieState* sortie, uint16_t x, uint16_t y,
-                 int16_t vx, int16_t vy, uint8_t left, uint8_t controls)
+                 int16_t vx, int16_t vy, uint8_t left, uint8_t controls) WINGS_BANKED
 {
     CombatProjectile* p;
     uint8_t i, fire = (controls & COMBAT_FIRE) || state->primary_pending;
@@ -131,8 +148,9 @@ void Combat_Advance(CombatState* state, SortieState* sortie, uint16_t x, uint16_
             state->secondary_cooldown=6;
             if (++state->secondary_phase==4) {state->secondary_phase=0;++state->secondary_cooldown;}
             p->x = x * 4u; p->y = (y+4) * 4u;
+            /* At the plane's velocity (0x07f2): Q8 per 150 Hz step x 6 / 64. */
             p->vx = vx * 6 / 64; p->vy = vy * 6 / 64;
-            p->life = 100; p->kind = COMBAT_FALLING_BOMB;
+            p->life = COMBAT_BOMB_LIFE; p->kind = COMBAT_FALLING_BOMB;
             --sortie->stock;
             if (state->secondary_fired != 65535u) ++state->secondary_fired;
         }
@@ -141,7 +159,7 @@ void Combat_Advance(CombatState* state, SortieState* sortie, uint16_t x, uint16_
 
 #ifndef WINGS_P1_FLIGHT
 void Combat_Step(CombatState* state, SortieState* sortie, uint16_t x, uint16_t y,
-                 int16_t vx, int16_t vy, uint8_t left, uint8_t controls)
+                 int16_t vx, int16_t vy, uint8_t left, uint8_t controls) WINGS_BANKED
 {
     if (Combat_Clock(state, controls)) Combat_Advance(state,sortie,x,y,vx,vy,left,controls);
 }

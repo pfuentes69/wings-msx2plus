@@ -7,8 +7,8 @@ describes what the MSX does and how. P3 is being built in steps:
 | Step | Contents | State |
 | --- | --- | --- |
 | 1 | Huts and dugouts: map data, wrecked huts, bomb hits, scoring, hut smoke | Done |
-| 2 | The original's bomb physics (gravity, drag, detonation at altitude 12) | Next |
-| 3 | Dugout guns: barrel art, hit-scan ground fire, engine damage | |
+| 2 | The original's bomb physics (gravity, drag, detonation at altitude 12) | Done |
+| 3 | Dugout guns: barrel art, hit-scan ground fire, engine damage | Next |
 | 4 | Soldiers: release, walking, re-manning dugouts, deaths (+25) | |
 | 5 | Island cleared: bonus, flag, message, mission complete | |
 | later | Rockets, AA guns (rockets only) | |
@@ -77,6 +77,38 @@ records (fields +8..+e) in `g_Island`:
 State resets at boot and on Ctrl-R (a new game), not when a plane is lost.
 That matches the original, where island damage persists through the mission.
 
+## Bomb physics
+
+The original's bomb update (0x0b58), once per 12.5 Hz tick in 16.16 fixed
+point:
+
+- **Drag:** vx −= trunc(whole pixels of vx / 10). The quotient of the integer
+  part by 10 is subtracted in whole pixels, so a bomb slows by 1 px a tick
+  from 10 px a tick and by 2 from 20. Below 10 px a tick it keeps its speed.
+- **Gravity:** vy grows by 0.375 px a tick (`-$5cae` = 0x6000), downward;
+  y += vy.
+- **Launch:** at the plane's velocity (vx negated facing left, 0x07f2).
+- **Detonation** (0x0bf0): when the altitude reaches 12 over the sea or the
+  island, or the height table + 11 over the carrier (surface class 1). There
+  is no height test against objects. A bomb falls through huts, trees and
+  dugouts and bursts 12 px above the sea. Only its x picks the target.
+
+The port keeps its Q2 positions and its 25 Hz weapon tick (`Fall` in
+`src/core/combat.c`). Its velocity unit, a quarter pixel per 25 Hz tick, is
+half a pixel per original tick. Gravity is therefore 3/8 of a unit a tick,
+added as 0/0/1/0/0/1/0/1 by age, and drag applies every second tick. Sampling
+at 25 Hz trails the original's step (velocity first, then position) by 3/32 px
+per original tick: about 2 px after a 100 px fall and 7 px after a fall from
+the ceiling. Bursts happen at y 1188 (sea and island) or 1156 (deck: 33 + 11)
+and are drawn on the surface, as before.
+
+From 100 px up at full speed (14 px a tick) a bomb falls for about 1.7 s and
+bursts some 190 px ahead of its release point. The earlier prototype's
+gravity was about ten times the original's.
+
+Combat (`combat.c`) moved into banked segment 23 with the island code, which
+freed about 2.2 KB of resident space (3,044 bytes free).
+
 ## Verification
 
 - `tests/test_island.py` builds `island.c` with a stub `Terrain_Remap` and
@@ -85,9 +117,14 @@ That matches the original, where island damage persists through the mission.
   detonations count, and the 49-puff smoke cadence.
 - `tests/test_mission.py` round-trips the variant columns through the tile
   map.
+- `tests/test_combat.py` follows released bombs against a 16.16 model of
+  the original update and checks the burst heights over sea, island and deck.
 - The emulator scenario (`tools/p0_smoke.tcl`, `island_run`) flies to island A
-  after the cannon tests and carpet-bombs it from y 1100 until the hut at 2392
-  is wrecked. The `island_bombed` snapshot checks the whole screen against
+  after the cannon tests and coasts to speed 1000 at y 1100. It aims one bomb
+  at the hut at 2392, predicting the burst point with a copy of `Fall`, then
+  turns back over the hut. The plane's x moves a frame's worth at a time
+  (28 px on PAL at full speed), and carpet bombing at 14 px a tick spaces the
+  bursts 44 px apart, wider than a hut, so the run coasts and aims instead. The `island_bombed` snapshot checks the whole screen against
   `verify_world_flight.island_background`, which pastes the variant columns
   over the scene for wrecked huts. It also checks the score (150 per wrecked
   hut, 200 per emptied dugout) and at least one smoke puff on screen. This

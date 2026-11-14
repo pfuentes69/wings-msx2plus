@@ -470,6 +470,9 @@ proc prepare_approach {} {
 proc cannon {pose name} {
     set heading [expr {[world_byte 11] ? 16 : 128}]
     set attitude [lindex [split $name _] 1]
+    # A held dive steps 600 a tick, two ticks a frame on PAL, so a single
+    # dive pose can be skipped: accept the middle three (the flash art is
+    # checked for whichever is drawn).
     if {$attitude eq "climb"} {fly [expr {$heading|32|1}]} elseif {$attitude eq "level"} {fly 1} else {fly [expr {$heading|64|1}]}
     set ::wanted_frame $pose
     snap $name [list cannon_next $name]
@@ -477,10 +480,10 @@ proc cannon {pose name} {
 proc cannon_next {name} {
     switch $name {
         cannon_climb_left {cannon 16 cannon_level_left}
-        cannon_level_left {cannon 46 cannon_dive_left}
+        cannon_level_left {cannon {45 46 47} cannon_dive_left}
         cannon_dive_left {cannon_settle 16 {pilot 128 1060;wait_for {![world_byte 11] && ![world_byte 13] && abs([world_y]-1060)<9 && abs([climb])<=600} {pilot_off;cannon 1 cannon_climb_right} "turn for cannon tests" 15}}
         cannon_climb_right {cannon 4 cannon_level_right}
-        cannon_level_right {cannon 7 cannon_dive_right}
+        cannon_level_right {cannon {6 7 8} cannon_dive_right}
         cannon_dive_right {cannon_settle 128 island_run}
     }
 }
@@ -495,17 +498,66 @@ proc island_run {} {
     game_byte 13 30;game_byte 15 192
     set ::score_before [expr {[value g_DisplayScore]}]
     pilot 16 1100
-    wait_for {[world_x]<2800 && [world_byte 11] && abs([world_y]-1100)<9} island_bomb "fly to the island" 90
+    wait_for {[world_x]<4300 && [world_byte 11] && abs([world_y]-1100)<9} island_coast "fly to the island" 90
+}
+proc island_coast {} {
+    # Coast to speed 1000 (10 px a tick; x moves 17-20 px a frame): about
+    # 1200 px from full speed.
+    pilot 0 1100
+    wait_for {[speed]<=1000 && abs([world_y]-1100)<9 && [climb]==0} island_bomb "coast over the island" 30
+}
+# Where a bomb released now bursts, relative to the plane: Combat_Advance's
+# launch (Q2, plane velocity x 6 / 64, 4 px below) and Fall(), level flight.
+proc bomb_offset {} {
+    set v [world_vx];set vx [expr {$v<0 ? -((-$v*6)/64) : ($v*6)/64}]
+    set x 0;set y [expr {([world_y]+4)*4}];set vy 0;set life 255
+    while {$y<1188*4} {
+        incr life -1;set age [expr {255-$life}]
+        incr vy [expr {((($age+1)*3)>>3)-(($age*3)>>3)}]
+        if {$age & 1} {
+            set w [expr {$vx>>1}];set q [expr {abs($w)>=10 ? abs($w)/10 : 0}]
+            if {$w<0} {incr vx [expr {2*$q}]} else {incr vx [expr {-2*$q}]}
+        }
+        incr x $vx;incr y $vy
+    }
+    return [expr {$x/4}]
 }
 proc island_bomb {} {
+    # Bombs keep the plane's speed and fall for about 1.7 s from y 1100,
+    # bursting well ahead, so a carpet of them can straddle a hut. Aim one
+    # at the hut at 2392 ([2376, 2408)). The plane's x advances a frame at
+    # a time (at most 20 px here); take the first sample inside the window.
+    # Hold the simulation while the press is sampled so the bomb leaves at
+    # the next weapon tick (5 px further on).
+    require [expr {[world_x]>2600}] "Coasted past the aiming point: x=[world_x]"
+    set ::bomb_dx [bomb_offset]
+    puts $::report "bomb offset $::bomb_dx speed=[speed]"
+    wait_for {[world_x]+$::bomb_dx<=2405} island_release "aim at the hut" 20
+}
+proc island_release {} {
+    debug write memory $::addr(g_HoldFlight) 1
+    puts $::report "bomb release x=[world_x]"
     keymatrixdown 4 8
-    wait_for {[island_wrecked 0] || [world_x]<2200} island_hit "bomb the huts" 20
+    after time 0.2 {keymatrixup 4 8}
+    after time 0.4 {
+        debug write memory $::addr(g_HoldFlight) 0
+        after time 0.3 island_log_bombs
+        wait_for {[island_wrecked 0]} island_hit "the bomb reaches the hut" 4
+    }
+}
+proc island_log_bombs {} {
+    for {set i 2} {$i<18} {incr i} {
+        set b [expr {$::addr(g_Combat)+$i*8}]
+        if {[debug read memory [expr {$b+7}]]} {
+            puts $::report "bomb $i x=[expr {([debug read memory $b]+256*[debug read memory [expr {$b+1}]])/4}] y=[expr {([debug read memory [expr {$b+2}]]+256*[debug read memory [expr {$b+3}]])/4}] life=[debug read memory [expr {$b+6}]] plane=[world_x] stock=[view 4]"
+        }
+    }
 }
 proc island_hit {} {
-    keymatrixup 4 8
-    require [island_wrecked 0] "Bombs missed the hut at 2392: x=[world_x]"
-    set ::wanted_smoke 1
-    snap island_bombed {pilot 128 1060;wait_for {[world_x]>5000} approach "fly back from the island" 90}
+    # The bomb bursts well behind the plane: turn back over the hut and
+    # capture it wrecked and smoking.
+    pilot 128 1060
+    wait_for {![world_byte 11] && abs([world_x]-2400)<60} {set ::wanted_smoke 1;snap island_bombed {wait_for {[world_x]>5000} approach "fly back from the island" 90}} "turn back over the hut" 20
 }
 proc approach {} {
     # Gear comes down within 1280 px of the carrier, in either direction.

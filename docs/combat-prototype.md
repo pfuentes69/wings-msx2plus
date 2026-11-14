@@ -20,14 +20,14 @@ and passing flight-position samples on intervening ticks. PAL/NTSC grouping is
 deterministic. The minimum gun interval is 120 ms (pool saturation delays further shots),
 round lifetime 480 ms and
 impact lifetime 240 ms. Gun shots follow the aircraft pitch and heading, with inherited horizontal/vertical aircraft velocity;
-bombs inherit it and accelerate downward. These are prototype parameters, not
-recovered Amiga weapon physics or flight dynamics.
+bombs inherit it. The gun parameters are prototype values; bombs now follow
+the original's physics and detonation heights (P3, see
+[island-combat.md](island-combat.md#bomb-physics)).
 
-Training collision uses the decoded sea/island/carrier classes. The flat sea
-and soil floor is height zero; the carrier deck is placed 32 pixels above it,
-matching the current visual deck. This approximation does not cover raised
-objects, ship sides, elevator motion, friendly damage or aircraft landing.
-Impacts count for diagnostics only and do not award score or alter scenery.
+Collision uses the decoded sea/island/carrier classes. Bursts are drawn on the
+flat sea and soil floor (height zero) or on the carrier deck, placed 32 pixels
+above it to match the visual deck. Bombs that burst on the island wreck huts
+and empty manned dugouts ([island-combat.md](island-combat.md)).
 Bombs now use the original artwork described below. Round and impact marks
 remain small authored primitives; original explosion conversion remains future work.
 
@@ -120,7 +120,8 @@ remain buffered, and overlapping keyboard/joystick aliases form one held input.
 Releasing stops further drops. Pause freezes both cooldown and projectiles.
 
 Two slots remain dedicated to gun rounds; sixteen additional slots allow bombs
-to fall simultaneously for their full 100-tick lifetime. Failed allocation or
+to fall simultaneously (the original has 15). A bomb's life is 255 weapon
+ticks, longer than a fall from the ceiling. Failed allocation or
 empty inventory spends no stock. Simulation and drawing scan only through the
 highest occupied slot. Each projectile has its own disjoint 8×8 background
 backup on each page; the bomb footprint includes only its opaque source bounds

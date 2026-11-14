@@ -2,7 +2,7 @@
 #include "terrain_renderer.h"
 #include "scenery_load.h"
 #include "../generated/mission_tiles.h"
-WINGS_CODE_SEGMENT(WINGS_SEGMENT_ISLAND)
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
 
 uint8_t g_TerrainDirty;
 

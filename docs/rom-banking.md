@@ -24,19 +24,19 @@ now banks code and grows to 256 KiB.
 | 17–20 | Raw data banks (pre-rendered HUD values) |
 | 21 | Banked code: `WINGS_SEGMENT_FLIGHT` (flight model, arresting rope) |
 | 22 | Banked code: `WINGS_SEGMENT_EFFECTS` (engine and hut smoke) |
-| 23 | Banked code: `WINGS_SEGMENT_ISLAND` (island targets, terrain column remap) |
+| 23 | Banked code: `WINGS_SEGMENT_COMBAT` (weapons, island targets, terrain column remap) |
 | 24–31 | Free for code or data |
 
-Measured release layout (P3 huts and dugouts, 2026-11-14):
+Measured release layout (P3 bomb physics, 2026-11-14):
 
 | Area | Used | Free |
 | --- | --- | --- |
-| Resident 4000h–9FFFh | 23,721 bytes | 855 of 24,576 |
+| Resident 4000h–9FFFh | 21,532 bytes | 3,044 of 24,576 |
 | Segment 3 | 7,708 bytes | 484 |
 | Segment 16 | 6,708 bytes | 1,484 |
 | Segment 21 | 5,824 bytes | 2,368 |
 | Segment 22 | 3,761 bytes | 4,431 |
-| Segment 23 | 1,420 bytes | 6,772 |
+| Segment 23 | 4,035 bytes | 4,157 |
 
 The debug profile is smaller (20,917 resident bytes; its segment 16 omits the
 P1 elevator). Every build prints these figures in its post-build step.
