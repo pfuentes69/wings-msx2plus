@@ -76,7 +76,7 @@ def main():
                 (ROOT/'assets_msx/mission_a'/('far.indices' if scale==8 else 'scene.indices')).read_bytes(),
                 terrain['far_width'] if scale==8 else terrain['width'],scale,int(wave),pilot,int(heave),int(ship),
                 projectiles,game[4],game[3],game[2],crew,ground,depth,stage!=1,flash=combat[158],
-                gauges=tuple((out/f'{name}.gauges').read_bytes()))
+                gauges=tuple((out/f'{name}.gauges').read_bytes()),crash=(out/f'{name}.crash').read_bytes()[0])
             for row in range(212):
                 for col in range(8,256):
                     ring=col if row>=172 else (int(camera)+col)%256
@@ -114,7 +114,7 @@ def main():
     required|={f'taxi_right_{i}' for i in range(10)}|{f'taxi_left_{i}' for i in range(10,0,-1)}
     required|={'taxi_right_stop','taxi_right_hold','taxi_left_stop','taxi_left_hold'}
     required|={'engine_low_fuel','engine_failed','engine_next_plane','game_over'}
-    required|={'landed','landed_service','deck_bounce','sea_splash','sea_crash_next'}
+    required|={'landed','landed_service','deck_bounce','sea_splash','sea_crash_next','engine_splash'}
     assert required<=snapshots.keys(),required-snapshots.keys()
     assert (out/'paused.combat').read_bytes()==(out/'pause_wait.combat').read_bytes(),'Pause advanced weapons'
     for key in ('world','y','pose','wave','heave','ship','crew','depth','stage'):

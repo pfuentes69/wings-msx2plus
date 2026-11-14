@@ -20,8 +20,11 @@ As the manual says, you approach from the right toward the carrier and stall
 onto the deck. The original has no cable geometry in its capture rule, so the
 four cables are scenery.
 
-A crash holds the scene for one second, with a splash (sea) or an impact
-(deck, island) at the plane. Then the plane is lost
+A crash holds the scene for one second while the original crash art plays
+at the plane: the sea splash `spl0`..`spl6` over water, and the explosion
+`exp0`..`exp5` on the deck or an island (world.shp). The original picks the
+outcome by surface (0xafba). The frames stream into the atlas slot of a large
+static aircraft frame, which is reloaded when the next plane launches. Then the plane is lost
 ([p2-engine.md](p2-engine.md)): the next one starts on deck, or GAME OVER.
 
 The check runs only while the plane is below deck height, so it costs
@@ -36,8 +39,10 @@ nothing in normal flight. Without that guard, the per-step call added about
   heights (0x5710), and the per-pose bottom offsets (0xaaea), from tables not
   yet extracted. Flying through the carrier's island superstructure does not
   collide yet.
-- The crash visual reuses the strike splash/impact marks; the original's
-  crash and explosion art is pending.
+- After engine failure the plane noses down. The original hands the descent
+  to its crash routine; its arithmetic is not mapped yet.
+- The crash art frame timing (spread evenly over the 1-second hold) is an
+  MSX choice.
 
 ## Verification
 
@@ -55,7 +60,9 @@ nothing in normal flight. Without that guard, the per-step call added about
      deck and launch again.
   5. A powered touchdown must bounce.
   6. A powered dive must crash; the scene is pixel-checked during the
-     splash hold, and the next plane appears on deck with one plane fewer.
+     crash hold, and the next plane appears on deck with one plane fewer.
+  7. The engine-failure crash over open sea must show the splash art,
+     pixel-checked.
 - The oracle draws the plane in its on-deck pose from the dumped flight
   mode rather than from snapshot names.
-- 98 snapshots pass on NTSC and on PAL.
+- 99 snapshots pass on NTSC and on PAL.

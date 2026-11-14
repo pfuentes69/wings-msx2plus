@@ -1753,7 +1753,7 @@
         "streamed": true
       }
     ],
-    "pixel_bytes": 26554,
+    "pixel_bytes": 28079,
     "reference_pivot": [
       25,
       16
@@ -2729,6 +2729,244 @@
       16,
       12
     ],
+    "crash": [
+      {
+        "name": "exp0",
+        "source": "reference_assets/unpacked_shapes/world/013_exp0.bin",
+        "source_sha256": "8080c9c74a6e40ffe1186fd89feb145b4af41ff08cdd2042cb203117515a72b0",
+        "drawing_origin": [
+          9,
+          9
+        ],
+        "dx": 18,
+        "dy": 7,
+        "width": 14,
+        "height": 10,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 26554,
+        "bytes": 70,
+        "packed_sha256": "d891161b827105222228ef869c3706b75c0f8015a019133e5504a38cb01f010d"
+      },
+      {
+        "name": "exp1",
+        "source": "reference_assets/unpacked_shapes/world/014_exp1.bin",
+        "source_sha256": "12e8a4318e986f69fe2aa99f747ded8471f55c14a0f19ecb742c6e88c69cce00",
+        "drawing_origin": [
+          10,
+          12
+        ],
+        "dx": 17,
+        "dy": 4,
+        "width": 18,
+        "height": 13,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 26624,
+        "bytes": 117,
+        "packed_sha256": "1a15452d9e72cd4a596cc277499faa1ce4317ce8cca3abe7c1d2fb4c6d132591"
+      },
+      {
+        "name": "exp2",
+        "source": "reference_assets/unpacked_shapes/world/015_exp2.bin",
+        "source_sha256": "3a868dced60bd357fee87ea45027784126aff28ad407e418b33afba3f69602d9",
+        "drawing_origin": [
+          15,
+          16
+        ],
+        "dx": 14,
+        "dy": 0,
+        "width": 24,
+        "height": 17,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 26741,
+        "bytes": 204,
+        "packed_sha256": "9297a973fd3d6b34415a2597ac08af466adbb6b12bbf568ef87594ea81612475"
+      },
+      {
+        "name": "exp3",
+        "source": "reference_assets/unpacked_shapes/world/016_exp3.bin",
+        "source_sha256": "67d858c92b02d3069256fdc3c949157ff0592a7c00985b56880edb33422c202b",
+        "drawing_origin": [
+          11,
+          17
+        ],
+        "dx": 14,
+        "dy": -1,
+        "width": 24,
+        "height": 18,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 26945,
+        "bytes": 216,
+        "packed_sha256": "0a733a51c20cb8f0c741feac59bb7d06c4c6833046183797648908990f47c500"
+      },
+      {
+        "name": "exp4",
+        "source": "reference_assets/unpacked_shapes/world/017_exp4.bin",
+        "source_sha256": "7832e395ebe58a27271a3d0195873acd1a8a80b5f568aac971fee9966ef550ca",
+        "drawing_origin": [
+          14,
+          18
+        ],
+        "dx": 12,
+        "dy": -2,
+        "width": 26,
+        "height": 19,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 27161,
+        "bytes": 247,
+        "packed_sha256": "488854635d6272c3f3d617c24ab4ad0880649143b3341fab4a71bba711912f8d"
+      },
+      {
+        "name": "exp5",
+        "source": "reference_assets/unpacked_shapes/world/018_exp5.bin",
+        "source_sha256": "f8a47f87f710ff9c4a3a9b2ab607ee967012ed29c14688ac848b9c7fad5f404e",
+        "drawing_origin": [
+          13,
+          17
+        ],
+        "dx": 13,
+        "dy": -1,
+        "width": 24,
+        "height": 18,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 27408,
+        "bytes": 216,
+        "packed_sha256": "68c81fd77a758b49515960f7d378345d59636a18c720184ca42aa0c603036f77"
+      },
+      {
+        "name": "spl0",
+        "source": "reference_assets/unpacked_shapes/world/116_spl0.bin",
+        "source_sha256": "8b5039d4a4befcff7651257a4c4f86f61f5608edbd338690aad13466d916e822",
+        "drawing_origin": [
+          15,
+          2
+        ],
+        "dx": 23,
+        "dy": 14,
+        "width": 6,
+        "height": 7,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 27624,
+        "bytes": 21,
+        "packed_sha256": "8bd5b048bf0330f9b9944449889be9b6c1c921166d34a67a2ce18bf432553da7"
+      },
+      {
+        "name": "spl1",
+        "source": "reference_assets/unpacked_shapes/world/117_spl1.bin",
+        "source_sha256": "0befec0f33f50f26f28fb5fddd9e48567b6c6c43768e92e930342c9f5cdca30d",
+        "drawing_origin": [
+          15,
+          2
+        ],
+        "dx": 21,
+        "dy": 14,
+        "width": 10,
+        "height": 7,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 27645,
+        "bytes": 35,
+        "packed_sha256": "aea4fe0928e96e56bc8667ca69b8f80d0f087c586a27f5ee4ee6ea3d6aa7358b"
+      },
+      {
+        "name": "spl2",
+        "source": "reference_assets/unpacked_shapes/world/118_spl2.bin",
+        "source_sha256": "13e7338e9a13ef842380e43f4023a6999d85c09b5deab758f1c64becb392db04",
+        "drawing_origin": [
+          16,
+          3
+        ],
+        "dx": 17,
+        "dy": 13,
+        "width": 16,
+        "height": 8,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 27680,
+        "bytes": 64,
+        "packed_sha256": "9802517ff0cbdb92e2eef04ac6b50ed3fa819ed03e4aea873fc199889889b46b"
+      },
+      {
+        "name": "spl3",
+        "source": "reference_assets/unpacked_shapes/world/119_spl3.bin",
+        "source_sha256": "96492948b7ad0441e4e5ae103dfabece46e50a38401a3ebaddfd0a8a848547d5",
+        "drawing_origin": [
+          16,
+          8
+        ],
+        "dx": 16,
+        "dy": 8,
+        "width": 18,
+        "height": 13,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 27744,
+        "bytes": 117,
+        "packed_sha256": "ce5bc1fe2248e7ee479fdc4667ea2cadaf1ea7c90e7c970573f719500d295007"
+      },
+      {
+        "name": "spl4",
+        "source": "reference_assets/unpacked_shapes/world/120_spl4.bin",
+        "source_sha256": "882ffc599b42f3fd75b0a4601adbe7671b530f1acbc0ac5cdac11ba68f2e8088",
+        "drawing_origin": [
+          16,
+          5
+        ],
+        "dx": 15,
+        "dy": 11,
+        "width": 20,
+        "height": 10,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 27861,
+        "bytes": 100,
+        "packed_sha256": "2c75e7f65a2a89d1043ecf96ac11efdca4cf9d830d3a710a11cdd4b0eafa85ac"
+      },
+      {
+        "name": "spl5",
+        "source": "reference_assets/unpacked_shapes/world/121_spl5.bin",
+        "source_sha256": "2fd04a42abdc5e3c948388869082b5c67620b5086799d245a5c32af0869546c9",
+        "drawing_origin": [
+          16,
+          3
+        ],
+        "dx": 14,
+        "dy": 13,
+        "width": 22,
+        "height": 8,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 27961,
+        "bytes": 88,
+        "packed_sha256": "87926b226f64c3708be928a6896a918dba943784188f570ee8bf6852e68706c6"
+      },
+      {
+        "name": "spl6",
+        "source": "reference_assets/unpacked_shapes/world/122_spl6.bin",
+        "source_sha256": "43be8104a1884917011148cad9e67d06fb186a514a02184955ea2daea180ba72",
+        "drawing_origin": [
+          14,
+          -2
+        ],
+        "dx": 17,
+        "dy": 18,
+        "width": 20,
+        "height": 3,
+        "atlas_x": 82,
+        "atlas_y": 512,
+        "data_offset": 28049,
+        "bytes": 30,
+        "packed_sha256": "e9a2a5f56e296966b86f049d51eb5c1236163e0242d8673f1cef04190f68e47e"
+      }
+    ],
+    "crash_host_shape": 2,
+    "crash_evidence": "world.shp exp0..exp5 / spl0..spl6; crash outcome by surface at 0xafba (docs/research/amiga-fuel-oil.md)",
     "gun_flash_order": "variant (fa, fb) * 20 + (left ? 10 : 0) + pitch pose 0..9",
     "gun_flash_evidence": "executable player renderer draws hellcat shape pose-5+0x43/0x57 (+10 left) while firing; pattern [0,1,0,2]"
   }

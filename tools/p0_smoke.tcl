@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -91,6 +91,7 @@ proc publishing {} {
     dump $name.crew [debug read_block memory $::addr(g_CrewFrame) 1]
     dump $name.gauges [debug read_block memory $::addr(g_DisplayGauges) 3]
     dump $name.flight [debug read_block memory $::addr(s_World) 22]
+    dump $name.crash [debug read_block memory $::addr(g_DisplayCrash) 1]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
     dump $name.rom [debug read_block memory 16384 32768]
@@ -488,7 +489,16 @@ proc engine_dry {} {
 }
 proc engine_crash_wait {} {
     set ::crash_deadline [expr {[machine_info time]+12}]
-    engine_wait_respawn
+    debug write memory $::addr(g_LastContact) 0
+    engine_wait_splash
+}
+proc engine_wait_splash {} {
+    require [expr {[machine_info time]<$::crash_deadline}] "Dead plane never reached the sea"
+    if {[value g_LastContact]!=3} {after time 0.01 engine_wait_splash;return}
+    after time 0.5 {
+        require [expr {[value g_DisplayCrash]>=6 && [value g_DisplayCrash]!=255}] "Sea crash must show the splash art: frame=[value g_DisplayCrash]"
+        snap engine_splash engine_wait_respawn
+    }
 }
 proc engine_wait_respawn {} {
     require [expr {[machine_info time]<$::crash_deadline}] "Dead plane never crashed"

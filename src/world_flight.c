@@ -36,6 +36,13 @@ CombatState g_Combat;
 EngineState g_Engine;
 static u8 s_CrashSteps;          /* 1-second hold after a crash */
 u8 g_LastContact;                /* latest LANDING_* contact, for verification */
+static u8 s_CrashSplash;         /* crash art: 0 explosion (deck, island), 1 sea splash */
+#endif
+/* Crash art frame drawn instead of the plane (255 = none); the frame shown
+ * on the published page, and the frame loaded into the host atlas slot. */
+static u8 s_CrashFrame = 255, s_RenderCrash = 255, s_CrashLoaded = 255;
+volatile u8 g_DisplayCrash = 255;
+#ifdef WINGS_P1_FLIGHT
 static u8 s_EngineSteps;         /* simulation steps into the current original tick */
 #endif
 /* Oil needle, fuel needle and lamps drawn on the rendered/published page.
@@ -396,18 +403,30 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     const AircraftShape* shape = &g_AircraftShapes[frame];
     const AircraftShape* flash;
     int16_t dx, dy, fx = 0, fy = 0, left, top, right, bottom, limit = 172;
+    s_RenderCrash = s_CrashFrame;
+    if (s_CrashFrame != 255)
+    {
+        /* The crash art streams into the host shape's atlas slot (restored
+         * when the next plane launches) and replaces the plane. */
+        shape = &g_CrashShapes[s_CrashFrame];
+        if (s_CrashLoaded != s_CrashFrame) { LoadShape(shape); s_CrashLoaded = s_CrashFrame; }
+        flash = 0;
+    }
+    else
+    {
     if (frame >= AIRCRAFT_STATIC_SHAPES && s_GroundShape != frame)
     {
         LoadShape(shape);
         s_GroundShape=frame;
     }
     flash = GunFlash(frame);
-    if (g_TerrainFar) { shape = Dashboard_FarShape(frame); world >>= 3; }
+    }
+    if (g_TerrainFar && s_CrashFrame == 255) { shape = Dashboard_FarShape(frame); world >>= 3; }
     dx = (int16_t)world + shape->dx - (g_TerrainFar ? 0 : 25);
     dy = (g_TerrainFar ? 161 - ((WINGS_FLIGHT_MAX_Y - y) >> 3) :
           WINGS_FLIGHT_MAX_Y - y > 131 ? 14 : 145 - (WINGS_FLIGHT_MAX_Y - y)) + shape->dy;
 #ifdef WINGS_P1_FLIGHT
-    if (s_World.flight.mode == FLIGHT_GROUND)
+    if (s_World.flight.mode == FLIGHT_GROUND && s_CrashFrame == 255)
         dy = 129 - shape->height + g_Carrier.depth; /* Tire contact stays on deck across both ground poses. */
     else
 #endif
@@ -553,20 +572,18 @@ static void NewPlane(void)
     Engine_Reset(&g_Engine,&g_Game.sortie);
     s_CrashSteps=s_EngineSteps=0;
 #endif
+    s_CrashFrame=255;
+    if (s_CrashLoaded!=255) { LoadShape(&g_AircraftShapes[CRASH_HOST_SHAPE]); s_CrashLoaded=255; }
     s_PageScale[0]=s_PageScale[1]=255;
 }
 
 #ifdef WINGS_P1_FLIGHT
-/* Contact crash: hold the scene for one second with a splash (sea) or an
- * impact (deck, island) at the plane; the original's crash art is pending. */
+/* Contact crash: hold the scene for one second while the original crash art
+ * plays at the plane - the sea splash over water, the explosion elsewhere
+ * (the original picks its crash outcome by surface, 0xafba). */
 static void StartCrash(void)
 {
-    CombatProjectile* p = &g_Combat.projectile[0];
-    u16 world = s_World.x >> 8;
-    u8 deck = world >= FLIGHT_DECK_LEFT && world <= FLIGHT_DECK_RIGHT;
-    p->x = world * 4u; p->y = (deck ? 1168u : 1200u) * 4u; p->vx = p->vy = 0;
-    p->life = 25;
-    p->kind = Mission_Surface(world) == MISSION_SEA ? COMBAT_SPLASH : COMBAT_IMPACT;
+    s_CrashSplash = Mission_Surface(s_World.x >> 8) == MISSION_SEA;
     s_CrashSteps = 150;
 }
 
@@ -787,6 +804,9 @@ void main(void)
                         if (s_CrashSteps)
                         {
                             if (!--s_CrashSteps) { LosePlane(); ConsumeActions(); reset_weapons=1; break; }
+                            s_CrashFrame = s_CrashSplash ?
+                                CRASH_SPLASH_FIRST + (u8)((150u - s_CrashSteps) * CRASH_SPLASH_COUNT / 150u) :
+                                CRASH_EXPLOSION_FIRST + (u8)((150u - s_CrashSteps) * CRASH_EXPLOSION_COUNT / 150u);
                             goto advance_clocks;
                         }
                         /* Throttle: pushing in the direction of flight (oil reads higher). */
@@ -876,7 +896,7 @@ advance_clocks:
             reset_weapons || s_PageScale[page] != g_TerrainFar ||
 #ifdef WINGS_P1_FLIGHT
             g_DisplayGauges[0] != g_Engine.oil_needle || g_DisplayGauges[1] != g_Engine.fuel_needle ||
-            g_DisplayGauges[2] != g_Engine.lamps ||
+            g_DisplayGauges[2] != g_Engine.lamps || g_DisplayCrash != s_CrashFrame ||
 #endif
             g_DisplayWave != s_Wave || g_DisplayHeave != s_RenderHeave || camera != g_DisplayCamera || world != g_DisplayWorld || y != g_DisplayY || frame != g_SelectedFrame)
             Render(page, camera, world, y, frame);
@@ -934,7 +954,7 @@ advance_clocks:
         g_DisplayElevator=g_Carrier.depth;
 #endif
         g_DisplayGauges[0]=s_RenderGauges[0]; g_DisplayGauges[1]=s_RenderGauges[1];
-        g_DisplayGauges[2]=s_RenderGauges[2];
+        g_DisplayGauges[2]=s_RenderGauges[2]; g_DisplayCrash=s_RenderCrash;
         g_FramePublished ^= 1;
     }
 }

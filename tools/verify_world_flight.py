@@ -52,7 +52,16 @@ def gun_flash_shape(scene, frame, flash):
     return None
 
 
-def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0)):
+def crash_shape(scene, index):
+    """Original crash art record and packed pixels (streamed into the host slot)."""
+    record = scene.metadata['crash'][index]
+    bank = record['data_offset'] // 8192
+    data = (scene.folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
+    offset = record['data_offset'] % 8192
+    return record, data[offset:offset + record['bytes']]
+
+
+def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255):
     pixels = [list(background[row * background_width + camera:row * background_width + camera + 256]) for row in range(212)]
     from convert_dashboard import compose, waves, pilot_frame, layout, PILOT_WIDTH
     # gauges: oil needle frame, fuel needle frame, lamp bits (1 oil, 2 fuel) as published.
@@ -115,7 +124,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
     else:
         source = (scene.folder / shape['file']).read_bytes()
     pivot = 161 - ((1200-y)//8) if scale == 8 else max(14,y-1055)
-    for sy in range(shape['height']):
+    for sy in range(shape['height'] if crash == 255 else 0):
         dy = (129 - shape['height'] + sy + heave + (elevator_depth or 0)) if on_deck else pivot + shape['dy'] + sy
         if elevator_active and dy>=145+heave:continue
         if not 0 <= dy < 172: continue
@@ -128,6 +137,8 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
                 pixel = packed & 15 if sx%2 else packed >> 4
             if pixel: pixels[dy][dx] = pixel
     overlay = gun_flash_shape(scene, frame, flash) if scale == 1 and not on_deck else None
+    if crash != 255:
+        overlay = crash_shape(scene, crash)  # the crash art replaces the plane
     if overlay:
         record, source = overlay
         for sy in range(record['height']):

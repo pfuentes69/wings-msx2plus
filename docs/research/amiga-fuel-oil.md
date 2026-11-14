@@ -77,6 +77,14 @@ smoothly. The throttle flag is set while horizontal input matches the heading
 These explain the reference panel: OIL at `ndlg` and FUEL at `ndln` is a new
 plane at full oil and fuel, not two arbitrary needle positions.
 
+## Engine failure (mode 4, 0xc74e) and crash outcome (0xafba)
+
+| Evidence | Meaning | Confidence |
+| --- | --- | --- |
+| 0xc74e sets `-$5bd6` = 25 and `-$5bd4` = 960, read only by the sound routine at 0x2132 | Engine sound: target volume and base pitch. Pitch rises with speed (`>>7`) and altitude (`>>4`); a failed engine changes the note. Other modes use 40/808, 49/385, 64/335 | Established |
+| 0xc74e clears `-$3216` (throttle) and `-$5c94` (fire); runs 0xafba every tick | No power or guns; the descent and impact are handled by the crash routine, not by the mode-0 flight controls | Established control flow |
+| 0xafba tests the surface under the plane (0xcb74, 0xcb34) | Three outcomes (sea, carrier, island). On impact it zeroes speed and pose, clamps altitude to the surface, and continues the sequence | Control flow established; descent arithmetic not mapped |
+
 ## Not yet recovered
 
 Engine-out flight physics, crash and splash presentation, refill in the hold,
