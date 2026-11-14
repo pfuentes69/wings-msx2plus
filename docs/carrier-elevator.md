@@ -37,9 +37,11 @@ This alignment is based on those combined observations, not on the reset X alone
 
 The shaft, stairs and foreground are decoded `mcar` artwork. At full height the
 platform top is viewport row 129 and the tires sit immediately above it. As the
-platform lowers, the plane moves with it. Clipping at the shaft's lower lip,
-row 145, hides the plane and platform behind the hull instead of drawing them
-through the ship's side. A depth of 32 pixels hides the plane completely.
+platform lowers, the plane moves with it. Clipping at the shaft's lower lip
+(`CARRIER_WELL_BOTTOM`, row 142: the light edge below the dark interior, which
+ends at row 141) hides the plane and platform behind the hull instead of
+drawing them through the ship's side. Row 145, used until 2026-11-14, let both
+cover the lip's three rows. A depth of 32 pixels hides the plane completely.
 Carrier heave moves all these parts together.
 
 Boarding currently requires ground mode, no turn, zero horizontal velocity and

@@ -479,7 +479,7 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
 #endif
     dy -= s_RenderHeave;
 #ifdef WINGS_P1_FLIGHT
-    if (g_Carrier.stage != CARRIER_DECK) limit = 145;
+    if (g_Carrier.stage != CARRIER_DECK) limit = CARRIER_WELL_BOTTOM;
 #endif
     left = dx; right = dx + shape->width;
     top = dy; bottom = dy + shape->height;

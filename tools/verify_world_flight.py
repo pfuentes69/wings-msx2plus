@@ -117,7 +117,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             mapping=json.loads((ROOT/'assets_msx/terrain/manifest.json').read_text())['source_to_msx_index']
             for row in range(13):
                 dy=129+elevator_depth+row+heave
-                if dy>=145+heave:continue
+                if dy>=142+heave:continue  # the well's lower edge (CARRIER_WELL_BOTTOM)
                 for col in range(64):
                     x=7004+col-camera;v=platform[row*64+col]
                     if v and 0<=x<256:pixels[dy][x]=mapping[str(v)]
@@ -155,7 +155,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
         for record, wheel_source in wheel_pieces(scene, wheel):
             for sy in range(record['height']):
                 dy = pivot + record['dy'] + gear - 5 + sy
-                if elevator_active and dy >= 145 + heave: continue
+                if elevator_active and dy >= 142 + heave: continue
                 if not 0 <= dy < 172: continue
                 for sx in range(record['width']):
                     dx = world + record['dx'] + sx - camera - 25
@@ -165,7 +165,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
                     if pixel: pixels[dy][dx] = pixel
     for sy in range(shape['height'] if crash == 255 else 0):
         dy = (129 - shape['height'] + sy + heave + (elevator_depth or 0)) if on_deck and not deck_level else pivot + shape['dy'] + sy
-        if elevator_active and dy>=145+heave:continue
+        if elevator_active and dy>=142+heave:continue
         if not 0 <= dy < 172: continue
         for sx in range(shape['width']):
             dx = (world >> 3 if scale == 8 else world) + shape['dx'] + sx - camera - (25 if scale == 1 else 0)
@@ -200,7 +200,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
         left, right = max(low & ~1, camera + 8), min((high + 2) & ~1, camera + 256)
         right = min(right, left + 128)
         origin = pivot + 16
-        limit = 145 + heave if elevator_active else 172
+        limit = 142 + heave if elevator_active else 172
         if cable >= hook:
             runs = ((cable - half, cable + 1, origin + 6), (hook, cable - half, origin + 5))
         else:

@@ -1,6 +1,7 @@
 #include "elevator.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCENE)
 #include "../core/flight.h"
+#include "../core/carrier.h"
 #include "../generated/elevator.h"
 #include "terrain_renderer.h"
 #include "scenery_load.h"
@@ -32,8 +33,8 @@ static void Copy(u8 page,u16 camera,u8 index,u16 origin,u8 y,u8 height,u8 width)
     if (left>=right) return;
     if (index)
     {
-        if (y>=145) return;
-        if (y+height>145) height=145-y;
+        if (y>=CARRIER_WELL_BOTTOM) return;
+        if (y+height>CARRIER_WELL_BOTTOM) height=CARRIER_WELL_BOTTOM-y;
     }
     sx=g_ElevatorX[index]+left-origin;
     if (index) VDP_CommandLMMM(sx,g_ElevatorY[index],left&255,(u16)page*256+y,right-left,height,VDP_OP_TIMP);

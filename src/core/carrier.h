@@ -7,6 +7,10 @@
 #define CARRIER_HOLD 3
 #define CARRIER_X 7032u
 #define CARRIER_DEPTH 32u
+/* First playfield row below the elevator well's opening (its light lower
+ * edge, row 142): the platform and the plane riding it are hidden from
+ * there down while the lift moves. */
+#define CARRIER_WELL_BOTTOM 142
 #define CARRIER_PIXEL_TICKS 18u
 #define CARRIER_PRESENT_TICKS 6u
 
