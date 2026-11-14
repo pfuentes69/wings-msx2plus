@@ -25,6 +25,9 @@ RawFiles.push({ offset: 7 * 8192, file: "assets_msx/dashboard/bank_7.bin" });
 RawFiles.push({ offset: 11 * 8192, file: "assets_msx/dashboard/waves.sc5" });
 
 RawFiles.push({ offset: 12 * 8192, file: "assets_msx/dashboard/bank_12.bin" });
+// Pre-rendered HUD values: oil dial and small counters in 17, fuel dial in 18.
+RawFiles.push({ offset: 17 * 8192, file: "assets_msx/dashboard/bank_17.bin" });
+RawFiles.push({ offset: 18 * 8192, file: "assets_msx/dashboard/bank_18.bin" });
 
 RawFiles.push({ offset: 13 * 8192, file: "assets_msx/ship/bank_13.bin" });
 RawFiles.push({ offset: 15 * 8192, file: "assets_msx/elevator/bank_15.bin" });

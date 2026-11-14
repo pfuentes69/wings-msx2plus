@@ -10,7 +10,10 @@ static u8 s_Row[128], s_Count, s_Value, s_Pilot[2];
 static u8 s_WaveBackdropValid[2], s_WaveHeave[2];
 static u8 s_Stream[64], s_StreamPos;
 static u16 s_StreamOffset;
-static u8 s_Ammo[2], s_Lives[2], s_Weapon[2];
+// Value currently shown per page for each pre-rendered HUD element.
+static u8 s_Hud[2][HUD_ELEMENT_COUNT];
+// The baked panel shows 30 bombs, three lives, bombs, full gauges, lamps off.
+static const u8 s_HudDefault[HUD_ELEMENT_COUNT] = {3, 0, 3, 0, 0, 0, HUD_NEEDLE_FULL, HUD_NEEDLE_FULL};
 
 static void Input(u16 offset)
 {
@@ -59,7 +62,8 @@ void Dashboard_Load(void) WINGS_BANKED
     u16 x, y, offset = 0;
     for (page = 0; page < 2; ++page)
     {
-        s_Pilot[page] = 255; s_Ammo[page] = 30; s_Lives[page] = 3; s_Weapon[page] = 255;
+        s_Pilot[page] = 255;
+        for (frame = 0; frame < HUD_ELEMENT_COUNT; ++frame) s_Hud[page][frame] = s_HudDefault[frame];
         s_WaveBackdropValid[page] = 0;
         Input(DASHBOARDPANEL_OFFSET);
         Expand(0, (u16)page * 256 + 172, 256, 40);
@@ -97,8 +101,8 @@ u8 Dashboard_Draw(u8 page, u8 area, u8 altitude) WINGS_BANKED
     u8 profile = area * 8 + (altitude >> 5);
     if (s_Pilot[page] != profile)
     {
-        VDP_CommandHMMM(g_PilotX[profile], g_PilotY[profile], 108,
-                        (u16)page * 256 + 183, 48, 24);
+        VDP_CommandHMMM(g_PilotX[profile], g_PilotY[profile], HUD_PILOT_X,
+                        (u16)page * 256 + 172 + HUD_PILOT_Y, HUD_PILOT_WIDTH, 24);
         s_Pilot[page] = profile;
     }
     return profile;
@@ -196,52 +200,50 @@ void Dashboard_Waves(u8 page, u16 camera, u8 frame, u8 heave) WINGS_BANKED
     if (height) DrawWaterBand(page, source_x, source_y, start, end, row, height, frame);
 }
 
-static void Stock(u8 page, u8 ammo)
+// Copy one pre-rendered value of a HUD element into the dashboard rows.
+static void Patch(u8 page, u8 element, u8 value)
 {
-    u8 digit, row, value, previous;
-    u16 address;
-    if (s_Ammo[page] == ammo) return;
-    previous = s_Ammo[page];
-    s_Ammo[page] = ammo;
-    for (digit = 0; digit < 2; ++digit)
+    u8 row, bytes = g_HudBytes[element];
+    u16 offset = g_HudOffset[element] + (u16)value * g_HudSize[element];
+    u16 address = ((u16)page * 256 + 172 + g_HudRow[element]) * 128 + g_HudColumn[element];
+    for (row = 0; row < g_HudHeight[element]; ++row)
     {
-        value = digit ? ammo % 10 : ammo / 10;
-        if (value == (digit ? previous % 10 : previous / 10)) continue;
-        address = ((u16)page*256+196)*128 + (digit ? 15 : 10);
-        Scenery_Read(DASHBOARD_BANK,AMMO_DIGITS_OFFSET+(u16)value*28,s_Row,28);
-        for (row = 0; row < 7; ++row)
-        {
-            VDP_WriteVRAM(s_Row+row*4, address, 0, 4);
-            address += 128;
-        }
+        Scenery_Read(g_HudBank[element], offset, s_Row, bytes);
+        VDP_WriteVRAM(s_Row, address, 0, bytes);
+        offset += bytes; address += 128;
     }
+    s_Hud[page][element] = value;
+}
+
+static void Show(u8 page, u8 element, u8 value)
+{
+    if (s_Hud[page][element] != value) Patch(page, element, value);
 }
 
 void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives) WINGS_BANKED
 {
-    u8 row;
-    u16 address;
-    Stock(page, stock);
-    if (s_Lives[page] != lives)
+    Show(page, HUD_AMMO_TENS, stock / 10);
+    Show(page, HUD_AMMO_UNITS, stock % 10);
+    Show(page, HUD_LIVES, lives > 9 ? 9 : lives);
+    Show(page, HUD_WEAPON, weapon);
+}
+
+/* Levels are 0..255; the 23 original needle frames sweep empty..full. A lamp
+ * is lit only at or below the critical frame, where no needle overlaps it.
+ * Redrawing a dial restores its lamp to off, so the lamp follows the dial. */
+static void Gauge(u8 page, u8 dial, u8 lamp, u8 level, u8 lit)
+{
+    u8 frame = ((u16)level * (HUD_NEEDLE_FULL + 1)) >> 8;
+    if (s_Hud[page][dial] != frame)
     {
-        s_Lives[page] = lives;
-        if (lives > 9) lives = 9;
-        address = ((u16)page*256+196)*128+25;
-        Scenery_Read(DASHBOARD_BANK,LIFE_DIGITS_OFFSET+(u16)lives*42,s_Row,42);
-        for (row=0; row<7; ++row)
-        {
-            VDP_WriteVRAM(s_Row+row*6,address,0,6);
-            address += 128;
-        }
+        Patch(page, dial, frame);
+        s_Hud[page][lamp] = 0;
     }
-    if (s_Weapon[page] != weapon)
-    {
-        s_Weapon[page] = weapon;
-        Scenery_Read(DASHBOARD_BANK,WEAPON_ICONS_OFFSET+(u16)weapon*77,s_Row,77);
-        address = ((u16)page*256+186)*128+9;
-        for (row=0; row<7; ++row)
-        {
-            VDP_WriteVRAM(s_Row+row*11,address,0,11); address += 128;
-        }
-    }
+    Show(page, lamp, lit && frame <= HUD_LAMP_CRITICAL_FRAME);
+}
+
+void Dashboard_Gauges(u8 page, u8 oil, u8 fuel, u8 lamps) WINGS_BANKED
+{
+    Gauge(page, HUD_OIL_DIAL, HUD_OIL_LAMP, oil, lamps & 1);
+    Gauge(page, HUD_FUEL_DIAL, HUD_FUEL_LAMP, fuel, lamps & 2);
 }

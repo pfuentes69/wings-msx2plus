@@ -10,7 +10,6 @@ import struct
 import statistics
 import subprocess
 from PIL import Image
-from convert_dashboard import DASHBOARD_DIGITS, weapon_patch
 from verify_world_flight import vram_image, expected_pixels, gun_flash_shape
 from aircraft_scene import AircraftScene
 
@@ -30,8 +29,9 @@ def main():
     assert symbols['g_TopPalette']>=0xc000 and symbols['g_BottomPalette']>=0xc000
     tables=(ROOT/'assets_msx/dashboard/bank_7.bin').read_bytes()
     assert data[7*8192:7*8192+len(tables)]==tables
-    bank=(ROOT/'assets_msx/dashboard/bank_12.bin').read_bytes()
-    assert data[12*8192:12*8192+len(bank)]==bank
+    for number in (12,17,18):
+        bank=(ROOT/f'assets_msx/dashboard/bank_{number}.bin').read_bytes()
+        assert data[number*8192:number*8192+len(bank)]==bank,('dashboard bank',number)
     env=dict(os.environ,WINGS_ROOT=str(ROOT),WINGS_TEST_OUT=str(out),WINGS_HEADLESS='1' if args.headless else '0',
              OPENMSX_HOME=str(out/'openmsx-home'),SDL_AUDIODRIVER='dummy')
     env.setdefault('OPENMSX_USER_DATA',str(Path.home()/'.openMSX/share'))
@@ -80,23 +80,8 @@ def main():
                     value=vram[page*32768+sy*128+ring//2]
                     value=(value>>(0 if ring%2 else 4))&15
                     assert value==expected[row][col],(name,'composite',col,row,value,expected[row][col])
-        # Match actual HUD digits to portable state, including reversed colors.
-        stock=f'{game[4]:02d}'
-        for digit,x in zip(stock,(22,32)):
-            for row,bits in enumerate(DASHBOARD_DIGITS[digit]):
-                for col,bit in enumerate(bits):
-                    at=page*32768+(196+row)*128+(x+col)//2
-                    value=(vram[at]>>(0 if (x+col)&1 else 4))&15
-                    assert value==(12 if bit=='1' else 15),(name,'stock',row,col,value)
-        for row,bits in enumerate(DASHBOARD_DIGITS[str(game[2])]):
-            for col,bit in enumerate(bits):
-                x=53+col;at=page*32768+(196+row)*128+x//2
-                assert ((vram[at]>>(0 if x&1 else 4))&15)==(12 if bit=='1' else 15),(name,'lives')
-        icon=weapon_patch(game[3])
-        for row in range(7):
-            for col in range(22):
-                x=18+col;at=page*32768+(186+row)*128+x//2
-                assert ((vram[at]>>(0 if x&1 else 4))&15)==icon[row*22+col],(name,'weapon icon')
+        # The HUD (ammo, lives, weapon, gauges) is part of the full-VRAM
+        # comparison above: expected_pixels composes it from the same state.
         palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
         # Host reconstruction verifies readable source pixels; it is not raster proof.
         preview=vram_image(vram,palette,int(camera),page,int(heave))

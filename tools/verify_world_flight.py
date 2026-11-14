@@ -54,8 +54,8 @@ def gun_flash_shape(scene, frame, flash):
 
 def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0):
     pixels = [list(background[row * background_width + camera:row * background_width + camera + 256]) for row in range(212)]
-    from convert_dashboard import panel, waves, pilot_frame
-    dashboard = panel()
+    from convert_dashboard import compose, waves, pilot_frame, layout, PILOT_WIDTH
+    dashboard = compose(ammo=stock, weapon=weapon, lives=lives)
     pixels = pixels[40:] + [list(dashboard[row * 256:(row + 1) * 256]) for row in range(40)]
     if scale == 1:
         for x in range(256):
@@ -99,7 +99,9 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
                     color = water[row * 96 + wx % 96]
                     if color: pixels[161 + row][x] = color
     cockpit = pilot_frame(pilot // 8, pilot % 8)
-    for row in range(24): pixels[183 + row][108:156] = cockpit[row * 48:(row+1)*48]
+    hud = layout()
+    for row in range(24):
+        pixels[172 + hud['pilot_y'] + row][hud['pilot_x']:hud['pilot_x'] + PILOT_WIDTH] = cockpit[row*48:row*48 + PILOT_WIDTH]
     shape = scene.frames[frame]
     if scale == 8:
         meta = json.loads((ROOT / 'assets_src/dashboard/manifest.json').read_text())
@@ -159,19 +161,6 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             mark(x-3,y,7,1,5 if kind==4 else 14)
             mark(x,y-3,1,7,5 if kind==4 else 14)
             mark(x-1,y-1,3,3,11)
-    if stock != 30:
-        from convert_dashboard import DASHBOARD_DIGITS
-        for digit,x in zip(f'{stock:02}',(20,30)):
-            for row,bits in enumerate(DASHBOARD_DIGITS[digit]):
-                pixels[196+row][x:x+8]=[15,15]+[12 if bit=='1' else 15 for bit in bits]+[15]
-    if weapon:
-        from convert_dashboard import weapon_patch
-        icon=weapon_patch(weapon)
-        for row in range(7):pixels[186+row][18:40]=icon[row*22:(row+1)*22]
-    if lives != 3:
-        from convert_dashboard import DASHBOARD_DIGITS
-        for row,bits in enumerate(DASHBOARD_DIGITS[str(min(lives,9))]):
-            pixels[196+row][50:62]=[11,15,15]+[12 if bit=='1' else 15 for bit in bits]+[15,15,11,6]
     pixels[171] = [1]*256
     return pixels
 

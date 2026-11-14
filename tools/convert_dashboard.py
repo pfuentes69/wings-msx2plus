@@ -15,18 +15,202 @@ from decode_shapes import decode_record
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'reference_assets/original_files/Wings_of_Fury/shapes'
 
-DASHBOARD_DIGITS = {
-    '0': ('01110','10001','10001','10001','10001','10001','01110'),
-    '1': ('00100','01100','00100','00100','00100','00100','01110'),
-    '2': ('01110','10001','00001','00010','00100','01000','11111'),
-    '3': ('11110','00001','00001','01110','00001','00001','11110'),
-    '4': ('00010','00110','01010','10010','11111','00010','00010'),
-    '5': ('11111','10000','10000','11110','00001','00001','11110'),
-    '6': ('01110','10000','10000','11110','10001','10001','01110'),
-    '7': ('11111','00001','00010','00100','01000','01000','01000'),
-    '8': ('01110','10001','10001','01110','10001','10001','01110'),
-    '9': ('01110','10001','10001','01111','00001','00001','01110'),
+# ---- 248-pixel recomposition of the original 640x37 hi-res panel ----
+# The panel is reduced exactly 2:1 (where a pixel pair differs, the locally
+# rarer colour is kept, preserving 1-pixel detail), then whole columns that
+# equal a neighbour are removed until 248 visible pixels remain. The dials keep
+# their native size; only flat frame, green and box-interior columns go.
+PANEL_REMOVE = frozenset({0, 1, 9, 10, 11, 12, 13, 15, 27, 39, 18, 19, 30, 31, 41, 42, 43,
+    71, 72, 73, 74, 75, 76, 84, 124, 127, *range(131, 145), 193, 196, 235, 236,
+    *range(243, 249), *range(270, 282), *range(305, 312), 317, 318, 319})
+PANEL_DROP_ROW = 2  # identical to row 1; the dashboard has 36 rows below the separator
+NEEDLES = tuple('ndl' + c for c in '123456789abcdefghijklmn')  # empty (0) .. full (22)
+NEEDLE_FULL = len(NEEDLES) - 1
+DIAL_HUB = {'oil': (208, 19), 'fuel': (430, 19)}    # needle origin, hi-res
+DIAL_LAMP = {'oil': (208, 12), 'fuel': (430, 12)}   # olof origin, hi-res
+# Provisional (not recovered): the warning lamp may blink at or below this
+# needle frame. Below it no needle pixel touches the lamp (checked in layout()).
+LAMP_CRITICAL_FRAME = 5
+SCORE_DIGITS = 6
+PILOT_WIDTH = 46
+LABEL_FONT = {
+    'O': ('.##.', '#..#', '#..#', '#..#', '.##.'),
+    'I': ('###', '.#.', '.#.', '.#.', '###'),
+    'L': ('#..', '#..', '#..', '#..', '###'),
+    'F': ('###', '#..', '##.', '#..', '#..'),
+    'U': ('#..#', '#..#', '#..#', '#..#', '.##.'),
+    'E': ('###', '#..', '##.', '#..', '###'),
 }
+BLACK, WHITE, LAMP_ON, LAMP_RIM = 11, 15, 10, 8
+DEFAULT_STATE = dict(oil=NEEDLE_FULL, fuel=NEEDLE_FULL, oil_lamp=False, fuel_lamp=False,
+                     ammo=30, lives=3, weapon=0, score=0, kills=0)
+
+
+def digit_glyphs():
+    """Original white counter digits (wnum): 12x7 hi-res, 2-pixel strokes -> 6x7."""
+    sprite, _ = dashboard_shape('wnum')
+    return [tuple(''.join('#' if sprite.getpixel((2 + 2*x, 2 + d*8 + y)) != 16 else '.'
+                          for x in range(6)) for y in range(7)) for d in range(10)]
+
+
+def _reduce_half(image):
+    width, height = image.size; source = image.load()
+    result = Image.new('P', (width // 2, height)); target = result.load()
+    for y in range(height):
+        for x in range(width // 2):
+            a, b = source[2*x, y], source[2*x+1, y]
+            if a != b:
+                near = [source[xx, yy] for xx in range(max(0, 2*x-3), min(width, 2*x+5))
+                        for yy in range(max(0, y-1), min(height, y+2))]
+                a = a if near.count(a) <= near.count(b) else b
+            target[x, y] = a
+    return result
+
+
+def _paste(image, name, x, y, recolor=None):
+    sprite, meta = dashboard_shape(name)
+    ox, oy = meta['origin_candidate']
+    for yy in range(sprite.height):
+        for xx in range(sprite.width):
+            color = sprite.getpixel((xx, yy))
+            if color == 16 or (name == 'olon' and color == 17):
+                continue
+            color = recolor.get(color, color & 15) if recolor else color & 15
+            if 0 <= x-ox+xx < image.width and 0 <= y-oy+yy < image.height:
+                image.putpixel((x-ox+xx, y-oy+yy), color)
+
+
+def panel_columns():
+    keep = [x for x in range(320) if x not in PANEL_REMOVE]
+    assert len(keep) == 248
+    return keep, {x: i for i, x in enumerate(keep)}
+
+
+def _col(x320):
+    """Screen x of a kept reduced-panel column."""
+    return 8 + panel_columns()[1][x320]
+
+
+def _row(y37):
+    """Dashboard row (0..39, screen line 172 + row) of a reduced-panel row."""
+    return 4 + y37 - (y37 > PANEL_DROP_ROW)
+
+
+def _text(pixels, x, y, text, color, font):
+    for char in text:
+        rows = font[char]
+        for yy, row in enumerate(rows):
+            for xx, bit in enumerate(row):
+                if bit == '#': pixels[(y+yy)*256 + x+xx] = color
+        x += len(rows[0]) + 1
+
+
+def _box(pixels, x0, x1, y0, y1, color):
+    for y in range(y0, y1+1):
+        pixels[y*256+x0:y*256+x1+1] = bytes([color]) * (x1-x0+1)
+
+
+def weapon_icon(weapon):
+    """Original bomb/misl/torp icon reduced 2:1; uniform body columns removed to fit."""
+    sprite, _ = dashboard_shape(('bomb', 'misl', 'torp')[weapon])
+    rows = [[sprite.getpixel((2*x, y)) for x in range(sprite.width // 2)] for y in range(sprite.height)]
+    # The leading 12-pixel square (colour 22) is the source's own green
+    # background, not part of the icon.
+    rows = [[16 if c == 22 else c for c in r] for r in rows]
+    columns = [x for x in range(len(rows[0])) if any(r[x] != 16 for r in rows)]
+    rows = [[r[x] for x in columns] for r in rows]
+    x0, x1 = _col(14) + 1, _col(38) - 1
+    room = x1 - x0 + 1 - 2  # a 1-pixel margin each side when possible
+    while len(rows[0]) > room:
+        for x in range(len(rows[0]) - 2, 0, -1):
+            if all(r[x] == r[x+1] for r in rows):
+                for r in rows: del r[x]
+                break
+        else:
+            break
+    if len(rows[0]) > x1 - x0 + 1:
+        raise ValueError('weapon icon does not fit its box')
+    return [[(16 if c == 16 else c & 15) for c in r] for r in rows]
+
+
+def _counter_x(lo, hi):
+    """Screen x of a 6-pixel digit centred in the white box spanning lo..hi."""
+    x0, x1 = _col(lo), _col(hi)
+    return x0 + (x1 - x0 + 1 - 6) // 2
+
+
+def layout():
+    """Screen-coordinate layout shared by the converter, runtime header and oracles."""
+    ammo = [_counter_x(16, 25), _counter_x(28, 37)]
+    score_x1 = _col(303)
+    kills_x0, kills_x1 = _col(249), _col(266)
+    window = _col(130)
+    return dict(ammo_x=ammo, ammo_y=_row(20), lives_x=_counter_x(58, 66),
+                lives_y=_row(20),
+                score_x=score_x1 - 1 - (SCORE_DIGITS * 7 - 1) + 1, score_y=_row(11),
+                kills_x=kills_x0 + (kills_x1 - kills_x0 + 1 - 13) // 2, kills_y=_row(21),
+                pilot_x=window, pilot_y=_row(8))
+
+
+_COMPOSED = {}
+
+
+def compose(**changes):
+    """The 256x40 dashboard (MSX dashboard-palette indices) for a HUD state."""
+    state = dict(DEFAULT_STATE, **changes)
+    key = tuple(sorted(state.items()))
+    if key not in _COMPOSED:
+        _COMPOSED[key] = bytes(_compose(state))
+    return bytearray(_COMPOSED[key])
+
+
+def _compose(state):
+    image, _ = original()
+    image = image.copy()
+    for dial in ('oil', 'fuel'):
+        _paste(image, NEEDLES[state[dial]], *DIAL_HUB[dial])
+        if state[dial + '_lamp']:
+            _paste(image, 'olof', *DIAL_LAMP[dial], recolor={28: LAMP_RIM, 19: LAMP_ON})
+    reduced = _reduce_half(image).load()
+    keep, at = panel_columns()
+    for x in PANEL_REMOVE:
+        if not any(0 <= x+d < 320 and all(reduced[x, y] == reduced[x+d, y] for y in range(37)) for d in (-1, 1)):
+            raise ValueError(f'panel column {x} is not a duplicate')
+    if any(reduced[x, PANEL_DROP_ROW] != reduced[x, PANEL_DROP_ROW-1] for x in range(320)):
+        raise ValueError('dropped panel row is not a duplicate')
+    pixels = bytearray([1]) * (256 * 40)
+    rows = [y for y in range(37) if y != PANEL_DROP_ROW]
+    for row, y in enumerate(rows):
+        for column, x in enumerate(keep):
+            p = reduced[x, y]
+            pixels[(row+4)*256 + 8+column] = 11 if p == 0 else 9 if p == 1 else p
+    sx, sy = _col, _row
+    digits = {str(i): g for i, g in enumerate(digit_glyphs())}
+    digits[' '] = ('......',) * 7
+    # OIL/FUEL legends: the reduced hi-res lettering breaks up, so redraw it in
+    # a 1-pixel-stroke face matching the original 2-pixel hi-res strokes.
+    for centre, lo, hi, word in ((104, 95, 113, 'OIL'), (215, 205, 226, 'FUEL')):
+        _box(pixels, sx(lo), sx(hi), sy(29), sy(33), BLACK)
+        width = sum(len(LABEL_FONT[c][0]) + 1 for c in word) - 1
+        _text(pixels, sx(centre) - width // 2, sy(29), word, WHITE, LABEL_FONT)
+    spots = layout()
+    for value, (lo, hi), x in zip(f"{state['ammo']:02d}", ((16, 25), (28, 37)), spots['ammo_x']):
+        _box(pixels, sx(lo), sx(hi), sy(19), sy(27), WHITE)
+        _text(pixels, x, spots['ammo_y'], value, BLACK, digits)
+    _box(pixels, sx(58), sx(66), sy(19), sy(27), WHITE)
+    _text(pixels, spots['lives_x'], spots['lives_y'], str(min(state['lives'], 9)), BLACK, digits)
+    _box(pixels, sx(14) + 1, sx(38) - 1, sy(11), sy(17), BLACK)
+    icon = weapon_icon(state['weapon'])
+    x0 = sx(14) + 1 + (sx(38) - 1 - (sx(14) + 1) + 1 - len(icon[0])) // 2
+    for yy, row in enumerate(icon):
+        for xx, color in enumerate(row):
+            if color != 16: pixels[(sy(12)+yy)*256 + x0+xx] = color
+    _box(pixels, sx(249), sx(303), sy(10), sy(18), BLACK)
+    if state['score'] is not None:
+        _text(pixels, spots['score_x'], spots['score_y'], str(state['score']).rjust(SCORE_DIGITS), WHITE, digits)
+    _box(pixels, sx(249), sx(266), sy(20), sy(28), BLACK)
+    _text(pixels, spots['kills_x'], spots['kills_y'], f"{state['kills']:02d}", WHITE, digits)
+    return pixels
 
 
 def original():
@@ -59,90 +243,63 @@ def dashboard_shape(name):
     raise ValueError(f'missing dashboard sprite {name}')
 
 
-def weapon_patch(weapon):
-    sprite,_=dashboard_shape(('bomb','misl','torp')[weapon])
-    sprite=sprite.crop((12,0,64,5)).resize((20,5),Image.Resampling.NEAREST)
-    patch=bytearray([11])*22*7
-    for yy in range(7): patch[yy*22]=6; patch[yy*22+21]=6
-    for yy in range(5):
-        for xx in range(20):
-            c=sprite.getpixel((xx,yy))
-            patch[(yy+1)*22+xx+1]=11 if c==16 or c&15==0 else 9 if c&15==1 else c&15
-    return bytes(patch)
+HUD_ELEMENTS = (
+    # name, bank, variant states (index = runtime value)
+    ('AMMO_TENS', 17, [dict(ammo=d * 10) for d in range(10)]),
+    ('AMMO_UNITS', 17, [dict(ammo=30 + d) for d in range(10)]),
+    ('LIVES', 17, [dict(lives=d) for d in range(10)]),
+    ('WEAPON', 17, [dict(weapon=w) for w in range(3)]),
+    ('OIL_LAMP', 17, [dict(oil=0), dict(oil=0, oil_lamp=True)]),
+    ('FUEL_LAMP', 17, [dict(fuel=0), dict(fuel=0, fuel_lamp=True)]),
+    ('OIL_DIAL', 17, [dict(oil=f) for f in range(len(NEEDLES))]),
+    ('FUEL_DIAL', 18, [dict(fuel=f) for f in range(len(NEEDLES))]),
+)
+
+
+def hud_variants():
+    """Byte-aligned dashboard rectangles, one pre-rendered copy per value.
+
+    Each rectangle covers every pixel its element can change; the rest of the
+    rectangle is the static panel, so any value can be copied in on its own.
+    A lamp rectangle lies inside its dial: the runtime redraws the lamp after
+    the dial, and only toggles it at or below LAMP_CRITICAL_FRAME, where no
+    needle reaches the lamp (checked here).
+    """
+    elements = []
+    for name, bank, states in HUD_ELEMENTS:
+        reference = compose(**states[0])
+        renders = [compose(**state) for state in states]
+        changed = [i for render in renders for i, (a, b) in enumerate(zip(reference, render)) if a != b]
+        xs = [i % 256 for i in changed]; ys = [i // 256 for i in changed]
+        x0, x1, y0, y1 = min(xs) & ~1, max(xs) | 1, min(ys), max(ys)
+        data = b''.join(pack_pixels(bytes(render[y*256+x] for y in range(y0, y1+1) for x in range(x0, x1+1)))
+                        for render in renders)
+        elements.append(dict(name=name, bank=bank, x=x0, y=y0, width=x1-x0+1, height=y1-y0+1,
+                             count=len(renders), data=data))
+    rects = {e['name']: e for e in elements}
+    for a in elements:
+        for b in elements:
+            if a is b or a['name'].endswith('LAMP') and b['name'].startswith(a['name'][:-5]): continue
+            if b['name'].endswith('LAMP') and a['name'].startswith(b['name'][:-5]): continue
+            if (a['x'] < b['x'] + b['width'] and b['x'] < a['x'] + a['width'] and
+                    a['y'] < b['y'] + b['height'] and b['y'] < a['y'] + a['height']):
+                raise ValueError(f"HUD rectangles overlap: {a['name']} {b['name']}")
+    for dial in ('OIL', 'FUEL'):
+        lamp, key = rects[dial + '_LAMP'], dial.lower()
+        lit = compose(**{key: 0, key + '_lamp': True})
+        for frame in range(LAMP_CRITICAL_FRAME + 1):
+            needle = compose(**{key: frame})
+            empty = compose(**{key: 0})
+            for y in range(lamp['y'], lamp['y'] + lamp['height']):
+                for x in range(lamp['x'], lamp['x'] + lamp['width']):
+                    if needle[y*256+x] != empty[y*256+x]:
+                        raise ValueError(f'{dial} needle frame {frame} reaches the lamp')
+    return elements
 
 
 def panel():
-    image, _ = original()
-    image = image.copy()
-
-    def paste_shape(name, x, y):
-        sprite, meta = dashboard_shape(name)
-        for yy in range(sprite.height):
-            for xx in range(sprite.width):
-                color = sprite.getpixel((xx, yy))
-                if color != 16 and 0 <= x+xx < 640 and 0 <= y+yy < 37:
-                    image.putpixel((x+xx, y+yy), color & 15)
-
-    # Separate original sprites are absent from iff-dash. These static values
-    # reproduce the supplied reference; gameplay instruments remain pending.
-    for y in range(10, 17):
-        for x in range(28, 80): image.putpixel((x, y), 11)
-    paste_shape('bomb', 16, 11)
-    for name, x, y in [('ndlg', 208, 19), ('ndln', 430, 19)]:
-        _, meta = dashboard_shape(name)
-        ox, oy = meta['origin_candidate']
-        paste_shape(name, x-ox, y-oy)
-    adapted = image.resize((248, 36), Image.Resampling.NEAREST)
-    pixels = bytearray([1]) * (256 * 40)
-    for y in range(36):
-        pixels[(y+4)*256+8:(y+5)*256] = bytes(11 if p == 0 else 9 if p == 1 else p & 15
-            for p in adapted.crop((0, y, 248, y+1)).tobytes())
-    def rectangle(x, y, width, height, color):
-        for yy in range(y, y+height):
-            pixels[yy*256+x:yy*256+x+width] = bytes([color])*width
-
-    def glyph(rows, x, y, color):
-        for yy, row in enumerate(rows):
-            for xx, bit in enumerate(row):
-                if bit == '1': pixels[(y+yy)*256+x+xx] = color
-
-    # Clear complete legacy counter regions before drawing aligned frames.
-    # Partial repainting leaves stepped black edges from iff-dash underneath.
-    rectangle(19, 22, 22, 11, 6)
-    rectangle(50, 22, 12, 11, 6)
-    rectangle(201, 12, 48, 23, 6)
-
-    # All numbers share one 5x7 face, including score and ammunition zeroes.
-    digits = DASHBOARD_DIGITS
-    rectangle(19, 22, 21, 11, 11)
-    rectangle(50, 22, 11, 11, 11)
-    for digit, x in [('3',20), ('0',30), ('3',51)]:
-        rectangle(x, 23, 9, 9, 15)
-        glyph(digits[digit], x+2, 24, 12)
-    # Separate fields share two-pixel side padding and one-pixel vertical padding.
-    rectangle(201, 13, 45, 9, 11)
-    for x in range(203, 240, 6): glyph(digits['0'], x, 14, 15)
-    rectangle(201, 24, 15, 9, 11)
-    for x in (203, 209): glyph(digits['0'], x, 25, 15)
-
-    # The dial bases have room for seven rows. Use full-width letterforms
-    # instead of squeezing the legends into the previous 3x5 face.
-    glyphs = {'O': ('01110','10001','10001','10001','10001','10001','01110'),
-              'I': ('11111','00100','00100','00100','00100','00100','11111'),
-              'L': ('10000','10000','10000','10000','10000','10000','11111'),
-              'F': ('11111','10000','10000','11110','10000','10000','10000'),
-              'U': ('10001','10001','10001','10001','10001','10001','01110'),
-              'E': ('11111','10000','10000','11110','10000','10000','11111')}
-    for word, center, left, right in [('OIL',89,75,102), ('FUEL',175,162,189)]:
-        rectangle(left, 32, right-left, 7, 11)
-        width = len(word)*6-1
-        x = center-width//2
-        for char in word:
-            glyph(glyphs[char], x, 32, 15)
-            x += 6
-    icon=weapon_patch(0)
-    for yy in range(7): pixels[(14+yy)*256+18:(14+yy)*256+40]=icon[yy*22:(yy+1)*22]
-    return pixels
+    """The default dashboard: full gauges, lamps off, 30 bombs, three lives."""
+    return bytes(compose())
 
 def reticle():
     im, _ = dashboard_shape('targ')
@@ -162,29 +319,35 @@ def ui_shape(name):
     return bytes(0 if p == 16 else 9 if p & 15 == 1 else p & 15 for p in im.tobytes()), meta
 
 def pilot_frame(kind, level):
-    # Forward-looking adaptation: the horizon recedes with altitude; source
-    # perspective strips and carrier silhouettes replace the former side map.
+    """Forward-looking pilot display, PILOT_WIDTH pixels wide in a 48-pixel slot.
+
+    The horizon recedes with altitude; source perspective strips and carrier
+    silhouettes replace the former side map. The two padding columns on the
+    right are never copied to the screen.
+    """
+    width = PILOT_WIDTH
     horizon = 17 + level * 2
     pixels = bytearray([2]) * (48 * 24)
-    for y in range(min(24,horizon),24):
-        pixels[y*48:(y+1)*48] = bytes([6 if kind == 2 else 9])*48
+    for y in range(min(24, horizon), 24):
+        pixels[y*48:y*48+width] = bytes([6 if kind == 2 else 9]) * width
     if kind:
-        name = '3dl9' if kind == 2 else '3dc' + chr(ord('a') + max(0,7-level))
+        name = '3dl9' if kind == 2 else '3dc' + chr(ord('a') + max(0, 7-level))
         source, meta = ui_shape(name)
-        width = max(2,round(meta['width']*48/128))
-        resized = Image.frombytes('P',(meta['width'],meta['height']),source).resize((width,meta['height']),Image.Resampling.NEAREST)
-        ox = round(meta['origin_candidate'][0]*48/128)
+        scaled = max(2, round(meta['width'] * width / 128))
+        resized = Image.frombytes('P', (meta['width'], meta['height']), source).resize(
+            (scaled, meta['height']), Image.Resampling.NEAREST)
+        ox = round(meta['origin_candidate'][0] * width / 128)
         oy = meta['origin_candidate'][1]
         for yy in range(meta['height']):
-            for xx in range(width):
-                dx,dy=24-ox+xx,horizon-oy+yy
-                color=resized.tobytes()[yy*width+xx]
-                if color and 0<=dx<48 and 0<=dy<24: pixels[dy*48+dx]=color
-    target=reticle()
+            for xx in range(scaled):
+                dx, dy = width // 2 - ox + xx, horizon - oy + yy
+                color = resized.tobytes()[yy*scaled+xx]
+                if color and 0 <= dx < width and 0 <= dy < 24: pixels[dy*48+dx] = color
+    target = reticle()
     for y in range(9):
         for x in range(12):
-            c=target[y*12+x]
-            if c: pixels[(4+y)*48+18+x]=c
+            c = target[y*12+x]
+            if c: pixels[(4+y)*48 + (width-12)//2 + x] = c
     return bytes(pixels)
 
 def ocean_artwork():
@@ -332,26 +495,38 @@ def artifacts():
     files[ROOT/'assets_msx/dashboard/far-plane.indices']=bytes(far_pixels)
     indexed('assets_msx/dashboard/far-poses.png',far_pixels,16,5*len(poses))
     code='/* Generated by tools/convert_dashboard.py; do not edit. */\n#pragma once\n'
-    tiles=bytes(c for d in '0123456789' for row in DASHBOARD_DIGITS[d]
-                for c in ([15,15]+[12 if bit == '1' else 15 for bit in row]+[15]))
-    ammo_digits=pack_pixels(tiles)
     code+=c_array('g_DashboardPalette',dashboard_palette(),'[32]')
     bundle=bytearray(); offsets={}
     for name,data in [('DashboardPanel',pack_pixels(panel())),('PilotRLE',pilot),('FarPlaneRLE',pack_pixels(far_pixels)),('BombRLE',pack_pixels(bomb_pixels()))]:
         offsets[name]=len(bundle); bundle.extend(rle(data))
         code+=f'#define {name.upper()}_OFFSET {offsets[name]}\n'
     code+='#define DASHBOARD_BANK 12\n'
-    # Prebuilt packed icon patches are read only when changing the loadout.
-    icons=bytearray()
-    for weapon in range(3): icons.extend(pack_pixels(weapon_patch(weapon)))
-    code+=f'#define WEAPON_ICONS_OFFSET {len(bundle)}\n'
-    bundle.extend(icons)
-
-    # Black frame and white padding around the one-digit lives counter.
-    life_tiles=bytes(c for d in '0123456789' for row in DASHBOARD_DIGITS[d]
-        for c in ([11,15,15]+[12 if bit=='1' else 15 for bit in row]+[15,15,11,6]))
-    code+=f'#define AMMO_DIGITS_OFFSET {len(bundle)}\n';bundle.extend(ammo_digits)
-    code+=f'#define LIFE_DIGITS_OFFSET {len(bundle)}\n';bundle.extend(pack_pixels(life_tiles))
+    # Pre-rendered HUD rectangles (see hud_variants) in their own banks.
+    elements=hud_variants(); hud_banks={}
+    for e in elements:
+        blob=hud_banks.setdefault(e['bank'],bytearray()); e['offset']=len(blob); blob.extend(e['data'])
+    for bank,blob in hud_banks.items():
+        if len(blob)>8192: raise ValueError(f'HUD variants exceed bank {bank}')
+        files[ROOT/f'assets_msx/dashboard/bank_{bank}.bin']=bytes(blob)
+    spots=layout()
+    for index,e in enumerate(elements): code+=f"#define HUD_{e['name']} {index}\n"
+    code+=f"#define HUD_ELEMENT_COUNT {len(elements)}\n"
+    def table(ctype,name,values):
+        return f"static const {ctype} {name}[] = {{{', '.join(str(v) for v in values)}}};\n"
+    code+=table('unsigned char','g_HudBank',[e['bank'] for e in elements])
+    code+=table('unsigned char','g_HudColumn',[e['x']//2 for e in elements])
+    code+=table('unsigned char','g_HudRow',[e['y'] for e in elements])
+    code+=table('unsigned char','g_HudBytes',[e['width']//2 for e in elements])
+    code+=table('unsigned char','g_HudHeight',[e['height'] for e in elements])
+    code+=table('unsigned short','g_HudOffset',[e['offset'] for e in elements])
+    code+=table('unsigned short','g_HudSize',[e['width']//2*e['height'] for e in elements])
+    glyph_rows=[sum(1<<(5-x) for x,bit in enumerate(row) if bit=='#') for glyph in digit_glyphs() for row in glyph]
+    code+=table('unsigned char','g_HudDigitRows',glyph_rows)
+    for key in ('pilot_x','pilot_y','score_x','score_y','kills_x','kills_y'):
+        code+=f"#define HUD_{key.upper()} {spots[key]}\n"
+    code+=f"#define HUD_PILOT_WIDTH {PILOT_WIDTH}\n#define HUD_SCORE_DIGITS {SCORE_DIGITS}\n"
+    code+=f"#define HUD_NEEDLE_FULL {NEEDLE_FULL}\n#define HUD_LAMP_CRITICAL_FRAME {LAMP_CRITICAL_FRAME}\n"
+    code+=f"#define HUD_BLACK {BLACK}\n#define HUD_WHITE {WHITE}\n"
     if len(bundle)>8192: raise ValueError('dashboard assets exceed bank 12')
     files[ROOT/'assets_msx/dashboard/bank_12.bin']=bytes(bundle)
     tables=bytearray();table_offsets={}
@@ -394,7 +569,9 @@ def artifacts():
         bomb_source='torpedo.shp',bomb_source_sha256=hashlib.sha256((SOURCE/'torpedo.shp').read_bytes()).hexdigest(),
         bomb_pose_ticks=[5,3],bomb_timing='MSX adaptation: horizontal 200 ms, diagonal 120 ms, then vertical; 25 Hz weapon clock',pilot_slots=slots[:24],far_poses=poses,far_pose_for_frame=list(pose_ids),
         dashboard_palette='original iff-dash RGB4 quantized to RGB3; shared flight border/sea slots 0/1; dashboard blue relocated to 9',
-        static_instruments=dict(secondary_stock=30,lives=3,score='0000000',oil_needle='ndlg',fuel_needle='ndln'),
+        hud_layout=dict(layout(), removed_columns=sorted(PANEL_REMOVE), dropped_row=PANEL_DROP_ROW,
+                        needles=list(NEEDLES), lamp_critical_frame=LAMP_CRITICAL_FRAME,
+                        elements=[{k:v for k,v in e.items() if k!='data'} | dict(sha256=hashlib.sha256(e['data']).hexdigest()) for e in elements]),
         wave_palette='original ocean.palette CMAP, nearest fit to five shared blue slots; source zero stays transparent',
         ocean_palette_sha256=hashlib.sha256((SOURCE/'ocean.palette').read_bytes()).hexdigest(),
         wave_source_sha256=hashlib.sha256(b''.join(source_frames)).hexdigest(),

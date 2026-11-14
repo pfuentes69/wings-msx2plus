@@ -196,8 +196,14 @@ class MissionTests(unittest.TestCase):
         self.assertNotIn(0, pixels)
         # During carrier heave, 6..15 are staged over the ocean; 1..5 finish
         # before the icons/pilot display at line 183. Keep that raster contract.
-        self.assertTrue(all(pixels[y*256+x] >= 6 for y in range(4,11) for x in range(8,256)))
-        score = {pixels[y*256+x] for y in range(14, 21) for x in range(203, 244)}
+        # Slots 1 and 2 hold the same colour in both palettes (asserted below),
+        # so the pilot window's top row (line 182, index 2) is timing-safe.
+        self.assertTrue(all(pixels[y*256+x] >= 6 or pixels[y*256+x] in (1, 2)
+                            for y in range(4,11) for x in range(8,256)))
+        from convert_dashboard import layout
+        hud = layout()
+        score = {pixels[y*256+x] for y in range(hud['score_y'], hud['score_y']+7)
+                 for x in range(hud['score_x'], hud['score_x']+41)}
         self.assertEqual(score, {11, 15})
         palette = dashboard_palette()
         self.assertEqual(palette[:2], (ROOT/'assets_msx/mission_a/palette.bin').read_bytes()[:2])
@@ -206,28 +212,28 @@ class MissionTests(unittest.TestCase):
         self.assertEqual(palette[22:24], bytes(2))  # actual black, not dark sea
         self.assertEqual(pilot_frame(0, 7)[0], 2)  # dashboard sky, not black
 
-    def test_counters_share_a_face_and_have_clean_rectangular_frames(self):
-        from convert_dashboard import panel
-        pixels = panel()
-        def crop(x, y, width, height):
-            return bytes(pixels[yy*256+xx] for yy in range(y,y+height)
-                         for xx in range(x,x+width))
-        zero = crop(203,14,5,7)
-        for x in range(203,240,6):
-            self.assertEqual(crop(x,14,5,7), zero)
-        for x in (203,209):
-            self.assertEqual(crop(x,25,5,7), zero)
-        # The ammunition zero is the same shape in the reversed colors.
-        self.assertEqual(bytes(15 if p == 12 else 11 for p in crop(32,24,5,7)), zero)
-        for x,y,width in [(201,13,45),(201,24,15)]:
-            self.assertEqual(set(crop(x,y,width,1)), {11})
-            self.assertEqual(set(crop(x,y+8,width,1)), {11})
-            self.assertEqual(set(crop(x,y,2,9)), {11})
-            self.assertEqual(set(crop(x+width-2,y,2,9)), {11})
-        # Removed legacy art must leave green around and between both fields.
-        self.assertEqual(set(crop(201,22,48,2)), {6})
-        self.assertEqual(set(crop(246,13,3,9)), {6})
-        self.assertEqual(set(crop(216,24,33,9)), {6})
+    def test_counters_use_the_original_digit_face_at_the_shared_layout(self):
+        from convert_dashboard import compose, digit_glyphs, layout, panel, NEEDLE_FULL
+        glyphs, hud = digit_glyphs(), layout()
+        def digit_at(pixels, x, y, ink, paper):
+            rows = tuple(''.join('#' if pixels[(y+yy)*256+x+xx] == ink else
+                                 ('.' if pixels[(y+yy)*256+x+xx] == paper else '?') for xx in range(6))
+                         for yy in range(7))
+            return glyphs.index(rows) if rows in glyphs else rows
+        # wnum digits are 6x7 with 2-pixel strokes after the exact 2:1 reduction.
+        self.assertTrue(all(len(g) == 7 and all(len(r) == 6 for r in g) for g in glyphs))
+        pixels = compose(ammo=27, lives=5, score=20160, kills=4)
+        self.assertEqual([digit_at(pixels, x, hud['ammo_y'], 11, 15) for x in hud['ammo_x']], [2, 7])
+        self.assertEqual(digit_at(pixels, hud['lives_x'], hud['lives_y'], 11, 15), 5)
+        score = [digit_at(pixels, hud['score_x'] + 7*i, hud['score_y'], 15, 11) for i in range(1, 6)]
+        self.assertEqual(score, [2, 0, 1, 6, 0])
+        self.assertEqual(set(pixels[(hud['score_y']+y)*256+hud['score_x']+x] for y in range(7) for x in range(6)), {11})
+        self.assertEqual([digit_at(pixels, hud['kills_x'] + 7*i, hud['kills_y'], 15, 11) for i in range(2)], [0, 4])
+        # The default panel is the composed default state (full gauges).
+        self.assertEqual(bytes(compose(oil=NEEDLE_FULL, fuel=NEEDLE_FULL)), panel())
+        # Pilot window: byte-aligned for HMMM, 46 pixels, top row at line 182.
+        self.assertEqual((hud['pilot_x'] % 2, hud['pilot_y']), (0, 11))
+        self.assertEqual(set(panel()[(hud['pilot_y'])*256+hud['pilot_x']:(hud['pilot_y'])*256+hud['pilot_x']+46]), {2})
 
     def test_fidelity_atlases_are_disjoint_and_source_rules_guarded(self):
         from convert_dashboard import waves, pilot_frame

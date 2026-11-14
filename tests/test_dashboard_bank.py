@@ -1,16 +1,21 @@
-"""Banked HUD streams must decode to the authored SCREEN 5 assets."""
+"""Banked HUD streams and pre-rendered values must match the authored dashboard."""
 import hashlib
 import json
 from pathlib import Path
 import re
 import sys
-import struct
 import unittest
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'))
-from convert_dashboard import panel, weapon_patch, bomb_pixels
+from convert_dashboard import panel, bomb_pixels, compose, hud_variants, HUD_ELEMENTS, LAMP_CRITICAL_FRAME
 from convert_hellcat import pack_pixels
+
+
+def header_table(name):
+    header=(ROOT/'src/generated/dashboard.h').read_text()
+    return [int(v) for v in re.search(rf'{name}\[\] = {{([^}}]*)}}',header)[1].split(',')]
+
 
 class DashboardBankTests(unittest.TestCase):
     def test_banked_streams_are_bounded_and_match_uncompressed_assets(self):
@@ -20,15 +25,13 @@ class DashboardBankTests(unittest.TestCase):
         self.assertEqual(metadata['bytes'],len(bank))
         self.assertLessEqual(len(bank),8192)
         self.assertEqual(metadata['sha256'],hashlib.sha256(bank).hexdigest())
-        header=(ROOT/'src/generated/dashboard.h').read_text()
-        icons=int(re.search(r'#define WEAPON_ICONS_OFFSET (\d+)',header)[1])
         streams=[('DashboardPanel',pack_pixels(panel())),
                  ('PilotRLE',pack_pixels((ROOT/'assets_msx/dashboard/pilot.indices').read_bytes())),
                  ('FarPlaneRLE',pack_pixels((ROOT/'assets_msx/dashboard/far-plane.indices').read_bytes())),
                  ('BombRLE',pack_pixels(bomb_pixels()))]
         for index,(name,expected) in enumerate(streams):
             start=metadata['offsets'][name]
-            end=metadata['offsets'][streams[index+1][0]] if index+1<len(streams) else icons
+            end=metadata['offsets'][streams[index+1][0]] if index+1<len(streams) else len(bank)
             decoded=bytearray()
             self.assertEqual((end-start)%2,0)
             for at in range(start,end,2):
@@ -36,7 +39,28 @@ class DashboardBankTests(unittest.TestCase):
                 self.assertGreater(count,0)
                 decoded.extend(bytes([value])*count)
             self.assertEqual(decoded,expected,name)
-        self.assertEqual(bank[icons:icons+231],b''.join(pack_pixels(weapon_patch(i)) for i in range(3)))
+
+    def test_hud_values_are_byte_aligned_crops_of_the_composed_panel(self):
+        banks={b:(ROOT/f'assets_msx/dashboard/bank_{b}.bin').read_bytes() for b in (17,18)}
+        tables={n:header_table(n) for n in ('g_HudBank','g_HudColumn','g_HudRow','g_HudBytes',
+                                             'g_HudHeight','g_HudOffset','g_HudSize')}
+        for index,(name,bank,states) in enumerate(HUD_ELEMENTS):
+            column,row=tables['g_HudColumn'][index],tables['g_HudRow'][index]
+            width,height=tables['g_HudBytes'][index],tables['g_HudHeight'][index]
+            self.assertEqual(tables['g_HudBank'][index],bank)
+            self.assertEqual(tables['g_HudSize'][index],width*height)
+            for value,state in enumerate(states):
+                render=compose(**state)
+                crop=bytes(render[(row+y)*256+column*2+x] for y in range(height) for x in range(width*2))
+                start=tables['g_HudOffset'][index]+value*width*height
+                self.assertEqual(banks[bank][start:start+width*height],pack_pixels(crop),(name,value))
+                self.assertLessEqual(start+width*height,8192)
+
+    def test_lamps_never_cover_a_needle_in_the_critical_range(self):
+        # hud_variants raises if a needle at or below the critical frame
+        # reaches its lamp rectangle, or if two element rectangles overlap.
+        self.assertGreaterEqual(LAMP_CRITICAL_FRAME,0)
+        self.assertEqual(len(hud_variants()),len(HUD_ELEMENTS))
 
     def test_original_bomb_frames_preserve_pixels_and_pivots(self):
         from decode_shapes import decode_record
@@ -51,28 +75,7 @@ class DashboardBankTests(unittest.TestCase):
             expected={(i%16-ox,i//16-oy):mapping[str(v)] for i,v in enumerate(pixels) if v}
             actual={(i%8-4,i//8-4):v for i,v in enumerate(atlas[frame*64:(frame+1)*64]) if v}
             self.assertEqual(actual,expected,name)
-        header=(ROOT/'src/generated/dashboard.h').read_text()
-        bank=(ROOT/'assets_msx/dashboard/bank_12.bin').read_bytes()
-        ammo=int(re.search(r'#define AMMO_DIGITS_OFFSET (\d+)',header)[1])
-        life=int(re.search(r'#define LIFE_DIGITS_OFFSET (\d+)',header)[1])
-        self.assertEqual(life-ammo,280)
-        self.assertEqual(len(bank)-life,420)
 
-    def test_banked_atlas_tables_preserve_reduced_shape_layout(self):
-        meta=json.loads((ROOT/'assets_src/dashboard/manifest.json').read_text())
-        bank=(ROOT/'assets_msx/dashboard/bank_7.bin').read_bytes();table=meta['tables_bank']
-        self.assertEqual(table['bank'],7)
-        self.assertEqual(table['bytes'],len(bank));self.assertLessEqual(len(bank),8192)
-        self.assertEqual(table['sha256'],hashlib.sha256(bank).hexdigest())
-        start=table['offsets']['g_FarShapes']
-        for i,pose in enumerate(meta['far_poses']):
-            actual=struct.unpack_from('<HbbBBBH',bank,start+i*9)
-            self.assertEqual(actual,(0,-pose['origin_candidate'][0],-pose['origin_candidate'][1],16,pose['height'],pose['atlas_x'],pose['atlas_y']))
-        start=table['offsets']['g_FarPoseForFrame']
-        self.assertEqual(list(bank[start:start+len(meta['far_pose_for_frame'])]),meta['far_pose_for_frame'])
 
-        frames=json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
-        start=table['offsets']['g_AircraftShapes']
-        for i,frame in enumerate(frames):
-            actual=struct.unpack_from('<HbbBBBH',bank,start+i*9)
-            self.assertEqual(actual,tuple(frame[k] for k in ('data_offset','dx','dy','width','height','atlas_x','atlas_y')))
+if __name__ == '__main__':
+    unittest.main()

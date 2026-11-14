@@ -484,6 +484,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     DrawAircraft(page, frame, world, y, camera);
     Weapons_Draw(page, camera, g_TerrainFar, s_RenderHeave, &g_Combat);
     Dashboard_Status(page, g_Game.sortie.weapon, g_Game.sortie.stock, g_Game.progress.lives);
+    Dashboard_Gauges(page, g_Game.sortie.oil, g_Game.sortie.fuel, 0);
     // A uniform guard line lets the raster reset settle before the panel.
     // Both old and new vertical offsets read the same dark separator pixel.
     VDP_CommandHMMV(0, (u16)page * 256 + 171 - s_RenderHeave,
@@ -777,6 +778,7 @@ void main(void)
                 g_RenderPage=page; g_Rendering=1;
                 Menu_Draw(page,&g_Game);
                 Dashboard_Status(page,g_Game.sortie.weapon,g_Game.sortie.stock,g_Game.progress.lives);
+                Dashboard_Gauges(page,g_Game.sortie.oil,g_Game.sortie.fuel,0);
                 VDP_CommandWait(); g_Rendering=0;
                 s_PageScale[page]=255; s_UiDirty=0;
             }
