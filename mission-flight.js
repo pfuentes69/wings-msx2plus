@@ -1,7 +1,7 @@
 // Mission ROM: 256 KiB ASCII8 with banked code; see docs/rom-banking.md.
 const mission = JSON.parse(require("fs").readFileSync(`${ProjDir}assets_msx/mission_a/manifest.json`, "utf8"));
 ProjModules = ["src/msx/scenery_load", "src/msx/banking", "src/msx/input_sampler", "src/core/controls", "src/core/carrier", "src/world_flight", "src/msx/mission_streamer", "src/msx/column_ops", "src/core/world", "src/core/flight", "src/core/aircraft",
-    "src/msx/elevator", "src/msx/dashboard", "src/core/combat", "src/core/game", "src/msx/menu", "src/msx/weapons", "src/msx/ship", "src/core/mission", "src/generated/mission_surfaces", "src/generated/hellcat_frames", "src/generated/mission_tiles"];
+    "src/msx/elevator", "src/msx/dashboard", "src/core/combat", "src/core/engine", "src/core/game", "src/msx/menu", "src/msx/weapons", "src/msx/ship", "src/core/mission", "src/generated/mission_surfaces", "src/generated/hellcat_frames", "src/generated/mission_tiles"];
 Target = "ROM_ASCII8";
 CustomISR = "VHBLANK";
 ROMSize = 256;
@@ -25,9 +25,10 @@ RawFiles.push({ offset: 7 * 8192, file: "assets_msx/dashboard/bank_7.bin" });
 RawFiles.push({ offset: 11 * 8192, file: "assets_msx/dashboard/waves.sc5" });
 
 RawFiles.push({ offset: 12 * 8192, file: "assets_msx/dashboard/bank_12.bin" });
-// Pre-rendered HUD values: oil dial and small counters in 17, fuel dial in 18.
-RawFiles.push({ offset: 17 * 8192, file: "assets_msx/dashboard/bank_17.bin" });
-RawFiles.push({ offset: 18 * 8192, file: "assets_msx/dashboard/bank_18.bin" });
+// Pre-rendered HUD values: counters and oil dial in 17, fuel dial in 18,
+// lit-lamp dials in 19 (oil) and 20 (fuel).
+for (const bank of [17, 18, 19, 20])
+    RawFiles.push({ offset: bank * 8192, file: `assets_msx/dashboard/bank_${bank}.bin` });
 
 RawFiles.push({ offset: 13 * 8192, file: "assets_msx/ship/bank_13.bin" });
 RawFiles.push({ offset: 15 * 8192, file: "assets_msx/elevator/bank_15.bin" });

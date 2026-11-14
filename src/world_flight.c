@@ -21,6 +21,7 @@ volatile u8 g_DisplayElevator;
 #include "msx/ship.h"
 #include "msx/weapons.h"
 #include "core/combat.h"
+#include "core/engine.h"
 #include "core/game.h"
 #include "msx/input_sampler.h"
 #include "msx/menu.h"
@@ -30,6 +31,15 @@ static u8 s_NextGameView[8];
 static u16 s_LastControl;
 static u8 s_UiDirty;
 CombatState g_Combat;
+#ifdef WINGS_P1_FLIGHT
+EngineState g_Engine;
+static u8 s_CrashSteps;          /* 1-second hold after a dead plane reaches the sea */
+static u8 s_EngineSteps;         /* simulation steps into the current original tick */
+#endif
+/* Oil needle, fuel needle and lamps drawn on the rendered/published page.
+ * A new plane reads oil frame 16 and fuel frame 22 (amiga-fuel-oil.md). */
+static u8 s_RenderGauges[3] = {16, 22, 0};
+volatile u8 g_DisplayGauges[3] = {16, 22, 0};
 #include "rom_mapper.h"
 #include "msx/scenery_load.h"
 
@@ -484,7 +494,11 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     DrawAircraft(page, frame, world, y, camera);
     Weapons_Draw(page, camera, g_TerrainFar, s_RenderHeave, &g_Combat);
     Dashboard_Status(page, g_Game.sortie.weapon, g_Game.sortie.stock, g_Game.progress.lives);
-    Dashboard_Gauges(page, g_Game.sortie.oil, g_Game.sortie.fuel, 0);
+#ifdef WINGS_P1_FLIGHT
+    s_RenderGauges[0] = g_Engine.oil_needle; s_RenderGauges[1] = g_Engine.fuel_needle;
+    s_RenderGauges[2] = g_Engine.lamps;
+#endif
+    Dashboard_Gauges(page, s_RenderGauges); /* now holds what this page shows */
     // A uniform guard line lets the raster reset settle before the panel.
     // Both old and new vertical offsets read the same dark separator pixel.
     VDP_CommandHMMV(0, (u16)page * 256 + 171 - s_RenderHeave,
@@ -526,6 +540,29 @@ static void ConsumeActions(void)
     s_LastControl=s_Latest;
     g_Combat.primary_pending=g_Combat.secondary_pending=0;
 }
+/* A fresh plane on deck: new sortie, or the next plane after a crash. */
+static void NewPlane(void)
+{
+    World_Reset(&s_World); Aircraft_Reset(&s_Aircraft); Combat_Reset(&g_Combat);
+#ifdef WINGS_P1_FLIGHT
+    Carrier_Reset(&g_Carrier);
+    Aircraft_SyncFlight(&s_Aircraft,&s_World.flight,s_World.x>>8);
+    Engine_Reset(&g_Engine,&g_Game.sortie);
+    s_CrashSteps=s_EngineSteps=0;
+#endif
+    s_PageScale[0]=s_PageScale[1]=255;
+}
+
+#ifdef WINGS_P1_FLIGHT
+/* The crashed plane is lost: launch the next one with the same weapon, or end
+ * the game when none remain (manual: lives > 0 ? next plane : game over). */
+static void LosePlane(void)
+{
+    if (Game_LosePlane(&g_Game)) { Game_SetLoadout(&g_Game,g_Game.sortie.weapon); NewPlane(); }
+    s_CrashSteps=0; s_UiDirty=1;
+}
+#endif
+
 static u8 ReadActions(void)
 {
     u8 reset_weapons=0, result, action, old_phase, old_cursor, old_notice, old_invert;
@@ -534,7 +571,8 @@ static u8 ReadActions(void)
 #ifdef WINGS_P1_FLIGHT
     if (g_Game.phase==GAME_PLAY && g_Carrier.stage==CARRIER_HOLD)
     {
-        Game_OpenService(&g_Game);s_UiDirty=1;ConsumeActions();return 0;
+        Game_OpenService(&g_Game);Engine_Reset(&g_Engine,&g_Game.sortie);
+        s_UiDirty=1;ConsumeActions();return 0;
     }
 #endif
     for (;;)
@@ -560,15 +598,7 @@ static u8 ReadActions(void)
         g_InputInvert=g_Game.invert;
         if (old_phase!=g_Game.phase || old_cursor!=g_Game.cursor || old_notice!=g_Game.notice || old_invert!=g_Game.invert) s_UiDirty=1;
         if (action & GAME_RESTARTED) Combat_Reset(&g_Combat);
-        if (action & GAME_START_SORTIE)
-        {
-            World_Reset(&s_World); Aircraft_Reset(&s_Aircraft); Combat_Reset(&g_Combat);
-#ifdef WINGS_P1_FLIGHT
-            Carrier_Reset(&g_Carrier);
-            Aircraft_SyncFlight(&s_Aircraft,&s_World.flight,s_World.x>>8);
-#endif
-            s_PageScale[0]=s_PageScale[1]=255; reset_weapons=1;
-        }
+        if (action & GAME_START_SORTIE) { NewPlane(); reset_weapons=1; }
 #ifdef WINGS_P1_FLIGHT
         if (action & GAME_LEAVE_SERVICE) {Carrier_Raise(&g_Carrier);Combat_Reset(&g_Combat);reset_weapons=1;}
 #endif
@@ -633,6 +663,9 @@ void main(void)
     World_Reset(&s_World);
 #ifdef WINGS_P1_FLIGHT
     Carrier_Reset(&g_Carrier);
+    /* The boot render reads the instruments before any sortie starts. */
+    Engine_Reset(&g_Engine,&g_Game.sortie);
+    s_CrashSteps=s_EngineSteps=0;
 #endif
     camera = s_World.camera;
     world = s_World.x >> 8;
@@ -731,7 +764,31 @@ void main(void)
                     else
 #endif
                     {
+#ifdef WINGS_P1_FLIGHT
+                        if (s_CrashSteps)
+                        {
+                            if (!--s_CrashSteps) { LosePlane(); ConsumeActions(); reset_weapons=1; break; }
+                            goto advance_clocks;
+                        }
+                        /* Throttle: pushing in the direction of flight (oil reads higher). */
+                        if (++s_EngineSteps==ENGINE_TICK_STEPS)
+                        {
+                            s_EngineSteps=0;
+                            Engine_Tick(&g_Engine,&g_Game.sortie,s_World.flight.mode!=FLIGHT_GROUND,
+                                (input&(FLIGHT_LEFT|FLIGHT_RIGHT))==(s_World.flight.facing_left?FLIGHT_LEFT:FLIGHT_RIGHT),1);
+                        }
+                        if (g_Engine.failed)
+                        {
+                            /* No power and no guns (original mode 4): the plane noses down.
+                             * Provisional until the original's engine-out physics is mapped. */
+                            input=FLIGHT_DOWN; weapons=0;
+                            g_Combat.primary_pending=g_Combat.secondary_pending=0;
+                        }
+#endif
                         World_StepSample(&s_World,input,step==steps-1);
+#ifdef WINGS_P1_FLIGHT
+                        if (g_Engine.failed && s_World.flight.y>=FLIGHT_MAX_Y) s_CrashSteps=150;
+#endif
                     if (Combat_Tick(&g_Combat)
 #ifdef WINGS_P1_FLIGHT
                         && Combat_Required(&g_Combat,weapons)
@@ -750,6 +807,9 @@ void main(void)
                             weapons);
                     }
                     }
+#ifdef WINGS_P1_FLIGHT
+advance_clocks:
+#endif
                     if (++s_AnimTick==12) { s_AnimTick=0; s_Wave=s_Wave ? s_Wave-1 : 11; }
 #ifdef WINGS_P1_FLIGHT
                     if (step==steps-1) Aircraft_SyncFlight(&s_Aircraft,&s_World.flight,s_World.x>>8);
@@ -778,7 +838,7 @@ void main(void)
                 g_RenderPage=page; g_Rendering=1;
                 Menu_Draw(page,&g_Game);
                 Dashboard_Status(page,g_Game.sortie.weapon,g_Game.sortie.stock,g_Game.progress.lives);
-                Dashboard_Gauges(page,g_Game.sortie.oil,g_Game.sortie.fuel,0);
+                Dashboard_Gauges(page,s_RenderGauges);
                 VDP_CommandWait(); g_Rendering=0;
                 s_PageScale[page]=255; s_UiDirty=0;
             }
@@ -788,7 +848,12 @@ void main(void)
 #ifdef WINGS_P1_FLIGHT
             g_DisplayElevator!=g_Carrier.depth ||
 #endif
-            reset_weapons || s_PageScale[page] != g_TerrainFar || g_DisplayWave != s_Wave || g_DisplayHeave != s_RenderHeave || camera != g_DisplayCamera || world != g_DisplayWorld || y != g_DisplayY || frame != g_SelectedFrame)
+            reset_weapons || s_PageScale[page] != g_TerrainFar ||
+#ifdef WINGS_P1_FLIGHT
+            g_DisplayGauges[0] != g_Engine.oil_needle || g_DisplayGauges[1] != g_Engine.fuel_needle ||
+            g_DisplayGauges[2] != g_Engine.lamps ||
+#endif
+            g_DisplayWave != s_Wave || g_DisplayHeave != s_RenderHeave || camera != g_DisplayCamera || world != g_DisplayWorld || y != g_DisplayY || frame != g_SelectedFrame)
             Render(page, camera, world, y, frame);
         else page = g_DisplayPage;
         surface = s_RenderSurface;
@@ -843,6 +908,8 @@ void main(void)
 #ifdef WINGS_P1_FLIGHT
         g_DisplayElevator=g_Carrier.depth;
 #endif
+        g_DisplayGauges[0]=s_RenderGauges[0]; g_DisplayGauges[1]=s_RenderGauges[1];
+        g_DisplayGauges[2]=s_RenderGauges[2];
         g_FramePublished ^= 1;
     }
 }

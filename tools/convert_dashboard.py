@@ -28,9 +28,9 @@ NEEDLES = tuple('ndl' + c for c in '123456789abcdefghijklmn')  # empty (0) .. fu
 NEEDLE_FULL = len(NEEDLES) - 1
 DIAL_HUB = {'oil': (208, 19), 'fuel': (430, 19)}    # needle origin, hi-res
 DIAL_LAMP = {'oil': (208, 12), 'fuel': (430, 12)}   # olof origin, hi-res
-# Provisional (not recovered): the warning lamp may blink at or below this
-# needle frame. Below it no needle pixel touches the lamp (checked in layout()).
-LAMP_CRITICAL_FRAME = 5
+# A new plane reads OIL at frame 16 (oil 128) and FUEL at 22 (fuel 192); see
+# docs/research/amiga-fuel-oil.md. Oil reaches frame 22 only under throttle.
+NEEDLE_NEW_OIL = 16
 SCORE_DIGITS = 6
 PILOT_WIDTH = 46
 LABEL_FONT = {
@@ -42,7 +42,7 @@ LABEL_FONT = {
     'E': ('###', '#..', '##.', '#..', '###'),
 }
 BLACK, WHITE, LAMP_ON, LAMP_RIM = 11, 15, 10, 8
-DEFAULT_STATE = dict(oil=NEEDLE_FULL, fuel=NEEDLE_FULL, oil_lamp=False, fuel_lamp=False,
+DEFAULT_STATE = dict(oil=NEEDLE_NEW_OIL, fuel=NEEDLE_FULL, oil_lamp=False, fuel_lamp=False,
                      ammo=30, lives=3, weapon=0, score=0, kills=0)
 
 
@@ -244,56 +244,50 @@ def dashboard_shape(name):
 
 
 HUD_ELEMENTS = (
-    # name, bank, variant states (index = runtime value)
-    ('AMMO_TENS', 17, [dict(ammo=d * 10) for d in range(10)]),
-    ('AMMO_UNITS', 17, [dict(ammo=30 + d) for d in range(10)]),
-    ('LIVES', 17, [dict(lives=d) for d in range(10)]),
-    ('WEAPON', 17, [dict(weapon=w) for w in range(3)]),
-    ('OIL_LAMP', 17, [dict(oil=0), dict(oil=0, oil_lamp=True)]),
-    ('FUEL_LAMP', 17, [dict(fuel=0), dict(fuel=0, fuel_lamp=True)]),
-    ('OIL_DIAL', 17, [dict(oil=f) for f in range(len(NEEDLES))]),
-    ('FUEL_DIAL', 18, [dict(fuel=f) for f in range(len(NEEDLES))]),
+    # name, bank, variant states (index = runtime value), rectangle group
+    ('AMMO_TENS', 17, [dict(ammo=d * 10) for d in range(10)], None),
+    ('AMMO_UNITS', 17, [dict(ammo=30 + d) for d in range(10)], None),
+    ('LIVES', 17, [dict(lives=d) for d in range(10)], None),
+    ('WEAPON', 17, [dict(weapon=w) for w in range(3)], None),
+    # Each dial frame exists with the lamp dark and lit: needles at the lamp's
+    # thresholds (oil < 116, fuel <= 64) do cross it, and the needle is drawn
+    # over the lamp, as in the original.
+    ('OIL_DIAL', 17, [dict(oil=f) for f in range(len(NEEDLES))], 'oil'),
+    ('FUEL_DIAL', 18, [dict(fuel=f) for f in range(len(NEEDLES))], 'fuel'),
+    ('OIL_DIAL_LIT', 19, [dict(oil=f, oil_lamp=True) for f in range(len(NEEDLES))], 'oil'),
+    ('FUEL_DIAL_LIT', 20, [dict(fuel=f, fuel_lamp=True) for f in range(len(NEEDLES))], 'fuel'),
 )
 
 
 def hud_variants():
     """Byte-aligned dashboard rectangles, one pre-rendered copy per value.
 
-    Each rectangle covers every pixel its element can change; the rest of the
-    rectangle is the static panel, so any value can be copied in on its own.
-    A lamp rectangle lies inside its dial: the runtime redraws the lamp after
-    the dial, and only toggles it at or below LAMP_CRITICAL_FRAME, where no
-    needle reaches the lamp (checked here).
+    Each rectangle covers every pixel its element (or rectangle group) can
+    change; the rest is the static panel, so any value can be copied in on
+    its own. Lit and dark dial frames share one rectangle.
     """
+    bounds = {}
+    for name, bank, states, group in HUD_ELEMENTS:
+        reference = compose(**{k: v for k, v in states[0].items() if not k.endswith('_lamp')})
+        changed = [i for state in states for i, (a, b) in enumerate(zip(reference, compose(**state))) if a != b]
+        key = group or name
+        bounds.setdefault(key, []).extend(changed)
     elements = []
-    for name, bank, states in HUD_ELEMENTS:
-        reference = compose(**states[0])
-        renders = [compose(**state) for state in states]
-        changed = [i for render in renders for i, (a, b) in enumerate(zip(reference, render)) if a != b]
+    for name, bank, states, group in HUD_ELEMENTS:
+        changed = bounds[group or name]
         xs = [i % 256 for i in changed]; ys = [i // 256 for i in changed]
         x0, x1, y0, y1 = min(xs) & ~1, max(xs) | 1, min(ys), max(ys)
+        renders = [compose(**state) for state in states]
         data = b''.join(pack_pixels(bytes(render[y*256+x] for y in range(y0, y1+1) for x in range(x0, x1+1)))
                         for render in renders)
-        elements.append(dict(name=name, bank=bank, x=x0, y=y0, width=x1-x0+1, height=y1-y0+1,
+        elements.append(dict(name=name, bank=bank, group=group, x=x0, y=y0, width=x1-x0+1, height=y1-y0+1,
                              count=len(renders), data=data))
-    rects = {e['name']: e for e in elements}
     for a in elements:
         for b in elements:
-            if a is b or a['name'].endswith('LAMP') and b['name'].startswith(a['name'][:-5]): continue
-            if b['name'].endswith('LAMP') and a['name'].startswith(b['name'][:-5]): continue
+            if a is b or (a['group'] and a['group'] == b['group']): continue
             if (a['x'] < b['x'] + b['width'] and b['x'] < a['x'] + a['width'] and
                     a['y'] < b['y'] + b['height'] and b['y'] < a['y'] + a['height']):
                 raise ValueError(f"HUD rectangles overlap: {a['name']} {b['name']}")
-    for dial in ('OIL', 'FUEL'):
-        lamp, key = rects[dial + '_LAMP'], dial.lower()
-        lit = compose(**{key: 0, key + '_lamp': True})
-        for frame in range(LAMP_CRITICAL_FRAME + 1):
-            needle = compose(**{key: frame})
-            empty = compose(**{key: 0})
-            for y in range(lamp['y'], lamp['y'] + lamp['height']):
-                for x in range(lamp['x'], lamp['x'] + lamp['width']):
-                    if needle[y*256+x] != empty[y*256+x]:
-                        raise ValueError(f'{dial} needle frame {frame} reaches the lamp')
     return elements
 
 
@@ -505,6 +499,7 @@ def artifacts():
     elements=hud_variants(); hud_banks={}
     for e in elements:
         blob=hud_banks.setdefault(e['bank'],bytearray()); e['offset']=len(blob); blob.extend(e['data'])
+    if max(e['width']//2*e['height'] for e in elements)>288: raise ValueError('HUD variant exceeds the runtime patch buffer')
     for bank,blob in hud_banks.items():
         if len(blob)>8192: raise ValueError(f'HUD variants exceed bank {bank}')
         files[ROOT/f'assets_msx/dashboard/bank_{bank}.bin']=bytes(blob)
@@ -525,7 +520,7 @@ def artifacts():
     for key in ('pilot_x','pilot_y','score_x','score_y','kills_x','kills_y'):
         code+=f"#define HUD_{key.upper()} {spots[key]}\n"
     code+=f"#define HUD_PILOT_WIDTH {PILOT_WIDTH}\n#define HUD_SCORE_DIGITS {SCORE_DIGITS}\n"
-    code+=f"#define HUD_NEEDLE_FULL {NEEDLE_FULL}\n#define HUD_LAMP_CRITICAL_FRAME {LAMP_CRITICAL_FRAME}\n"
+    code+=f"#define HUD_NEEDLE_FULL {NEEDLE_FULL}\n#define HUD_NEEDLE_NEW_OIL {NEEDLE_NEW_OIL}\n"
     code+=f"#define HUD_BLACK {BLACK}\n#define HUD_WHITE {WHITE}\n"
     if len(bundle)>8192: raise ValueError('dashboard assets exceed bank 12')
     files[ROOT/'assets_msx/dashboard/bank_12.bin']=bytes(bundle)
@@ -570,7 +565,7 @@ def artifacts():
         bomb_pose_ticks=[5,3],bomb_timing='MSX adaptation: horizontal 200 ms, diagonal 120 ms, then vertical; 25 Hz weapon clock',pilot_slots=slots[:24],far_poses=poses,far_pose_for_frame=list(pose_ids),
         dashboard_palette='original iff-dash RGB4 quantized to RGB3; shared flight border/sea slots 0/1; dashboard blue relocated to 9',
         hud_layout=dict(layout(), removed_columns=sorted(PANEL_REMOVE), dropped_row=PANEL_DROP_ROW,
-                        needles=list(NEEDLES), lamp_critical_frame=LAMP_CRITICAL_FRAME,
+                        needles=list(NEEDLES), new_plane_needles=dict(oil=NEEDLE_NEW_OIL, fuel=NEEDLE_FULL),
                         elements=[{k:v for k,v in e.items() if k!='data'} | dict(sha256=hashlib.sha256(e['data']).hexdigest()) for e in elements]),
         wave_palette='original ocean.palette CMAP, nearest fit to five shared blue slots; source zero stays transparent',
         ocean_palette_sha256=hashlib.sha256((SOURCE/'ocean.palette').read_bytes()).hexdigest(),

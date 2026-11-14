@@ -15,5 +15,6 @@ void Dashboard_RestoreWaves(u8 page, u8 reset) WINGS_BANKED;
 void Dashboard_CopyPalette(u8* destination) WINGS_BANKED;
 
 void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives) WINGS_BANKED;
-/* Oil/fuel levels 0..255; lamps: bit 0 oil, bit 1 fuel warning lit this frame. */
-void Dashboard_Gauges(u8 page, u8 oil, u8 fuel, u8 lamps) WINGS_BANKED;
+/* gauges: in {oil frame, fuel frame, lamps (bit 0 oil, bit 1 fuel)} wanted;
+ * out: what the page shows (at most one dial changes per call). */
+void Dashboard_Gauges(u8 page, u8* gauges) WINGS_BANKED;

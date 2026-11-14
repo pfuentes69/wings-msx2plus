@@ -11,6 +11,7 @@ import statistics
 import subprocess
 from PIL import Image
 from verify_world_flight import vram_image, expected_pixels, gun_flash_shape
+from convert_dashboard import compose, layout, PILOT_WIDTH
 from aircraft_scene import AircraftScene
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -29,7 +30,7 @@ def main():
     assert symbols['g_TopPalette']>=0xc000 and symbols['g_BottomPalette']>=0xc000
     tables=(ROOT/'assets_msx/dashboard/bank_7.bin').read_bytes()
     assert data[7*8192:7*8192+len(tables)]==tables
-    for number in (12,17,18):
+    for number in (12,17,18,19,20):
         bank=(ROOT/f'assets_msx/dashboard/bank_{number}.bin').read_bytes()
         assert data[number*8192:number*8192+len(bank)]==bank,('dashboard bank',number)
     env=dict(os.environ,WINGS_ROOT=str(ROOT),WINGS_TEST_OUT=str(out),WINGS_HEADLESS='1' if args.headless else '0',
@@ -43,7 +44,7 @@ def main():
         with subprocess.Popen([shutil.which('openmsx'),'-control','stdio',*settings,'-machine',args.machine,'-cart',str(rom),'-romtype','ASCII8',
                         '-script',str(ROOT/'tools/p0_smoke.tcl')],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT,stdin=subprocess.PIPE) as emulator:
             try:
-                assert emulator.wait(timeout=100)==0, 'openMSX failed'
+                assert emulator.wait(timeout=200)==0, 'openMSX failed'
             except subprocess.TimeoutExpired:
                 emulator.kill(); emulator.wait(); raise
     assert rom.read_bytes()==data,'ROM changed during verification'
@@ -72,7 +73,8 @@ def main():
             expected=expected_pixels(scene,int(pose),int(world),int(y),int(camera),
                 (ROOT/'assets_msx/mission_a'/('far.indices' if scale==8 else 'scene.indices')).read_bytes(),
                 terrain['far_width'] if scale==8 else terrain['width'],scale,int(wave),pilot,int(heave),int(ship),
-                projectiles,game[4],game[3],game[2],crew,ground,depth,stage!=1,flash=combat[158])
+                projectiles,game[4],game[3],game[2],crew,ground,depth,stage!=1,flash=combat[158],
+                gauges=tuple((out/f'{name}.gauges').read_bytes()))
             for row in range(212):
                 for col in range(8,256):
                     ring=col if row>=172 else (int(camera)+col)%256
@@ -81,7 +83,18 @@ def main():
                     value=(value>>(0 if ring%2 else 4))&15
                     assert value==expected[row][col],(name,'composite',col,row,value,expected[row][col])
         # The HUD (ammo, lives, weapon, gauges) is part of the full-VRAM
-        # comparison above: expected_pixels composes it from the same state.
+        # comparison above for gameplay. Menus keep the dashboard too: check
+        # it in every phase (the pilot window shows the last flight profile).
+        gauges=tuple((out/f'{name}.gauges').read_bytes())
+        assert all(g<=22 for g in gauges[:2]) and gauges[2]<=3,(name,'gauge state',gauges)
+        hud=compose(ammo=game[4],weapon=game[3],lives=game[2],oil=gauges[0],fuel=gauges[1],
+                    oil_lamp=bool(gauges[2]&1),fuel_lamp=bool(gauges[2]&2))
+        spots=layout()
+        for row in range(40):
+            for col in range(8,256):
+                if spots['pilot_y']<=row<spots['pilot_y']+24 and spots['pilot_x']<=col<spots['pilot_x']+PILOT_WIDTH:continue
+                value=(vram[page*32768+(172+row)*128+col//2]>>(0 if col&1 else 4))&15
+                assert value==hud[row*256+col],(name,'dashboard',col,172+row,value,hud[row*256+col])
         palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
         # Host reconstruction verifies readable source pixels; it is not raster proof.
         preview=vram_image(vram,palette,int(camera),page,int(heave))
@@ -98,6 +111,7 @@ def main():
     required|={'stall_held','stall_released','dive_released','dive_persistent','dive_recovered'}
     required|={f'taxi_right_{i}' for i in range(10)}|{f'taxi_left_{i}' for i in range(10,0,-1)}
     required|={'taxi_right_stop','taxi_right_hold','taxi_left_stop','taxi_left_hold'}
+    required|={'engine_low_fuel','engine_failed','engine_next_plane','game_over'}
     assert required<=snapshots.keys(),required-snapshots.keys()
     assert (out/'paused.combat').read_bytes()==(out/'pause_wait.combat').read_bytes(),'Pause advanced weapons'
     for key in ('world','y','pose','wave','heave','ship','crew','depth','stage'):

@@ -104,6 +104,10 @@ void Menu_Draw(u8 page, const GameState* game) WINGS_BANKED
         if (game->cursor || game->notice) Text(page,122,"NOT AVAILABLE IN THIS BUILD");
         Text(page,151,"ENTER OR BUTTON TO CONFIRM");
     }
+    else if (game->phase==GAME_OVER)
+    {
+        Text(page,65,"GAME OVER"); Text(page,100,"ENTER OR BUTTON TO CONTINUE");
+    }
     else if (game->phase==GAME_PAUSE)
     {
         Text(page,65,"PAUSED"); Text(page,100,"PRESS ESC TO CONTINUE");

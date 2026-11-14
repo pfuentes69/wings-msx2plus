@@ -7,7 +7,7 @@ set prof_period $env(WINGS_PROFILE_PERIOD)
 set prof_file [file join $env(WINGS_TEST_OUT) profile.txt]
 set prof_noi [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set prof_syms [read $prof_noi];close $prof_noi
-foreach n {g_Bank3Segment g_Rendering g_GameView g_Combat g_FramePublished VDP_InterruptHandler g_ViewChange} {
+foreach n {g_Bank3Segment g_Rendering g_GameView g_Combat g_FramePublished VDP_InterruptHandler g_ViewChange g_DisplayWorld g_DisplayY} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $prof_syms -> a]} {error "Missing $n"}
     set prof_addr($n) [expr {$a}]
 }
@@ -52,6 +52,12 @@ proc prof_rendering {} {
         # View changes (altitude scale switch, full page rebuild) are exempt from deadlines.
         set kind [expr {[debug read memory $::prof_addr(g_ViewChange)] ? "rebuild" : "frame"}]
         incr ::prof_calls([list ${kind}_cost_${sim}_${draw} [prof_guns]])
+        # Where the heaviest gameplay frames happen (world x, y of the last publication).
+        if {$kind eq "frame" && $sim + $draw > 110} {
+            set wx [expr {[debug read memory $::prof_addr(g_DisplayWorld)]+256*[debug read memory [expr {$::prof_addr(g_DisplayWorld)+1}]]}]
+            set wy [expr {[debug read memory $::prof_addr(g_DisplayY)]+256*[debug read memory [expr {$::prof_addr(g_DisplayY)+1}]]}]
+            incr ::prof_calls([list heavy_${sim}_${draw}_x${wx}_y${wy} [prof_guns]])
+        }
         unset ::prof_render_start
     }
 }

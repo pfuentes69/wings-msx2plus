@@ -213,7 +213,7 @@ class MissionTests(unittest.TestCase):
         self.assertEqual(pilot_frame(0, 7)[0], 2)  # dashboard sky, not black
 
     def test_counters_use_the_original_digit_face_at_the_shared_layout(self):
-        from convert_dashboard import compose, digit_glyphs, layout, panel, NEEDLE_FULL
+        from convert_dashboard import compose, digit_glyphs, layout, panel, NEEDLE_FULL, NEEDLE_NEW_OIL
         glyphs, hud = digit_glyphs(), layout()
         def digit_at(pixels, x, y, ink, paper):
             rows = tuple(''.join('#' if pixels[(y+yy)*256+x+xx] == ink else
@@ -229,8 +229,8 @@ class MissionTests(unittest.TestCase):
         self.assertEqual(score, [2, 0, 1, 6, 0])
         self.assertEqual(set(pixels[(hud['score_y']+y)*256+hud['score_x']+x] for y in range(7) for x in range(6)), {11})
         self.assertEqual([digit_at(pixels, hud['kills_x'] + 7*i, hud['kills_y'], 15, 11) for i in range(2)], [0, 4])
-        # The default panel is the composed default state (full gauges).
-        self.assertEqual(bytes(compose(oil=NEEDLE_FULL, fuel=NEEDLE_FULL)), panel())
+        # The default panel is a new plane: OIL at ndlg (16), FUEL at ndln (22).
+        self.assertEqual(bytes(compose(oil=NEEDLE_NEW_OIL, fuel=NEEDLE_FULL)), panel())
         # Pilot window: byte-aligned for HMMM, 46 pixels, top row at line 182.
         self.assertEqual((hud['pilot_x'] % 2, hud['pilot_y']), (0, 11))
         self.assertEqual(set(panel()[(hud['pilot_y'])*256+hud['pilot_x']:(hud['pilot_y'])*256+hud['pilot_x']+46]), {2})

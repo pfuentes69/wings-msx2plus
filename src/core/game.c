@@ -1,4 +1,5 @@
 #include "game.h"
+#include "engine.h"
 
 uint8_t Game_WeaponStock(uint8_t weapon)
 {
@@ -18,15 +19,24 @@ void Game_Reset(GameState* game)
     game->progress.rank=0; game->progress.lives=3;
     game->mission.map=0; game->mission.objectives=0;
     Game_SetLoadout(game,WEAPON_BOMBS);
-    game->sortie.oil=game->sortie.fuel=255;
+    game->sortie.oil=ENGINE_OIL_FULL; game->sortie.fuel=ENGINE_FUEL_FULL;
     game->phase=GAME_RANK; game->cursor=game->invert=game->notice=0;
+}
+
+uint8_t Game_LosePlane(GameState* game)
+{
+    if (game->progress.lives) --game->progress.lives;
+    if (game->progress.lives) return 1;
+    game->phase=GAME_OVER; game->cursor=game->notice=0;
+    return 0;
 }
 
 void Game_OpenService(GameState* game)
 {
     game->phase=GAME_SERVICE;game->cursor=game->sortie.weapon;game->notice=0;
     Game_SetLoadout(game,game->sortie.weapon);
-    game->sortie.oil=game->sortie.fuel=255;
+    /* The hold repairs and refuels to full (manual; values from the executable). */
+    game->sortie.oil=ENGINE_OIL_FULL; game->sortie.fuel=ENGINE_FUEL_FULL;
 }
 
 uint8_t Game_HandleAction(GameState* game, uint16_t pressed)
@@ -67,6 +77,12 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed)
         }
     }
     if (!(pressed & (ACTION_BUTTONS))) return 0;
+    if (old==GAME_OVER)
+    {
+        /* High-score entry arrives with P6; return to rank selection. */
+        prev=game->invert; Game_Reset(game); game->invert=prev;
+        return GAME_CONTEXT_CHANGED;
+    }
     if (old==GAME_RANK)
     {
         if (game->cursor==7) { game->phase=GAME_LOAD_MENU; game->cursor=GAME_RANK; }

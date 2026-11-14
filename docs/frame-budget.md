@@ -14,20 +14,28 @@ included in all figures below.
 
 | Per rendered gameplay frame | NTSC (FS-A1WX) | PAL (C-BIOS EU) |
 | --- | --- | --- |
-| Simulation, mean / max | 16.1 / 43 ms | 18.6 / 49 ms |
-| Render, mean / max | 43.4 / ~80 ms | 41.0 / ~80 ms |
-| Simulation + render, mean | 59.5 ms | 59.6 ms |
-| Simulation + render, p99 | 99 ms | 107 ms |
-| Worst gameplay frame | ~107 ms (28 + 80, firing) | ~107 ms |
-| **Spare time, worst frame** | **~26 ms** | **~53 ms** |
-| Spare time, mean frame | ~74 ms | ~100 ms |
+| Simulation, mean / max | 19.6 / 50 ms | 23.0 / 57 ms |
+| Render, mean | 47.9 ms | 46.0 ms |
+| Simulation + render, mean | 67.5 ms | 69.0 ms |
+| Simulation + render, p99 | 119 ms | 110 ms |
+| Worst gameplay frame | ~126 ms (29 + 97, low over the carrier, one dial redraw) | ~114 ms |
+| **Spare time, worst frame** | **~7 ms** | **~46 ms** |
+| Spare time, mean frame | ~66 ms | ~91 ms |
+
+Updated 2026-11-14 for the P2 engine work. The P0 run now also takes off
+twice more and flies low over the carrier: about 34 ms of simulation plus an
+84 ms redraw before any dial redraw (118 ms). The first measurement (worst
+~107 ms) did not sample those frames. A dial redraw costs about 5 ms per page
+when a needle moves; at most one is drawn per page.
 
 View rebuilds (altitude scale switch, full-page redraw, 300+ ms) and
 restart/menu transition frames are excluded. They are exempt from the
 deadline by design (`g_ViewChange`, phase not `GAME_PLAY`).
 
-**NTSC worst case is the binding limit: about 26 ms per frame (20%) is left
-for enemy simulation and drawing at today's scene complexity.** Before adding
+**NTSC worst case is the binding limit: only about 7 ms per frame is left
+in the heaviest scene (low over the carrier) for enemy simulation and
+drawing.** Recovering render time (candidates below) is a precondition for
+enemies there. Before adding
 entities, set per-entity budgets against this, and remeasure with the
 profiler after each phase. The plan's rule applies: optimise transitions and
 rendering before increasing active combat load, and never miss a deadline
@@ -58,6 +66,9 @@ of render time. About 21 VDP commands per frame. Mean per frame (NTSC):
    overlay columns dirty once per column reuse instead of every frame.
 4. Hand-written Z80 for the remaining `Terrain_DrawColumn` C path
    (mismatch runs and cache update).
+5. **Dial redraws.** The generic `VDP_WriteVRAM` costs about 5 ms per dial
+   patch: 20 rows of 13–14 bytes, with an address set per row. Options:
+   per-frame minimal rectangles, or a row blit tuned to V9938 timing.
 
 ## History
 

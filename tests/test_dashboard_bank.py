@@ -8,7 +8,7 @@ import unittest
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'))
-from convert_dashboard import panel, bomb_pixels, compose, hud_variants, HUD_ELEMENTS, LAMP_CRITICAL_FRAME
+from convert_dashboard import panel, bomb_pixels, compose, hud_variants, HUD_ELEMENTS
 from convert_hellcat import pack_pixels
 
 
@@ -41,10 +41,10 @@ class DashboardBankTests(unittest.TestCase):
             self.assertEqual(decoded,expected,name)
 
     def test_hud_values_are_byte_aligned_crops_of_the_composed_panel(self):
-        banks={b:(ROOT/f'assets_msx/dashboard/bank_{b}.bin').read_bytes() for b in (17,18)}
+        banks={b:(ROOT/f'assets_msx/dashboard/bank_{b}.bin').read_bytes() for b in (17,18,19,20)}
         tables={n:header_table(n) for n in ('g_HudBank','g_HudColumn','g_HudRow','g_HudBytes',
                                              'g_HudHeight','g_HudOffset','g_HudSize')}
-        for index,(name,bank,states) in enumerate(HUD_ELEMENTS):
+        for index,(name,bank,states,_) in enumerate(HUD_ELEMENTS):
             column,row=tables['g_HudColumn'][index],tables['g_HudRow'][index]
             width,height=tables['g_HudBytes'][index],tables['g_HudHeight'][index]
             self.assertEqual(tables['g_HudBank'][index],bank)
@@ -56,11 +56,12 @@ class DashboardBankTests(unittest.TestCase):
                 self.assertEqual(banks[bank][start:start+width*height],pack_pixels(crop),(name,value))
                 self.assertLessEqual(start+width*height,8192)
 
-    def test_lamps_never_cover_a_needle_in_the_critical_range(self):
-        # hud_variants raises if a needle at or below the critical frame
-        # reaches its lamp rectangle, or if two element rectangles overlap.
-        self.assertGreaterEqual(LAMP_CRITICAL_FRAME,0)
-        self.assertEqual(len(hud_variants()),len(HUD_ELEMENTS))
+    def test_lit_and_dark_dials_share_one_rectangle(self):
+        elements={e['name']:e for e in hud_variants()}
+        for dial in ('OIL','FUEL'):
+            dark,lit=elements[dial+'_DIAL'],elements[dial+'_DIAL_LIT']
+            self.assertEqual([dark[k] for k in ('x','y','width','height')],[lit[k] for k in ('x','y','width','height')])
+            self.assertNotEqual(dark['data'],lit['data'])
 
     def test_original_bomb_frames_preserve_pixels_and_pivots(self):
         from decode_shapes import decode_record

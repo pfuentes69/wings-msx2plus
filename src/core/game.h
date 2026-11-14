@@ -10,6 +10,7 @@
 #define GAME_LOAD_MENU 5
 #define GAME_SAVE_MENU 6
 #define GAME_SERVICE 7
+#define GAME_OVER 8
 #define WEAPON_BOMBS 0
 #define WEAPON_ROCKETS 1
 #define WEAPON_TORPEDO 2
@@ -32,6 +33,8 @@ uint8_t Game_WeaponStock(uint8_t weapon);
 void Game_SetLoadout(GameState* game, uint8_t weapon);
 void Game_OpenService(GameState* game);
 void Game_Reset(GameState* game);
+/* A crash costs one plane. Returns 1 while planes remain, else enters GAME_OVER. */
+uint8_t Game_LosePlane(GameState* game);
 uint8_t Game_HandleAction(GameState* game, uint16_t pressed);
 void Game_View(const GameState* game, uint8_t* view);
 #endif

@@ -5064,14 +5064,14 @@
   },
   "asset_bank": {
     "bank": 12,
-    "bytes": 7194,
+    "bytes": 7188,
     "offsets": {
       "DashboardPanel": 0,
-      "PilotRLE": 3410,
-      "FarPlaneRLE": 6474,
-      "BombRLE": 7068
+      "PilotRLE": 3404,
+      "FarPlaneRLE": 6468,
+      "BombRLE": 7062
     },
-    "sha256": "700ee4954ae124621329bfcdd0d564ee9a1703ab39c6d7f844a811f7cd29f42b"
+    "sha256": "ee5c4a53f78f089055b60a614e2ad38d37f8ebef849f716784c39b72497c51fc"
   },
   "bomb_slots": [
     [
@@ -6123,11 +6123,15 @@
       "ndlm",
       "ndln"
     ],
-    "lamp_critical_frame": 5,
+    "new_plane_needles": {
+      "oil": 16,
+      "fuel": 22
+    },
     "elements": [
       {
         "name": "AMMO_TENS",
         "bank": 17,
+        "group": null,
         "x": 16,
         "y": 23,
         "width": 8,
@@ -6139,6 +6143,7 @@
       {
         "name": "AMMO_UNITS",
         "bank": 17,
+        "group": null,
         "x": 26,
         "y": 23,
         "width": 6,
@@ -6150,6 +6155,7 @@
       {
         "name": "LIVES",
         "bank": 17,
+        "group": null,
         "x": 50,
         "y": 23,
         "width": 6,
@@ -6161,6 +6167,7 @@
       {
         "name": "WEAPON",
         "bank": 17,
+        "group": null,
         "x": 16,
         "y": 15,
         "width": 18,
@@ -6170,41 +6177,21 @@
         "sha256": "90cbdaaf4e8759a7ce5d7e1f8b4f9c96bbb05499168d234d39260e3bd0cd2e26"
       },
       {
-        "name": "OIL_LAMP",
-        "bank": 17,
-        "x": 84,
-        "y": 13,
-        "width": 8,
-        "height": 5,
-        "count": 2,
-        "offset": 835,
-        "sha256": "78503f5d242cc280b6472c021dc831a64aaa1b9d641d15edb41e8a5decf77dbd"
-      },
-      {
-        "name": "FUEL_LAMP",
-        "bank": 17,
-        "x": 178,
-        "y": 13,
-        "width": 8,
-        "height": 5,
-        "count": 2,
-        "offset": 875,
-        "sha256": "d5bbb8135520bb4b6cec50dd385de921a0eb58b010c0e2a7ba06c629bdb9b68b"
-      },
-      {
         "name": "OIL_DIAL",
         "bank": 17,
+        "group": "oil",
         "x": 76,
         "y": 10,
         "width": 26,
         "height": 20,
         "count": 23,
-        "offset": 915,
+        "offset": 835,
         "sha256": "f770f11943fd0bd7831b450296ca3060e8810b12c9f75033b9e040debdc41506"
       },
       {
         "name": "FUEL_DIAL",
         "bank": 18,
+        "group": "fuel",
         "x": 168,
         "y": 10,
         "width": 28,
@@ -6212,6 +6199,30 @@
         "count": 23,
         "offset": 0,
         "sha256": "e6bf8f807cfe5c71f81e2f76f5a181f8b31ee7ee2bce93357e5f1b41fdeb2a63"
+      },
+      {
+        "name": "OIL_DIAL_LIT",
+        "bank": 19,
+        "group": "oil",
+        "x": 76,
+        "y": 10,
+        "width": 26,
+        "height": 20,
+        "count": 23,
+        "offset": 0,
+        "sha256": "fcdc14399f6eaab2b1fbb1ab79198a1821dd959bb23367f3ed64c7edcaef2414"
+      },
+      {
+        "name": "FUEL_DIAL_LIT",
+        "bank": 20,
+        "group": "fuel",
+        "x": 168,
+        "y": 10,
+        "width": 28,
+        "height": 20,
+        "count": 23,
+        "offset": 0,
+        "sha256": "f738c8b3d38fb90d62c66ca4e313d80ffcf0b3391123c7f20ba08d39790b6f8d"
       }
     ]
   },

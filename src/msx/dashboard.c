@@ -12,8 +12,11 @@ static u8 s_Stream[64], s_StreamPos;
 static u16 s_StreamOffset;
 // Value currently shown per page for each pre-rendered HUD element.
 static u8 s_Hud[2][HUD_ELEMENT_COUNT];
-// The baked panel shows 30 bombs, three lives, bombs, full gauges, lamps off.
-static const u8 s_HudDefault[HUD_ELEMENT_COUNT] = {3, 0, 3, 0, 0, 0, HUD_NEEDLE_FULL, HUD_NEEDLE_FULL};
+// The baked panel shows 30 bombs, three lives, bombs and a new plane's
+// gauges (oil frame 16, fuel frame 22, lamps dark). Dial entries hold the
+// frame plus HUD_LIT when the lit variant is shown; the _LIT slots are unused.
+#define HUD_LIT 32
+static const u8 s_HudDefault[HUD_ELEMENT_COUNT] = {3, 0, 3, 0, HUD_NEEDLE_NEW_OIL, HUD_NEEDLE_FULL, 255, 255};
 
 static void Input(u16 offset)
 {
@@ -201,23 +204,33 @@ void Dashboard_Waves(u8 page, u16 camera, u8 frame, u8 heave) WINGS_BANKED
 }
 
 // Copy one pre-rendered value of a HUD element into the dashboard rows.
+// Read the whole variant first (at most two bank reads; Scenery_Read takes up
+// to 255 bytes), then write it row by row.
+#define HUD_PATCH_MAX 288
+static u8 s_Patch[HUD_PATCH_MAX];
 static void Patch(u8 page, u8 element, u8 value)
 {
     u8 row, bytes = g_HudBytes[element];
-    u16 offset = g_HudOffset[element] + (u16)value * g_HudSize[element];
+    u16 size = g_HudSize[element];
+    u16 offset = g_HudOffset[element] + (u16)value * size;
     u16 address = ((u16)page * 256 + 172 + g_HudRow[element]) * 128 + g_HudColumn[element];
+    const u8* source = s_Patch;
+    if (size > 255)
+    {
+        Scenery_Read(g_HudBank[element], offset, s_Patch, 255);
+        Scenery_Read(g_HudBank[element], offset + 255, s_Patch + 255, (u8)(size - 255));
+    }
+    else Scenery_Read(g_HudBank[element], offset, s_Patch, (u8)size);
     for (row = 0; row < g_HudHeight[element]; ++row)
     {
-        Scenery_Read(g_HudBank[element], offset, s_Row, bytes);
-        VDP_WriteVRAM(s_Row, address, 0, bytes);
-        offset += bytes; address += 128;
+        VDP_WriteVRAM(source, address, 0, bytes);
+        source += bytes; address += 128;
     }
-    s_Hud[page][element] = value;
 }
 
 static void Show(u8 page, u8 element, u8 value)
 {
-    if (s_Hud[page][element] != value) Patch(page, element, value);
+    if (s_Hud[page][element] != value) { Patch(page, element, value); s_Hud[page][element] = value; }
 }
 
 void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives) WINGS_BANKED
@@ -228,22 +241,36 @@ void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives) WINGS_BANKED
     Show(page, HUD_WEAPON, weapon);
 }
 
-/* Levels are 0..255; the 23 original needle frames sweep empty..full. A lamp
- * is lit only at or below the critical frame, where no needle overlaps it.
- * Redrawing a dial restores its lamp to off, so the lamp follows the dial. */
-static void Gauge(u8 page, u8 dial, u8 lamp, u8 level, u8 lit)
+
+
+/* Frames 0..22 are the original needle positions; a lit lamp selects the
+ * dial's lit variants (the needle is drawn over the lamp, as in the original).
+ * A dial patch costs ~5 ms, so at most one dial changes per rendered page;
+ * the needles move one frame per 12.5 Hz tick, so the deferral is invisible.
+ * gauges: in = wanted {oil frame, fuel frame, lamps}; out = shown on page. */
+static u8 s_GaugeTurn;
+static u8 GaugeKey(u8 frame, u8 lit)
 {
-    u8 frame = ((u16)level * (HUD_NEEDLE_FULL + 1)) >> 8;
-    if (s_Hud[page][dial] != frame)
-    {
-        Patch(page, dial, frame);
-        s_Hud[page][lamp] = 0;
-    }
-    Show(page, lamp, lit && frame <= HUD_LAMP_CRITICAL_FRAME);
+    if (frame > HUD_NEEDLE_FULL) frame = HUD_NEEDLE_FULL; /* never index past the variants */
+    return lit ? frame + HUD_LIT : frame;
 }
 
-void Dashboard_Gauges(u8 page, u8 oil, u8 fuel, u8 lamps) WINGS_BANKED
+void Dashboard_Gauges(u8 page, u8* gauges) WINGS_BANKED
 {
-    Gauge(page, HUD_OIL_DIAL, HUD_OIL_LAMP, oil, lamps & 1);
-    Gauge(page, HUD_FUEL_DIAL, HUD_FUEL_LAMP, fuel, lamps & 2);
+    u8 oil = GaugeKey(gauges[0], gauges[2] & 1), fuel = GaugeKey(gauges[1], gauges[2] & 2);
+    u8 change_oil = s_Hud[page][HUD_OIL_DIAL] != oil, change_fuel = s_Hud[page][HUD_FUEL_DIAL] != fuel;
+    if (change_oil && change_fuel) { s_GaugeTurn ^= 1; change_oil = s_GaugeTurn; change_fuel = !s_GaugeTurn; }
+    if (change_oil)
+    {
+        Patch(page, oil >= HUD_LIT ? HUD_OIL_DIAL_LIT : HUD_OIL_DIAL, oil & (HUD_LIT - 1));
+        s_Hud[page][HUD_OIL_DIAL] = oil;
+    }
+    if (change_fuel)
+    {
+        Patch(page, fuel >= HUD_LIT ? HUD_FUEL_DIAL_LIT : HUD_FUEL_DIAL, fuel & (HUD_LIT - 1));
+        s_Hud[page][HUD_FUEL_DIAL] = fuel;
+    }
+    oil = s_Hud[page][HUD_OIL_DIAL]; fuel = s_Hud[page][HUD_FUEL_DIAL];
+    gauges[0] = oil & (HUD_LIT - 1); gauges[1] = fuel & (HUD_LIT - 1);
+    gauges[2] = (oil >= HUD_LIT ? 1 : 0) | (fuel >= HUD_LIT ? 2 : 0);
 }

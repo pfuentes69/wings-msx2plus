@@ -5,26 +5,26 @@ const unsigned char g_DashboardPalette[32] = {
     0x73, 0x03, 0x07, 0x03, 0x70, 0x00, 0x00, 0x00, 0x12, 0x01, 0x33, 0x03, 0x45, 0x04, 0x67, 0x06
 };
 #define DASHBOARDPANEL_OFFSET 0
-#define PILOTRLE_OFFSET 3410
-#define FARPLANERLE_OFFSET 6474
-#define BOMBRLE_OFFSET 7068
+#define PILOTRLE_OFFSET 3404
+#define FARPLANERLE_OFFSET 6468
+#define BOMBRLE_OFFSET 7062
 #define DASHBOARD_BANK 12
 #define HUD_AMMO_TENS 0
 #define HUD_AMMO_UNITS 1
 #define HUD_LIVES 2
 #define HUD_WEAPON 3
-#define HUD_OIL_LAMP 4
-#define HUD_FUEL_LAMP 5
-#define HUD_OIL_DIAL 6
-#define HUD_FUEL_DIAL 7
+#define HUD_OIL_DIAL 4
+#define HUD_FUEL_DIAL 5
+#define HUD_OIL_DIAL_LIT 6
+#define HUD_FUEL_DIAL_LIT 7
 #define HUD_ELEMENT_COUNT 8
-static const unsigned char g_HudBank[] = {17, 17, 17, 17, 17, 17, 17, 18};
-static const unsigned char g_HudColumn[] = {8, 13, 25, 8, 42, 89, 38, 84};
-static const unsigned char g_HudRow[] = {23, 23, 23, 15, 13, 13, 10, 10};
-static const unsigned char g_HudBytes[] = {4, 3, 3, 9, 4, 4, 13, 14};
-static const unsigned char g_HudHeight[] = {7, 7, 7, 5, 5, 5, 20, 20};
-static const unsigned short g_HudOffset[] = {0, 280, 490, 700, 835, 875, 915, 0};
-static const unsigned short g_HudSize[] = {28, 21, 21, 45, 20, 20, 260, 280};
+static const unsigned char g_HudBank[] = {17, 17, 17, 17, 17, 18, 19, 20};
+static const unsigned char g_HudColumn[] = {8, 13, 25, 8, 38, 84, 38, 84};
+static const unsigned char g_HudRow[] = {23, 23, 23, 15, 10, 10, 10, 10};
+static const unsigned char g_HudBytes[] = {4, 3, 3, 9, 13, 14, 13, 14};
+static const unsigned char g_HudHeight[] = {7, 7, 7, 5, 20, 20, 20, 20};
+static const unsigned short g_HudOffset[] = {0, 280, 490, 700, 835, 0, 0, 0};
+static const unsigned short g_HudSize[] = {28, 21, 21, 45, 260, 280, 260, 280};
 static const unsigned char g_HudDigitRows[] = {30, 51, 51, 51, 51, 51, 30, 6, 14, 6, 6, 6, 6, 15, 31, 51, 3, 14, 24, 48, 63, 63, 6, 14, 3, 3, 51, 30, 14, 14, 30, 22, 54, 63, 6, 63, 48, 62, 3, 1, 51, 30, 12, 24, 24, 62, 51, 51, 30, 63, 3, 6, 6, 12, 12, 12, 30, 51, 51, 30, 51, 51, 30, 30, 51, 51, 31, 3, 6, 12};
 #define HUD_PILOT_X 112
 #define HUD_PILOT_Y 11
@@ -35,7 +35,7 @@ static const unsigned char g_HudDigitRows[] = {30, 51, 51, 51, 51, 51, 30, 6, 14
 #define HUD_PILOT_WIDTH 46
 #define HUD_SCORE_DIGITS 6
 #define HUD_NEEDLE_FULL 22
-#define HUD_LAMP_CRITICAL_FRAME 5
+#define HUD_NEEDLE_NEW_OIL 16
 #define HUD_BLACK 11
 #define HUD_WHITE 15
 #define FAR_PLANE_COUNT 27

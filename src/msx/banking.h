@@ -16,7 +16,7 @@
  * segment at (segment << 16) | A000h; tools/check_rom_layout.py verifies it. */
 
 #define WINGS_SEGMENT_HUD 3     /* dashboard, weapons */
-#define WINGS_SEGMENT_SCENE 16  /* menu, ship, carrier elevator */
+#define WINGS_SEGMENT_SCENE 16  /* menu, ship, carrier elevator, engine */
 
 #if defined(WINGS_BANKED_CODE) && defined(__SDCC)
 #define WINGS_BANKED __banked

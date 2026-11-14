@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -89,6 +89,7 @@ proc publishing {} {
     dump $name.lift [debug read_block memory $::addr(g_Carrier) 3]
     dump $name.view [debug read_block memory $::addr(g_DisplayScale) 3]
     dump $name.crew [debug read_block memory $::addr(g_CrewFrame) 1]
+    dump $name.gauges [debug read_block memory $::addr(g_DisplayGauges) 3]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
     dump $name.rom [debug read_block memory 16384 32768]
@@ -448,7 +449,64 @@ proc cannon_dive_right {} {
 }
 proc restarted {} {
     require [expr {[view 2]==3 && [view 4]==30 && [view 5]==1 && [stat 30]==0 && [stat 32]==0}] "Ctrl-R game reset or setting retention"
-    snap restart done
+    snap restart engine_new_game
+}
+# P2 engine: low fuel warning, dry tank, crash, next plane, game over.
+# g_Game: lives at +7, fuel at +15. g_Engine: fuel_ticks +0, failed +3, lamps +8.
+proc game_byte {offset value} {debug write memory [expr {$::addr(g_Game)+$offset}] $value}
+proc engine_byte {offset} {debug read memory [expr {$::addr(g_Engine)+$offset}]}
+proc engine_new_game {} {
+    pulse 7 128 {phase 1 {pulse 7 128 {phase 2 {pulse 7 128 {phase 3 {wait_lift_up {engine_takeoff engine_low_fuel}}}}}}}
+}
+proc engine_takeoff {then} {
+    keymatrixdown 8 16
+    after time 5.4 [list keymatrixdown 8 32]
+    after time 8.9 [list engine_airborne $then]
+}
+proc engine_airborne {then} {
+    keymatrixup 8 48
+    require [expr {[word g_DisplayY]<1160 && [engine_byte 3]==0}] "Engine scenario takeoff"
+    uplevel #0 $then
+}
+proc engine_low_fuel {} {
+    game_byte 15 60
+    set ::lamps {}
+    after time 1.4 engine_watch_lamp
+}
+proc engine_watch_lamp {} {
+    lappend ::lamps [expr {[engine_byte 8] & 2}]
+    if {[llength $::lamps] < 40} {after time 0.02 engine_watch_lamp;return}
+    require [expr {[lsearch $::lamps 0]>=0 && [lsearch $::lamps 2]>=0}] "Fuel lamp did not blink: $::lamps"
+    require [expr {[engine_byte 7]<=8}] "Fuel needle did not sweep down"
+    snap engine_low_fuel engine_dry
+}
+proc engine_dry {} {
+    game_byte 15 0
+    debug write memory $::addr(g_Engine) 1
+    after time 0.3 {require [expr {[engine_byte 3]==1}] "Dry tank did not fail the engine"; snap engine_failed engine_crash_wait}
+}
+proc engine_crash_wait {} {
+    set ::crash_deadline [expr {[machine_info time]+12}]
+    engine_wait_respawn
+}
+proc engine_wait_respawn {} {
+    require [expr {[machine_info time]<$::crash_deadline}] "Dead plane never crashed"
+    if {[view 2]!=2 || [word g_DisplayWorld]!=7032 || [word g_DisplayY]!=1160} {after time 0.05 engine_wait_respawn;return}
+    require [expr {[debug read memory [expr {$::addr(g_Game)+15}]]==192 && [debug read memory [expr {$::addr(g_Game)+14}]]==128 && [engine_byte 3]==0}] "Next plane not refuelled and repaired"
+    snap engine_next_plane {wait_lift_up {engine_takeoff engine_last_plane}}
+}
+proc engine_last_plane {} {
+    game_byte 7 1
+    game_byte 15 0
+    debug write memory $::addr(g_Engine) 1
+    set ::crash_deadline [expr {[machine_info time]+12}]
+    engine_wait_game_over
+}
+proc engine_wait_game_over {} {
+    require [expr {[machine_info time]<$::crash_deadline}] "Last plane never crashed"
+    if {[view 0]!=8} {after time 0.05 engine_wait_game_over;return}
+    require [expr {[view 2]==0}] "Game over with planes remaining"
+    snap game_over {pulse 7 128 {phase 0 {require [expr {[view 2]==3}] "Game over did not reset"; done}}}
 }
 proc done {} {
     require [expr {[value g_InputOverflow]==0}] "Input queue overflow in normal scenarios"
@@ -456,4 +514,4 @@ proc done {} {
 }
 debug watchpoint create -type write_mem -address $addr(g_MissedFrames) -command {guard missed_frame}
 after time 1 {guard ready}
-after time 240 {bgerror "P0 scenario timeout"}
+after time 330 {bgerror "P0 scenario timeout"}

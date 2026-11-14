@@ -59,7 +59,7 @@ class GameTests(unittest.TestCase):
         g=self.game();g.phase=3;g.progress.score=12345;g.progress.rank=3;g.progress.lives=2
         g.mission.objectives=17;g.sortie.stock=4;g.sortie.oil=90;g.sortie.fuel=23
         self.core.Game_OpenService(C.byref(g))
-        self.assertEqual((g.phase,g.sortie.stock,g.sortie.oil,g.sortie.fuel),(7,30,255,255))
+        self.assertEqual((g.phase,g.sortie.stock,g.sortie.oil,g.sortie.fuel),(7,30,128,192))
         self.action(g,4);self.assertEqual((g.phase,g.cursor,g.sortie.stock),(7,1,15))
         self.action(g,64);self.assertEqual((g.phase,g.notice),(7,1))
         self.action(g,1);self.assertEqual((g.cursor,g.sortie.stock),(0,30))

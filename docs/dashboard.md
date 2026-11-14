@@ -33,8 +33,9 @@ counters and OIL/FUEL legends used a home-made 5×7 face. Now:
   size.
 - **Original needles and lamp.** The 23 `ndl1`..`ndln` frames sweep from
   empty (lower left) to full (lower right). They are composed onto the dial
-  in hi-res and then reduced. The `olof` lamp lights bright red when a gauge
-  is critical (manual: "a red light blinks").
+  in hi-res and then reduced. A new plane reads OIL at `ndlg` and FUEL at
+  `ndln`, like the reference panel. The `olof` lamp blinks bright red when a
+  gauge is critical (manual: "a red light blinks").
 - **Original digits.** `wnum` is drawn on a double-pixel grid (12×7 hi-res,
   4-pixel strokes), so the 2:1 reduction gives lossless 6×7 digits with
   2-pixel strokes. Ammo and lives are black on white, score and kills white
@@ -49,13 +50,15 @@ counters and OIL/FUEL legends used a home-made 5×7 face. Now:
   atlas slots) at an even x, as HMMM requires.
 
 Every dynamic element is a byte-aligned rectangle with one pre-rendered copy
-per value, in banks 17 (ammo, lives, weapon, lamps, oil dial) and 18 (fuel
-dial). `Dashboard_Status` and `Dashboard_Gauges` copy a rectangle only when
-its value changes. A lamp lies inside its dial and is redrawn after it. It
-only switches at or below `LAMP_CRITICAL_FRAME`, where no needle reaches it;
-the converter checks this. The score and kills digits sit on a 7-pixel pitch,
-so neighbours share bytes. They will be plotted at runtime from the generated
-glyph rows when scoring arrives (P3); until then the panel shows 0 and 00.
+per value. Counters and the dark oil dial are in bank 17, the dark fuel dial
+in 18, and the lit-lamp dials in 19 (oil) and 20 (fuel). The needles cross
+the lamp at the warning thresholds, and the original draws the needle over
+the lamp, so every frame exists both dark and lit. `Dashboard_Status` and
+`Dashboard_Gauges` copy a rectangle only when its value changes, and at most
+one dial per rendered page (see [p2-engine.md](p2-engine.md)). The score and
+kills digits sit on a 7-pixel pitch, so neighbours share bytes. They will be
+plotted at runtime from the generated glyph rows when scoring arrives (P3);
+until then the panel shows 0 and 00.
 
 `convert_dashboard.layout()` is the single source of positions for the
 converter, the generated header (`HUD_*`) and both pixel oracles. The oracles

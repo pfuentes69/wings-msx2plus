@@ -136,7 +136,12 @@ def main():
               f'(worst: sim {totals_ms[-1][1]} + render {totals_ms[-1][2]})')
     if counted:
         print('\n== calls (gameplay only): name guns-idle guns-active')
-        for name in sorted({n for n, _ in counted if not n.startswith(('frame_cost_', 'rebuild_cost_', 'publish_tstates_'))}):
+        heavy = sorted(((int(n.split('_')[1]) + int(n.split('_')[2]), n) for (n, g), c in counted.items()
+                        if n.startswith('heavy_')), reverse=True)
+        if heavy:
+            print('\n== heaviest gameplay frames (sim+render ms, location):')
+            for total, n in heavy[:12]: print(f'{total:5d}  {n}')
+        for name in sorted({n for n, _ in counted if not n.startswith(('frame_cost_', 'rebuild_cost_', 'publish_tstates_', 'heavy_'))}):
             print(f'{name:28} {counted[(name, 0)]:8d} {counted[(name, 1)]:8d}')
 
 

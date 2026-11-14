@@ -31,16 +31,17 @@ when reported; this plan does not schedule another general dashboard art pass.
 | Build and platform | MSXgl/SDCC, 256 KiB ASCII8 ROM with banked code, native build/launcher, scripted openMSX | Physical hardware and final storage compatibility |
 | Asset research | 73 recovered files, 12 unpacked archives/1,049 records; aircraft, terrain, dashboard and carrier effects decoded as needed | Complete enemy/weapon/ship animation exports and semantic gameplay tables |
 | Mission data | All 15 map files parsed; a.map anchors, surface classes, depth and reset X recovered | Briefings, objectives, ranks, dynamic target/enemy initialization |
-| Flight and views | P1 heading/throttle, stall modes, coupled turns, bidirectional deck taxi with ground-turn artwork/end stops, and leftward deck takeoff; scrolling and close/distant views | Timed Amiga tuning, landing and aircraft collisions |
-| Scenery and dashboard | Original-art panels, waves, flag/radar/heave, altitude pilot profiles | Functional instruments, horizon/target distance, threat arrow, kill counter and damage/promotion semantics |
-| Weapons | P0 primary/secondary controls, 30/15/1 stocks, three lives; original per-pose cannon flash overlays with hit-scan surface strikes; sixteen bombs, held release at about four/second, and flat training impacts | Rockets/torpedoes, target damage, explosions and scoring |
+| Flight and views | P1 heading/throttle, stall modes, coupled turns, bidirectional deck taxi with ground-turn artwork/end stops, and leftward deck takeoff; hand-written Z80 flight step; scrolling and close/distant views | Timed Amiga tuning, engine-out physics, landing and aircraft collisions |
+| Scenery and dashboard | Original-art panels, waves, flag/radar/heave, altitude pilot profiles; dashboard recomposed at native dial size with original needles, warning lamps and digits; working OIL/FUEL gauges | Horizon/target distance, threat arrow, score/kill counters (P3), damage smoke |
+| Weapons | P0 primary/secondary controls, 30/15/1 stocks; original per-pose cannon flash overlays with hit-scan surface strikes; sixteen bombs, held release at about four/second, and flat training impacts | Rockets/torpedoes, target damage, explosions and scoring |
 | Audio | Original effects and music extracted/previewed | Runtime PSG/OPLL implementation and sound toggle |
-| Validation | 124 host tests; release passes 89 NTSC/89 PAL snapshots, weapon renderer passes 64/71 full-VRAM checks including pitched cannon fire and bomb salvos | Fresh raster and physical FS-A1WX acceptance; later manual gameplay gates |
+| Engine and lives (P2) | Executable-derived fuel burn, oil leak and engine failure; lamps and needle motion; crash costs a plane, next plane on deck, GAME OVER ([p2-engine](p2-engine.md)) | Engine-out physics, crash art, landing, hold service flow under P2 gates |
+| Validation | 150 host tests, including emulated-Z80 checks of the hand-written assembly; release passes 93 NTSC/93 PAL snapshots with full-dashboard checks in every phase; weapon renderer passes 64/68 full-VRAM checks | Physical FS-A1WX acceptance; later manual gameplay gates |
 
-Current presentation is 7.5 fps NTSC / 6.25 fps PAL at eight VBlanks per frame.
-Flight advances on a nominal 150 Hz clock; weapon simulation uses 25 Hz.
-P0 headless regular weapon redraw maxima are approximately 88.65/94.22 ms with no
-missed deadlines. Scale rebuilds still pause simulation for roughly 0.27–0.32 seconds
+Current presentation is 7.5 fps NTSC / 6.25 fps PAL at eight VBlanks per frame,
+including while firing. Flight advances on a nominal 150 Hz clock; weapon
+simulation uses 25 Hz; the original's logic ran at 12.5 Hz (12 steps per tick).
+See the measured [frame budget](frame-budget.md); there are no missed deadlines. Scale rebuilds still pause simulation for roughly 0.27–0.32 seconds
 per page. Those transitions are a prototype limitation, not recovered behavior.
 See [weapons measurements](combat-prototype.md) and [scenery notes](scenery-fidelity.md).
 

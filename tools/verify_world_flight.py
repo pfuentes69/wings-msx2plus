@@ -52,10 +52,12 @@ def gun_flash_shape(scene, frame, flash):
     return None
 
 
-def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0):
+def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0)):
     pixels = [list(background[row * background_width + camera:row * background_width + camera + 256]) for row in range(212)]
     from convert_dashboard import compose, waves, pilot_frame, layout, PILOT_WIDTH
-    dashboard = compose(ammo=stock, weapon=weapon, lives=lives)
+    # gauges: oil needle frame, fuel needle frame, lamp bits (1 oil, 2 fuel) as published.
+    dashboard = compose(ammo=stock, weapon=weapon, lives=lives, oil=gauges[0], fuel=gauges[1],
+                        oil_lamp=bool(gauges[2] & 1), fuel_lamp=bool(gauges[2] & 2))
     pixels = pixels[40:] + [list(dashboard[row * 256:(row + 1) * 256]) for row in range(40)]
     if scale == 1:
         for x in range(256):
