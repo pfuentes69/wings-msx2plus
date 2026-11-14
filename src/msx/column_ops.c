@@ -84,6 +84,7 @@ unsigned char Column_Equal(const unsigned short* a, const unsigned short* b) __n
  *         tile = decoded[0]; count = 1; color = g_MissionTileColors[tile]
  *         solid colour (color != 255): extend over equal tiles
  *         atlas tile: extend over tile+1, tile+2 ... up to g_MissionTileLimit
+ *         below the playfield (y % 256 >= 172, a close-view pan): cache only
  *         height = count * 8, cut at playfield row 172
  *         HMMV x, y, 8, height, color * 17   or
  *         HMMM tileX, tileY, x, y, 8, height
@@ -210,6 +211,11 @@ void Column_Runs(unsigned short* cache, const unsigned short* decoded) __naked
     column_runs_counted$:
         ld      a, b
         ld      (_s_Count), a
+        ; Panned below the playfield: update the cache, draw nothing.
+        ld      a, (_g_ColumnY)
+        cp      a, #172
+        jp      nc, column_runs_cache$
+        ld      a, b
         ; height = count * 8, cut at playfield row 172.
         add     a, a
         add     a, a

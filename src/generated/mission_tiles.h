@@ -12,3 +12,7 @@ extern const unsigned char g_MissionTileX[TERRAIN_TILE_COUNT], g_MissionTileLimi
 extern const unsigned short g_MissionTileY[TERRAIN_TILE_COUNT];
 extern const unsigned char g_TerrainPalette[32];
 extern const unsigned char g_MissionTileColors[TERRAIN_TILE_COUNT];
+/* Per 256 px of the close view: the first VRAM row (tile-aligned) with any
+ * scenery; above it the view is sky. A pan step moves only rows below it. */
+#define TERRAIN_BLOCKS 30
+extern const unsigned char g_TerrainBlockTop[TERRAIN_BLOCKS];

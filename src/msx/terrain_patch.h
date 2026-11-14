@@ -9,4 +9,6 @@ extern uint8_t g_TerrainDirty;
 /* Banked (segment 23). Show map column source in place of column; source ==
  * column restores the original from ROM. */
 void Terrain_Remap(uint16_t column, uint16_t source) WINGS_BANKED;
+/* Repaint tile rows first..last of the visible columns from the tile cache. */
+void Terrain_RepaintBand(uint8_t page, uint16_t camera, uint8_t first, uint8_t last) WINGS_BANKED;
 #endif

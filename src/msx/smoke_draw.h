@@ -22,5 +22,5 @@ void Smoke_ClearPages(void) WINGS_BANKED;
  * near-view top clamp; heave: the carrier's vertical scroll (screen
  * positions stay fixed, as for aircraft and weapons); limit: first row not
  * to draw. g_SmokeDrawn rows are screen rows (before the heave). */
-void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, u8 heave, i16 limit) WINGS_BANKED;
+void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WINGS_BANKED;
 #endif

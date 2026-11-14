@@ -66,6 +66,7 @@ def main():
         terrain_palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
         assert (out/f'{name}.palette').read_bytes()[:2]==terrain_palette[:2],(name,'sky colour 0',(out/f'{name}.palette').read_bytes()[:2])
         vram=(out/f'{name}.vram').read_bytes()
+        fine=struct.unpack('b',(out/f'{name}.fine').read_bytes())[0]   # -1..7
         scale,wave_view,pilot=(out/f'{name}.view').read_bytes()
         stage,depth,lift_tick=(out/f'{name}.lift').read_bytes()
         crew=(out/f'{name}.crew').read_bytes()[0]
@@ -89,11 +90,12 @@ def main():
                 gauges=tuple((out/f'{name}.gauges').read_bytes()),crash=(out/f'{name}.crash').read_bytes()[0],
                 wheel=wheel,gear=gear,deck_level=deck_level,rope=rope,facing_left=bool(flight[11]),
                 smoke=[(x & 0xFFFF,row,frame) for x,row,frame in smoke],
-                score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0])
+                score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0],fine=fine)
             for row in range(212):
+                if row==171:continue   # the split shows the dashboard's solid row
                 for col in range(8,256):
                     ring=col if row>=172 else (int(camera)+col)%256
-                    sy=row if row>=172 else vram_row(row,int(y),scale,int(heave))
+                    sy=row if row>=172 else vram_row(row,fine,int(heave))
                     value=vram[page*32768+sy*128+ring//2]
                     value=(value>>(0 if ring%2 else 4))&15
                     assert value==expected[row][col],(name,'composite',col,row,value,expected[row][col])
@@ -113,7 +115,7 @@ def main():
                 assert value==hud[row*256+col],(name,'dashboard',col,172+row,value,hud[row*256+col])
         palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
         # Host reconstruction verifies readable source pixels; it is not raster proof.
-        preview=vram_image(vram,palette,int(camera),page,int(heave),int(y),scale)
+        preview=vram_image(vram,palette,int(camera),page,int(heave),fine)
         preview.save(out/f'{name}-vram.png')
         shots,secondary,impacts=struct.unpack_from('<HHH',combat,152)
         snapshots[name]=dict(phase=game[0],rank=game[1],lives=game[2],weapon=game[3],stock=game[4],invert=game[5],
@@ -156,6 +158,11 @@ def main():
     assert snapshots['arrest']['rope'] in (0,1,2,3) and snapshots['landed']['rope']==255
     assert snapshots['engine_smoke']['smoke']>=2 and snapshots['start']['smoke']==0
     assert struct.unpack('<I',(out/'engine_smoke.score').read_bytes())[0]==20160
+    # Close-view pan steps over the carrier can run 1-3 VBlanks long (the
+    # block move covers the tower); they are counted apart from missed frames.
+    overruns=int(next(l.split()[1] for l in report.splitlines() if l.startswith('pan_overruns ')))
+    assert overruns<=16,('pan step overruns',overruns)
+    print(f'pan step overruns: {overruns}')
     # P3: the bombed hut at 2392 is wrecked (the one at 2712 and the dugouts
     # may be too): 150 a hut, 200 a manned dugout.
     island=(out/'island_bombed.island').read_bytes()

@@ -57,7 +57,8 @@ log:
 
 
 def model(cache, decoded, x, y, colors, limits, tile_x, tile_y):
-    """The C loop of Terrain_DrawColumn (decoded ends with the 65534 sentinel)."""
+    """The C loop of Terrain_DrawColumn (decoded ends with the 65534 sentinel).
+    Rows panned below the playfield (y % 256 >= 172) update the cache only."""
     decoded, cache = decoded + [65534], cache + [0x1234]
     log, row, i = [], 0, 0
     while True:
@@ -79,7 +80,9 @@ def model(cache, decoded, x, y, colors, limits, tile_x, tile_y):
         height = count * 8
         if y % 256 + height > 172:
             height = 172 - y % 256
-        if color != 255:
+        if y % 256 >= 172:
+            pass                      # panned below the playfield: cache only
+        elif color != 255:
             log.append(('HMMV', x, y, 8, height, color * 17))
         else:
             log.append(('HMMM', tile_x[tile], tile_y[tile], x, y, 8, height))
@@ -179,7 +182,7 @@ class ColumnRunsZ80Tests(unittest.TestCase):
             if trial % 10 == 0:
                 cache = list(decoded)                        # nothing to draw
             x = rng.randrange(0, 256, 8)
-            y = rng.choice([0, 256]) + 24
+            y = rng.choice([0, 256]) + 24 + 8 * rng.randrange(7)   # close-view pan 0..6 rows
             expected = model(list(cache), decoded, x, y, colors, limits, tile_x, tile_y)
             log, cache_out, y_out, ticks = self.run_column(cache, decoded, x, y, (colors, limits, tile_x, tile_y))
             self.assertEqual(log, expected[0], trial)

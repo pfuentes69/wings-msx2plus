@@ -10,12 +10,12 @@
 #include "msx/smoke_draw.h"
 #include "core/smoke.h"
 #include "core/island.h"
-#include "msx/terrain_patch.h"
 #include "core/flight_model.h"
 #include "msx/elevator.h"
 CarrierState g_Carrier;
 volatile u8 g_DisplayElevator;
 #endif
+#include "msx/terrain_patch.h"
 #include "generated/hellcat_frames.h"
 #ifndef WINGS_PRESENT_TICKS
 #define WINGS_PRESENT_TICKS 2
@@ -83,7 +83,10 @@ volatile u8 g_ScrollFine, g_ScrollCoarse, g_VerticalOffset, g_LineSplit;
  * g_FirstSplit/g_FirstState: the first line interrupt and the HBlank state
  * the VBlank ISR arms (2: top split pending). */
 volatile u8 g_PlayOffset, g_FirstSplit, g_FirstState;
+volatile u8 g_DisplayFine;   /* the published page's fine pan (verification) */
 static u8 s_ViewKey, s_RenderFine;   /* view: 8 distant, else pan rows / 8 */
+static int8_t s_PanStep;              /* tile rows the page moves this render */
+static u8 s_Repainted;                /* scenery under the elevator was repainted */
 static u8 s_RenderHeave;
 /* Far view x: an arithmetic shift, so the sea left of the map (negative x)
  * stays continuous with the map. */
@@ -104,6 +107,9 @@ volatile u8 g_DisplayPage, g_SelectedFrame, g_DisplayX, g_Turning;
 volatile u16 g_DisplayY;
 volatile u8 g_HoldFlight, g_RenderPage;
 volatile u16 g_DisplayCamera, g_DisplayWorld, g_MissedFrames;
+/* Close-view pan steps that ran past the frame deadline: counted apart
+ * from g_MissedFrames, like view changes (docs/altitude-view.md). */
+volatile u16 g_PanOverruns;
 /* Not static: the openMSX scenarios read the flight state (tools/p0_smoke.tcl). */
 WorldState s_World;
 static AircraftState s_Aircraft;
@@ -209,16 +215,31 @@ void VDP_HBlankHandler(void) __naked
     __asm
         ld a, (_g_DashboardSplit)
         cp #2
-        jr z, pan_split$
+        jp z, pan_split$
         or a
-        jr nz, dashboard_low_palette$
-        // The last play lines show the dashboard's top rows (VRAM 172..175,
-        // solid colour 1) through a +2 scroll: a dark separator that is
-        // never drawn into the play area, whatever its scroll.
+        jp nz, dashboard_low_palette$
+        // Requested on line 169: switch the scroll in the horizontal retrace
+        // before line 171 (S#2 bit 5, polled), so no line mixes two offsets.
+        // R23 = +1 shows the dashboard's solid top rows (VRAM 172..175,
+        // colour 1) from line 171: a separator never drawn into the play area.
         ld a, #2
+        out (0x99), a
+        ld a, #0x8f
+        out (0x99), a
+    split_wait_display$:
+        in a, (0x99)
+        and #0x20
+        jr nz, split_wait_display$
+    split_wait_retrace$:
+        in a, (0x99)
+        and #0x20
+        jr z, split_wait_retrace$
+        ld a, #1
         out (0x99), a
         ld a, #0x97
         out (0x99), a
+        // The rest happens on the solid rows: horizontal scroll, the second
+        // request (line 173 in the +1 scroll) and the upper colors.
         xor a
         out (0x99), a
         ld a, #0x9b
@@ -229,13 +250,10 @@ void VDP_HBlankHandler(void) __naked
         out (0x99), a
         ld a, #1
         ld (_g_DashboardSplit), a
-        // Line 172 in the +2 scroll; leave time to return before it.
         ld a, #174
         out (0x99), a
         ld a, #0x93
         out (0x99), a
-        // Stage the upper dashboard colors now, leaving a short final
-        // transfer before the icons at 183.
         ld a, #6
         out (0x99), a
         ld a, #0x90
@@ -278,7 +296,7 @@ void VDP_HBlankHandler(void) __naked
         out (0x99), a
         ret
     dashboard_low_palette$:
-        // Still on the solid top rows: back to the dashboard's own scroll.
+        // Still on the solid rows: back to the dashboard's own scroll.
         xor a
         out (0x99), a
         ld a, #0x97
@@ -308,11 +326,12 @@ static void PublishScroll(void)
     u8 scroll = s_RenderHeave + s_RenderFine;
     g_VerticalOffset = 0 - s_RenderHeave;
     g_PlayOffset = 0 - scroll;
-    g_LineSplit = scroll ? 169 - scroll : 170;
+    g_LineSplit = 169 - scroll;   /* line 169 in the play scroll */
     /* R19 counts scrolled lines: line s with the top region's -heave. */
-    g_FirstSplit = s_RenderFine ? s_RenderFine : g_LineSplit;
-    g_FirstState = s_RenderFine ? 2 : 0;
+    g_FirstSplit = (int8_t)s_RenderFine > 0 ? s_RenderFine : g_LineSplit;
+    g_FirstState = (int8_t)s_RenderFine > 0 ? 2 : 0;
     g_DashboardSplit = g_FirstState;
+    g_DisplayFine = s_RenderFine;
     VDP_SetVerticalOffset(g_VerticalOffset);
     VDP_SetHBlankLine(g_FirstSplit);
 }
@@ -325,6 +344,47 @@ static void WaitVBlank(void)
 static void DrawColumn(u16 world, u8 page)
 {
     Terrain_DrawColumn(world, page);
+}
+
+/* A close-view pan step of s_PanStep tile rows: move the page's scenery
+ * with a VDP block move instead of rebuilding it (a rebuild took 250+ ms),
+ * shift the tile cache to match, and redraw what the move exposed. */
+/* The first VRAM row with scenery on a page drawn at pan pan_rows: the
+ * visible 256-px blocks' tops (converter), lowered by the pan, and never
+ * below the wave strip (row 160). */
+static u8 SceneryTop(u16 camera, u8 pan_rows)
+{
+    int16_t left = (int16_t)(camera + 8) >> 8, right = (int16_t)(camera + 255) >> 8;
+    u8 top = 160, block;
+    if (left >= 0 && left < TERRAIN_BLOCKS && (block = g_TerrainBlockTop[left] + pan_rows) < top) top = block;
+    if (right >= 0 && right < TERRAIN_BLOCKS && (block = g_TerrainBlockTop[right] + pan_rows) < top) top = block;
+    return top;
+}
+
+static void PanStep(u8 page, u16 camera)
+{
+    u16 base = (u16)page * 256;
+    u8 rows, top = SceneryTop(camera, g_PanRows), old = g_PanRows;
+    g_PanRows = s_ViewKey << 3;
+    if (s_PanStep > 0)
+    {
+        /* Rows top..171-rows move down; above them the view is sky. */
+        rows = (u8)s_PanStep << 3;
+        if (top + rows < 172)
+            VDP_CommandYMMM(base + 171 - rows, 0, base + 171, 172 - rows - top, 0x08); /* bottom up */
+        VDP_CommandHMMV(0, base + top, 256, top + rows < 172 ? rows : 172 - top, 0);
+        /* Waves drawn at no pan moved into the bottom tile row. */
+        if (!old) Terrain_RepaintBand(page, camera, 18 - s_ViewKey, 18 - s_ViewKey);
+    }
+    else
+    {
+        /* Rows top..171 move up; the cache (map rows) already knows what
+         * comes up from below: repaint it, the last row moved only half in. */
+        rows = (u8)(-s_PanStep) << 3;
+        VDP_CommandYMMM(base + top, 0, base + top - rows, 172 - top, 0);
+        Terrain_RepaintBand(page, camera, TERRAIN_MAP_ROWS - 1 + s_PanStep - s_ViewKey, TERRAIN_MAP_ROWS - 1 - s_ViewKey);
+    }
+    s_PageScale[page] = s_ViewKey;
 }
 
 /* Every column a page shows from this camera (unchanged ones cost a check). */
@@ -524,7 +584,7 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     }
     else
 #endif
-    dy -= s_RenderHeave + s_RenderFine;
+    dy -= s_RenderHeave + (int8_t)s_RenderFine;
 #ifdef WINGS_P1_FLIGHT
     if (g_Carrier.stage != CARRIER_DECK) limit = CARRIER_WELL_BOTTOM;
 #endif
@@ -591,7 +651,16 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     u16 previous, next;
     g_RenderPage = page;
     g_ViewChange = s_PageScale[page] != s_ViewKey;
-    g_PanRows = s_ViewKey == 8 ? 0 : s_ViewKey << 3;
+    s_PanStep = 0;
+    if (g_ViewChange && s_PageScale[page] < 8 && s_ViewKey < 8)
+    {
+        /* Close view to close view: a pan step of up to 3 tile rows moves
+         * the page instead of rebuilding it. */
+        int8_t step = (int8_t)s_ViewKey - (int8_t)s_PageScale[page];
+        if (step >= -3 && step <= 3) { s_PanStep = step; g_ViewChange = 0; }
+    }
+    /* Restores see the page as drawn (its old pan); PanStep moves it on. */
+    g_PanRows = !g_ViewChange && s_PageScale[page] < 8 ? s_PageScale[page] << 3 : (s_ViewKey == 8 ? 0 : s_ViewKey << 3);
     g_Rendering = 1;
     if (g_ViewChange)
     {
@@ -613,6 +682,9 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
      * not know about it, so scrolled-in columns must see the clean sky. */
     s_Smoked = Smoke_Restore(page, g_ViewChange, camera);
 #endif
+    s_Repainted = 0;
+    if (s_PanStep) { PanStep(page, camera); s_Repainted = 1; }
+    g_PanRows = s_ViewKey == 8 ? 0 : s_ViewKey << 3;
     /* Signed differences: the camera may cross 0 into the open sea. */
     if ((int16_t)(camera - s_Camera[page]) > 0)
     {
@@ -644,10 +716,11 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
         DrawView(camera, page);
     }
 #endif
+    /* The elevator is redrawn only when something repainted under it. */
     if (!g_TerrainFar)
     {
 #ifdef WINGS_P1_FLIGHT
-        Elevator_Draw(page,camera,g_Carrier.depth,g_ViewChange || s_Smoked);
+        Elevator_Draw(page,camera,g_Carrier.depth,g_ViewChange || s_Smoked || s_Repainted);
 #endif
         Ship_Draw(page, camera);
 #ifdef WINGS_P1_FLIGHT
@@ -660,7 +733,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
      * top rows; the smoke follows it down by the same amount. */
     Smoke_Draw(page, camera, g_TerrainFar,
                !g_TerrainFar && WINGS_FLIGHT_MAX_Y - y > 131 ? (int16_t)(WINGS_FLIGHT_MAX_Y - y) - 131 : 0,
-               s_RenderHeave + s_RenderFine, g_Carrier.stage != CARRIER_DECK ? CARRIER_WELL_BOTTOM : 172);
+               (int8_t)(s_RenderHeave + (int8_t)s_RenderFine), g_Carrier.stage != CARRIER_DECK ? CARRIER_WELL_BOTTOM : 172);
     s_RenderSmokePage = page;
 #endif
     DrawAircraft(page, frame, world, y, camera);
@@ -847,7 +920,7 @@ void main(void)
     u8 page, frame, steps, step, input, tick, turn, held = 0;
     u8 base_steps, present_ticks, core_phase = 0;
     g_Ready = g_Rendering = g_FramePublished = g_HoldFlight = 0;
-    g_MissedFrames = 0;
+    g_MissedFrames = g_PanOverruns = 0;
     g_InputEnabled=0; g_InputInvert=g_InputOverflow=0;
     Controls_Reset(&g_Controls); s_LastControl=0; s_UiDirty=1;
     Game_Reset(&g_Game);
@@ -1090,7 +1163,13 @@ advance_clocks:
         s_RenderHeave = !g_TerrainFar && (u16)(camera + 256) > 6592 && camera < 7368 ? g_ShipHeave : 0;
         { int16_t altitude = (int16_t)(WINGS_FLIGHT_MAX_Y - y);
           u8 pan = !g_TerrainFar && altitude > 131 ? (u8)(altitude - 131) : 0;  /* original 0x26e */
-          s_ViewKey = g_TerrainFar ? 8 : pan >> 3; s_RenderFine = pan & 7; }
+          /* Tile rows (software) plus a fine scroll of -1..7 px (hardware):
+           * a plane holding height on a row boundary keeps its tile rows
+           * (at -1 the last play line shows terrain row 171, still valid). */
+          if (g_TerrainFar) s_ViewKey = 8;
+          else if (s_ViewKey == 8 || pan + 1 < (u8)(s_ViewKey << 3) || pan - (s_ViewKey << 3) > 7)
+              s_ViewKey = pan >> 3;
+          s_RenderFine = g_TerrainFar ? 0 : (u8)(pan - (s_ViewKey << 3)); }
 #ifdef WINGS_P1_FLIGHT
         s_CarrierView = !g_TerrainFar && (u16)(camera + 256) > 6592 && camera < 7368;
 #endif
@@ -1135,7 +1214,9 @@ advance_clocks:
             if ((u8)(g_VBlankTicks - tick) > present_ticks || !(VDP_ReadStatus(2) & 64))
             {
                 if (!g_ViewChange && g_Game.phase==GAME_PLAY)
-                ++g_MissedFrames;
+                {
+                    if (s_PanStep) ++g_PanOverruns; else ++g_MissedFrames;
+                }
                 WaitVBlank();
             }
         }

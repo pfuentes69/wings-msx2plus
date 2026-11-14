@@ -49,7 +49,7 @@ static void RepaintRows(u8 page, u16 world, u8 first, u8 last)
     s_Stale[TERRAIN_MAP_ROWS] = 65535u;
     for (row = first; row <= last; ++row) s_Stale[row] = 65535u;
     g_ColumnX = world & 255;
-    g_ColumnY = (u16)page * 256 + 24;
+    g_ColumnY = (u16)page * 256 + 24 + g_PanRows;   /* map rows, drawn at the pan */
     Column_Runs(s_Stale, s_Rows);
 }
 
@@ -77,7 +77,7 @@ u8 Smoke_Restore(u8 page, u8 rebuilt, u16 camera) WINGS_BANKED
     u16 column;
     u8 i, elevator = 0, first, last, n = s_OldCount[page];
     Rect* r = s_Old[page];
-    i16 left, right;
+    i16 left, right, top = TERRAIN_TOP + g_PanRows;   /* VRAM row of map row 0 */
     (void)camera;
     s_OldCount[page] = 0;
     if (rebuilt) return 0;
@@ -86,14 +86,14 @@ u8 Smoke_Restore(u8 page, u8 rebuilt, u16 camera) WINGS_BANKED
         /* The whole rectangle, even if the camera has since moved: the
          * page's ring still holds the pixels there. */
         left = r->left; right = r->right;
-        if (r->bottom <= TERRAIN_TOP) { SkyFill(page, left, right, r->top, r->bottom); continue; }
-        first = (u8)(((r->top < TERRAIN_TOP ? TERRAIN_TOP : r->top) - TERRAIN_TOP) >> 3);
-        last = (u8)((r->bottom - 1 - TERRAIN_TOP) >> 3);
+        if (r->bottom <= top) { SkyFill(page, left, right, r->top, r->bottom); continue; }
+        first = (u8)(((r->top < top ? top : r->top) - top) >> 3);
+        last = (u8)((r->bottom - 1 - top) >> 3);
         /* Over plain sky (the usual case) one fill erases the puff. */
         for (column = (u16)(left & ~7); (i16)column < right; column += 8)
             if (!SkyRows(page, column, first, last)) break;
         if ((i16)column >= right) { SkyFill(page, left, right, r->top, r->bottom); continue; }
-        if (r->top < TERRAIN_TOP) SkyFill(page, left, right, r->top, TERRAIN_TOP);
+        if (r->top < top) SkyFill(page, left, right, r->top, top);
         if (!g_TerrainFar && right > ELEVATOR_LEFT && left < ELEVATOR_RIGHT) elevator = 1;
         /* Otherwise repaint the tiles under it from the page's tile cache. */
         for (column = (u16)(left & ~7); (i16)column < right; column += 8)
@@ -129,7 +129,7 @@ static void Piece(const AircraftShape* piece)
     }
 }
 
-void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, u8 heave, i16 limit) WINGS_BANKED
+void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WINGS_BANKED
 {
     const SmokePuff* p = g_Smoke;
     const signed char* box;

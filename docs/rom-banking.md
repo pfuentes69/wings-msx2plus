@@ -31,12 +31,12 @@ Measured release layout (close-view pan, 2026-11-14):
 
 | Area | Used | Free |
 | --- | --- | --- |
-| Resident 4000h–9FFFh | 21,703 bytes | 2,873 of 24,576 |
+| Resident 4000h–9FFFh | 22,682 bytes | 1,894 of 24,576 |
 | Segment 3 | 7,917 bytes | 275 |
 | Segment 16 | 6,930 bytes | 1,262 |
 | Segment 21 | 5,824 bytes | 2,368 |
-| Segment 22 | 3,735 bytes | 4,457 |
-| Segment 23 | 4,035 bytes | 4,157 |
+| Segment 22 | 3,831 bytes | 4,361 |
+| Segment 23 | 5,136 bytes | 3,056 |
 
 The debug profile is smaller (20,917 resident bytes; its segment 16 omits the
 P1 elevator). Every build prints these figures in its post-build step.

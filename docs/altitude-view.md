@@ -84,34 +84,56 @@ above it.
 
 The port now pans by p = altitude − 131 (0..55) in two parts.
 
-- **Whole tile rows, in software (`g_PanRows` = 8 × (p / 8)).** Every
-  scenery layer is drawn that many rows lower. The terrain shifts each
-  decoded column down by p / 8 sky tiles before the tile-cache diff, and
-  the column cache key carries the shift in its top 3 bits. The other
-  layers add `g_PanRows` to their rows: the ship, signalmen, elevator
-  and well edge (clipped at row 172), bombs and smoke. Overlay rows
-  marked for repaint move with it too. Waves are skipped once the strip
-  (rows 161..171) is a tile row or more below the view. A change of p / 8
-  rebuilds that page like a view change, at most 7 times across the band.
-- **The last 0..7 px, in hardware (`s_RenderFine`).** R23 already scrolls
-  the scene by the carrier's heave. Wrapped top rows would show VRAM rows
-  248..255, which hold cached wave frames, so the top lines keep the
-  heave-only offset (they show sky). A line interrupt at line s = heave +
-  fine (R19 = fine, counted in the top offset) switches to the full offset
-  (`pan_split$` in `VDP_HBlankHandler`). The plane, drawn at its screen
-  row, subtracts the full scroll.
+- **Whole tile rows, in software (`g_PanRows`, a multiple of 8).** The
+  tile cache keeps map rows, independent of the pan, and terrain columns
+  are drawn `g_PanRows` lower. The run loop (`Column_Runs`) still caches
+  rows pushed below row 172 but draws nothing for them. The other layers
+  add `g_PanRows` to their rows: the ship, signalmen, elevator and well
+  edge (clipped at 172), bombs and smoke. Waves are skipped once the strip
+  (rows 161..171) is a tile row or more below the view.
+- **A pan step** (the tile rows change by up to 3) moves the page instead of
+  rebuilding it (`PanStep`); a rebuild took 250–300 ms. A VDP block move
+  (YMMM) shifts the rows below the scenery's top, which comes from
+  `g_TerrainBlockTop`: the converter's first scenery row per 256 px. It is
+  40 at the carrier's tower, 120–160 over the islands, and none over open
+  sea. Then:
+  - **Step down:** the rows uncovered above are filled with sky.
+  - **Step up:** the rows uncovered at the bottom are painted from the cache
+    (`Terrain_RepaintBand`). That needs no map decode: solid runs merge,
+    and a row of one tile is painted once and doubled.
+  - **Order:** all this happens after the restores and before the
+    scrolled-in columns are drawn, so the cache matches VRAM when they are
+    compared.
+- **The fine part, in hardware (`s_RenderFine`, −1..7 px).** R23 already
+  scrolls the scene by the carrier's heave. Wrapped top rows would show the
+  cached wave frames in VRAM rows 243..253. So the top lines keep the
+  heave-only offset (they show sky), and a line interrupt at line s = heave
+  + fine (R19 = fine) switches to the full offset (`pan_split$`). The tile
+  rows change only when the fine part leaves −1..7. A plane holding height
+  on a row boundary therefore doesn't step every frame. At −1 the last
+  play line shows terrain row 171.
 
 The bottom split no longer relies on a dark guard line drawn into the play
 area. That line moved with the scroll and left stale rows when the scroll
-shrank, and repainting them cost about 40 ms a frame. Instead, the first
-dashboard interrupt sets R23 = +2: the last play lines then show the
-dashboard's top rows, VRAM 172..175, which are solid colour 1. The second
-interrupt, at line 172, restores R23 = 0 and finishes the palette. The
-split is two-stage in every view now.
+shrank. The first dashboard interrupt is requested on line 169 and polls
+the horizontal-retrace flag (S#2 bit 5). R23 = +1 is written in the retrace
+before line 171, so no line mixes two scrolls. From line 171 the screen shows
+the dashboard's top rows, VRAM 172..175, which are solid colour 1. The
+second interrupt, anywhere in those dark lines, restores R23 = 0 and
+finishes the palette.
+
+**Timing.** Steps over open sea and the islands fit the 8-VBlank frame. Over
+the carrier the block move spans the tower, about 130 rows. There a step can
+run 1–3 VBlanks long: up to about 185 ms against the 133 ms NTSC frame, about
+10 frames on a descent through the band. Those frames are counted in
+`g_PanOverruns`, apart from missed frames, as view changes are. The emulator
+run reports them and allows at most 16 (8 NTSC, 4 PAL now).
 
 Verification: `tools/p0_smoke.tcl` climbs into the distant view after the
 island run. It comes down through the band over the carrier with a bomb
 falling, and captures `pan_high` (pan 45..55) and `pan_mid` (17..29). The
-cannon tests also fly in the band (pans 7..38). `verify_world_flight.pan_of`,
-`vram_row` and `split_line` model the pan, the two scroll regions and the
-split in the oracle. NTSC and PAL run with no missed frame deadline.
+cannon tests also fly in the band. Each snapshot dumps the published fine
+scroll (`g_DisplayFine`). `verify_world_flight.pan_of` and `vram_row` model
+the pan and the two scroll regions in the oracle, which skips line 171 (the
+split's dark row). `tests/test_column_runs_z80.py` covers the run loop with
+pans of 0..6 rows.
