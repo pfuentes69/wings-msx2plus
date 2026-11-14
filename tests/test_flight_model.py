@@ -52,6 +52,7 @@ class FlightModelTests(unittest.TestCase):
         cls.core.Flight_GearDown.restype = C.c_uint8
         cls.core.Aircraft_Wheel.argtypes = [C.POINTER(Flight)]
         cls.core.Aircraft_Wheel.restype = C.c_uint8
+        cls.core.Flight_EngineOut.argtypes = [C.POINTER(Flight)]
         cls.meta = json.loads((ROOT / 'assets_msx/hellcat/manifest.json').read_text())['animation']
         cls.names = {f['id']: f['name'] for f in cls.meta['frames']}
 
@@ -334,6 +335,39 @@ class FlightModelTests(unittest.TestCase):
         w.flight.turn, w.flight.turn_clock = 8, 2
         self.ticks(w, 0, 3)
         self.assertEqual(w.flight.climb, -450)
+
+    # Engine failure (original mode 4, 0xafba)
+
+    def test_a_dead_engine_falls_keeping_its_horizontal_step(self):
+        w = self.air(speed=1200)
+        self.ticks(w, 0)                       # level: 12 px a tick (speed 1196)
+        self.core.Flight_EngineOut(C.byref(w.flight))
+        self.assertEqual((w.flight.mode, w.flight.speed, w.flight.path), (3, 1200, 0))
+        steps, xs = [], []
+        for _ in range(14):
+            y0, x0 = w.flight.y, w.x
+            self.ticks(w, LEFT | UP)           # no control
+            steps.append((w.flight.y - y0) // 256)
+            xs.append((x0 - w.x) // 256)
+        self.assertEqual(steps[:11], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10])
+        self.assertEqual(set(xs), {12})
+        self.assertEqual((w.flight.climb, w.flight.frame), (-3100, 8))   # nose down, pose 9
+
+    def test_a_falling_plane_finishes_or_unwinds_its_turn(self):
+        w = self.air(speed=1000)
+        w.flight.turn = 16
+        self.core.Flight_EngineOut(C.byref(w.flight))
+        self.assertEqual([self.ticks(w, 0).flight.turn for _ in range(6)], [18, 20, 22, 24, 0, 0])
+        w = self.air(speed=1000)
+        w.flight.turn = 5
+        self.core.Flight_EngineOut(C.byref(w.flight))
+        self.assertEqual([self.ticks(w, 0).flight.turn for _ in range(3)], [3, 1, 0])
+
+    def test_a_dead_engine_has_no_gear_or_wheels(self):
+        w = self.air(x=7300, altitude=100)
+        self.core.Flight_EngineOut(C.byref(w.flight))
+        self.ticks(w, 0)
+        self.assertEqual((self.core.Flight_GearDown(C.byref(w.flight), 7300), self.wheel(w)), (0, 255))
 
     # Open sea beyond the map (the original never limits x)
 

@@ -48,9 +48,6 @@ in frames over the carrier.
 **Provisional:**
 
 - One original altitude unit is taken as one pixel (altitude = 1200 − y).
-- After engine failure the plane noses down (forced Down input). The
-  original hands the descent to its crash routine; its arithmetic is not
-  mapped yet.
 - The crash art frame timing (spread evenly over the 1-second hold) is an
   MSX choice.
 

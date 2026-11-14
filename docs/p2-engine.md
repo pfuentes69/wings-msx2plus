@@ -10,7 +10,7 @@ Implemented 2026-11-14. The evidence is in
 | New plane / hold service | fuel 192, oil 128 | Executable (plane init 0xb7ec) |
 | Fuel burn | 1 unit per 28 ticks of flight: a full tank lasts ~7.2 min | Executable (0x1386, 0xb8b4) |
 | Oil | stays at 128 until damaged; then leaks 1 per 80 ticks (6.4 s) | Executable (0x1386) |
-| Engine failure | oil < 96 or the tank runs dry; no power, no guns | Executable (0xc6a0, mode 4) |
+| Engine failure | oil < 96 or the tank runs dry; no power, no guns; the plane falls as the original's does (see [flight-model.md](flight-model.md)) | Executable (0xc6a0, mode 4, 0xafba) |
 | OIL needle | `(oil − 96) / 2`; +6 frames under throttle (the flight model's flag: pushing the way you fly, or Down alone) | Executable (0xee5e, 0xbff4) |
 | FUEL needle | `fuel / 8`, at most frame 22; twitches at empty | Executable (0xef2a) |
 | Lamps | oil < 116 and fuel ≤ 64; the original blink counters (10 and 8) | Executable |
@@ -26,8 +26,6 @@ warnings are active in flight and on deck. The hold refills through
 
 **Provisional, until the original is mapped further or observed:**
 
-- After failure the plane noses down (forced dive input). The original's
-  engine-out physics (mode 4) is not recovered.
 - The crash happens when the dead plane reaches sea level, followed by a
   1-second hold. Splash/explosion art, deck collisions and crashing into the
   sea under power are P2 part 2 (landing and collisions).

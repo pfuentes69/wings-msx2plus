@@ -69,9 +69,10 @@ def main():
         projectiles=[]
         if game[0]==3:
             projectiles=[dict(zip(('x','y','vx','vy','life','kind'),struct.unpack_from('<HHbbBB',combat,i*8))) for i in range(18)]
-            # On the deck (flight byte 12: 0 deck, 2 cable arrest) or riding the elevator.
+            # On the deck (flight byte 12: 0 deck, 2 cable arrest; 1 flying, 3 engine
+            # out) or riding the elevator.
             flight=(out/f'{name}.flight').read_bytes()
-            ground=stage!=1 or flight[12]!=1
+            ground=stage!=1 or flight[12] in (0,2)
             # Level on the deck (rolling fast, byte 17, or held by a cable).
             deck_level=stage==1 and (flight[12]==2 or (flight[12]==0 and flight[17]!=0))
             wheel,gear,rope=(out/f'{name}.wheel').read_bytes()

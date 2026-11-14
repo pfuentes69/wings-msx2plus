@@ -9,6 +9,7 @@
 #include "msx/rope.h"
 #include "msx/smoke_draw.h"
 #include "core/smoke.h"
+#include "core/flight_model.h"
 #include "msx/elevator.h"
 CarrierState g_Carrier;
 volatile u8 g_DisplayElevator;
@@ -928,7 +929,7 @@ void main(void)
                         ((s_Latest & ACTION_SECONDARY) ? COMBAT_BOMB : 0);
 #ifdef WINGS_P1_FLIGHT
                 if (reset_weapons) steps=0; /* Publish the fully lowered platform first. */
-                if (s_World.flight.mode==FLIGHT_AIRBORNE && s_World.flight.y>LANDING_CHECK_Y)
+                if (!FLIGHT_ON_DECK(&s_World.flight) && s_World.flight.y>LANDING_CHECK_Y)
                     Landing_Prepare(&s_World.flight,s_World.x>>8,&s_ContactBottom,&s_ContactSurface);
                 else s_ContactBottom=0, s_ContactSurface=0;
 #endif
@@ -955,14 +956,14 @@ void main(void)
                         if (++s_EngineSteps==ENGINE_TICK_STEPS)
                         {
                             s_EngineSteps=0;
-                            Engine_Tick(&g_Engine,&g_Game.sortie,s_World.flight.mode==FLIGHT_AIRBORNE,
+                            Engine_Tick(&g_Engine,&g_Game.sortie,!FLIGHT_ON_DECK(&s_World.flight),
                                 s_World.flight.throttle,1);
                         }
                         if (g_Engine.failed)
                         {
-                            /* No power and no guns (original mode 4): the plane noses down.
-                             * Provisional until the original's engine-out physics is mapped. */
-                            input=FLIGHT_DOWN; weapons=0;
+                            /* No power and no guns (original mode 4): the plane falls. */
+                            if (s_World.flight.mode==FLIGHT_AIRBORNE) Flight_EngineOut(&s_World.flight);
+                            input=0; weapons=0;
                             g_Combat.primary_pending=g_Combat.secondary_pending=0;
                         }
 #endif
@@ -971,7 +972,7 @@ void main(void)
                         /* Contact needs the plane near the surface; skip the call otherwise
                          * (nearly every step), which keeps it off the frame budget. */
                         contact=LANDING_NONE;
-                        if (s_World.flight.mode==FLIGHT_AIRBORNE)
+                        if (!FLIGHT_ON_DECK(&s_World.flight))
                         {
                             /* Cheap gate on the frame's cached bottom/surface; the exact
                              * (banked) check runs only when the plane may be touching. */

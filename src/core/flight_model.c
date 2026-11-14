@@ -23,6 +23,8 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_FLIGHT)
 #define DECK_ROLL_FAST 600
 #define DECK_BRAKE 8
 #define ARREST_BRAKE 110
+#define DEAD_CLIMB_MIN (-3100)  /* the falling plane's nose settles at -31 degrees */
+#define DEAD_FALL_MAX (-10)     /* terminal vertical step, px per tick */
 
 /* sin(degree) x 10000, 0..90 (-$548a). Entries 1..4 are all sin 4 degrees. */
 static const uint16_t s_Sin[91] = {
@@ -282,14 +284,50 @@ static void DeckControls(FlightState* f, uint8_t input)
     if (f->speed > SPEED_MAX) f->speed = SPEED_MAX;
 }
 
+void Flight_EngineOut(FlightState* f) WINGS_BANKED
+{
+    /* c6a0: speed = last horizontal step x 100; the last vertical step
+     * carries on (kept in path). This tick's per-step motion holds both. */
+    int16_t dx = f->vx * (int16_t)FLIGHT_TICK_STEPS + f->xrem;
+    int16_t dy = f->vy * (int16_t)FLIGHT_TICK_STEPS + f->yrem;
+    if (f->mode != FLIGHT_AIRBORNE) return;
+    if (dx < 0) dx = -dx;
+    f->speed = (dx / 256) * 100;
+    f->path = -(dy / 256);
+    f->mode = FLIGHT_DEAD;
+    f->landing = f->throttle = 0;
+}
+
+/* 0xafba while falling: the nose drops 6 degrees a tick to -31, an
+ * unfinished turn resolves 2 frames a tick, gravity takes 1 px a tick off
+ * the vertical step down to -10, and the horizontal step stays. */
+static void Fall(FlightState* f, uint16_t world)
+{
+    int16_t hstep = f->speed / 100;
+    f->climb -= ACCEL;
+    if (f->climb < DEAD_CLIMB_MIN) f->climb = DEAD_CLIMB_MIN;
+    if (f->turn)
+    {
+        if (f->turn < 14) f->turn = f->turn > 2 ? f->turn - 2 : 0;
+        else
+        {
+            if (f->turn == 14) f->facing_left ^= 1;
+            f->turn += 2;
+            if (f->turn > 25) f->turn = 0;
+        }
+    }
+    if (--f->path < DEAD_FALL_MAX) f->path = DEAD_FALL_MAX;
+    SetMotion(f, world, f->facing_left ? -hstep : hstep, -f->path);
+}
+
 void Flight_Tick(FlightState* f, uint16_t world, uint8_t input) WINGS_BANKED
 {
     if ((input & (FLIGHT_UP | FLIGHT_DOWN)) == (FLIGHT_UP | FLIGHT_DOWN)) input &= ~FLIGHT_UP; /* DOWN wins */
-    if (f->mode == FLIGHT_AIRBORNE)
+    if (f->mode == FLIGHT_AIRBORNE || f->mode == FLIGHT_DEAD)
     {
         uint8_t index;
-        AirControls(f, input);
-        Integrate(f, input, world);
+        if (f->mode == FLIGHT_DEAD) Fall(f, world);
+        else { AirControls(f, input); Integrate(f, input, world); }
         index = (uint8_t)((f->climb + 5000) / 500);
         f->frame = f->turn ? 4 : s_Pose[index > 17 ? 17 : index] - 1;
         return;

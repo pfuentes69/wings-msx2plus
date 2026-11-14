@@ -66,6 +66,18 @@ past both ends of the map. The port does the same:
   texture phase taken from the signed position.
 - Guns and bombs work only over the map. Beyond it there is nothing to hit.
 
+## Engine failure
+
+When the engine fails (original mode 4, 0xafba) the plane gets no more
+control: it keeps its last horizontal step and falls. Each tick:
+
+- the vertical step loses 1 px, down to −10 px;
+- the nose drops 6°, to −31°;
+- an unfinished turn moves 2 frames toward its nearer end.
+
+The gear comes up and there are no guns. It hits the sea, an island or the
+deck under the existing crash rules ([p2-landing.md](p2-landing.md)).
+
 ## On the deck
 
 | Input | Effect per tick |
@@ -112,7 +124,6 @@ The contact rules are in [p2-landing.md](p2-landing.md).
 | Deck-turn poses | The original's 6 deck frames map onto the existing 5-step taxi sequence |
 | Leaving over a deck end | The plane may sink 4 px over the last 16 px without crashing. The original's bow and stern geometry is not mapped |
 | Turn pause while a weapon is in flight (0xaa6e) | Not reproduced |
-| Engine-out descent (mode 4) | Still a forced Down input; the original's crash routine is not mapped |
 | Arithmetic | The original uses fast floating point; the port uses scaled integers (sin × 10000, turn × 100) with exact quotients. Results agree except where a value lands exactly on a whole pixel and the original's rounding differs |
 
 ## Cost

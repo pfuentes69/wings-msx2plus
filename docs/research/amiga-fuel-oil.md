@@ -83,11 +83,12 @@ plane at full oil and fuel, not two arbitrary needle positions.
 | --- | --- | --- |
 | 0xc74e sets `-$5bd6` = 25 and `-$5bd4` = 960, read only by the sound routine at 0x2132 | Engine sound: target volume and base pitch. Pitch rises with speed (`>>7`) and altitude (`>>4`); a failed engine changes the note. Other modes use 40/808, 49/385, 64/335 | Established |
 | 0xc74e clears `-$3216` (throttle) and `-$5c94` (fire); runs 0xafba every tick | No power or guns; the descent and impact are handled by the crash routine, not by the mode-0 flight controls | Established control flow |
-| 0xafba tests the surface under the plane (0xcb74, 0xcb34) | Three outcomes (sea, carrier, island). On impact it zeroes speed and pose, clamps altitude to the surface, and continues the sequence | Control flow established; descent arithmetic not mapped |
+| 0xafba tests the surface under the plane (0xcb74, 0xcb34) | Three outcomes (sea, carrier, island). On impact it zeroes speed and pose, clamps altitude to the surface, and continues the sequence | Control flow established |
+| 0xc6a0 → mode 4: speed = last horizontal step (`$16`) × 100; 0xafba while falling (0xb340, 0xb35c, 0xb3cc) | Each tick: climb −600 down to −3100 (the nose settles at −31°); vertical step (`$18`) −1 down to −10, added to the altitude; x += speed / 100 × facing (the last horizontal step, no turn factor). An unfinished turn moves 2 frames a tick (0xb1bc: below 14 back toward 0, from 14 on to the end, the heading flipping at 14). Gear up (0xb45a). On the surface the plane slides, speed −85 a tick | Established |
 
 ## Not yet recovered
 
-Engine-out flight physics, crash and splash presentation, refill in the hold,
+Crash and splash presentation details, refill in the hold,
 what crashes on contact with the sea or deck, and which attackers cause each
 kind of damage.
 

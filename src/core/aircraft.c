@@ -108,7 +108,7 @@ void Aircraft_SyncFlight(AircraftState* state, const FlightState* flight, uint16
  * deck poses include their wheels). 255 when none. */
 uint8_t Aircraft_Wheel(const FlightState* flight)
 {
-    if (flight->turn || (flight->mode == FLIGHT_GROUND && !flight->fast_roll)) return 255;
+    if (flight->turn || flight->mode == FLIGHT_DEAD || (flight->mode == FLIGHT_GROUND && !flight->fast_roll)) return 255;
     return (flight->facing_left ? 10 : 0) + flight->frame;
 }
 #endif
