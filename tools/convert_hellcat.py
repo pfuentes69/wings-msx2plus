@@ -137,6 +137,85 @@ def gun_flash_assets(pixels):
     return records
 
 
+WHEEL_CELL = (6, 6)  # largest piece
+
+
+def wheel_blobs(color_map):
+    """The original landing-gear overlays wh01..wh14 split into small pieces.
+
+    The player renderer (0x0550) draws the wheel shape for the plane's pose
+    behind the plane (poses 1..10 right are wh01..wh0a, left wh0b..wh14) at
+    a vertical offset that slides 0..5 as the gear goes up or down. Each
+    sprite has about 20 pixels in two or three blobs; whole sprites (up to
+    28x23) do not fit the full atlas, so each blob (at most 6x6) gets its own
+    small rectangle.
+    Returns one list of (blob pixels, origin-relative x, y, width, height)
+    per sprite.
+    """
+    from decode_shapes import decode_record
+    root = Path(__file__).resolve().parents[1]
+    terrain = {int(k): v for k, v in json.loads(
+        (root / 'assets_msx/terrain/manifest.json').read_text())['source_to_msx_index'].items()}
+    sprites = []
+    for number in range(1, 21):
+        name = f'wh{number:02x}'
+        path = next((root / FLASH_SOURCE).glob(f'*_{name}.bin'))
+        indices, meta = decode_record(path.read_bytes())
+        width = meta['width']
+        ox, oy = meta['origin_candidate']
+        # Wheel greys follow the aircraft palette; the odd outline pixels the
+        # playfield mapping (as the cannon flash does).
+        colors = {(i % width, i // width): color_map.get(v, terrain[v]) for i, v in enumerate(indices) if v}
+        colors = {k: v for k, v in colors.items() if v}
+        pieces, todo = [], set(colors)
+        while todo:
+            stack = [todo.pop()]
+            blob = set(stack)
+            while stack:
+                x, y = stack.pop()
+                for q in ((x + dx, y + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)):
+                    if q in todo:
+                        todo.remove(q); blob.add(q); stack.append(q)
+            x0 = min(x for x, _ in blob)
+            y0 = min(y for _, y in blob)
+            w = max(x for x, _ in blob) - x0 + 1
+            h = max(y for _, y in blob) - y0 + 1
+            w += w & 1
+            if w > WHEEL_CELL[0] or h > WHEEL_CELL[1]:
+                raise ValueError(f'{name}: wheel piece exceeds its atlas cell')
+            crop = [colors.get((x0 + c, y0 + r), 0) if (x0 + c, y0 + r) in blob else 0
+                    for r in range(h) for c in range(w)]
+            pieces.append((name, crop, x0 - ox, y0 - oy, w, h))
+        pieces.sort(key=lambda piece: (piece[3], piece[2]))
+        sprites.append(pieces)
+    return sprites
+
+
+def wheel_assets(pixels, color_map, frames):
+    """Pack the wheel pieces into leftover atlas gaps (identical pieces shared)."""
+    from convert_dashboard import atlas_slots
+    sprites = wheel_blobs(color_map)
+    unique = {}
+    for pieces in sprites:
+        for name, crop, rx, ry, w, h in pieces:
+            unique.setdefault((w, h, bytes(crop)), len(unique))
+    keys = sorted(unique, key=unique.get)
+    cells = atlas_slots(27, True, True, True, True, frames=frames, reserve_wheels=[(w, h) for w, h, _ in keys])[-1]
+    stored = {}
+    for key, (x, y) in zip(keys, cells):
+        packed = pack_pixels(list(key[2]))
+        stored[key] = dict(atlas_x=x, atlas_y=y, data_offset=len(pixels), bytes=len(packed),
+                           packed_sha256=hashlib.sha256(packed).hexdigest())
+        pixels.extend(packed)
+    records, first = [], []
+    for pieces in sprites:
+        first.append(len(records))
+        for name, crop, rx, ry, w, h in pieces:
+            records.append(dict(name=name, dx=25 + rx, dy=16 + ry, width=w, height=h, **stored[(w, h, bytes(crop))]))
+    first.append(len(records))
+    return records, first, [list(c) for c in cells]
+
+
 CRASH_SOURCE = Path('reference_assets/unpacked_shapes/world')
 CRASH_EXPLOSION = tuple(f'exp{n}' for n in range(6))
 CRASH_SPLASH = tuple(f'spl{n}' for n in range(7))
@@ -280,6 +359,7 @@ def animation_assets(source, destination, base_manifest):
         record['streamed']=True
     flashes = gun_flash_assets(pixels)
     crashes, crash_host = crash_assets(pixels, records)
+    wheels, wheel_first, wheel_cells = wheel_assets(pixels, color_map, records[:53])
     pitch_left = [index['hc28' if n == 5 else f'hc{n:02x}-left'] for n in range(1, 11)]
     taxi = [index[name] for name in ('hcoc','hc1f-left','hc1e-left','hc1d-left','hc1c-left','hc1b','hc1c','hc1d','hc1e','hc1f','hc21')]
     # The original's air-turn shapes by turn frame 1..25 (DATA -$52ee facing
@@ -332,6 +412,15 @@ extern const AircraftShape g_GunFlash[GUN_FLASH_COUNT];
 #ifdef MISSION_TERRAIN
 extern const AircraftShape g_CrashShapes[{len(crashes)}];
 #endif
+/* Original landing-gear overlays (wh01..wh14) as small static atlas pieces:
+ * sprite = (left ? 10 : 0) + pitch pose 0..9; its pieces are
+ * g_WheelPieces[g_WheelFirst[sprite] .. g_WheelFirst[sprite + 1]). Drawn
+ * behind the plane, (5 - gear position) px higher while the gear moves. */
+#define WHEEL_PIECE_COUNT {len(wheels)}
+#ifdef MISSION_TERRAIN
+extern const AircraftShape g_WheelPieces[WHEEL_PIECE_COUNT];
+#endif
+extern const unsigned char g_WheelFirst[21];
 """
     code = '/* Generated by tools/convert_hellcat.py; do not edit. */\n#include "hellcat_frames.h"\n\n'
     # Palette bytes are generated by the legacy/reference conversion using the same source indices.
@@ -349,7 +438,9 @@ extern const AircraftShape g_CrashShapes[{len(crashes)}];
     code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in flashes) + '\n};\n#endif\n'
     code += f'#ifdef MISSION_TERRAIN\nconst AircraftShape g_CrashShapes[{len(crashes)}] = {{\n'
     code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in crashes) + '\n};\n#endif\n'
-    for symbol, table in [('g_PitchRight', pitch_right), ('g_PitchLeft', pitch_left),
+    code += f'#ifdef MISSION_TERRAIN\nconst AircraftShape g_WheelPieces[WHEEL_PIECE_COUNT] = {{\n'
+    code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in wheels) + '\n};\n#endif\n'
+    for symbol, table in [('g_WheelFirst', wheel_first), ('g_PitchRight', pitch_right), ('g_PitchLeft', pitch_left),
                           ('g_TurnLeftToRight', ltr), ('g_TurnRightToLeft', rtl),
                           ('g_GearFrame', [index['hc40'], index['hc41']]),
                           ('g_TailDownFrame', [index['hc21'], index['hcoc']]),
@@ -359,6 +450,7 @@ extern const AircraftShape g_CrashShapes[{len(crashes)}];
     metadata = dict(taxi_cache=taxi_cache, taxi_turn=taxi, taxi_artwork='Original front/right gear-down poses; four left-quarter views explicitly reflected. Five increments per quarter selected for MSX; exact original playback/timing unverified.', frames=records, pixel_bytes=len(pixels), reference_pivot=[25, 16],
         placement='logical position + dx/dy; signed source drawing origins preserved; X packed on even byte boundary',
         gear_frames=[index['hc40'], index['hc41']], tail_down_frames=[index['hc21'], index['hcoc']], evidence=facts, pitch_right=pitch_right, pitch_left=pitch_left, left_to_right=ltr, right_to_left=rtl,
+        wheels=wheels, wheel_first=wheel_first, wheel_cell=WHEEL_CELL,
         gun_flash=flashes, gun_flash_slots=FLASH_SLOTS, gun_flash_slot_size=FLASH_SLOT_SIZE,
         crash=crashes, crash_host_shape=crash_host, crash_evidence='world.shp exp0..exp5 / spl0..spl6; crash outcome by surface at 0xafba (docs/research/amiga-fuel-oil.md)',
         gun_flash_order='variant (fa, fb) * 20 + (left ? 10 : 0) + pitch pose 0..9',

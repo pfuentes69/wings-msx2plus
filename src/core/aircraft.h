@@ -9,6 +9,8 @@ typedef struct AircraftState {
 
 #ifdef WINGS_P1_FLIGHT
 void Aircraft_SyncFlight(AircraftState* state, const FlightState* flight, uint16_t world);
+/* Landing-gear overlay sprite (g_WheelFirst index) for the pose, or 255. */
+uint8_t Aircraft_Wheel(const FlightState* flight);
 #endif
 
 void Aircraft_Reset(AircraftState* state);

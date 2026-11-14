@@ -50,6 +50,8 @@ class FlightModelTests(unittest.TestCase):
         cls.core.Aircraft_SyncFlight.argtypes = [C.POINTER(Aircraft), C.POINTER(Flight), C.c_uint16]
         cls.core.Flight_GearDown.argtypes = [C.POINTER(Flight), C.c_uint16]
         cls.core.Flight_GearDown.restype = C.c_uint8
+        cls.core.Aircraft_Wheel.argtypes = [C.POINTER(Flight)]
+        cls.core.Aircraft_Wheel.restype = C.c_uint8
         cls.meta = json.loads((ROOT / 'assets_msx/hellcat/manifest.json').read_text())['animation']
         cls.names = {f['id']: f['name'] for f in cls.meta['frames']}
 
@@ -85,6 +87,9 @@ class FlightModelTests(unittest.TestCase):
         a = Aircraft()
         self.core.Aircraft_SyncFlight(C.byref(a), C.byref(w.flight), w.x >> 8)
         return self.names[a.shape]
+
+    def wheel(self, w):
+        return self.core.Aircraft_Wheel(C.byref(w.flight))
 
     def altitude(self, w):
         return 1200 - w.flight.y / 256
@@ -135,9 +140,10 @@ class FlightModelTests(unittest.TestCase):
         w = self.deck()
         w.flight.speed, w.flight.boost = 700, 8
         self.ticks(w, LEFT)
-        self.assertEqual((w.flight.fast_roll, self.shape(w)), (1, 'hc41'))   # level on its wheels, facing left
+        # Level pose (hc28 is level facing left) on the level wheel overlay.
+        self.assertEqual((w.flight.fast_roll, self.shape(w), self.wheel(w)), (1, 'hc28', 14))
         self.ticks(w, LEFT | UP)
-        self.assertEqual((w.flight.fast_roll, self.shape(w)), (0, 'hcoc'))
+        self.assertEqual((w.flight.fast_roll, self.shape(w), self.wheel(w)), (0, 'hcoc', 255))
 
     def test_brakes_without_power(self):
         w = self.deck()
@@ -340,18 +346,48 @@ class FlightModelTests(unittest.TestCase):
         w = self.deck()
         self.assertEqual(self.core.Flight_GearDown(C.byref(w.flight), 0), 1)
 
-    def test_gear_and_flare_shapes(self):
+    def test_wheel_overlay_follows_the_pose(self):
+        # 0x0550: wheel sprite (left ? 10 : 0) + pitch, on every flying pose,
+        # whatever the gear state (the renderer slides it up when retracted).
         w = self.air(x=7300, altitude=60)
         self.ticks(w, 0)
-        self.assertEqual(self.shape(w), 'hc41')            # wheels down, level, facing left
-        w.flight.facing_left = 0
-        self.assertEqual(self.shape(w), 'hc40')
-        w = self.air(x=7300, altitude=60)
+        self.assertEqual((self.shape(w), self.wheel(w)), ('hc28', 14))
         self.ticks(w, UP)
-        self.assertEqual(self.shape(w), 'hcoc')            # flare with the gear down
-        w = self.air(x=4000, altitude=600)
-        self.ticks(w, UP)
-        self.assertEqual(self.shape(w), 'hc04-left')       # flare away from the carrier
+        self.assertEqual((self.shape(w), self.wheel(w)), ('hc04-left', 13))   # the flare
+        w = self.air(x=4000, altitude=600, left=False)
+        self.ticks(w, RIGHT | DOWN, 8)
+        self.assertEqual((self.shape(w), self.wheel(w)), ('hc0a', 9))
+        w.flight.turn = 5
+        self.assertEqual(self.wheel(w), 255)                                  # none while turning
+        w = self.deck()
+        self.assertEqual(self.wheel(w), 255)                                  # tail-down pose has its own
+        w.flight.mode = ARREST
+        self.assertEqual((self.shape(w), self.wheel(w)), ('hc28', 14))
+
+    def test_wheel_pieces_rebuild_the_original_sprites(self):
+        import sys
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from decode_shapes import decode_record
+        meta, folder = self.meta, ROOT / 'assets_msx/hellcat'
+        for sprite in range(20):
+            raw = next((ROOT / 'reference_assets/unpacked_shapes/hellcat').glob(f'*_wh{sprite + 1:02x}.bin')).read_bytes()
+            indices, m = decode_record(raw)
+            ox, oy = m['origin_candidate']
+            original = {(i % m['width'] - ox, i // m['width'] - oy) for i, v in enumerate(indices) if v}
+            drawn = set()
+            for r in meta['wheels'][meta['wheel_first'][sprite]:meta['wheel_first'][sprite + 1]]:
+                bank = r['data_offset'] // 8192
+                data = (folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
+                packed = data[r['data_offset'] % 8192:r['data_offset'] % 8192 + r['bytes']]
+                for y in range(r['height']):
+                    for x in range(r['width']):
+                        b = packed[y * (r['width'] // 2) + x // 2]
+                        if (b & 15 if x % 2 else b >> 4):
+                            drawn.add((r['dx'] - 25 + x, r['dy'] - 16 + y))
+            # Every drawn pixel is an original wheel pixel; only source
+            # colour 1 (mapped to transparent) may be missing.
+            self.assertLessEqual(drawn, original, sprite)
+            self.assertGreaterEqual(len(drawn), len(original) - 2, sprite)
 
 
 if __name__ == '__main__':

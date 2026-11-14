@@ -83,7 +83,7 @@ The contact rules are in [p2-landing.md](p2-landing.md).
 | Item | Choice |
 | --- | --- |
 | Directions tapped between two frames | Count for that frame's ticks, so a one-tick Down tap starts a held dive |
-| Wheels on the flare and when tail up on deck | The atlas has wheels only on the level (`hc40`/`hc41`) and tail-down views. The original overlays wheels (`wh01`..`wh14`) on any pose: those shapes are not extracted yet |
+| Wheel overlay pieces | The original's `wh01`..`wh14` (0x0550) are drawn behind the plane on every pose except turns and the slow deck poses, sliding up 5 px as the gear retracts. They don't fit the atlas whole, so each splits into its 2–3 blobs (41 distinct pieces, at most 6×6) packed into leftover atlas gaps. The slide moves 1 px per presented frame (the original: per drawn frame) |
 | Deck-turn poses | The original's 6 deck frames map onto the existing 5-step taxi sequence |
 | Leaving over a deck end | The plane may sink 4 px over the last 16 px without crashing. The original's bow and stern geometry is not mapped |
 | Turn pause while a weapon is in flight (0xaa6e) | Not reproduced |

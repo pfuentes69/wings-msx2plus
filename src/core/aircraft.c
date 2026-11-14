@@ -83,27 +83,32 @@ uint8_t Aircraft_FlightPitch(const FlightState* flight)
 /* Deck turn frame 0..6 (the original's hc21, hc20..hc1b) to the MSX taxi
  * sequence, 5 steps from a resting side view to the front view. */
 static const uint8_t s_DeckTurn[7] = {0, 1, 2, 3, 3, 4, 5};
-/* The original picks the shape from the flight state (0xc378, 0xabde). */
+/* The original picks the shape from the flight state (0xc378, 0xabde). The
+ * wheels are a separate overlay drawn by the renderer (Aircraft_Wheel). */
 void Aircraft_SyncFlight(AircraftState* state, const FlightState* flight, uint16_t world)
 {
     uint8_t left = flight->facing_left, pitch = flight->frame;
+    (void)world;
     state->facing_left = state->target_left = left;
     state->turning = flight->turn != 0;
     state->step = flight->turn;
-    if (FLIGHT_ON_DECK(flight))
+    if (flight->mode == FLIGHT_GROUND && !flight->fast_roll)
     {
-        /* Tail down, turning on the spot, or tail up on its wheels when
-         * rolling fast. */
-        if (flight->fast_roll) state->shape = g_GearFrame[left];
-        else if (flight->turn)
+        /* Tail down at rest or rolling slowly, or turning on the spot. */
+        if (flight->turn)
             state->shape = g_TaxiTurn[left ? s_DeckTurn[flight->turn] : 10 - s_DeckTurn[flight->turn]];
         else state->shape = g_TailDownFrame[left];
     }
     else if (flight->turn) state->shape = left ? g_AirTurnLeft[flight->turn] : g_AirTurnRight[flight->turn];
-    else if (Flight_GearDown(flight, world) && pitch == 4) state->shape = g_GearFrame[left];
-    /* The flare with the gear down: the original adds wheels to the
-     * nose-up pose; the MSX atlas has them only on the tail-down view. */
-    else if (Flight_GearDown(flight, world) && pitch == 3 && flight->landing) state->shape = g_TailDownFrame[left];
     else state->shape = left ? g_PitchLeft[pitch] : g_PitchRight[pitch];
+}
+
+/* 0x0550: the wheel overlay for the pose, when the original draws it: not
+ * turning, and flying, held by a cable, or rolling fast on deck (the slow
+ * deck poses include their wheels). 255 when none. */
+uint8_t Aircraft_Wheel(const FlightState* flight)
+{
+    if (flight->turn || (flight->mode == FLIGHT_GROUND && !flight->fast_roll)) return 255;
+    return (flight->facing_left ? 10 : 0) + flight->frame;
 }
 #endif

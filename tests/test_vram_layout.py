@@ -25,6 +25,34 @@ class VramLayoutTests(unittest.TestCase):
             occupied.update(addresses)
         self.assertEqual(len(occupied), sum(f['bytes'] for f in frames if not f.get('streamed')))
 
+    def test_wheel_pieces_use_free_atlas_gaps(self):
+        import sys
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from convert_dashboard import atlas_slots
+        meta = json.loads((ROOT / 'assets_msx/hellcat/manifest.json').read_text())['animation']
+        taken = set()
+        for group, (w, h) in zip(atlas_slots(27, True, True, True, True, frames=meta['frames']),
+                                 [(48, 24), (256, 4), (16, 14), (96, 2), (8, 8), (22, 7), (8, 8)]):
+            for x, y in group:
+                taken |= {(xx, yy) for yy in range(y, y + h) for xx in range(x, x + w)}
+        for f in meta['frames']:
+            if not f.get('streamed'):
+                taken |= {(xx, yy) for yy in range(f['atlas_y'], f['atlas_y'] + f['height'])
+                          for xx in range(f['atlas_x'], f['atlas_x'] + f['width'])}
+        tiles = json.loads((ROOT / 'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']
+        for t in range(tiles):   # terrain tile atlas below the clean strips
+            x, y = t % 288 // 9 * 8, 512 + t // 288 * 256 + 180 + t % 9 * 8
+            taken |= {(xx, yy) for yy in range(y, y + 8) for xx in range(x, x + 8)}
+        pieces = {}
+        for r in meta['wheels']:
+            pieces[(r['atlas_x'], r['atlas_y'])] = (r['width'], r['height'])
+        for (x, y), (w, h) in pieces.items():
+            self.assertEqual(x % 2, 0)
+            self.assertIn(y // 256, (2, 3))
+            area = {(xx, yy) for yy in range(y, y + h) for xx in range(x, x + w)}
+            self.assertTrue(taken.isdisjoint(area), (x, y))
+            taken |= area
+
     def test_streamed_ground_turns_share_only_the_reserved_scratch_rectangle(self):
         meta=json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']
         cache=meta['taxi_cache']

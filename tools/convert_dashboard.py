@@ -389,7 +389,7 @@ def bomb_pixels():
             result[frame*64+y*8+x]=mapping[str(color)]
     return bytes(result)
 
-def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=False, reserve_crew=False, frames=None):
+def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=False, reserve_crew=False, frames=None, reserve_wheels=()):
     if frames is None: frames=json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
     tiles=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']
     occupied=[bytearray(256) for _ in range(512)]
@@ -425,7 +425,16 @@ def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=F
                             if reserve_crew:
                                 crew=allocate(34,22,7)
                                 weapons=allocate(36,8,8)
-                                return slots,backups,ships,tails,weapons,crew,allocate(5,8,8)
+                                bombs=allocate(5,8,8)
+                                if reserve_wheels:
+                                    # Landing-gear overlay pieces (tools/convert_hellcat.py),
+                                    # allocated last so nothing above moves; largest first,
+                                    # each at its own size, in the leftover gaps.
+                                    order=sorted(range(len(reserve_wheels)),key=lambda i:-reserve_wheels[i][0]*reserve_wheels[i][1])
+                                    cells=[None]*len(reserve_wheels)
+                                    for i in order:cells[i]=allocate(1,*reserve_wheels[i])[0]
+                                    return slots,backups,ships,tails,weapons,crew,bombs,cells
+                                return slots,backups,ships,tails,weapons,crew,bombs
                             return slots,backups,ships,tails,allocate(36,8,8)
                         return slots,backups,ships,tails
                     return slots,backups

@@ -52,6 +52,20 @@ def gun_flash_shape(scene, frame, flash):
     return None
 
 
+def wheel_pieces(scene, sprite):
+    """Landing-gear overlay pieces (records and packed pixels) for a published sprite."""
+    meta = scene.metadata
+    if sprite == 255 or 'wheels' not in meta:
+        return []
+    out = []
+    for record in meta['wheels'][meta['wheel_first'][sprite]:meta['wheel_first'][sprite + 1]]:
+        bank = record['data_offset'] // 8192
+        data = (scene.folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
+        offset = record['data_offset'] % 8192
+        out.append((record, data[offset:offset + record['bytes']]))
+    return out
+
+
 def crash_shape(scene, index):
     """Original crash art record and packed pixels (streamed into the host slot)."""
     record = scene.metadata['crash'][index]
@@ -61,7 +75,7 @@ def crash_shape(scene, index):
     return record, data[offset:offset + record['bytes']]
 
 
-def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255):
+def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False):
     pixels = [list(background[row * background_width + camera:row * background_width + camera + 256]) for row in range(212)]
     from convert_dashboard import compose, waves, pilot_frame, layout, PILOT_WIDTH
     # gauges: oil needle frame, fuel needle frame, lamp bits (1 oil, 2 fuel) as published.
@@ -124,8 +138,25 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
     else:
         source = (scene.folder / shape['file']).read_bytes()
     pivot = 161 - ((1200-y)//8) if scale == 8 else max(14,y-1055)
+    if on_deck and deck_level:
+        # Rolling fast or held by a cable: the level pose at deck height on its
+        # wheel overlay, riding the deck heave and the elevator.
+        pivot += heave + (elevator_depth or 0)
+    if scale == 1 and crash == 255:
+        # The wheels go behind the plane, (5 - gear) px higher while moving.
+        for record, wheel_source in wheel_pieces(scene, wheel):
+            for sy in range(record['height']):
+                dy = pivot + record['dy'] + gear - 5 + sy
+                if elevator_active and dy >= 145 + heave: continue
+                if not 0 <= dy < 172: continue
+                for sx in range(record['width']):
+                    dx = world + record['dx'] + sx - camera - 25
+                    if not 0 <= dx < 256: continue
+                    packed = wheel_source[sy * (record['width']//2) + sx//2]
+                    pixel = packed & 15 if sx%2 else packed >> 4
+                    if pixel: pixels[dy][dx] = pixel
     for sy in range(shape['height'] if crash == 255 else 0):
-        dy = (129 - shape['height'] + sy + heave + (elevator_depth or 0)) if on_deck else pivot + shape['dy'] + sy
+        dy = (129 - shape['height'] + sy + heave + (elevator_depth or 0)) if on_deck and not deck_level else pivot + shape['dy'] + sy
         if elevator_active and dy>=145+heave:continue
         if not 0 <= dy < 172: continue
         for sx in range(shape['width']):

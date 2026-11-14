@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -102,6 +102,7 @@ proc publishing {} {
     dump $name.gauges [debug read_block memory $::addr(g_DisplayGauges) 3]
     dump $name.flight [debug read_block memory $::addr(s_World) 37]
     dump $name.crash [debug read_block memory $::addr(g_DisplayCrash) 1]
+    dump $name.wheel [binary format cc [value g_DisplayWheel] [value g_DisplayGear]]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
     dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
     dump $name.rom [debug read_block memory 16384 32768]
@@ -284,7 +285,7 @@ proc launch_roll {} {
 }
 proc accelerating_roll {} {
     require [expr {[value g_SelectedFrame]==52 && [speed]<600 && [speed]>200}] "Tail down while accelerating: speed=[speed]"
-    snap accelerating_roll {wait_for {[world_byte 17]} {set ::wanted_frame 50;snap ground_roll lift_off} "tail up" 5}
+    snap accelerating_roll {wait_for {[world_byte 17]} {set ::wanted_frame 16;snap ground_roll lift_off} "tail up" 5}
 }
 proc lift_off {} {
     # Rolled off the bow below flying speed: climb away; the plane dips first.
@@ -471,7 +472,7 @@ proc cannon_settle {heading then} {
 proc approach {} {
     # Gear comes down within 1280 px of the carrier, in either direction.
     pilot 128 1060
-    wait_for {[world_x]>5800} {set ::wanted_frame 49;snap approach {pilot_off;fly 1;keymatrixup 8 1;after time 0.3 restart_game}} "fly to the carrier" 60
+    wait_for {[world_x]>5900} {set ::wanted_frame 4;snap approach {pilot_off;fly 1;keymatrixup 8 1;after time 0.3 restart_game}} "fly to the carrier" 60
 }
 proc restart_game {} {
     fly 0

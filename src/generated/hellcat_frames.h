@@ -40,3 +40,12 @@ extern const AircraftShape g_GunFlash[GUN_FLASH_COUNT];
 #ifdef MISSION_TERRAIN
 extern const AircraftShape g_CrashShapes[13];
 #endif
+/* Original landing-gear overlays (wh01..wh14) as small static atlas pieces:
+ * sprite = (left ? 10 : 0) + pitch pose 0..9; its pieces are
+ * g_WheelPieces[g_WheelFirst[sprite] .. g_WheelFirst[sprite + 1]). Drawn
+ * behind the plane, (5 - gear position) px higher while the gear moves. */
+#define WHEEL_PIECE_COUNT 42
+#ifdef MISSION_TERRAIN
+extern const AircraftShape g_WheelPieces[WHEEL_PIECE_COUNT];
+#endif
+extern const unsigned char g_WheelFirst[21];

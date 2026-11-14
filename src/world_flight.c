@@ -44,6 +44,12 @@ static u8 s_ContactBottom, s_ContactSurface; /* per-frame contact gate (Landing_
 static u8 s_CrashFrame = 255, s_RenderCrash = 255, s_CrashLoaded = 255;
 volatile u8 g_DisplayCrash = 255;
 #ifdef WINGS_P1_FLIGHT
+/* Landing gear: the overlay sprite drawn (255 none) and its slide 0..5
+ * (5 = down), as the original animates it toward the gear state (0x0550). */
+static u8 s_Wheel = 255, s_GearPos = 5, s_RenderWheel = 255, s_RenderGear = 5;
+volatile u8 g_DisplayWheel = 255, g_DisplayGear = 5;
+#endif
+#ifdef WINGS_P1_FLIGHT
 static u8 s_EngineSteps;         /* simulation steps into the current original tick */
 #endif
 /* Oil needle, fuel needle and lamps drawn on the rendered/published page.
@@ -345,6 +351,9 @@ static void LoadCaches(void)
     u8 i;
     s_GroundShape=s_FlashSlot[0]=s_FlashSlot[1]=255;
     for (i=0; i<AIRCRAFT_STATIC_SHAPES; ++i) LoadShape(&g_AircraftShapes[i]);
+#ifdef WINGS_P1_FLIGHT
+    for (i=0; i<WHEEL_PIECE_COUNT; ++i) LoadShape(&g_WheelPieces[i]);
+#endif
 }
 
 /* The original cannon overlay matching the drawn pitch pose. There is no
@@ -407,6 +416,10 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     const AircraftShape* shape = &g_AircraftShapes[frame];
     const AircraftShape* flash;
     int16_t dx, dy, fx = 0, fy = 0, left, top, right, bottom, limit = 172;
+#ifdef WINGS_P1_FLIGHT
+    int16_t wy = 0, wx;
+    u8 wheel = 255, first = 0, last = 0, i;
+#endif
     s_RenderCrash = s_CrashFrame;
     if (s_CrashFrame != 255)
     {
@@ -431,7 +444,13 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
           WINGS_FLIGHT_MAX_Y - y > 131 ? 14 : 145 - (WINGS_FLIGHT_MAX_Y - y)) + shape->dy;
 #ifdef WINGS_P1_FLIGHT
     if (FLIGHT_ON_DECK(&s_World.flight) && s_CrashFrame == 255)
-        dy = 129 - shape->height + g_Carrier.depth; /* Tire contact stays on deck across both ground poses. */
+    {
+        /* The slow deck poses carry their own wheels: rest them on the deck.
+         * Rolling fast or held by a cable, the level pose stands at deck
+         * height (y 1160) on the wheel overlay. */
+        dy = (s_World.flight.mode == FLIGHT_GROUND && !s_World.flight.fast_roll ?
+              129 - shape->height : 145 - (int16_t)(WINGS_FLIGHT_MAX_Y - FLIGHT_DECK_Y) + shape->dy) + g_Carrier.depth;
+    }
     else
 #endif
     dy -= s_RenderHeave;
@@ -440,6 +459,25 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
 #endif
     left = dx; right = dx + shape->width;
     top = dy; bottom = dy + shape->height;
+#ifdef WINGS_P1_FLIGHT
+    if (!g_TerrainFar && s_CrashFrame == 255) wheel = s_Wheel;
+    s_RenderWheel = wheel; s_RenderGear = s_GearPos;
+    if (wheel != 255)
+    {
+        /* Pieces share the plane's drawing origin, (5 - gear) px higher
+         * while the gear is going up or down. */
+        first = g_WheelFirst[wheel]; last = g_WheelFirst[wheel + 1];
+        wy = dy - shape->dy + s_GearPos - 5;
+        for (i = first; i < last; ++i)
+        {
+            wx = (int16_t)world + g_WheelPieces[i].dx - 25;
+            if (wx < left) left = wx;
+            if (wx + g_WheelPieces[i].width > right) right = wx + g_WheelPieces[i].width;
+            if (wy + g_WheelPieces[i].dy < top) top = wy + g_WheelPieces[i].dy;
+            if (wy + g_WheelPieces[i].dy + g_WheelPieces[i].height > bottom) bottom = wy + g_WheelPieces[i].dy + g_WheelPieces[i].height;
+        }
+    }
+#endif
     if (flash)
     {
         // Both shapes use the original drawing origins around one object point.
@@ -462,6 +500,11 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     s_OldHeight[page] = bottom - top;
     Background(page, 1);
     s_Valid[page] = 1;
+#ifdef WINGS_P1_FLIGHT
+    /* Behind the plane, as in the original. */
+    for (i = first; i < last; ++i)
+        CopyShape(page, &g_WheelPieces[i], (int16_t)world + g_WheelPieces[i].dx - 25, wy + g_WheelPieces[i].dy, camera, limit);
+#endif
     CopyShape(page, shape, dx, dy, camera, limit);
     if (flash) CopyShape(page, flash, fx, fy, camera, limit);
 }
@@ -575,6 +618,7 @@ static void NewPlane(void)
     Aircraft_SyncFlight(&s_Aircraft,&s_World.flight,s_World.x>>8);
     Engine_Reset(&g_Engine,&g_Game.sortie);
     s_CrashSteps=s_EngineSteps=0;
+    s_GearPos=5; s_Wheel=255;
 #endif
     s_CrashFrame=255;
     if (s_CrashLoaded!=255) { LoadShape(&g_AircraftShapes[CRASH_HOST_SHAPE]); s_CrashLoaded=255; }
@@ -890,6 +934,13 @@ advance_clocks:
 #endif
                 }
                 Ship_Advance(step<steps ? step+1 : steps);
+#ifdef WINGS_P1_FLIGHT
+                /* The gear slides one pixel per presented frame toward its
+                 * state (the original: one per drawn frame). */
+                { u8 down = Flight_GearDown(&s_World.flight, s_World.x >> 8) ? 5 : 0;
+                  if (s_GearPos < down) ++s_GearPos; else if (s_GearPos > down) --s_GearPos; }
+                s_Wheel = Aircraft_Wheel(&s_World.flight);
+#endif
             }
         }
         camera = s_World.camera;
@@ -927,6 +978,7 @@ advance_clocks:
 #ifdef WINGS_P1_FLIGHT
             g_DisplayGauges[0] != g_Engine.oil_needle || g_DisplayGauges[1] != g_Engine.fuel_needle ||
             g_DisplayGauges[2] != g_Engine.lamps || g_DisplayCrash != s_CrashFrame ||
+            g_DisplayWheel != (g_TerrainFar || s_CrashFrame != 255 ? 255 : s_Wheel) || g_DisplayGear != s_GearPos ||
 #endif
             g_DisplayWave != s_Wave || g_DisplayHeave != s_RenderHeave || camera != g_DisplayCamera || world != g_DisplayWorld || y != g_DisplayY || frame != g_SelectedFrame)
             Render(page, camera, world, y, frame);
@@ -985,6 +1037,9 @@ advance_clocks:
 #endif
         g_DisplayGauges[0]=s_RenderGauges[0]; g_DisplayGauges[1]=s_RenderGauges[1];
         g_DisplayGauges[2]=s_RenderGauges[2]; g_DisplayCrash=s_RenderCrash;
+#ifdef WINGS_P1_FLIGHT
+        g_DisplayWheel=s_RenderWheel; g_DisplayGear=s_RenderGear;
+#endif
         g_FramePublished ^= 1;
     }
 }
