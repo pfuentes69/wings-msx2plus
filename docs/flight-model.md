@@ -50,6 +50,22 @@ the turn. Releasing after frame 19 mirrors the turn and finishes it quickly.
 (1000 − speed) / 100 px per tick, and the nose drops unless Up is held.
 **Ceiling**: altitude 1100.
 
+## Open sea beyond the map
+
+The original never limits the plane's x, and its camera always centres on
+the plane (screen x = plane x − camera + 160), so the ocean seems to go on
+past both ends of the map. The port does the same:
+
+- World x is a 16-bit ring read as signed. The map is 0..7607; open sea
+  continues 16,000 px beyond either end (about 75 s at top speed), where the
+  plane stops. That keeps every signed value within 16 bits.
+- The camera centres on the plane. The far view divides by 8 with a signed
+  shift, so the sea left of the map joins it seamlessly.
+- Terrain columns outside the map draw a plain sea column: map x 5000, or far
+  x 624. Wave bands that reach either end of the map run on, with the wave
+  texture phase taken from the signed position.
+- Guns and bombs work only over the map. Beyond it there is nothing to hit.
+
 ## On the deck
 
 | Input | Effect per tick |
@@ -120,8 +136,9 @@ The contact rules are in [p2-landing.md](p2-landing.md).
   over 30,000 random steps on an emulated Z80.
 - `tests/test_landing.py` covers the contact rules with the flare flag.
 - The P0 smoke run flies everything with closed-loop scripts on the real
-  state, pixel-checking each snapshot: deck turns, takeoff, turns, stall,
-  dive tap, cannon in climb, level and dive both ways, and gear near the
-  carrier. A circuit flown low, coasting downwind, ends in a flare landing
-  with a cable arrest, a taxi onto the elevator, a powered bounce and a sea
-  crash. 89 snapshots pass on NTSC, 86 on PAL.
+  state, pixel-checking each snapshot, wheels included: deck turns, takeoff,
+  turns, stall, dive tap, cannon in climb, level and dive both ways, gear near
+  the carrier, and open sea past the map's right end. A circuit flown low,
+  coasting downwind and turning onto final out over the open sea, ends in a
+  flare landing with a cable arrest, a taxi onto the elevator, a powered
+  bounce and a sea crash. 90 snapshots pass on NTSC, 87 on PAL.

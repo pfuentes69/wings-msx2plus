@@ -61,6 +61,9 @@ volatile u8 g_DisplayGauges[3] = {16, 22, 0};
 
 volatile u8 g_ScrollFine, g_ScrollCoarse, g_VerticalOffset, g_LineSplit;
 static u8 s_RenderHeave;
+/* Far view x: an arithmetic shift, so the sea left of the map (negative x)
+ * stays continuous with the map. */
+#define FAR_X(world) ((u16)((int16_t)(world) >> 3))
 #ifdef WINGS_P1_FLIGHT
 static u8 s_CarrierView; /* the near view shows the carrier */
 #endif
@@ -438,7 +441,7 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     }
     flash = GunFlash(frame);
     }
-    if (g_TerrainFar && s_CrashFrame == 255) { shape = Dashboard_FarShape(frame); world >>= 3; }
+    if (g_TerrainFar && s_CrashFrame == 255) { shape = Dashboard_FarShape(frame); world = FAR_X(world); }
     dx = (int16_t)world + shape->dx - (g_TerrainFar ? 0 : 25);
     dy = (g_TerrainFar ? 161 - ((WINGS_FLIGHT_MAX_Y - y) >> 3) :
           WINGS_FLIGHT_MAX_Y - y > 131 ? 14 : 145 - (WINGS_FLIGHT_MAX_Y - y)) + shape->dy;
@@ -512,6 +515,7 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
 static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
 {
     u16 previous, next;
+    u8 count;
     g_RenderPage = page;
     g_ViewChange = s_PageScale[page] != g_TerrainFar;
     g_Rendering = 1;
@@ -520,7 +524,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
         s_Valid[page] = 0;
         VDP_CommandHMMV(0, (u16)page * 256, 256, 172, 0);
         Terrain_InitPage(page);
-        for (previous = camera & 65528u; previous <= ((camera + 255) & 65528u); previous += 8)
+        for (previous = camera & 65528u, count = 33; count; --count, previous += 8)
             DrawColumn(previous, page);
         s_Camera[page] = camera;
         s_PageScale[page] = g_TerrainFar;
@@ -528,11 +532,12 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     Weapons_Restore(page, g_ViewChange);
     if (s_Valid[page]) Background(page, 0);
     Dashboard_RestoreWaves(page, g_ViewChange);
-    if (camera > s_Camera[page])
+    /* Signed differences: the camera may cross 0 into the open sea. */
+    if ((int16_t)(camera - s_Camera[page]) > 0)
     {
         previous = (s_Camera[page] + 255) & 65528u;
         next = (camera + 255) & 65528u;
-        while (previous < next)
+        while ((int16_t)(next - previous) > 0)
         {
             previous += 8;
             DrawColumn(previous, page);
@@ -542,7 +547,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     {
         previous = (s_Camera[page] + 8) & 65528u;
         next = (camera + 8) & 65528u;
-        while (previous > next)
+        while ((int16_t)(previous - next) > 0)
         {
             previous -= 8;
             DrawColumn(previous, page);
@@ -573,7 +578,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     VDP_CommandHMMV(0, (u16)page * 256 + 171 - s_RenderHeave,
                     256, s_RenderHeave + 1, 0x11);
     {
-        u16 ahead = s_Aircraft.facing_left ? (world < 128 ? 0 : world - 128) : (world > WINGS_WORLD_WIDTH - 129 ? WINGS_WORLD_WIDTH - 1 : world + 128);
+        u16 ahead = s_Aircraft.facing_left ? world - 128 : world + 128;
         u16 altitude = WINGS_FLIGHT_MAX_Y - y;
         s_RenderPilot = Dashboard_Draw(page, Mission_Surface(ahead), altitude > 255 ? 255 : altitude);
     }
@@ -721,6 +726,7 @@ static u8 ReadActions(void)
 void main(void)
 {
     u16 column, camera, world, y;
+    u8 columns;
     u16 surface;
     u8 weapons, reset_weapons, i;
 #ifdef WINGS_P1_FLIGHT
@@ -778,10 +784,8 @@ void main(void)
     for (page = 0; page < 2; ++page)
     {
         Terrain_InitPage(page);
-        for (column = camera & 65528u; column <= ((camera + 255) & 65528u); column += 8)
-        {
+        for (column = camera & 65528u, columns = 33; columns; --columns, column += 8)
             DrawColumn(column, page);
-        }
     }
     Render(0, camera, world, s_World.flight.y >> 8, s_Aircraft.shape);
     VDP_SetPage(0);
@@ -947,13 +951,18 @@ advance_clocks:
         world = s_World.x >> 8;
         y = s_World.flight.y >> 8;
         g_TerrainFar = WINGS_FLIGHT_MAX_Y - y > 186;
+#ifdef WINGS_P1_FLIGHT
+        /* The camera centres on the plane; past the map ends the sea goes on. */
+        camera = (g_TerrainFar ? FAR_X(world) : world) - 128;
+#else
         camera = g_TerrainFar ? world >> 3 : world;
         { u16 maximum = g_TerrainFar ? ((WINGS_WORLD_WIDTH + 7) >> 3) - 256 : WINGS_WORLD_WIDTH - 256;
           camera = camera < 128 ? 0 : camera - 128; if (camera > maximum) camera = maximum; }
+#endif
         g_ViewChange = 0;
-        s_RenderHeave = !g_TerrainFar && camera + 256 > 6592 && camera < 7368 ? g_ShipHeave : 0;
+        s_RenderHeave = !g_TerrainFar && (u16)(camera + 256) > 6592 && camera < 7368 ? g_ShipHeave : 0;
 #ifdef WINGS_P1_FLIGHT
-        s_CarrierView = !g_TerrainFar && camera + 256 > 6592 && camera < 7368;
+        s_CarrierView = !g_TerrainFar && (u16)(camera + 256) > 6592 && camera < 7368;
 #endif
         frame = s_Aircraft.shape;
         page = g_DisplayPage ^ 1;
@@ -1013,7 +1022,7 @@ advance_clocks:
         g_DisplayCamera = camera;
         g_DisplayWorld = world;
         g_DisplayX =
-            (g_TerrainFar ? world >> 3 : world) - camera;
+            (g_TerrainFar ? FAR_X(world) : world) - camera;
         g_DisplayY = y;
         g_SelectedFrame = frame;
         g_Turning = s_Aircraft.turning;

@@ -62,8 +62,9 @@ in frames over the carrier.
   tables, and earlier deck contact when the nose is up.
 - The P0 smoke run flies a closed-loop autopilot from the real flight state
   (`s_World`; `g_LastContact` records each contact):
-  1. Take off, fly out low, turn, coast past the carrier, and turn onto final
-     just inside the map's right end, 5 px above deck contact.
+  1. Take off, fly out low, turn, coast past the carrier, turn onto final
+     out over the open sea past the map's end, and settle 5 px above deck
+     contact.
   2. Flare (Up alone): it must land facing left at deck height, catch a cable
      and stop short of the elevator.
   3. Taxi, cutting power at the braking distance, and stop on the elevator
@@ -77,4 +78,4 @@ in frames over the carrier.
      pixel-checked.
 - The oracle draws the plane in its on-deck pose from the dumped flight
   mode rather than from snapshot names.
-- 89 snapshots pass on NTSC and 86 on PAL (PAL captures fewer intermediate deck-turn poses).
+- 90 snapshots pass on NTSC and 87 on PAL (PAL captures fewer intermediate deck-turn poses).

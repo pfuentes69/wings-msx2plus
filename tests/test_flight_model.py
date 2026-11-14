@@ -335,6 +335,26 @@ class FlightModelTests(unittest.TestCase):
         self.ticks(w, 0, 3)
         self.assertEqual(w.flight.climb, -450)
 
+    # Open sea beyond the map (the original never limits x)
+
+    def test_the_plane_flies_on_past_both_map_ends(self):
+        w = self.air(x=10, altitude=600, speed=1000)
+        self.ticks(w, 0, 3)
+        self.assertEqual(((w.x >> 8) & 0xFFFF) - 65536, 10 - 30)  # x is a signed 16-bit ring
+        self.assertEqual(w.camera, (((w.x >> 8) & 0xFFFF) - 128) & 0xFFFF)  # centred, not clamped
+        w = self.air(x=7600, altitude=600, speed=1000, left=False)
+        self.ticks(w, 0, 3)
+        self.assertEqual(w.x >> 8, 7630)
+        self.assertEqual(w.camera, 7630 - 128)
+
+    def test_open_sea_ends_16000_px_out(self):
+        w = self.air(x=7608 + 15995, altitude=600, speed=1000, left=False)
+        self.ticks(w, 0, 3)
+        self.assertEqual(w.x >> 8, 7608 + 16000)
+        w = self.air(x=(65536 - 15995) & 0xFFFF, altitude=600, speed=1000)
+        self.ticks(w, 0, 3)
+        self.assertEqual(w.x >> 8, 65536 - 16000)
+
     # Gear (0xb45a)
 
     def test_gear_down_near_the_carrier_in_either_direction(self):

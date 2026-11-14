@@ -472,7 +472,13 @@ proc cannon_settle {heading then} {
 proc approach {} {
     # Gear comes down within 1280 px of the carrier, in either direction.
     pilot 128 1060
-    wait_for {[world_x]>5900} {set ::wanted_frame 4;snap approach {pilot_off;fly 1;keymatrixup 8 1;after time 0.3 restart_game}} "fly to the carrier" 60
+    wait_for {[world_x]>5900} {set ::wanted_frame 4;snap approach open_sea} "fly to the carrier" 60
+}
+proc open_sea {} {
+    # Past the map's right end (7608) the ocean goes on and the camera keeps
+    # the plane centred, as in the original.
+    pilot 128 1060
+    wait_for {[world_x]>7900} {snap open_sea_right {pilot_off;fly 1;keymatrixup 8 1;after time 0.3 restart_game}} "fly past the map end" 30
 }
 proc restart_game {} {
     fly 0
@@ -590,23 +596,28 @@ proc pilot_tick {} {
 proc circuit {then} {
     # From takeoff (flying left off the bow): out to the left and back past
     # the carrier, low (y 1140, 60 px up); coast downwind to bleed speed so
-    # the cable arrest is short; turn onto final just inside the map's
-    # right end, descending to 5 px above deck contact.
+    # the cable arrest is short; turn onto final out over the open sea past
+    # the map's end, settle 5 px above deck contact, and flare near the stern.
     set ::circuit_then $then
     pilot 16 1140
     wait_for {[world_x]<6000} {pilot 128 1140;wait_for {![world_byte 11] && ![world_byte 13]} circuit_downwind "turn downwind" 10} "outbound" 15
 }
 proc circuit_downwind {} {
     pilot 128 1140
-    wait_for {(abs([world_y]-1140)<=4 && [climb]==0) || [world_x]>6400} {pilot 0 1140;wait_for {[world_x]>=7380} circuit_turn_final "downwind" 25} "settle downwind" 15
+    wait_for {(abs([world_y]-1140)<=4 && [climb]==0) || [world_x]>6400} {pilot 0 1140;wait_for {[world_x]>=7800} circuit_turn_final "downwind" 30} "settle downwind" 15
 }
 proc circuit_turn_final {} {
     pilot 16 1155
-    wait_for {[world_byte 11] && ![world_byte 13] && ([world_y]>=1150 || [world_x]<7330)} circuit_final "turn onto final" 10
+    wait_for {[world_byte 11] && ![world_byte 13]} circuit_on_final "turn onto final" 10
+}
+proc circuit_on_final {} {
+    # Level or descending at the flare: from a climb the flight path takes
+    # several ticks to turn down and the touchdown comes too late.
+    wait_for {[world_x]<=7430 && (abs([world_y]-1155)<=2 && [climb]<=0 || [world_x]<7380)} circuit_final "final approach" 10
 }
 proc circuit_final {} {
-    puts $::report "final x=[world_x] y=[world_y] speed=[speed]"
-    require [expr {[world_x]>7300 && [world_y]>=1144 && [world_y]<=1158}] "Final approach not set up: x=[world_x] y=[world_y]"
+    puts $::report "final x=[world_x] y=[world_y] speed=[speed] climb=[climb]"
+    require [expr {[world_x]>7330 && [world_y]>=1150 && [world_y]<=1158}] "Final approach not set up: x=[world_x] y=[world_y]"
     pilot_off
     uplevel #0 $::circuit_then
 }

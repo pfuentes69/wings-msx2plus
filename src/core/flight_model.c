@@ -162,12 +162,12 @@ static void AirControls(FlightState* f, uint8_t input)
 }
 
 /* Spread one tick's whole-pixel motion over the next FLIGHT_TICK_STEPS
- * steps, stopping at the ends of the world. */
+ * steps, stopping FLIGHT_SEA_LIMIT px out over the open sea. */
 static void SetMotion(FlightState* f, uint16_t world, int16_t dx, int16_t dy)
 {
-    int16_t q;
-    if (dx < 0 && world < (uint16_t)-dx) dx = -(int16_t)world;
-    if (dx > 0 && world + (uint16_t)dx > WINGS_WORLD_WIDTH - 1) dx = (int16_t)(WINGS_WORLD_WIDTH - 1 - world);
+    int16_t q, at = (int16_t)world;
+    if (dx < 0 && at + dx < -FLIGHT_SEA_LIMIT) dx = -FLIGHT_SEA_LIMIT - at;
+    if (dx > 0 && at + dx > (int16_t)WINGS_WORLD_WIDTH + FLIGHT_SEA_LIMIT) dx = (int16_t)WINGS_WORLD_WIDTH + FLIGHT_SEA_LIMIT - at;
     q = dx * 256;
     f->vx = q / (int16_t)FLIGHT_TICK_STEPS;
     f->xrem = (int8_t)(q - f->vx * (int16_t)FLIGHT_TICK_STEPS);

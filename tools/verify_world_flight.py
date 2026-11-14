@@ -76,7 +76,14 @@ def crash_shape(scene, index):
 
 
 def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False):
-    pixels = [list(background[row * background_width + camera:row * background_width + camera + 256]) for row in range(212)]
+    # World x is a 16-bit ring read as signed; beyond the map the MSX draws a
+    # column of open sea (map x 5000 near, far x 624 in the distant view).
+    signed = lambda v: v - 65536 if v >= 32768 else v
+    camera, world = signed(camera), signed(world)
+    sea = 5000 if scale == 1 else 624
+    def source_x(wx):
+        return wx if 0 <= wx < background_width else sea + (wx & 7)
+    pixels = [[background[row * background_width + source_x(camera + x)] for x in range(256)] for row in range(212)]
     from convert_dashboard import compose, waves, pilot_frame, layout, PILOT_WIDTH
     # gauges: oil needle frame, fuel needle frame, lamp bits (1 oil, 2 fuel) as published.
     dashboard = compose(ammo=stock, weapon=weapon, lives=lives, oil=gauges[0], fuel=gauges[1],
@@ -87,7 +94,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             wx = camera + x
             if 6592 <= wx < 7368:
                 for row in range(172):
-                    pixels[row][x] = background[(row+40-heave)*background_width+wx]
+                    pixels[row][x] = background[(row+40-heave)*background_width+source_x(wx)]
         ship = (ROOT/'assets_msx/ship/frames.indices').read_bytes()[ship_frame*1344:(ship_frame+1)*1344]
         for row in range(42):
             for col in range(32):
@@ -119,7 +126,8 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
         for x in range(256):
             wx = camera + x
             for band in water_bands:
-                if not band['start'] <= wx < band['end']: continue
+                # Bands reaching either end of the map run on over the sea.
+                if not (band['start'] <= wx or band['start'] == 0) or not (wx < band['end'] or band['end'] >= 7608): continue
                 for row in range(band['row'], band['row'] + band['height']):
                     color = water[row * 96 + wx % 96]
                     if color: pixels[161 + row][x] = color
@@ -160,7 +168,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
         if elevator_active and dy>=145+heave:continue
         if not 0 <= dy < 172: continue
         for sx in range(shape['width']):
-            dx = world // scale + shape['dx'] + sx - camera - (25 if scale == 1 else 0)
+            dx = (world >> 3 if scale == 8 else world) + shape['dx'] + sx - camera - (25 if scale == 1 else 0)
             if not 0 <= dx < 256: continue
             if scale == 8: pixel = source[sy * shape['width'] + sx]
             else:

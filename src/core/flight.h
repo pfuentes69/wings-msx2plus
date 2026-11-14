@@ -31,6 +31,11 @@
 /* The original runs its logic once per 4 PAL VBlanks (12.5 Hz): one tick is
  * 12 steps of the port's 150 Hz simulation clock. */
 #define FLIGHT_TICK_STEPS 12u
+/* World x is a 16-bit ring read as signed: the map is 0..WINGS_WORLD_WIDTH-1
+ * and open sea continues FLIGHT_SEA_LIMIT px beyond either end, as in the
+ * original, which never limits the plane's x. The limit keeps every signed
+ * world and camera value within int16. */
+#define FLIGHT_SEA_LIMIT 16000
 
 /* Modes (the original's player mode in brackets). */
 #define FLIGHT_GROUND 0   /* on deck: taxi, takeoff roll [1] */

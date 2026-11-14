@@ -133,14 +133,16 @@ static void DrawWaterBand(u8 page, u16 source_x, u16 source_y,
                           u16 start, u16 end, u8 row, u8 height, u8 frame)
 {
     u8 take, piece, special = (frame & 3) == 3;
-    u16 left, part, seam, position, sx, sy, limit, start_left = start % 96;
+    /* Texture phase from the signed position, so the waves run on
+     * continuously into the sea left of the map (negative x). */
+    u16 left, part, seam, position, sx, sy, limit, start_left = (u16)((int16_t)start % 96 + 96) % 96;
     while (height)
     {
         take = height;
         if (special && row < 9 && row + take > 9) take = 9 - row;
 
         position = start; left = start_left;
-        while (position < end)
+        while ((int16_t)(end - position) > 0)
         {
             sx = source_x + left; sy = source_y + row; limit = 96 - left;
             if (special && row >= 9)
@@ -175,9 +177,12 @@ void Dashboard_Waves(u8 page, u16 camera, u8 frame, u8 heave) WINGS_BANKED
 {
     const MissionWaterBand* band = g_MissionWaterBands;
     u8 region, row = 0, height = 0;
-    u16 left, right, start = 0, end = 0, source_x, source_y;
-    u16 visible_left = (camera + 8) & 65534u;
-    u16 visible_right = (camera + 257) & 65534u;
+    u16 source_x, source_y;
+    /* Signed world x: bands that reach either end of the map continue over
+     * the open sea beyond it. */
+    int16_t left, right, start = 0, end = 0, band_start, band_end;
+    int16_t visible_left = (int16_t)((camera + 8) & 65534u);
+    int16_t visible_right = (int16_t)((camera + 257) & 65534u);
     s_WaveHeave[page] = heave;
     if (heave)
         VDP_CommandHMMM(0, (u16)page * 256 + 159, 0, g_WaveBackdropY[page], 256, 4);
@@ -188,8 +193,10 @@ void Dashboard_Waves(u8 page, u16 camera, u8 frame, u8 heave) WINGS_BANKED
     source_y = 212 + (frame & 3) * 11 + (frame >= 8 ? 256 : 0);
     for (region = 0; region < MISSION_WATER_REGIONS; ++region, ++band)
     {
-        left = band->start > visible_left ? band->start : visible_left;
-        right = band->end < visible_right ? band->end : visible_right;
+        band_start = band->start ? (int16_t)band->start : -32768;
+        band_end = band->end < MISSION_SURFACE_WIDTH ? (int16_t)band->end : 32767;
+        left = band_start > visible_left ? band_start : visible_left;
+        right = band_end < visible_right ? band_end : visible_right;
         if (left >= right) continue;
         // Away from shore all intervals clip to the same viewport bounds.
         // Merge them before issuing commands; preserve the transparency split.
@@ -198,11 +205,11 @@ void Dashboard_Waves(u8 page, u16 camera, u8 frame, u8 heave) WINGS_BANKED
             height += band->height;
         else
         {
-            if (height) DrawWaterBand(page, source_x, source_y, start, end, row, height, frame);
+            if (height) DrawWaterBand(page, source_x, source_y, (u16)start, (u16)end, row, height, frame);
             start = left; end = right; row = band->row; height = band->height;
         }
     }
-    if (height) DrawWaterBand(page, source_x, source_y, start, end, row, height, frame);
+    if (height) DrawWaterBand(page, source_x, source_y, (u16)start, (u16)end, row, height, frame);
 }
 
 // Copy one pre-rendered value of a HUD element into the dashboard rows.

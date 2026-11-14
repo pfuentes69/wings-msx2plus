@@ -112,7 +112,7 @@ def main():
                             wheel=(out/f'{name}.wheel').read_bytes()[0],gear=(out/f'{name}.wheel').read_bytes()[1])
         if not args.headless:
             assert Image.open(out/f'{name}.png').size==(320,240)
-    required={'lift_paused','lift_pause_wait','lift_start','lift_rise_24','lift_rise_16','lift_rise_8','lift_left_down_8','lift_left_down_16','lift_left_down_24','lift_left_inside','service_left','lift_left_return','lift_right_down_8','lift_right_down_24','lift_right_inside','service_right','lift_right_return','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','approach','rank','load_menu','briefing','rockets','torpedo','loadout','start','guns','aliases','short_press','paused',
+    required={'lift_paused','lift_pause_wait','lift_start','lift_rise_24','lift_rise_16','lift_rise_8','lift_left_down_8','lift_left_down_16','lift_left_down_24','lift_left_inside','service_left','lift_left_return','lift_right_down_8','lift_right_down_24','lift_right_inside','service_right','lift_right_return','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','approach','open_sea_right','rank','load_menu','briefing','rockets','torpedo','loadout','start','guns','aliases','short_press','paused',
               'pause_wait','inverted','resumed','no_debug','restart','ground_roll','takeoff','turn','turn_complete','compensated_turn','joystick_guns','joystick_secondary','joystick_inverted','in_game_load','in_game_save'}
     required|={f'cannon_{pitch}_{heading}' for pitch in ('climb','level','dive') for heading in ('left','right')}
     required|={'stall_held','stall_released','dive_released','dive_persistent','dive_recovered'}
@@ -131,6 +131,8 @@ def main():
     assert snapshots['approach']['pose']==4 and snapshots['approach']['wheel']==4 and snapshots['approach']['gear']==5
     assert snapshots['accelerating_roll']['pose']==52 and snapshots['slow_roll']['pose']==52
     assert snapshots['ground_roll']['pose']==16 and snapshots['ground_roll']['wheel']==14
+    sea=snapshots['open_sea_right']
+    assert sea['world']>7900 and sea['camera']==sea['world']-128,('open sea',sea['world'],sea['camera'])
     assert 6609<snapshots['ground_roll']['world']<7032
     assert snapshots['takeoff']['pose'] not in (49,50,51,52) and snapshots['takeoff']['world']<6593
     assert 10<=snapshots['turn']['pose']<40
@@ -177,7 +179,7 @@ def main():
     lift_timing=dict(presentation_vblanks=6,samples=len(cadence),median_publication_ms=median,
         max_regular_redraw_ms=max(r for i,r in cadence),simulation_ticks_per_pixel=18,travel_ticks=576)
     summary=dict(lift_timing=lift_timing,machine=args.machine,rom_sha256=hashlib.sha256(data).hexdigest(),raster_captured=not args.headless,
-                 snapshots=snapshots,checks=['original elevator platform and hull occlusion at multiple depths','initial leftward emergence and two heading-preserving service cycles','primary/secondary elevator activation with held-confirmation consumption','real bomb expenditure then reload without a game reset','turning round on the deck at rest in both directions, in place','streamed ground-turn artwork and noncontiguous bank restoration','gear down near the carrier in either direction; original wheel overlays on every pose, sliding up and down','full visible composite pixels including both original signalmen and deck heave','original flight model (12.5 Hz): deck roll, tail up, rolling off the bow and climbing away','original turn: height lost, regained by climbing through the turn','stall flare keeps airspeed and sinks nose up; a Down tap starts a held dive','release boot and seven-rank/load shells','context edge consumption',
+                 snapshots=snapshots,checks=['original elevator platform and hull occlusion at multiple depths','initial leftward emergence and two heading-preserving service cycles','primary/secondary elevator activation with held-confirmation consumption','real bomb expenditure then reload without a game reset','turning round on the deck at rest in both directions, in place','streamed ground-turn artwork and noncontiguous bank restoration','gear down near the carrier in either direction; original wheel overlays on every pose, sliding up and down','open sea past the map end with the camera centred on the plane','full visible composite pixels including both original signalmen and deck heave','original flight model (12.5 Hz): deck roll, tail up, rolling off the bow and climbing away','original turn: height lost, regained by climbing through the turn','stall flare keeps airspeed and sinks nose up; a Down tap starts a held dive','release boot and seven-rank/load shells','context edge consumption',
                     '30/15/1 stock previews and three lives','unlimited provisional guns do not spend secondary stock',
                     'N/GRAPH alias overlap and short press buffering','PSG-boundary injection of both joystick triggers and inversion','in-game save/load shells return without state mutation','Esc-only pause freezes gameplay clocks',
                     'Ctrl-F settings and Ctrl-R restart','release profile ignores debug R/T',

@@ -54,10 +54,20 @@ void Terrain_InitPage(u8 page)
     }
 }
 
+/* Map columns of open sea (x 5000, between the islands and the carrier),
+ * drawn for every column beyond the map's ends: the ocean goes on, as in the
+ * original. tests/test_mission.py checks that both are plain sea. */
+#define TERRAIN_SEA_COLUMN 625u
+#define TERRAIN_FAR_SEA_COLUMN 78u
+
 void Terrain_DrawColumn(u16 world, u8 page)
 {
     u8 slot = (world & 255) >> 3;
-    u16 column = ((world >> 3) + (g_TerrainFar ? TERRAIN_FAR_COLUMN : 0)) * 2;
+    u16 column = world >> 3;
+    if (g_TerrainFar)
+        column = (column < TERRAIN_MAP_COLUMNS - TERRAIN_FAR_COLUMN ? column : TERRAIN_FAR_SEA_COLUMN) + TERRAIN_FAR_COLUMN;
+    else if (column >= TERRAIN_FAR_COLUMN) column = TERRAIN_SEA_COLUMN;
+    column *= 2;
     u16 offset = s_Map[column] | ((u16)s_Map[column + 1] << 8);
     u16* cached;
     u16* decoded;
