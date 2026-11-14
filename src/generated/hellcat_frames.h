@@ -59,7 +59,7 @@ extern const unsigned char g_WheelFirst[21];
 /* Original engine smoke frames as atlas pieces, offsets from the puff's
  * origin: frame = stage - 1 (near smk0..smk4) or 5 + (far smk0/smk1);
  * pieces g_SmokePieces[g_SmokeFirst[frame] .. g_SmokeFirst[frame + 1]). */
-#define SMOKE_PIECE_COUNT 8
+#define SMOKE_PIECE_COUNT 7
 #ifdef MISSION_TERRAIN
 extern const AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT];
 #endif

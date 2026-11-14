@@ -79,18 +79,21 @@ IM2 reservation, stack and BIOS workspace. Physical hardware remains untested.
 
 ## Original falling-bomb artwork
 
-The close view uses `torpedo.shp` records `bom3` → `bom5` → `bom6` for
-leftward releases, and `bom9` → `bom7` → `bom6` for rightward releases.
-These preserve the source pixels, transparency and drawing pivots, padded into
-five 8×8 VRAM frames. The source archive hash and atlas locations are recorded
-in `assets_src/dashboard/manifest.json`.
+The close view uses all 12 `torpedo.shp` tumble frames, `bom0`..`bomb`
+(the original's shapes 0x40..0x4b). Each keeps its source pixels,
+transparency and drawing pivot, cropped into an 8×6 cell (every frame fits
+7×6, so the 8-px byte-aligned backup covers it), with the pivot recorded per
+frame (`g_BombPivotX/Y`, `bomb_pivots` in `assets_src/dashboard/manifest.json`).
 
-A bomb starts horizontal for five weapon ticks (200 ms), rotates diagonally
-for three ticks (120 ms), then points vertically down until impact. Direction
-follows its inherited horizontal velocity. This timing is an MSX adaptation
-of the supplied reference; the original physics and timing are not claimed to
-be recovered. Existing inherited velocity, gravity, ammunition, impact and
-far-view point rendering remain unchanged.
+As in the original (0x07f2, 0x0cca), a bomb released moving left starts at
+`bom3` (nose left), one moving right at `bom9` (nose right). It steps one
+frame on every second original tick, wrapping after `bomb`. A leftward bomb
+noses down through `bom4`..`bom6` (vertical after about half a second) and
+keeps turning on a long fall. A rightward one turns nose up first, as the
+original's frame order dictates. The original advances the frame only when a
+frame has been drawn since its last tick and its draw counter is odd, so its
+pace follows its render rate. The port assumes 12.5 Hz drawing: one frame
+per 4 weapon ticks.
 
 Clipped transparent VDP copies draw the cached sprites. Per-projectile backups preserve all opaque pixels and byte alignment.
 Ammo and lives digit data move to dashboard bank 12, read only when changed,

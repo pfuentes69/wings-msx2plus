@@ -261,14 +261,17 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
         else: y=y-1039
         if scale == 8: mark(x,y,1,2 if kind>=3 else 1,11)
         elif kind == 2:
-            from convert_dashboard import bomb_pixels
-            pose=0 if p['life']>250 else 1 if p['life']>247 else 2   # COMBAT_BOMB_LIFE 255
-            if pose!=2 and p['vx']>0:pose+=3
-            source=bomb_pixels()[pose*64:(pose+1)*64]
-            for row in range(8):
+            from convert_dashboard import bomb_frames
+            pixels,pivots=bomb_frames()
+            # The original tumble: bom3 moving left, bom9 right, a frame per
+            # 4 weapon ticks of age (COMBAT_BOMB_LIFE 255).
+            pose=((3 if p['vx']<0 else 9)+((255-p['life'])>>2))%12
+            source=pixels[pose*48:(pose+1)*48]   # 8 x 6 cells
+            px,py=pivots[pose]
+            for row in range(6):
                 for col in range(8):
                     color=source[row*8+col]
-                    if color:mark(x-4+col,y-4+row,1,1,color)
+                    if color:mark(x-px+col,y-py+row,1,1,color)
         else:
             mark(x-3,y,7,1,5 if kind==4 else 14)
             mark(x,y-3,1,7,5 if kind==4 else 14)
@@ -439,8 +442,8 @@ def main():
                         assert vram[address:address+8] == packed, (name,'ship cache',phase,piece,row)
             bomb_pixels = (ROOT/'assets_msx/dashboard/bombs.indices').read_bytes()
             for index,(sx,sy) in enumerate(far_meta['bomb_slots']):
-                for row in range(8):
-                    line=bomb_pixels[index*64+row*8:index*64+(row+1)*8]
+                for row in range(6):
+                    line=bomb_pixels[index*48+row*8:index*48+(row+1)*8]
                     packed=bytes((line[x]<<4)|line[x+1] for x in range(0,8,2))
                     address=(sy+row)*128+sx//2
                     assert vram[address:address+4]==packed,(name,'bomb atlas',index,row)

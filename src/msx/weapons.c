@@ -85,7 +85,14 @@ void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* stat
         // Back up only the affected pixels (plus byte alignment). Small
         // rounds must not pay for a full impact cross on every page restore.
         if (far) { left=x&~1; right=left+2; top=y; bottom=y+(kind>=COMBAT_IMPACT ? 2 : 1); }
-        else if (kind==COMBAT_FALLING_BOMB) { left=(x-3)&~1; right=left+8; top=y-3; bottom=y+3; }
+        else if (kind==COMBAT_FALLING_BOMB)
+        {
+            /* The original tumble (0x07f2, 0x0cca): bom3 moving left, bom9
+             * moving right, one frame on every 2 original ticks. */
+            s_BombPose = ((p->vx < 0 ? 3 : 9) + ((COMBAT_BOMB_LIFE - p->life) >> 2)) % BOMB_FRAMES;
+            x -= g_BombPivotX[s_BombPose]; y -= g_BombPivotY[s_BombPose];
+            left=x&~1; right=left+8; top=y; bottom=y+BOMB_HEIGHT;
+        }
         else { left=(x-3)&~1; right=left+8; top=y-3; bottom=y+4; }
         if (left < (i16)((camera+8)&65534u)) left = (camera+8)&65534u;
         if (right > (i16)((camera+257)&65534u)) right = (camera+257)&65534u;
@@ -99,10 +106,7 @@ void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* stat
         if (far) Mark(x, y, 1, kind >= COMBAT_IMPACT ? 2 : 1, 11);
         else if (kind == COMBAT_FALLING_BOMB)
         {
-            // Two discrete rotations after release: horizontal, diagonal, down.
-            s_BombPose = p->life > COMBAT_BOMB_LIFE - 5 ? 0 : p->life > COMBAT_BOMB_LIFE - 8 ? 1 : 2;
-            if (s_BombPose != 2 && p->vx > 0) s_BombPose += 3;
-            Mark(x-4, y-4, 8, 8, 0);
+            Mark(x, y, 8, BOMB_HEIGHT, 0);
         }
         else
         {

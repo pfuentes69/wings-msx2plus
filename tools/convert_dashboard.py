@@ -372,22 +372,31 @@ def waves():
     mapping = wave_mapping()
     return [bytes(mapping[v] for v in frame) for frame in frames]
 
-BOMB_NAMES = ('bom3','bom5','bom6','bom9','bom7')
+# The original's 12 tumble frames (shapes 0x40..0x4b, torpedo.shp bom0..bomb):
+# a bomb starts at bom3 (nose left) moving left or bom9 moving right and steps
+# one frame every second original tick (0x07f2, 0x0cca).
+BOMB_NAMES = tuple(f'bom{n:x}' for n in range(12))
+BOMB_HEIGHT = 6   # every frame fits 7 x 6
 
-def bomb_pixels():
-    """Original horizontal/diagonal/down poses, padded around their source pivot."""
+def bomb_frames():
+    """Each frame cropped into an 8 x BOMB_HEIGHT cell (7 px wide at most, so
+    an 8-px byte-aligned backup always covers it): pixels and the pivot's (x, y)
+    in the cell (the bomb's position is drawn at the pivot)."""
     records={n:r for n,_,r in read_ppkc(unpack_rpck((SOURCE/'torpedo.shp').read_bytes()))}
     mapping=json.loads((ROOT/'assets_msx/terrain/manifest.json').read_text())['source_to_msx_index']
-    result=bytearray(5*64)
+    result,pivots=bytearray(len(BOMB_NAMES)*8*BOMB_HEIGHT),[]
     for frame,name in enumerate(BOMB_NAMES):
         pixels,meta=decode_record(records[name],plane_constants=True)
         ox,oy=meta['origin_candidate']
-        for i,color in enumerate(pixels):
-            if not color:continue
-            x,y=i%meta['width']-ox+4,i//meta['width']-oy+4
-            if not (0<=x<8 and 0<=y<8):raise ValueError('bomb exceeds padded frame')
-            result[frame*64+y*8+x]=mapping[str(color)]
-    return bytes(result)
+        points=[(i%meta['width']-ox,i//meta['width']-oy,c) for i,c in enumerate(pixels) if c]
+        px=-min(x for x,_,_ in points);py=-min(y for _,y,_ in points)
+        if max(x for x,_,_ in points)+px>=7 or max(y for _,y,_ in points)+py>=BOMB_HEIGHT:raise ValueError('bomb exceeds its cell')
+        for x,y,c in points:result[(frame*BOMB_HEIGHT+y+py)*8+x+px]=mapping[str(c)]
+        pivots.append((px,py))
+    return bytes(result),pivots
+
+def bomb_pixels():
+    return bomb_frames()[0]
 
 def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=False, reserve_crew=False, frames=None, reserve_wheels=(), reserve_rope=False, reserve_smoke=()):
     if frames is None: frames=json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
@@ -425,7 +434,7 @@ def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=F
                             if reserve_crew:
                                 crew=allocate(34,22,7)
                                 weapons=allocate(36,8,8)
-                                bombs=allocate(5,8,8)
+                                bombs=allocate(len(BOMB_NAMES),8,BOMB_HEIGHT)
                                 if reserve_wheels:
                                     # Landing-gear overlay pieces (tools/convert_hellcat.py),
                                     # allocated last so nothing above moves; largest first,
@@ -550,6 +559,10 @@ def artifacts():
         table_offsets[name]=len(tables)
         table_header+=f'#define {name} (({kind}*)(g_DashboardTables+{len(tables)}))\n'
         for value in values:tables.extend(struct.pack('<H' if kind=='unsigned short' else 'B',value))
+    pivots=bomb_frames()[1]
+    table('g_BombPivotX','unsigned char',[x for x,y in pivots])
+    table('g_BombPivotY','unsigned char',[y for x,y in pivots])
+    table_header+=f'#define BOMB_FRAMES {len(BOMB_NAMES)}\n#define BOMB_HEIGHT {BOMB_HEIGHT}\n'
     for name,slots0 in [('Bomb',bomb_slots),('Pilot',slots[:24]),('WaveTail',tails),('WaveBackdrop',water_backups),('WeaponBackup',weapon_backups)]:
         table('g_'+name+'X','unsigned char',[x for x,y in slots0])
         table('g_'+name+'Y','unsigned short',[y for x,y in slots0])
@@ -572,7 +585,7 @@ def artifacts():
     if len(tables)>8192:raise ValueError('dashboard tables exceed bank 7')
     files[ROOT/'assets_msx/dashboard/bank_7.bin']=bytes(tables)
     files[ROOT/'assets_msx/dashboard/bombs.indices']=bomb_pixels()
-    indexed('assets_msx/dashboard/bombs.png',bomb_pixels(),8,40)
+    indexed('assets_msx/dashboard/bombs.png',bomb_pixels(),8,BOMB_HEIGHT*len(BOMB_NAMES))
     files[ROOT/'src/generated/dashboard.h']=code.encode()
     records=[]
     for name,offset,raw in read_ppkc(unpack_rpck((SOURCE/'dash.shp').read_bytes())):
@@ -583,7 +596,7 @@ def artifacts():
         asset_bank=dict(bank=12,bytes=len(bundle),offsets=offsets,sha256=hashlib.sha256(bundle).hexdigest()),
         bomb_slots=bomb_slots,bomb_names=BOMB_NAMES,
         bomb_source='torpedo.shp',bomb_source_sha256=hashlib.sha256((SOURCE/'torpedo.shp').read_bytes()).hexdigest(),
-        bomb_pose_ticks=[5,3],bomb_timing='MSX adaptation: horizontal 200 ms, diagonal 120 ms, then vertical; 25 Hz weapon clock',pilot_slots=slots[:24],far_poses=poses,far_pose_for_frame=list(pose_ids),
+        bomb_pivots=bomb_frames()[1],bomb_timing='original tumble: start bom3 (moving left) or bom9, one frame every 4 weapon ticks (2 original ticks)',pilot_slots=slots[:24],far_poses=poses,far_pose_for_frame=list(pose_ids),
         dashboard_palette='original iff-dash RGB4 quantized to RGB3; shared flight border/sea slots 0/1; dashboard blue relocated to 9',
         hud_layout=dict(layout(), removed_columns=sorted(PANEL_REMOVE), dropped_row=PANEL_DROP_ROW,
                         needles=list(NEEDLES), new_plane_needles=dict(oil=NEEDLE_NEW_OIL, fuel=NEEDLE_FULL),

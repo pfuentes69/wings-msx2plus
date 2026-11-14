@@ -738,6 +738,9 @@ static void StartCrash(void)
 {
     s_CrashSplash = Mission_Surface(s_World.x >> 8) == MISSION_SEA;
     s_CrashSteps = 150;
+    /* 0xafba clamps the altitude to the surface: the art plays there, not
+     * where the plane's lowest point first touched. */
+    s_World.flight.y = (FlightVertical)(WINGS_FLIGHT_MAX_Y - s_ContactSurface) << 8;
 }
 
 /* The crashed plane is lost: launch the next one with the same weapon, or end

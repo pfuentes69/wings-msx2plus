@@ -27,7 +27,9 @@ warnings are active in flight and on deck. The hold refills through
 **Provisional, until the original is mapped further or observed:**
 
 - The crash happens when the dead plane reaches sea level, followed by a
-  1-second hold. Splash/explosion art, deck collisions and crashing into the
+  1-second hold. As in the original (0xafba), the plane is first clamped to
+  the surface, so the splash or explosion plays on it, not where the
+  plane's lowest point first touched. Splash/explosion art, deck collisions and crashing into the
   sea under power are P2 part 2 (landing and collisions).
 - The next plane keeps the current weapon with a full load.
 - GAME OVER returns to rank selection (the high-score table is P6).

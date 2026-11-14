@@ -5046,69 +5046,152 @@
     "bank": 7,
     "bytes": 1134,
     "offsets": {
-      "g_BombX": 0,
-      "g_BombY": 5,
-      "g_PilotX": 15,
-      "g_PilotY": 39,
-      "g_WaveTailX": 87,
-      "g_WaveTailY": 90,
-      "g_WaveBackdropX": 96,
-      "g_WaveBackdropY": 98,
-      "g_WeaponBackupX": 102,
-      "g_WeaponBackupY": 138,
-      "g_FarShapes": 210,
-      "g_FarPoseForFrame": 453,
+      "g_BombPivotX": 0,
+      "g_BombPivotY": 12,
+      "g_BombX": 24,
+      "g_BombY": 36,
+      "g_PilotX": 60,
+      "g_PilotY": 84,
+      "g_WaveTailX": 132,
+      "g_WaveTailY": 135,
+      "g_WaveBackdropX": 141,
+      "g_WaveBackdropY": 143,
+      "g_WeaponBackupX": 147,
+      "g_WeaponBackupY": 183,
+      "g_FarShapes": 255,
+      "g_FarPoseForFrame": 498,
       "g_AircraftShapes": 576
     },
-    "sha256": "98ec1c72adb21169f5ffe4ddbf9ac6e0f04e4083ecf65157104cdec70c68a4b7"
+    "sha256": "195ce41e91e208960cebbc7a4b166a991f5008cfafa7e27983012df89f5c1c98"
   },
   "asset_bank": {
     "bank": 12,
-    "bytes": 7188,
+    "bytes": 7366,
     "offsets": {
       "DashboardPanel": 0,
       "PilotRLE": 3404,
       "FarPlaneRLE": 6468,
       "BombRLE": 7062
     },
-    "sha256": "ee5c4a53f78f089055b60a614e2ad38d37f8ebef849f716784c39b72497c51fc"
+    "sha256": "07c1e8005a51c8e0f09d16e6a79c7baee81c62b311f95a382b5fc2c00cec1dee"
   },
   "bomb_slots": [
     [
-      236,
-      993
+      136,
+      535
     ],
     [
-      244,
-      993
+      0,
+      571
     ],
     [
-      236,
-      1001
+      8,
+      571
     ],
     [
-      244,
-      1001
+      32,
+      626
     ],
     [
-      236,
-      1009
+      40,
+      626
+    ],
+    [
+      48,
+      626
+    ],
+    [
+      56,
+      626
+    ],
+    [
+      64,
+      626
+    ],
+    [
+      84,
+      626
+    ],
+    [
+      92,
+      626
+    ],
+    [
+      100,
+      626
+    ],
+    [
+      108,
+      626
     ]
   ],
   "bomb_names": [
+    "bom0",
+    "bom1",
+    "bom2",
     "bom3",
+    "bom4",
     "bom5",
     "bom6",
+    "bom7",
+    "bom8",
     "bom9",
-    "bom7"
+    "boma",
+    "bomb"
   ],
   "bomb_source": "torpedo.shp",
   "bomb_source_sha256": "05f156491c236eb0dbf1f103fb2703982602a922f0b7787e4fc83573900589f4",
-  "bomb_pose_ticks": [
-    5,
-    3
+  "bomb_pivots": [
+    [
+      1,
+      2
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      2,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      1,
+      3
+    ],
+    [
+      3,
+      3
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      2
+    ]
   ],
-  "bomb_timing": "MSX adaptation: horizontal 200 ms, diagonal 120 ms, then vertical; 25 Hz weapon clock",
+  "bomb_timing": "original tumble: start bom3 (moving left) or bom9, one frame every 4 weapon ticks (2 original ticks)",
   "pilot_slots": [
     [
       124,

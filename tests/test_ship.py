@@ -43,7 +43,7 @@ class ShipTests(unittest.TestCase):
         cache=json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['taxi_cache']
         add(cache['x'],cache['y'],cache['width'],cache['height'])
         for x,y in cockpit['weapon_backups']:add(x,y,8,8)
-        for x,y in cockpit['bomb_slots']:add(x,y,8,8)
+        for x,y in cockpit['bomb_slots']:add(x,y,8,6)
         for x,y in json.loads((ROOT/'assets_msx/ship/manifest.json').read_text())['crew_slots']:add(x,y,22,7)
 
         lift=json.loads((ROOT/'assets_msx/elevator/manifest.json').read_text())

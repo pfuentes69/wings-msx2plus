@@ -70,11 +70,14 @@ class DashboardBankTests(unittest.TestCase):
         records={n:r for n,_,r in read_ppkc(unpack_rpck(source.read_bytes()))}
         mapping=json.loads((ROOT/'assets_msx/terrain/manifest.json').read_text())['source_to_msx_index']
         atlas=(ROOT/'assets_msx/dashboard/bombs.indices').read_bytes()
-        for frame,name in enumerate(('bom3','bom5','bom6','bom9','bom7')):
+        pivots=json.loads((ROOT/'assets_src/dashboard/manifest.json').read_text())['bomb_pivots']
+        for frame in range(12):
+            name=f'bom{frame:x}'
             pixels,meta=decode_record(records[name],plane_constants=True)
             ox,oy=meta['origin_candidate']
+            px,py=pivots[frame]
             expected={(i%16-ox,i//16-oy):mapping[str(v)] for i,v in enumerate(pixels) if v}
-            actual={(i%8-4,i//8-4):v for i,v in enumerate(atlas[frame*64:(frame+1)*64]) if v}
+            actual={(i%8-px,i//8-py):v for i,v in enumerate(atlas[frame*48:(frame+1)*48]) if v}
             self.assertEqual(actual,expected,name)
 
 

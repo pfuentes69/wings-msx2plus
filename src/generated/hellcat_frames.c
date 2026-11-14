@@ -1936,64 +1936,63 @@ const AircraftShape g_WheelPieces[WHEEL_PIECE_COUNT] = {
     {AIRCRAFT_DATA(28079), 34, 13, 6, 4, 250, 524} /* wh01 */,
     {AIRCRAFT_DATA(28091), 15, 26, 2, 4, 206, 525} /* wh01 */,
     {AIRCRAFT_DATA(28095), 34, 16, 6, 4, 82, 533} /* wh02 */,
-    {AIRCRAFT_DATA(28107), 12, 26, 4, 3, 156, 536} /* wh02 */,
+    {AIRCRAFT_DATA(28107), 12, 26, 4, 3, 210, 536} /* wh02 */,
     {AIRCRAFT_DATA(28113), 32, 17, 6, 4, 88, 533} /* wh03 */,
-    {AIRCRAFT_DATA(28125), 11, 23, 4, 3, 206, 536} /* wh03 */,
+    {AIRCRAFT_DATA(28125), 11, 23, 4, 3, 214, 536} /* wh03 */,
     {AIRCRAFT_DATA(28131), 32, 18, 4, 5, 112, 533} /* wh04 */,
-    {AIRCRAFT_DATA(28141), 8, 21, 4, 3, 210, 536} /* wh04 */,
+    {AIRCRAFT_DATA(28141), 8, 21, 4, 3, 218, 536} /* wh04 */,
     {AIRCRAFT_DATA(28147), 7, 18, 6, 3, 124, 535} /* wh05 */,
     {AIRCRAFT_DATA(28156), 31, 19, 4, 5, 116, 533} /* wh05 */,
-    {AIRCRAFT_DATA(28166), 7, 17, 4, 2, 156, 539} /* wh06 */,
-    {AIRCRAFT_DATA(28170), 28, 21, 4, 4, 148, 536} /* wh06 */,
-    {AIRCRAFT_DATA(28178), 8, 14, 4, 3, 214, 536} /* wh07 */,
+    {AIRCRAFT_DATA(28166), 7, 17, 4, 2, 160, 539} /* wh06 */,
+    {AIRCRAFT_DATA(28170), 28, 21, 4, 4, 156, 536} /* wh06 */,
+    {AIRCRAFT_DATA(28178), 8, 14, 4, 3, 222, 536} /* wh07 */,
     {AIRCRAFT_DATA(28184), 27, 21, 4, 5, 120, 533} /* wh07 */,
     {AIRCRAFT_DATA(28194), 8, 11, 2, 2, 160, 536} /* wh08 */,
     {AIRCRAFT_DATA(28196), 11, 12, 2, 1, 250, 528} /* wh08 */,
     {AIRCRAFT_DATA(28197), 28, 22, 4, 5, 162, 534} /* wh08 */,
-    {AIRCRAFT_DATA(28207), 9, 9, 4, 2, 160, 539} /* wh09 */,
+    {AIRCRAFT_DATA(28207), 9, 9, 4, 2, 210, 539} /* wh09 */,
     {AIRCRAFT_DATA(28211), 27, 22, 4, 6, 162, 528} /* wh09 */,
-    {AIRCRAFT_DATA(28223), 12, 5, 4, 2, 206, 539} /* wh0a */,
+    {AIRCRAFT_DATA(28223), 12, 5, 4, 2, 214, 539} /* wh0a */,
     {AIRCRAFT_DATA(28227), 23, 22, 6, 6, 250, 512} /* wh0a */,
     {AIRCRAFT_DATA(28245), 11, 13, 6, 4, 94, 533} /* wh0b */,
     {AIRCRAFT_DATA(28257), 33, 26, 2, 4, 234, 537} /* wh0b */,
     {AIRCRAFT_DATA(28261), 11, 16, 6, 4, 100, 533} /* wh0c */,
-    {AIRCRAFT_DATA(28273), 35, 26, 4, 3, 218, 536} /* wh0c */,
+    {AIRCRAFT_DATA(28273), 35, 26, 4, 3, 226, 537} /* wh0c */,
     {AIRCRAFT_DATA(28279), 13, 17, 6, 4, 106, 533} /* wh0d */,
-    {AIRCRAFT_DATA(28291), 36, 23, 4, 3, 222, 536} /* wh0d */,
+    {AIRCRAFT_DATA(28291), 36, 23, 4, 3, 230, 537} /* wh0d */,
     {AIRCRAFT_DATA(28297), 14, 18, 4, 5, 252, 534} /* wh0e */,
-    {AIRCRAFT_DATA(28307), 39, 21, 4, 3, 226, 537} /* wh0e */,
+    {AIRCRAFT_DATA(28307), 39, 21, 4, 3, 252, 539} /* wh0e */,
     {AIRCRAFT_DATA(28313), 37, 18, 6, 3, 130, 535} /* wh0f */,
-    {AIRCRAFT_DATA(28322), 15, 19, 4, 5, 136, 535} /* wh0f */,
-    {AIRCRAFT_DATA(28332), 40, 17, 4, 2, 210, 539} /* wh10 */,
-    {AIRCRAFT_DATA(28336), 18, 21, 4, 4, 152, 536} /* wh10 */,
-    {AIRCRAFT_DATA(28344), 39, 14, 4, 3, 230, 537} /* wh11 */,
-    {AIRCRAFT_DATA(28350), 19, 21, 4, 5, 140, 535} /* wh11 */,
+    {AIRCRAFT_DATA(28322), 15, 19, 4, 5, 144, 536} /* wh0f */,
+    {AIRCRAFT_DATA(28332), 40, 17, 4, 2, 218, 539} /* wh10 */,
+    {AIRCRAFT_DATA(28336), 18, 21, 4, 4, 206, 536} /* wh10 */,
+    {AIRCRAFT_DATA(28344), 39, 14, 4, 3, 252, 542} /* wh11 */,
+    {AIRCRAFT_DATA(28350), 19, 21, 4, 5, 148, 536} /* wh11 */,
     {AIRCRAFT_DATA(28360), 40, 11, 2, 2, 164, 539} /* wh12 */,
     {AIRCRAFT_DATA(28196), 38, 12, 2, 1, 250, 528} /* wh12 */,
-    {AIRCRAFT_DATA(28362), 18, 22, 4, 5, 144, 536} /* wh12 */,
-    {AIRCRAFT_DATA(28372), 37, 9, 4, 2, 214, 539} /* wh13 */,
+    {AIRCRAFT_DATA(28362), 18, 22, 4, 5, 152, 536} /* wh12 */,
+    {AIRCRAFT_DATA(28372), 37, 9, 4, 2, 222, 539} /* wh13 */,
     {AIRCRAFT_DATA(28376), 19, 22, 4, 6, 252, 528} /* wh13 */,
-    {AIRCRAFT_DATA(28388), 35, 5, 4, 2, 218, 539} /* wh14 */,
+    {AIRCRAFT_DATA(28388), 35, 5, 4, 2, 252, 545} /* wh14 */,
     {AIRCRAFT_DATA(28392), 22, 22, 6, 6, 250, 518} /* wh14 */
 };
 #endif
 #ifdef MISSION_TERRAIN
 const AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT] = {
-    {AIRCRAFT_DATA(28410), -1, -1, 4, 3, 252, 539} /* smk0 */,
+    {AIRCRAFT_DATA(28410), -1, -1, 4, 3, 252, 547} /* smk0 */,
     {AIRCRAFT_DATA(28416), -2, -2, 6, 4, 22, 564} /* smk1 */,
-    {AIRCRAFT_DATA(28428), -4, -3, 10, 6, 32, 626} /* smk2 */,
-    {AIRCRAFT_DATA(28458), -6, -4, 14, 8, 214, 1011} /* smk3 */,
-    {AIRCRAFT_DATA(28514), -7, -5, 14, 5, 224, 564} /* smk4 */,
-    {AIRCRAFT_DATA(28549), -7, 0, 14, 5, 0, 571} /* smk4 */,
+    {AIRCRAFT_DATA(28428), -4, -3, 10, 6, 116, 626} /* smk2 */,
+    {AIRCRAFT_DATA(28458), -6, -4, 14, 8, 236, 1003} /* smk3 */,
+    {AIRCRAFT_DATA(28514), -7, -5, 14, 10, 236, 993} /* smk4 */,
     {AIRCRAFT_DATA(28584), -1, 0, 4, 1, 82, 537} /* smk0 */,
-    {AIRCRAFT_DATA(28586), -1, -1, 4, 2, 222, 539} /* smk1 */
+    {AIRCRAFT_DATA(28586), -1, -1, 4, 2, 252, 550} /* smk1 */
 };
 #endif
 
 const signed char g_SmokeBox[28] = {-1, -1, 4, 3, -2, -2, 6, 4, -4, -3, 10, 6, -6, -4, 14, 8, -7, -5, 14, 10, -1, 0, 4, 1, -1, -1, 4, 2};
 
 const unsigned char g_SmokeFirst[8] = {
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x06, 0x07, 0x08
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
 };
 
 const unsigned char g_WheelFirst[21] = {

@@ -82,8 +82,8 @@ void Dashboard_Load(void) WINGS_BANKED
     for (frame = 0; frame < FAR_PLANE_COUNT; ++frame)
         Expand(g_FarShapes[frame].atlas_x, g_FarShapes[frame].atlas_y, 16, 5);
     Input(BOMBRLE_OFFSET);
-    for (frame = 0; frame < 5; ++frame)
-        Expand(g_BombX[frame], g_BombY[frame], 8, 8);
+    for (frame = 0; frame < BOMB_FRAMES; ++frame)
+        Expand(g_BombX[frame], g_BombY[frame], 8, BOMB_HEIGHT);
     for (frame = 0; frame < 12; ++frame)
     {
         x = frame >= 4 && frame < 8 ? 144 : 48;
