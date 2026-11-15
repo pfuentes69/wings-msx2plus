@@ -16,6 +16,22 @@ from aircraft_scene import AircraftScene
 
 ROOT=Path(__file__).resolve().parents[1]
 
+def ticker_rows(island):
+    """The message ticker's text as 12 rows of pixels (src/msx/message.c):
+    the island's message with its bonus; the mission's last island appends
+    "Good work ..." over the final full stop. Odd glyphs get a blank column."""
+    from convert_font import glyphs, strings
+    height, first, last, font = glyphs()
+    msgs = strings()
+    text = msgs['g_MessageCleared'].replace(b'%ld', str(struct.unpack_from('<H', island, 312)[0]).encode())
+    if island[314]: text = text[:-1] + msgs['g_MessageMission']
+    rows = [[] for _ in range(height)]
+    for c in text:
+        width, bits = font[c if first <= c <= last else first]
+        for r in range(height): rows[r] += bits[r] + [0] * (width & 1)
+    return text, rows
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--machine',default='Panasonic_FS-A1WX-512K')
@@ -80,6 +96,8 @@ def main():
             # Level on the deck (rolling fast, byte 17, or held by a cable).
             deck_level=stage==1 and (flight[12]==2 or (flight[12]==0 and flight[17]!=0))
             wheel,gear,rope=(out/f'{name}.wheel').read_bytes()
+            band,ticker=struct.unpack('<BH',(out/f'{name}.band').read_bytes())
+            if band: _,text_rows=ticker_rows((out/f'{name}.island').read_bytes())
             raw=(out/f'{name}.smoke').read_bytes()
             smoke=[struct.unpack_from('<HhB',raw,1+5*i) for i in range(raw[0])]
             expected=expected_pixels(scene,int(pose),int(world),int(y),int(camera),
@@ -90,14 +108,20 @@ def main():
                 gauges=tuple((out/f'{name}.gauges').read_bytes()),crash=(out/f'{name}.crash').read_bytes()[0],
                 wheel=wheel,gear=gear,deck_level=deck_level,rope=rope,facing_left=bool(flight[11]),
                 smoke=[(x & 0xFFFF,row,frame) for x,row,frame in smoke],
-                score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0],fine=fine)
+                score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0],fine=fine,band=band)
             for row in range(212):
                 for col in range(8,256):
-                    ring=col if row>=172 else (int(camera)+col)%256
-                    sy=row if row>=172 else vram_row(row,fine,int(heave))
+                    if row<band:
+                        # The ticker: text pixel ticker at the right edge.
+                        ring=(ticker+1+col)%256;sy=row;p=ticker-255+col
+                        want=11 if 1<=row<=12 and 0<=p<len(text_rows[0]) and text_rows[row-1][p] else 0
+                    else:
+                        ring=col if row>=172 else (int(camera)+col)%256
+                        sy=row if row>=172 else vram_row(row,fine,int(heave))
+                        want=expected[row][col]
                     value=vram[page*32768+sy*128+ring//2]
                     value=(value>>(0 if ring%2 else 4))&15
-                    assert value==expected[row][col],(name,'composite',col,row,value,expected[row][col])
+                    assert value==want,(name,'composite',col,row,value,want,band)
         # The HUD (ammo, lives, weapon, gauges) is part of the full-VRAM
         # comparison above for gameplay. Menus keep the dashboard too: check
         # it in every phase (the pilot window shows the last flight profile).
@@ -133,7 +157,7 @@ def main():
     required|={'landed','landed_service','deck_bounce','sea_splash','sea_crash_next','engine_splash','arrest'}
     required|={'island_bombed','pan_high','pan_mid'}
     required|={'deck_smoke_live','deck_smoke_cleared'}
-    required|={'island_soldiers'}
+    required|={'island_soldiers','island_cleared'}
     assert required<=snapshots.keys(),required-snapshots.keys()
     assert (out/'paused.combat').read_bytes()==(out/'pause_wait.combat').read_bytes(),'Pause advanced weapons'
     for key in ('world','y','pose','wave','heave','ship','crew','depth','stage'):
@@ -175,6 +199,20 @@ def main():
     raw=(out/'island_soldiers.smoke').read_bytes()
     drawn={raw[1+5*i+4] for i in range(raw[0])}
     assert drawn&set(range(23,28)) and drawn&set(range(28,32)) and 40 in drawn,('soldier frames',sorted(drawn))   # dying 28..30, or his corpse 31
+    # The flag (0x3b52) waves over the island until it is cleared (0x3f5e):
+    # then the bonus (450 for island A, the only one: the mission is
+    # complete) and the ticker at the top with the executable's messages.
+    assert drawn&{43,44,45},('flag cloth',sorted(drawn))
+    before=(out/'island_soldiers.island').read_bytes();cleared=(out/'island_cleared.island').read_bytes()
+    raw=(out/'island_cleared.smoke').read_bytes()
+    assert not {raw[1+5*i+4] for i in range(raw[0])}&{43,44,45},'flag cloth after the clear'
+    assert cleared[309]==1 and cleared[310]==0 and cleared[311]==0 and struct.unpack_from('<H',cleared,312)[0]==450 and cleared[314]==1,('island cleared',cleared[302:315].hex())
+    gained=struct.unpack('<I',(out/'island_cleared.score').read_bytes())[0]-struct.unpack('<I',(out/'island_soldiers.score').read_bytes())[0]
+    assert gained>=450+25,('clear bonus',gained)
+    band,ticker=struct.unpack('<BH',(out/'island_cleared.band').read_bytes())
+    text,_=ticker_rows(cleared)
+    assert band>=15 and ticker>=300 and text.startswith(b'All enemy forces on island have been destroyed . . . Bonus 450 points . . Good work !'),(band,ticker,text)
+    print(f'ticker: {text.decode()!r}, band {band}, at pixel {ticker}')
     # Smoke over the signalmen and the elevator is drawn, then fully erased.
     assert snapshots['deck_smoke_live']['smoke']>=4 and snapshots['deck_smoke_cleared']['smoke']==0
     # Dugout guns (0x4f5c): the run passes the right dugout at low altitude.

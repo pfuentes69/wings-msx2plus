@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_HudScore g_DisplayScore g_SmokeDrawn g_SmokeDrawnCount g_Smoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_DisplayBand g_DisplayTicker g_MessageActive g_HudScore g_DisplayScore g_SmokeDrawn g_SmokeDrawnCount g_Smoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -63,6 +63,22 @@ proc finish {name then} {
 # plane) shows there in the wrong place.
 proc smoke_count {} {debug read memory [expr {$::addr(g_SmokeDrawnCount)+[value g_DisplayPage]}]}
 proc top_split_check {} {
+    set band [value g_DisplayBand]
+    if {$band} {
+        # The message band (src/msx/message.c): VRAM rows 0 .. band + 1
+        # show unscrolled (a late split included): sky, text rows 1..12 in
+        # ink 11 only. Scenery starts at row 24.
+        set base [expr {[value g_DisplayPage]*32768}]
+        for {set r 0} {$r<$band+2 && $r<24} {incr r} {
+            binary scan [debug read_block VRAM [expr {$base+$r*128}] 128] cu* bytes
+            set x 0
+            foreach b $bytes {
+                if {$r>=1 && $r<=12 ? ($b & 15) ni {0 11} || ($b >> 4) ni {0 11} : $b} {error "Band row $r not sky/text: world=[word g_DisplayWorld] y=[word g_DisplayY] band=$band x=[expr {$x*2}] byte=$b"}
+                incr x
+            }
+        }
+        return
+    }
     if {[value g_DisplayScale]!=1} {return}
     set fine [value g_DisplayFine];set heave [value g_DisplayHeave]
     if {$fine>127} {set fine [expr {$fine-256}]}
@@ -153,7 +169,8 @@ proc publishing {} {
     set page [value g_DisplayPage]
     dump $name.smoke [binary format c [smoke_count]][debug read_block memory [expr {$::addr(g_SmokeDrawn)+$page*27*5}] [expr {27*5}]]
     dump $name.score [debug read_block memory $::addr(g_DisplayScore) 4]
-    dump $name.island [debug read_block memory $::addr(g_Island) 309]
+    dump $name.island [debug read_block memory $::addr(g_Island) 315]
+    dump $name.band [binary format cs [value g_DisplayBand] [word g_DisplayTicker]]
     dump $name.palette [debug read_block {VDP palette} 0 32]
     dump $name.fine [debug read_block memory $::addr(g_DisplayFine) 1]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
@@ -569,7 +586,19 @@ proc island_soldiers {} {
     debug write memory [expr {$::addr(g_Island)+304}] [expr {[debug read memory [expr {$::addr(g_Island)+304}]]+3}]
     debug write memory [expr {$::addr(g_Island)+305}] [expr {[debug read memory [expr {$::addr(g_Island)+305}]]+2}]
     debug write memory [expr {$::addr(g_Island)+307}] 0
-    after time 0.3 {snap island_soldiers {wait_for {[world_x]>5000} pan_climb "fly back from the island" 90}}
+    after time 0.3 {snap island_soldiers island_clear}
+}
+# Island cleared (0x3f5e): island A's last soldier dies with no gun left
+# (soldiers[0] = 1 at +128, guns[0] = 0 at +132): bonus, flag down, and
+# the message ticker at the top (src/msx/message.c). Capture it running,
+# then fly on with it through the pan descent over the carrier.
+proc island_clear {} {
+    set base [expr {$::addr(g_Island)+162}]
+    set tick [debug read memory [expr {$::addr(g_Island)+306}]]
+    debug write_block memory [expr {$base+7*18}] [binary format sccccc [expr {[word g_DisplayCamera]+100}] 1 5 2 2 $tick]
+    foreach {offset value} {128 1 132 0 307 0} {debug write memory [expr {$::addr(g_Island)+$offset}] $value}
+    foreach offset {304 305} {debug write memory [expr {$::addr(g_Island)+$offset}] [expr {[debug read memory [expr {$::addr(g_Island)+$offset}]]+1}]}
+    wait_for {[value g_DisplayBand] && [word g_DisplayTicker]>=300} {snap island_cleared {wait_for {[world_x]>5000} pan_climb "fly back from the island" 90}} "the island-cleared ticker" 10
 }
 proc island_run {} {
     game_byte 13 30;game_byte 15 192

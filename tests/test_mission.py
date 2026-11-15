@@ -45,8 +45,11 @@ class MissionTests(unittest.TestCase):
             cell = self.mission['cells'][x // 8]
             self.assertTrue(cell['draw'])
             self.assertEqual(self.evidence['shape_names'][cell['shape_id']], name)
-        self.assertEqual(len(self.scene['placed']), 75)
-        self.assertEqual(len(self.scene['unresolved']), 14)
+        # The flag's pole (0x113, flg0..flg2 in the executable) is baked in
+        # as POST; the cloth is an overlay until the island is cleared.
+        self.assertEqual(placed[2408]['name'], 'POST')
+        self.assertEqual(len(self.scene['placed']), 76)
+        self.assertEqual(len(self.scene['unresolved']), 13)
 
     def test_bad_map_and_modified_instruction_evidence_are_rejected(self):
         raw = (ROOT / 'reference_assets/original_files/Wings_of_Fury/maps/a.map').read_bytes()

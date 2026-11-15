@@ -74,6 +74,7 @@ static u8 s_RenderGauges[3] = {16, 22, 0};
 volatile u8 g_DisplayGauges[3] = {16, 22, 0};
 #include "rom_mapper.h"
 #include "msx/scenery_load.h"
+#include "msx/message.h"
 
 volatile u8 g_ScrollFine, g_ScrollCoarse, g_VerticalOffset, g_LineSplit;
 /* Close-view pan (docs/altitude-view.md): above altitude 131 the original
@@ -83,6 +84,9 @@ volatile u8 g_ScrollFine, g_ScrollCoarse, g_VerticalOffset, g_LineSplit;
  * g_FirstSplit/g_FirstState: the first line interrupt and the HBlank state
  * the VBlank ISR arms (2: top split pending). */
 volatile u8 g_PlayOffset, g_FirstSplit, g_FirstState;
+/* The play area's horizontal scroll, set again at the top split (the
+ * message band above it has its own; msx/message.h). */
+volatile u8 g_PlayFine, g_PlayCoarse;
 volatile u8 g_DisplayFine;   /* the published page's fine pan (verification) */
 static u8 s_ViewKey, s_RenderFine;   /* view: 8 distant, else pan rows / 8 */
 static int8_t s_PanStep;              /* tile rows the page moves this render */
@@ -94,6 +98,7 @@ static u8 s_RenderHeave;
 #define FAR_X(world) ((u16)((int16_t)(world) >> 3))
 #ifdef WINGS_P1_FLIGHT
 static u8 s_CarrierView; /* the near view shows the carrier */
+static u8 s_Tight;       /* the last frame took within a VBlank of the base deadline */
 #endif
 volatile u8 g_DashboardSplit;
 volatile u16 g_DisplaySurfaceWord;
@@ -280,6 +285,14 @@ void VDP_HBlankHandler(void) __naked
         out (0x99), a
         ld a, #0x97
         out (0x99), a
+        ld a, (_g_PlayFine)
+        out (0x99), a
+        ld a, #0x9b
+        out (0x99), a
+        ld a, (_g_PlayCoarse)
+        out (0x99), a
+        ld a, #0x9a
+        out (0x99), a
         ld a, (_g_LineSplit)
         out (0x99), a
         ld a, #0x93
@@ -305,25 +318,57 @@ void VDP_HBlankHandler(void) __naked
         WINGS_LINE_ISR_TAIL
     __endasm;
 }
-/* The vertical scroll and line splits for the page being published. */
-static void PublishScroll(void)
+/* The scrolls and line splits for the page being published. */
+#ifdef WINGS_P1_FLIGHT
+static u8 s_Band[2];   /* per page: the message band's height, 0 without */
+#endif
+/* The published band and its text pixel at the right edge (verification). */
+volatile u8 g_DisplayBand;
+volatile u16 g_DisplayTicker;
+static void PublishScroll(u8 page, u16 camera)
 {
     u8 scroll = s_RenderHeave + s_RenderFine;
-    g_VerticalOffset = 0 - s_RenderHeave;
+    g_PlayFine = (-camera) & 7;
+    g_PlayCoarse = ((camera & 255) + 7) >> 3;
     g_PlayOffset = 0 - scroll;
     g_LineSplit = 170 - scroll;   /* line 170 in the play scroll */
-    /* R19 counts scrolled lines: line s with the top region's -heave. The
-     * split is requested up to 2 lines early: those lines then show VRAM
-     * rows 254..255 (kept sky) under the play scroll, and an interrupt up
-     * to 2 lines late shows rows fine - 2 .. fine - 1 (sky: g_TopClip), so
-     * a late interrupt changes nothing on screen. Measured lateness is 0-2
-     * lines on nearly every field, rarely 3-4. */
-    g_FirstSplit = (int8_t)s_RenderFine > 0 ? s_RenderFine - (s_RenderFine < 2 ? s_RenderFine : 2) : g_LineSplit;
-    g_FirstState = (int8_t)s_RenderFine > 0 ? 2 : 0;
+#ifdef WINGS_P1_FLIGHT
+    if (s_Band[page])
+    {
+        /* The message band: VRAM rows 0.. unscrolled, the text pixel
+         * g_MessageScroll at its right edge; the split is requested 2 lines
+         * early (MESSAGE_BAND leaves sky there). */
+        g_VerticalOffset = 0;
+        g_FirstSplit = s_Band[page] - 2;
+        g_FirstState = 2;
+        camera = g_MessageScroll[page] + 1;
+        g_DisplayTicker = g_MessageScroll[page];
+    }
+    else
+#else
+    (void)page;
+#endif
+    {
+        g_VerticalOffset = 0 - s_RenderHeave;
+        /* R19 counts scrolled lines: line s with the top region's -heave.
+         * The split is requested up to 2 lines early: those lines then show
+         * VRAM rows 254..255 (kept sky) under the play scroll, and an
+         * interrupt up to 2 lines late shows rows fine - 2 .. fine - 1 (sky:
+         * g_TopClip), so a late interrupt changes nothing on screen.
+         * Measured lateness is 0-2 lines on nearly every field, rarely 3-4. */
+        g_FirstSplit = (int8_t)s_RenderFine > 0 ? s_RenderFine - (s_RenderFine < 2 ? s_RenderFine : 2) : g_LineSplit;
+        g_FirstState = (int8_t)s_RenderFine > 0 ? 2 : 0;
+    }
+    g_ScrollFine = (-camera) & 7;
+    g_ScrollCoarse = ((camera & 255) + 7) >> 3;
     g_DashboardSplit = g_FirstState;
     g_DisplayFine = s_RenderFine;
+#ifdef WINGS_P1_FLIGHT
+    g_DisplayBand = s_Band[page];
+#endif
     VDP_SetVerticalOffset(g_VerticalOffset);
     VDP_SetHBlankLine(g_FirstSplit);
+    VDP_SetHorizontalOffset(camera & 255);
 }
 static void WaitVBlank(void)
 {
@@ -435,7 +480,7 @@ static void Background(u8 page, u8 save)
     }
 }
 
-static void LoadShape(const AircraftShape* shape)
+void Atlas_LoadShape(const AircraftShape* shape)
 {
     const u8* source;
     u16 offset = (u16)shape->data;
@@ -459,10 +504,10 @@ static void LoadCaches(void)
 {
     u8 i;
     s_GroundShape=s_FlashSlot[0]=s_FlashSlot[1]=255;
-    for (i=0; i<AIRCRAFT_STATIC_SHAPES; ++i) LoadShape(&g_AircraftShapes[i]);
+    for (i=0; i<AIRCRAFT_STATIC_SHAPES; ++i) Atlas_LoadShape(&g_AircraftShapes[i]);
 #ifdef WINGS_P1_FLIGHT
-    for (i=0; i<WHEEL_PIECE_COUNT; ++i) LoadShape(&g_WheelPieces[i]);
-    for (i=0; i<SMOKE_PIECE_COUNT; ++i) LoadShape(&g_SmokePieces[i]);
+    for (i=0; i<WHEEL_PIECE_COUNT; ++i) Atlas_LoadShape(&g_WheelPieces[i]);
+    Smoke_LoadPieces();
 #endif
 }
 
@@ -489,7 +534,7 @@ static const AircraftShape* GunFlash(u8 frame)
     index += slot * 20;
     if (s_FlashSlot[slot] != index)
     {
-        LoadShape(&g_GunFlash[index]);
+        Atlas_LoadShape(&g_GunFlash[index]);
         s_FlashSlot[slot] = index;
     }
     return &g_GunFlash[index];
@@ -559,14 +604,14 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
         /* The crash art streams into the host shape's atlas slot (restored
          * when the next plane launches) and replaces the plane. */
         shape = &g_CrashShapes[s_CrashFrame];
-        if (s_CrashLoaded != s_CrashFrame) { LoadShape(shape); s_CrashLoaded = s_CrashFrame; }
+        if (s_CrashLoaded != s_CrashFrame) { Atlas_LoadShape(shape); s_CrashLoaded = s_CrashFrame; }
         flash = 0;
     }
     else
     {
     if (frame >= AIRCRAFT_STATIC_SHAPES && s_GroundShape != frame)
     {
-        LoadShape(shape);
+        Atlas_LoadShape(shape);
         s_GroundShape=frame;
     }
     flash = GunFlash(frame);
@@ -654,6 +699,13 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     u16 previous, next;
     g_RenderPage = page;
     g_TopClip = !g_TerrainFar && (int8_t)s_RenderFine > 0 ? s_RenderFine : 0;
+#ifdef WINGS_P1_FLIGHT
+    /* The message band shows VRAM rows 0 .. band + 1 (a late split) at its
+     * own scroll: no overlays there. */
+    { u8 scroll = s_RenderHeave + s_RenderFine;
+      s_Band[page] = g_MessageActive ? MESSAGE_BAND((int8_t)scroll > 0 ? scroll : 0) : 0;
+      if (s_Band[page]) g_TopClip = s_Band[page] + 2; }
+#endif
     g_ViewChange = s_PageScale[page] != s_ViewKey;
     s_PanStep = 0;
     if (g_ViewChange && s_PageScale[page] < 8 && s_ViewKey < 8)
@@ -771,6 +823,10 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     s_RenderSurface = Mission_Query(world);
     // Finish the hidden page before it can be published.
     VDP_CommandWait();
+#ifdef WINGS_P1_FLIGHT
+    /* After the commands: a rebuild clears the band's rows. */
+    if (g_MessageActive) Message_Draw(page, g_ViewChange);
+#endif
     g_Rendering = 0;
 }
 
@@ -812,7 +868,7 @@ static void NewPlane(void)
     Smoke_Reset(); Smoke_ClearPages();
 #endif
     s_CrashFrame=255;
-    if (s_CrashLoaded!=255) { LoadShape(&g_AircraftShapes[CRASH_HOST_SHAPE]); s_CrashLoaded=255; }
+    if (s_CrashLoaded!=255) { Atlas_LoadShape(&g_AircraftShapes[CRASH_HOST_SHAPE]); s_CrashLoaded=255; }
     s_PageScale[0]=s_PageScale[1]=255;
 }
 
@@ -945,6 +1001,9 @@ void main(void)
     g_TerrainFar = g_ViewChange = s_PageScale[0] = s_PageScale[1] = 0;
     g_VerticalOffset = s_RenderHeave = 0; g_LineSplit = 170;
     g_PlayOffset = g_FirstState = s_RenderFine = s_ViewKey = g_PanRows = 0; g_FirstSplit = 170;
+#ifdef WINGS_P1_FLIGHT
+    g_MessageActive = g_MessageWait = s_Band[0] = s_Band[1] = 0;
+#endif
     s_GuardTop[0] = s_GuardTop[1] = 172;
     g_DisplayPage = 0;
     s_Valid[0] = s_Valid[1] = 0;
@@ -1000,6 +1059,7 @@ void main(void)
     VDP_SetHorizontalOffset(camera & 255);
     g_ScrollFine = (-camera) & 7;
     g_ScrollCoarse = ((camera & 255) + 7) >> 3;
+    g_PlayFine = g_ScrollFine; g_PlayCoarse = g_ScrollCoarse;
     VDP_SetHBlankLine(171);
     VDP_EnableHBlank(TRUE);
     VDP_EnableDisplay(TRUE);
@@ -1037,12 +1097,13 @@ void main(void)
         if (g_Combat.count>COMBAT_GUN_COUNT || g_Combat.secondary_cooldown ||
             g_Combat.secondary_pending || Weapons_PendingRestore()) present_ticks+=2;
 #ifdef WINGS_P1_FLIGHT
-        /* NTSC, heavy scenes: over the carrier (~95 ms of render CPU) or
-         * with 4+ smoke, gun or soldier shapes on screen, 2 more VBlanks
-         * until the render paths are rewritten (docs/frame-budget.md).
-         * PAL's frame is long enough. */
+        /* NTSC, heavy scenes: over the carrier (~95 ms of render CPU), with
+         * 4+ smoke, gun or soldier shapes on screen, or after a frame that
+         * came within a VBlank of the base deadline (large puffs cost
+         * several pieces each), 2 more VBlanks until the render paths are
+         * rewritten (docs/frame-budget.md). PAL's frame is long enough. */
         if (g_Game.phase==GAME_PLAY && g_Carrier.stage==CARRIER_DECK && !(g_VDP_REGSAV[9]&2) &&
-            (s_CarrierView || g_SmokeDrawnCount[g_DisplayPage] >= 4)) present_ticks+=2;
+            (s_CarrierView || g_SmokeDrawnCount[g_DisplayPage] >= 4 || s_Tight)) present_ticks+=2;
 #endif
         steps=(g_VDP_REGSAV[9]&2) ? present_ticks*3 : present_ticks*5/2;
         weapons=reset_weapons=0; input=0; turn=0;
@@ -1179,6 +1240,10 @@ advance_clocks:
 #endif
             }
         }
+#ifdef WINGS_P1_FLIGHT
+        /* The ticker moves 2 px a VBlank (msx/message.c). */
+        if (g_Game.phase==GAME_PLAY && (g_Island.message || g_MessageActive)) Message_Update(present_ticks);
+#endif
         camera = s_World.camera;
         world = s_World.x >> 8;
         y = s_World.flight.y >> 8;
@@ -1209,6 +1274,9 @@ advance_clocks:
         page = g_DisplayPage ^ 1;
         if (g_Game.phase!=GAME_PLAY)
         {
+#ifdef WINGS_P1_FLIGHT
+            s_Band[0] = s_Band[1] = 0;
+#endif
             if (s_UiDirty)
             {
                 g_RenderPage=page; g_Rendering=1;
@@ -1230,12 +1298,15 @@ advance_clocks:
             g_DisplayGauges[0] != g_Engine.oil_needle || g_DisplayGauges[1] != g_Engine.fuel_needle ||
             g_DisplayGauges[2] != g_Engine.lamps || g_DisplayCrash != s_CrashFrame ||
             g_DisplayWheel != (g_TerrainFar || s_CrashFrame != 255 ? 255 : s_Wheel) || g_DisplayGear != s_GearPos ||
-            SmokeActive() || s_GunsDrawn || s_SoldiersMoving || g_SmokeDrawnCount[g_DisplayPage] || g_TerrainDirty ||
+            SmokeActive() || s_GunsDrawn || s_SoldiersMoving || g_MessageActive || g_SmokeDrawnCount[g_DisplayPage] || g_TerrainDirty ||
 #endif
             g_DisplayWave != s_Wave || g_DisplayHeave != s_RenderHeave || camera != g_DisplayCamera || world != g_DisplayWorld || y != g_DisplayY || frame != g_SelectedFrame)
             Render(page, camera, world, y, frame);
         else page = g_DisplayPage;
         surface = s_RenderSurface;
+#ifdef WINGS_P1_FLIGHT
+        s_Tight = (u8)(g_VBlankTicks - tick) + 1 >= WINGS_PRESENT_TICKS;
+#endif
         // Prepare the diagnostic/UI snapshot before the publication window.
         Game_View(&g_Game,s_NextGameView);
         // The deadline is a VBlank window. A completed page can still be
@@ -1252,14 +1323,19 @@ advance_clocks:
                 WaitVBlank();
             }
         }
-        else while ((u8)(g_VBlankTicks - tick) < present_ticks) WaitVBlank();
+        else while ((u8)(g_VBlankTicks - tick) < present_ticks)
+        {
+#ifdef WINGS_P1_FLIGHT
+            /* The ticker's text, with a whole frame still to spare. */
+            if (g_MessageActive && g_Game.phase == GAME_PLAY && page != g_DisplayPage &&
+                (u8)(g_VBlankTicks - tick) + 1 < present_ticks && Message_Work(page)) continue;
+#endif
+            WaitVBlank();
+        }
         tick = g_VBlankTicks;
         if (g_Game.phase!=GAME_PLAY) { camera=0; s_RenderHeave=0; s_RenderFine=0; }
-        g_ScrollFine = (-camera) & 7;
-        g_ScrollCoarse = ((camera & 255) + 7) >> 3;
         VDP_SetPage(page);
-        PublishScroll();
-        VDP_SetHorizontalOffset(camera & 255);
+        PublishScroll(page, camera);
         g_DisplayPage = page;
         g_DisplayCamera = camera;
         g_DisplayWorld = world;

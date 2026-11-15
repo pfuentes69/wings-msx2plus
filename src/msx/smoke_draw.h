@@ -2,6 +2,7 @@
 #define WINGS_MSX_SMOKE_DRAW_H
 #include "core.h"
 #include "banking.h"
+#include "../generated/hellcat_frames.h"
 
 /* Drawing the engine smoke and the dugout guns (banked, segment 22). Puffs are drawn behind the
  * plane and erased by repainting the terrain tiles under them (sky above
@@ -19,6 +20,8 @@ extern u8 g_SmokeDrawnCount[2];
 u8 Smoke_Restore(u8 page, u8 rebuilt, u16 camera) WINGS_BANKED;
 /* Forget what both pages show (boot: RAM is not cleared; new plane). */
 void Smoke_ClearPages(void) WINGS_BANKED;
+/* Copy the smoke-path frames into their atlas places (boot). */
+void Smoke_LoadPieces(void) WINGS_BANKED;
 /* Draw the live puffs. shift: rows the plane is pushed down by the
  * near-view top clamp; heave: the carrier's vertical scroll (screen
  * positions stay fixed, as for aircraft and weapons); limit: first row not

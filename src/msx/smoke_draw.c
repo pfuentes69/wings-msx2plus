@@ -4,6 +4,7 @@
 #include "terrain_renderer.h"
 #include "../core/smoke.h"
 #include "../core/island.h"
+#include "../generated/mission_island.h"
 #include "../generated/hellcat_frames.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_EFFECTS)
 
@@ -92,6 +93,14 @@ static void SkyFill(u8 page, i16 left, i16 right, i16 top, i16 bottom)
         VDP_CommandHMMV(ring, (u16)page * 256 + top, part, bottom - top, 0);
         ring += part; width -= part;
     }
+}
+
+/* world_flight.c (resident): one atlas shape from the aircraft banks. */
+void Atlas_LoadShape(const AircraftShape* shape);
+void Smoke_LoadPieces(void) WINGS_BANKED
+{
+    u8 i;
+    for (i = 0; i < SMOKE_PIECE_COUNT; ++i) Atlas_LoadShape(&g_SmokePieces[i]);
 }
 
 void Smoke_ClearPages(void) WINGS_BANKED
@@ -185,7 +194,7 @@ static void Piece(const AircraftShape* piece)
 }
 
 /* Place a shape at world (x, y) in this view (s_Far, s_Shift). */
-static u8 s_Far, s_Drawn;
+static u8 s_Far, s_Drawn, s_FlagPhase;
 static i16 s_Shift;
 static SmokeDrawn* s_Out;
 static void Place(u16 x, u16 y)
@@ -245,6 +254,18 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
         Place(g->x, WINGS_FLIGHT_MAX_Y - ISLAND_GUN_ALTITUDE);
         Shape(far ? SMOKE_FRAME_FAR_FLASH : SMOKE_FRAME_GUN + frame);
     }
+    /* The island flag's cloth (0x3b52), close view only, waving through
+     * flg0..flg2 until the island is cleared; the pole is in the scenery. */
+    if (!far)
+        for (i = 0; i < ISLAND_COUNT; ++i)
+        {
+            if (g_Island.cleared & (1 << i)) continue;
+            if ((u16)(s_IslandFlagX[i] - camera + 16) > 288u) continue;
+            /* RAM is not cleared at boot: any phase above 2 restarts. */
+            if (!s_FlagPhase-- || s_FlagPhase > 2) s_FlagPhase = 2;
+            Place(s_IslandFlagX[i], WINGS_FLIGHT_MAX_Y - 11);
+            Shape(SMOKE_FRAME_FLAG + s_FlagPhase);
+        }
     /* Island soldiers (0x3eee) at altitude 12: walking guy0..guy4, dying
      * guy5..guy7, the corpse guy8 (+ 9 facing left). The distant view
      * shows a 2-frame figure and no corpses. */

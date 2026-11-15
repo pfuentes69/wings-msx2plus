@@ -14,6 +14,10 @@ static u16 s_StreamOffset;
 static u8 s_Hud[2][HUD_ELEMENT_COUNT];
 static u8 s_Status[2][3]; /* weapon, stock, lives last shown per page */
 u32 g_HudScore[2];        /* score shown per page (the panel shows 0) */
+/* The score s_ScoreField (Dashboard_Score) holds: the second page reuses it (composing took
+ * most of the redraw's ~20 ms, paid on each page). */
+static u32 s_FieldScore;
+static u8 s_FieldValid;
 // The baked panel shows 30 bombs, three lives, bombs and a new plane's
 // gauges (oil frame 16, fuel frame 22, lamps dark). Dial entries hold the
 // frame plus HUD_LIT when the lit variant is shown; the _LIT slots are unused.
@@ -66,6 +70,7 @@ void Dashboard_Load(void) WINGS_BANKED
     u8 page, frame, row, piece;
     u16 x, y, offset = 0;
     Waves_Init();
+    s_FieldValid = 0;
     for (page = 0; page < 2; ++page)
     {
         s_Pilot[page] = 255;
@@ -209,30 +214,40 @@ static const u8 s_Pair[4] = {
     SCORE_BACK << 4 | SCORE_BACK, SCORE_BACK << 4 | SCORE_INK,
     SCORE_INK << 4 | SCORE_BACK, SCORE_INK << 4 | SCORE_INK};
 static u8 s_ScoreField[7][HUD_SCORE_DIGITS * 7 / 2];
+static const u8 s_Blank7[7] = {0, 0, 0, 0, 0, 0, 0};   /* a leading blank: no pixels (in ROM) */
 void Dashboard_Score(u8 page, u32 score) WINGS_BANKED
 {
-    u8 digit[HUD_SCORE_DIGITS], i, row, lead = 1;
+    const u8* rows[HUD_SCORE_DIGITS];
+    const u8* pa;
+    const u8* pb;
+    u8* out;
+    u8 i, row, lead = 1, a, b;
     u16 address;
+    u32 power;
     if (g_HudScore[page] == score) return;
     g_HudScore[page] = score;
+    if (s_FieldValid && s_FieldScore == score) goto write;
+    s_FieldScore = score; s_FieldValid = 1;
     if (score > 999999UL) score = 999999UL;
+    /* Each digit's 7 glyph rows (no multiplications: SDCC calls for them). */
     for (i = 0; i < HUD_SCORE_DIGITS; ++i)
     {
-        u8 d = 0;
-        while (score >= s_Powers[i]) { score -= s_Powers[i]; ++d; }
-        if (d || i == HUD_SCORE_DIGITS - 1) lead = 0;
-        digit[i] = lead ? 255 : d;
+        power = s_Powers[i];
+        pa = g_HudDigitRows;
+        while (score >= power) { score -= power; pa += 7; }
+        if (pa != g_HudDigitRows || i == HUD_SCORE_DIGITS - 1) lead = 0;
+        rows[i] = lead ? s_Blank7 : pa;
     }
     /* Digits pair up into byte-aligned 14-pixel cells: the first digit's 6
      * pixels fill 3 bytes, then the gap and the second digit fill 4 (its
      * pixels start on an odd nibble). Each byte is two pixels from s_Pair. */
-    for (row = 0; row < 7; ++row)
+    for (i = 0; i < HUD_SCORE_DIGITS; i += 2)
     {
-        u8* out = s_ScoreField[row];
-        for (i = 0; i < HUD_SCORE_DIGITS; i += 2)
+        pa = rows[i]; pb = rows[i + 1];
+        out = &s_ScoreField[0][0] + (i >> 1) * 7;
+        for (row = 0; row < 7; ++row, out += HUD_SCORE_DIGITS * 7 / 2 - 7)
         {
-            u8 a = digit[i] == 255 ? 0 : g_HudDigitRows[digit[i] * 7 + row];
-            u8 b = digit[i + 1] == 255 ? 0 : g_HudDigitRows[digit[i + 1] * 7 + row];
+            a = *pa++; b = *pb++;
             *out++ = s_Pair[(a >> 4) & 3];
             *out++ = s_Pair[(a >> 2) & 3];
             *out++ = s_Pair[a & 3];
@@ -242,6 +257,7 @@ void Dashboard_Score(u8 page, u32 score) WINGS_BANKED
             *out++ = s_Pair[(b << 1) & 2];          /* b's last pixel, then gap */
         }
     }
+write:
     address = ((u16)page * 256 + 172 + HUD_SCORE_Y) * 128 + HUD_SCORE_X / 2;
     for (row = 0; row < 7; ++row, address += 128)
         VDP_WriteVRAM(s_ScoreField[row], address, 0, HUD_SCORE_DIGITS * 7 / 2);

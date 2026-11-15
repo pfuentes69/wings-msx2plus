@@ -112,7 +112,7 @@ def vram_row(row, fine, heave):
     return (row - heave) % 256 if row < scroll - early else (row - scroll) % 256
 
 
-def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True, smoke=(), score=0, fine=None):
+def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True, smoke=(), score=0, fine=None, band=0):
     # World x is a 16-bit ring read as signed; beyond the map the MSX draws a
     # column of open sea (map x 5000 near, far x 624 in the distant view).
     signed = lambda v: v - 65536 if v >= 32768 else v
@@ -125,7 +125,9 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
     scroll = heave + fine
     # Overlays (plane, wheels, flash, weapons, rope) stay at VRAM rows from
     # g_TopClip (fine in the close-view pan, else 0): screen rows from here.
-    overlay_top = scroll + max(0, fine) if scale == 1 else 0
+    # The message band (rows 0 .. band + 1 shown unscrolled): band + 2.
+    clip = band + 2 if band else max(0, fine) if scale == 1 else 0
+    overlay_top = scroll + clip
     panned = pan - fine >= 8   # whole tile rows of pan: the wave strip is below the view
     def background_row(row):   # rows above the image are sky
         return max(row, 0) * background_width
@@ -206,7 +208,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             for yy in range(record['height']):
                 r = row + record['dy'] + yy
                 # VRAM rows 0 .. fine - 1 show in the top split: none drawn there.
-                if not max(0, fine) <= r - scroll < vram_limit or r >= 172: continue
+                if not clip <= r - scroll < vram_limit or r >= 172: continue
                 for xx in range(record['width']):
                     wx = sx_ + record['dx'] + xx
                     if not camera + 8 <= wx < camera + 256: continue

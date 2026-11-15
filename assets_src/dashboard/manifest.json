@@ -5062,7 +5062,7 @@
       "g_FarPoseForFrame": 498,
       "g_AircraftShapes": 576
     },
-    "sha256": "195ce41e91e208960cebbc7a4b166a991f5008cfafa7e27983012df89f5c1c98"
+    "sha256": "968e8c68cde69432c22c6853a7837c510162eb64230a3ed9d279bd8b5c95233f"
   },
   "asset_bank": {
     "bank": 12,
@@ -5620,7 +5620,7 @@
     },
     {
       "name": "lpnc",
-      "atlas_x": 192,
+      "atlas_x": 200,
       "atlas_y": 935,
       "sha256": "1cfab2cc944f42599dd3db77d8b8fc4726e6f8607df0297e0529731b2f9de4ce",
       "width": 16,
@@ -5648,7 +5648,7 @@
     },
     {
       "name": "lpnd",
-      "atlas_x": 208,
+      "atlas_x": 216,
       "atlas_y": 935,
       "sha256": "5553ea5f9c79a9de1debc62deca9f50f931b1d2b9a075fb6b780d642a574f41a",
       "width": 16,
@@ -5675,7 +5675,7 @@
     },
     {
       "name": "lpne",
-      "atlas_x": 224,
+      "atlas_x": 232,
       "atlas_y": 935,
       "sha256": "09ab37580f039a8ea712d3e761f8161d257dcd5001f50101a4ab0e2cb1bff64b",
       "width": 16,
@@ -5702,7 +5702,7 @@
     },
     {
       "name": "lpnf",
-      "atlas_x": 192,
+      "atlas_x": 200,
       "atlas_y": 940,
       "sha256": "958f631293f502e615ea88aadc4657d4ef1076eb4e4349651ed9f6c74a3d128f",
       "width": 16,
@@ -5729,7 +5729,7 @@
     },
     {
       "name": "lpng",
-      "atlas_x": 208,
+      "atlas_x": 216,
       "atlas_y": 940,
       "sha256": "9cb1d6d034d5718383a976379e84db1c98d69da931f9d0af0f2044d0d7253a72",
       "width": 16,
@@ -5756,7 +5756,7 @@
     },
     {
       "name": "lpnh",
-      "atlas_x": 224,
+      "atlas_x": 232,
       "atlas_y": 940,
       "sha256": "a570f88d5045e5d3278b771b012dcc7c12157f81cc3bacba53ffd3b04405ff44",
       "width": 16,
@@ -5783,7 +5783,7 @@
     },
     {
       "name": "lpni",
-      "atlas_x": 192,
+      "atlas_x": 200,
       "atlas_y": 945,
       "sha256": "b0e1ace6ecf40311c5e6c80283b9221e6704f3d4982966afee9a139319a82160",
       "width": 16,
@@ -5810,7 +5810,7 @@
     },
     {
       "name": "lpnj",
-      "atlas_x": 208,
+      "atlas_x": 216,
       "atlas_y": 945,
       "sha256": "87e05192304ea2466cee579c79250cd1c5dad7131d142adf59631ebfdbf75962",
       "width": 16,
@@ -5838,7 +5838,7 @@
     },
     {
       "name": "lpnk",
-      "atlas_x": 224,
+      "atlas_x": 232,
       "atlas_y": 945,
       "sha256": "4511130a27f1c3209b72e87e596fadfa0fb0e78b1d68339bb9892eb5fed4aecf",
       "width": 16,
@@ -5866,7 +5866,7 @@
     },
     {
       "name": "lpnn",
-      "atlas_x": 192,
+      "atlas_x": 200,
       "atlas_y": 950,
       "sha256": "7d96499a943eae007f7238d2346b4be0544166bb252f482ff79938d221ada944",
       "width": 16,
@@ -5893,7 +5893,7 @@
     },
     {
       "name": "lpno",
-      "atlas_x": 208,
+      "atlas_x": 216,
       "atlas_y": 950,
       "sha256": "d974a312ebd358cd9fd826e64feccafaa43d1774b1d73007cd98cff469af4e24",
       "width": 16,
@@ -5920,7 +5920,7 @@
     },
     {
       "name": "lpnp",
-      "atlas_x": 224,
+      "atlas_x": 232,
       "atlas_y": 950,
       "sha256": "153e0ea57b1514efb45a1c60f07eb4f6bf45fe497c09f21350a13c40303ba36b",
       "width": 16,
@@ -5947,7 +5947,7 @@
     },
     {
       "name": "lpnq",
-      "atlas_x": 192,
+      "atlas_x": 200,
       "atlas_y": 959,
       "sha256": "28704ce88a9e2093452dcf8c72a005b46107e734d2926d12366d2d6dc2cc2df9",
       "width": 16,
@@ -5974,7 +5974,7 @@
     },
     {
       "name": "lpnr",
-      "atlas_x": 208,
+      "atlas_x": 216,
       "atlas_y": 959,
       "sha256": "1efeefb8b4165463539454d562b1c1a0e57641360faced6876d96698e3888759",
       "width": 16,
@@ -6001,7 +6001,7 @@
     },
     {
       "name": "lpns",
-      "atlas_x": 224,
+      "atlas_x": 232,
       "atlas_y": 959,
       "sha256": "38b9f180c7d915beb201759ef3d9fdee0a302c11a0d55437aaf6bfb4a6aa2ed3",
       "width": 16,
@@ -6457,63 +6457,63 @@
     ],
     [
       240,
-      937
+      923
     ],
     [
       248,
-      937
+      923
     ],
     [
-      22,
+      248,
+      931
+    ],
+    [
+      180,
+      935
+    ],
+    [
+      188,
+      935
+    ],
+    [
+      248,
       939
     ],
     [
-      240,
-      945
+      248,
+      947
     ],
     [
       248,
-      945
-    ],
-    [
-      240,
-      953
+      955
     ],
     [
       248,
-      953
-    ],
-    [
-      240,
-      961
+      963
     ],
     [
       248,
-      961
-    ],
-    [
-      240,
-      969
+      971
     ],
     [
       248,
-      969
-    ],
-    [
-      240,
-      977
-    ],
-    [
-      248,
-      977
-    ],
-    [
-      236,
-      985
+      979
     ],
     [
       244,
-      985
+      987
+    ],
+    [
+      244,
+      995
+    ],
+    [
+      236,
+      997
+    ],
+    [
+      244,
+      1003
     ]
   ],
   "wave_names": [

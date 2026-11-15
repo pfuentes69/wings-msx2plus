@@ -57,7 +57,8 @@ class Island(C.Structure):
                 ('soldiers', C.c_uint8 * 4), ('guns', C.c_uint8 * 4), ('gun', Gun * MAX_DUGOUTS),
                 ('hits', C.c_uint16), ('soldier', Soldier * MAX_SOLDIERS), ('kills', C.c_uint16),
                 ('out', C.c_uint8), ('alive', C.c_uint8), ('tick', C.c_uint8), ('wait', C.c_uint8),
-                ('gunwork', C.c_uint8)]
+                ('gunwork', C.c_uint8), ('cleared', C.c_uint8), ('left', C.c_uint8), ('message', C.c_uint8),
+                ('bonus', C.c_uint16), ('complete', C.c_uint8)]
 
 
 class Projectile(C.Structure):
@@ -375,6 +376,24 @@ class IslandTests(unittest.TestCase):
         self.assertEqual(self.now(s), 2036)
         self.core.Island_Kill(2036 - 16, 16)
         self.assertEqual((s.state & 7, s.x, s.frame), (DYING, 2036, 5))
+
+    def test_the_last_soldier_clears_the_island_and_the_mission(self):
+        score = C.c_uint32(0)
+        self.assertEqual((self.island.left, self.island.cleared, self.island.message), (1, 0, 0))
+        self.island.soldiers[0] = 2
+        s = self.put(2000, 1)
+        self.core.Island_Kill(2000, 16)
+        for _ in range(12):
+            self.core.Island_Soldiers(C.byref(score))
+        self.assertEqual((score.value, self.island.soldiers[0], self.island.cleared), (25, 1, 0))
+        s = self.put(2100, 1)
+        self.core.Island_Kill(2100, 16)
+        for _ in range(12):
+            self.core.Island_Soldiers(C.byref(score))
+        # +25, then the island's bonus (450 on map A); the only island: done.
+        self.assertEqual((score.value, self.island.soldiers[0]), (25 + 25 + 450, 0))
+        self.assertEqual((self.island.cleared, self.island.left, self.island.bonus), (1, 0, 450))
+        self.assertEqual((self.island.message, self.island.complete), (2, 1))
 
     def test_impacts_and_strikes_kill_soldiers(self):
         s = self.put(2600, 1)

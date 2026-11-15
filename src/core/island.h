@@ -36,6 +36,10 @@
 #define ISLAND_SOLDIER_ALTITUDE 12
 #define ISLAND_SOLDIER_POINTS 25
 #define ISLAND_REINFORCE_TICKS 200
+/* g_Island.message: what the ticker should show (Message_Update takes it). */
+#define ISLAND_MESSAGE_NONE 0
+#define ISLAND_MESSAGE_CLEARED 1   /* "All enemy forces on island ... Bonus %ld points" */
+#define ISLAND_MESSAGE_MISSION 2   /* ... + "Good work ! ... return to carrier ..." */
 /* An object anchored at a covers [a - 16, a + 16): the impact column's
  * anchor within columns -1..+2 (0x4ae4). */
 #define ISLAND_HIT(x, a) ((uint16_t)((x) - (a) + 16u) < 32u)
@@ -79,6 +83,11 @@ typedef struct IslandState {
     uint8_t tick;                  /* soldiers' updates, mod 256 */
     uint8_t wait;                  /* updates with nothing due (soldiers.c) */
     uint8_t gunwork;               /* a dugout is empty or holds fire: Island_Guns must run */
+    uint8_t cleared;               /* islands cleared (bits): the flag comes down */
+    uint8_t left;                  /* islands with targets not yet cleared (-$5c7b) */
+    uint8_t message;               /* ISLAND_MESSAGE_* waiting for the ticker */
+    uint16_t bonus;                /* the last island's bonus */
+    uint8_t complete;              /* the mission is complete: return to the carrier */
 } IslandState;
 extern IslandState g_Island;
 
@@ -95,18 +104,17 @@ void Island_Tick(void) WINGS_BANKED;
 /* One original update of the soldiers: walking, dying (+25 each, into
  * *score), re-manning dugouts. */
 uint8_t Island_Soldiers(uint32_t* score) WINGS_BANKED;   /* returns soldiers walking or dying */
-/* src/core/soldiers.c (banked, segment 22). The islands' land extents,
+/* src/core/soldiers.c (banked, segment 25). The islands' land extents,
  * for the walk: from Island_Reset. */
 void Soldiers_Reset(void) WINGS_BANKED;
 /* Walking soldiers within r px of world x start to die (0x1a8c): bombs and
  * cannon strikes r 16, the plane's crash r 8. */
 void Island_Kill(int16_t x, uint8_t r) WINGS_BANKED;
-/* A soldier's position and frame now, in g_SoldierX / g_SoldierFrame.
- * Not banked: segment 22 only (the smoke drawing). */
+/* A soldier's position and frame now, in g_SoldierX / g_SoldierFrame. */
 extern int16_t g_SoldierX;
 extern int16_t g_SoldierLandLow, g_SoldierLandHigh;   /* where soldiers can be */
 extern uint8_t g_SoldierFrame;
-void Soldier_Now(const IslandSoldier* s);
+void Soldier_Now(const IslandSoldier* s) WINGS_BANKED;
 /* One original update of the dugout guns: choose each manned gun's shape
  * and, while the plane flies (flying) at world x, fire at it. A hit sparks
  * at the nose and wears the engine. Returns the number of guns drawn. */

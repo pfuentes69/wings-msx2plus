@@ -10,7 +10,7 @@ const unsigned char g_HellcatPalette[32] = {
 
 #define AIRCRAFT_DATA(offset) ((const unsigned char*)(offset))
 #else
-const unsigned char g_AircraftPixels[30221] = {
+const unsigned char g_AircraftPixels[30341] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1899,7 +1899,15 @@ const unsigned char g_AircraftPixels[30221] = {
     0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90, 0x00, 0x00, 0x00, 0x00,
     0xd0, 0x09, 0xd0, 0xf0, 0x00, 0x0d, 0xd9, 0xd0, 0xfd, 0xdd, 0xdd, 0xdd, 0x00, 0x00, 0x0d, 0xdd,
     0x0d, 0xd0, 0x0f, 0xfd, 0x00, 0x00, 0x90, 0x00, 0x0d, 0x00, 0x90, 0x00, 0x00, 0xf0, 0xd0, 0xdd,
-    0xdd, 0x09, 0xd0, 0xff, 0xdd, 0xdd, 0x9d, 0xd9, 0xd0, 0x90, 0xd0, 0x90, 0xdd
+    0xdd, 0x09, 0xd0, 0xff, 0xdd, 0xdd, 0x9d, 0xd9, 0xd0, 0x90, 0xd0, 0x90, 0xdd, 0x00, 0xbb, 0xbb,
+    0x00, 0x0b, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xdd, 0xdd, 0xbb, 0xbb, 0xbb, 0xdd, 0xdd, 0xbb,
+    0xbb, 0xbb, 0xbd, 0xdd, 0xdb, 0xbb, 0xbb, 0xbd, 0xdd, 0xdb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb,
+    0xbb, 0x00, 0x00, 0xbb, 0xb0, 0xb0, 0x00, 0xbb, 0xbb, 0x00, 0xbb, 0xbb, 0xdd, 0xbb, 0xbb, 0xbb,
+    0xbd, 0xdd, 0xdb, 0xbb, 0xbb, 0xdd, 0xdd, 0xdb, 0xbb, 0xbb, 0xdd, 0xdd, 0xbb, 0xbb, 0xbb, 0xbd,
+    0xdb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0x0b, 0xbb, 0x00, 0x00, 0xbb, 0xbb, 0xb0, 0x00,
+    0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbd, 0xdd, 0xbb, 0xbb, 0xbb, 0xdd, 0xdd, 0xdb,
+    0xbb, 0xbb, 0xdd, 0xdd, 0xdb, 0xbb, 0xbb, 0xbd, 0xdd, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb,
+    0x00, 0x0b, 0xbb, 0x00, 0x00
 };
 
 #define AIRCRAFT_DATA(offset) (g_AircraftPixels + (offset))
@@ -1961,15 +1969,15 @@ const AircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT] = {
     {AIRCRAFT_DATA(21706), 4, 8, 0, 0, 0, 0} /* hc41 (unused) */,
     {AIRCRAFT_DATA(22042), 4, 9, 40, 15, 166, 525} /* hc21 */,
     {AIRCRAFT_DATA(22342), 10, 2, 40, 15, 152, 554} /* hcoc */,
-    {AIRCRAFT_DATA(22642), 2, 9, 46, 15, 192, 965} /* hc1b */,
-    {AIRCRAFT_DATA(22987), 2, 9, 44, 15, 192, 965} /* hc1c */,
-    {AIRCRAFT_DATA(23317), 2, 9, 44, 15, 192, 965} /* hc1d */,
-    {AIRCRAFT_DATA(23647), 6, 9, 38, 15, 192, 965} /* hc1e */,
-    {AIRCRAFT_DATA(23932), 6, 9, 38, 15, 192, 965} /* hc1f */,
-    {AIRCRAFT_DATA(24217), 4, 9, 44, 15, 192, 965} /* hc1c-left */,
-    {AIRCRAFT_DATA(24576), 4, 9, 44, 15, 192, 965} /* hc1d-left */,
-    {AIRCRAFT_DATA(24906), 6, 9, 38, 15, 192, 965} /* hc1e-left */,
-    {AIRCRAFT_DATA(25191), 6, 9, 38, 15, 192, 965} /* hc1f-left */
+    {AIRCRAFT_DATA(22642), 2, 9, 46, 15, 200, 965} /* hc1b */,
+    {AIRCRAFT_DATA(22987), 2, 9, 44, 15, 200, 965} /* hc1c */,
+    {AIRCRAFT_DATA(23317), 2, 9, 44, 15, 200, 965} /* hc1d */,
+    {AIRCRAFT_DATA(23647), 6, 9, 38, 15, 200, 965} /* hc1e */,
+    {AIRCRAFT_DATA(23932), 6, 9, 38, 15, 200, 965} /* hc1f */,
+    {AIRCRAFT_DATA(24217), 4, 9, 44, 15, 200, 965} /* hc1c-left */,
+    {AIRCRAFT_DATA(24576), 4, 9, 44, 15, 200, 965} /* hc1d-left */,
+    {AIRCRAFT_DATA(24906), 6, 9, 38, 15, 200, 965} /* hc1e-left */,
+    {AIRCRAFT_DATA(25191), 6, 9, 38, 15, 200, 965} /* hc1f-left */
 };
 #endif
 #ifdef MISSION_TERRAIN
@@ -2079,85 +2087,6 @@ const AircraftShape g_WheelPieces[WHEEL_PIECE_COUNT] = {
     {AIRCRAFT_DATA(28392), 22, 22, 6, 6, 250, 518} /* wh14 */
 };
 #endif
-#ifdef MISSION_TERRAIN
-const AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT] = {
-    {AIRCRAFT_DATA(28410), -1, -1, 4, 3, 252, 554} /* smk0 */,
-    {AIRCRAFT_DATA(28416), -2, -2, 6, 4, 242, 565} /* smk1 */,
-    {AIRCRAFT_DATA(28428), -4, -3, 10, 6, 116, 626} /* smk2 */,
-    {AIRCRAFT_DATA(28458), -6, -4, 14, 4, 110, 805} /* smk3 */,
-    {AIRCRAFT_DATA(28486), -6, 0, 14, 4, 48, 829} /* smk3 */,
-    {AIRCRAFT_DATA(28514), -7, -5, 14, 5, 32, 599} /* smk4 */,
-    {AIRCRAFT_DATA(28549), -7, 0, 14, 5, 46, 599} /* smk4 */,
-    {AIRCRAFT_DATA(28584), -1, 0, 4, 1, 82, 537} /* smk0 */,
-    {AIRCRAFT_DATA(28586), -1, -1, 4, 2, 16, 571} /* smk1 */,
-    {AIRCRAFT_DATA(28590), -7, -5, 14, 5, 60, 599} /* smk5 */,
-    {AIRCRAFT_DATA(28625), -7, 0, 14, 5, 84, 599} /* smk5 */,
-    {AIRCRAFT_DATA(28660), -9, -4, 8, 5, 184, 1018} /* gun0 */,
-    {AIRCRAFT_DATA(28680), -6, -5, 8, 6, 178, 942} /* gun1 */,
-    {AIRCRAFT_DATA(28704), -4, -6, 6, 7, 230, 1015} /* gun2 */,
-    {AIRCRAFT_DATA(28725), -1, -6, 2, 7, 252, 547} /* gun3 */,
-    {AIRCRAFT_DATA(28732), -1, -6, 6, 7, 236, 1015} /* gun4 */,
-    {AIRCRAFT_DATA(28753), 0, -5, 8, 6, 184, 1012} /* gun5 */,
-    {AIRCRAFT_DATA(28777), 1, -4, 8, 5, 192, 1018} /* gun6 */,
-    {AIRCRAFT_DATA(28797), -23, -11, 22, 3, 188, 573} /* gnf0 */,
-    {AIRCRAFT_DATA(28830), -23, -8, 22, 3, 210, 573} /* gnf0 */,
-    {AIRCRAFT_DATA(28863), -23, -5, 22, 3, 232, 573} /* gnf0 */,
-    {AIRCRAFT_DATA(28896), -23, -2, 22, 3, 98, 599} /* gnf0 */,
-    {AIRCRAFT_DATA(28929), -17, -16, 18, 4, 22, 564} /* gnf1 */,
-    {AIRCRAFT_DATA(28965), -17, -12, 18, 4, 224, 564} /* gnf1 */,
-    {AIRCRAFT_DATA(29001), -17, -8, 18, 4, 82, 573} /* gnf1 */,
-    {AIRCRAFT_DATA(29037), -17, -4, 18, 2, 16, 575} /* gnf1 */,
-    {AIRCRAFT_DATA(29055), -17, -2, 18, 3, 62, 794} /* gnf1 */,
-    {AIRCRAFT_DATA(29082), -11, -18, 12, 4, 62, 829} /* gnf2 */,
-    {AIRCRAFT_DATA(29106), -11, -14, 12, 5, 72, 627} /* gnf2 */,
-    {AIRCRAFT_DATA(29136), -11, -9, 12, 5, 158, 809} /* gnf2 */,
-    {AIRCRAFT_DATA(29166), -11, -4, 12, 5, 0, 824} /* gnf2 */,
-    {AIRCRAFT_DATA(29196), -4, -21, 8, 11, 236, 993} /* gnf3 */,
-    {AIRCRAFT_DATA(29240), -4, -10, 8, 11, 244, 993} /* gnf3 */,
-    {AIRCRAFT_DATA(29284), -1, -18, 12, 4, 32, 925} /* gnf4 */,
-    {AIRCRAFT_DATA(29308), -1, -14, 12, 5, 12, 824} /* gnf4 */,
-    {AIRCRAFT_DATA(29338), -1, -9, 12, 5, 24, 824} /* gnf4 */,
-    {AIRCRAFT_DATA(29368), -1, -4, 12, 5, 144, 833} /* gnf4 */,
-    {AIRCRAFT_DATA(29398), 0, -16, 18, 4, 100, 573} /* gnf5 */,
-    {AIRCRAFT_DATA(29434), 0, -12, 18, 4, 152, 573} /* gnf5 */,
-    {AIRCRAFT_DATA(29470), 0, -8, 18, 4, 170, 573} /* gnf5 */,
-    {AIRCRAFT_DATA(29506), 0, -4, 18, 2, 34, 575} /* gnf5 */,
-    {AIRCRAFT_DATA(29524), 0, -2, 18, 3, 230, 1012} /* gnf5 */,
-    {AIRCRAFT_DATA(29551), 1, -11, 22, 3, 184, 785} /* gnf6 */,
-    {AIRCRAFT_DATA(29584), 1, -8, 22, 3, 184, 788} /* gnf6 */,
-    {AIRCRAFT_DATA(29617), 1, -5, 22, 3, 40, 794} /* gnf6 */,
-    {AIRCRAFT_DATA(29650), 1, -2, 22, 3, 220, 812} /* gnf6 */,
-    {AIRCRAFT_DATA(29683), -1, -2, 4, 2, 16, 573} /* expl */,
-    {AIRCRAFT_DATA(29687), -3, -8, 6, 8, 118, 797} /* guy0 */,
-    {AIRCRAFT_DATA(29711), -2, -8, 6, 9, 250, 606} /* guy1 */,
-    {AIRCRAFT_DATA(29738), -3, -8, 6, 9, 250, 615} /* guy2 */,
-    {AIRCRAFT_DATA(29765), -3, -8, 6, 9, 250, 768} /* guy3 */,
-    {AIRCRAFT_DATA(29792), -3, -8, 8, 9, 214, 1011} /* guy4 */,
-    {AIRCRAFT_DATA(29828), -5, -9, 10, 8, 236, 1004} /* guy5 */,
-    {AIRCRAFT_DATA(29868), -8, -8, 12, 6, 244, 654} /* guy6 */,
-    {AIRCRAFT_DATA(29904), -9, -7, 10, 6, 158, 942} /* guy7 */,
-    {AIRCRAFT_DATA(29934), -12, -2, 12, 3, 224, 554} /* guy8 */,
-    {AIRCRAFT_DATA(29952), -3, -8, 6, 8, 248, 1012} /* guy9 */,
-    {AIRCRAFT_DATA(29976), -3, -8, 6, 9, 250, 777} /* guya */,
-    {AIRCRAFT_DATA(30003), -2, -8, 6, 9, 250, 805} /* guyb */,
-    {AIRCRAFT_DATA(30030), -3, -8, 6, 9, 186, 935} /* guyc */,
-    {AIRCRAFT_DATA(30057), -4, -8, 8, 9, 222, 1011} /* guyd */,
-    {AIRCRAFT_DATA(30093), -4, -9, 10, 8, 246, 1004} /* guye */,
-    {AIRCRAFT_DATA(30133), -4, -8, 12, 6, 172, 785} /* guyf */,
-    {AIRCRAFT_DATA(30169), 0, -7, 10, 6, 168, 942} /* gy10 */,
-    {AIRCRAFT_DATA(30199), 1, -2, 12, 3, 200, 1018} /* gy11 */,
-    {AIRCRAFT_DATA(30217), 0, -1, 2, 2, 254, 547} /* guy0 */,
-    {AIRCRAFT_DATA(30219), 0, -1, 2, 2, 254, 549} /* guy1 */
-};
-#endif
-
-const signed char g_SmokeBox[172] = {-1, -1, 4, 3, -2, -2, 6, 4, -4, -3, 10, 6, -6, -4, 14, 8, -7, -5, 14, 10, -1, 0, 4, 1, -1, -1, 4, 2, -7, -5, 14, 10, -9, -4, 8, 5, -6, -5, 8, 6, -4, -6, 6, 7, -1, -6, 2, 7, -1, -6, 6, 7, 0, -5, 8, 6, 1, -4, 8, 5, -23, -11, 22, 12, -17, -16, 18, 17, -11, -18, 12, 19, -4, -21, 8, 22, -1, -18, 12, 19, 0, -16, 18, 17, 1, -11, 22, 12, -1, -2, 4, 2, -3, -8, 6, 8, -2, -8, 6, 9, -3, -8, 6, 9, -3, -8, 6, 9, -3, -8, 8, 9, -5, -9, 10, 8, -8, -8, 12, 6, -9, -7, 10, 6, -12, -2, 12, 3, -3, -8, 6, 8, -3, -8, 6, 9, -2, -8, 6, 9, -3, -8, 6, 9, -4, -8, 8, 9, -4, -9, 10, 8, -4, -8, 12, 6, 0, -7, 10, 6, 1, -2, 12, 3, 0, -1, 2, 2, 0, -1, 2, 2};
-
-const unsigned char g_SmokeFirst[44] = {
-    0x00, 0x01, 0x02, 0x03, 0x05, 0x07, 0x08, 0x09, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12,
-    0x16, 0x1b, 0x1f, 0x21, 0x25, 0x2a, 0x2e, 0x2f, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
-    0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43
-};
 
 const unsigned char g_WheelFirst[21] = {
     0x00, 0x02, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x11, 0x13, 0x15, 0x17, 0x19, 0x1b, 0x1d, 0x1f,

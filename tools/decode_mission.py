@@ -120,6 +120,11 @@ def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False):
             continue
         ident = cell['shape_id']
         name = evidence['shape_names'][ident] if ident < len(evidence['shape_names']) else None
+        if ident == 0x113 and not reduced:
+            # The island flag (0x3b52, close view only): its pole is baked
+            # into the scenery as POST; the waving cloth is drawn over it at
+            # run time while the island holds out.
+            name = 'POST'
         if name not in records:
             unresolved.append(dict(**cell, name=name, reason='not present in normal-scale world shape archive' if name else 'outside fixed 184-entry world table; special marker or other archive'))
             continue

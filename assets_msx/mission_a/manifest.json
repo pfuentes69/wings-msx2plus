@@ -855,6 +855,25 @@
       "visible_pixels": 416
     },
     {
+      "index": 301,
+      "file_offset": 610,
+      "x": 2408,
+      "raw_word": 33870,
+      "draw": true,
+      "shape_id": 275,
+      "surface": 2,
+      "depth": 0,
+      "y_offset": 0,
+      "name": "POST",
+      "drawing_x": 2400,
+      "drawing_y": 176,
+      "shape_offset": 320,
+      "shape_sha256": "876d43559cb0dce46cf1a8d265d6b0ef80a2f1617e39dbbe382aa20003051505",
+      "width": 16,
+      "height": 25,
+      "visible_pixels": 50
+    },
+    {
       "index": 339,
       "file_offset": 686,
       "x": 2712,
@@ -1576,19 +1595,6 @@
       "reason": "not present in normal-scale world shape archive"
     },
     {
-      "index": 301,
-      "file_offset": 610,
-      "x": 2408,
-      "raw_word": 33870,
-      "draw": true,
-      "shape_id": 275,
-      "surface": 2,
-      "depth": 0,
-      "y_offset": 0,
-      "name": null,
-      "reason": "outside fixed 184-entry world table; special marker or other archive"
-    },
-    {
       "index": 421,
       "file_offset": 850,
       "x": 3368,
@@ -1631,41 +1637,41 @@
   "comparisons": [
     {
       "size": 8,
-      "tile_count": 441,
-      "tile_bytes": 14112,
+      "tile_count": 445,
+      "tile_bytes": 14240,
       "columns": 952,
       "rows": 19,
-      "unique_columns": 187,
+      "unique_columns": 188,
       "dense_map_bytes": 36176,
-      "compressed_map_bytes": 5639,
-      "total_bytes": 19751
+      "compressed_map_bytes": 5657,
+      "total_bytes": 19897
     },
     {
       "size": 16,
-      "tile_count": 295,
-      "tile_bytes": 37760,
+      "tile_count": 297,
+      "tile_bytes": 38016,
       "columns": 476,
       "rows": 10,
-      "unique_columns": 143,
+      "unique_columns": 144,
       "dense_map_bytes": 9520,
-      "compressed_map_bytes": 2968,
-      "total_bytes": 40728
+      "compressed_map_bytes": 2980,
+      "total_bytes": 40996
     }
   ],
   "selected": {
     "size": 8,
-    "tile_count": 503,
-    "tile_bytes": 16096,
+    "tile_count": 510,
+    "tile_bytes": 16320,
     "columns": 1084,
     "rows": 19,
-    "unique_columns": 235,
+    "unique_columns": 237,
     "dense_map_bytes": 41192,
-    "compressed_map_bytes": 6470,
-    "total_bytes": 22566
+    "compressed_map_bytes": 6506,
+    "total_bytes": 22826
   },
-  "bundle_bytes": 22566,
-  "tile_map_offset": 16096,
-  "bundle_sha256": "8a578ec51066f1d5a1b5f674f95812cc0b92b302fc7f904edb50721133e2a5f4",
+  "bundle_bytes": 22826,
+  "tile_map_offset": 16320,
+  "bundle_sha256": "7a8d15a02b5d111128c7e34da779e6cea5da66031a6a38a1ea47cafcebd696d1",
   "palette_sha256": "0b37b14c0c7d721406951e121885f75479ae3d439bd8429cee8bb2986e7715f9",
   "ocean_palette_sha256": "701a351ccfbae78c8285f9d7ffab0d532dcaf6716395930b7055e2bfc4d70902",
   "palette_rgb3": [
@@ -1765,7 +1771,7 @@
     "ordering": "column-major groups of 9 tiles"
   },
   "map_format": "u16le column offsets, deduplicated count:u8/tile:u16le runs; exactly 19 tile rows",
-  "map_and_cache_ram_bytes": 9068,
+  "map_and_cache_ram_bytes": 9104,
   "island": {
     "islands": [
       {

@@ -10,7 +10,7 @@ describes what the MSX does and how. P3 is being built in steps:
 | 2 | The original's bomb physics (gravity, drag, detonation at altitude 12) | Done |
 | 3 | Dugout guns: barrel art, hit-scan ground fire, engine damage | Done |
 | 4 | Soldiers: release, walking, re-manning dugouts, deaths (+25) | Done |
-| 5 | Island cleared: bonus, flag, message, mission complete | Next |
+| 5 | Island cleared: bonus, flag, message, mission complete | Done |
 | later | Rockets, AA guns (rockets only) | |
 
 ## Map data
@@ -199,8 +199,8 @@ over the carrier are back at the baseline.
 
 The island's soldiers follow the original (0x1de4, 0x1e82, 0x3eee, 0x1a8c,
 0x4fee). Release and reinforcement are in `src/core/island.c` (segment 23).
-The walk and the deaths are in `src/core/soldiers.c` (segment 22, since
-segment 23 was full).
+The walk and the deaths are in `src/core/soldiers.c` (segment 25, since
+segments 22 and 23 are full).
 
 - **Release:** a bombed hut or dugout lets its garrison out one at a time:
   the first after 60 ticks, then every (rand >> 4) & 31 ticks (3 if 0).
@@ -240,7 +240,66 @@ or someone is dying (`g_Island.wait`). `tests/test_island.py` checks over
 **RAM.** The soldiers' state brought the gameplay stack within ~14 bytes of
 the variables. The map's run data (4.3 KB) now stays in ROM, in bank 24, and
 is decoded from window 3 (`Terrain_DecodeColumn`); only the column table,
-which wrecked huts rewrite, is in RAM. Data now ends at E1E8h, about 4.3 KB below the stack's start (F380h).
+which wrecked huts rewrite, is in RAM. Data now ends at E2C5h (with the
+ticker's text buffer), about 4.2 KB below the stack's start (F380h).
+
+## Island cleared
+
+The original (0x3f5e) checks, when one of an island's soldiers dies, whether
+the island has no soldier and no AA gun left. `Cleared()` in
+`src/core/soldiers.c` does the same:
+
+- **Bonus:** the island's bonus from the map (`-$7b82`, 450 for island A) is
+  scored.
+- **Flag:** the island's bit in `g_Island.cleared` takes the flag down. The
+  flag (0x3b52, shape 0x113) is a pole with a waving cloth, `flg0..flg2` in
+  turn, while the island has soldiers or guns; then the pole alone. The
+  port bakes the pole into the near scene (`decode_mission.py` names it
+  `POST`). The cloth is drawn as frames 43..45 of the smoke path, cropped of
+  the pole, until the island is cleared. The distant view draws no flag.
+- **Mission:** `g_Island.left` counts the islands with targets not yet
+  cleared (`-$5c7b`). The last one completes the mission
+  (`g_Island.complete`). Map A has one island, so clearing it completes the
+  mission. Returning to the carrier for the next mission is P4.
+- **Message:** the original's ticker shows "All enemy forces on island have
+  been destroyed . . . Bonus 450 points . . ." For the mission's last island,
+  0x5694 drops the final full stop and appends "Good work ! You are ordered
+  to return to carrier to receive your next mission ! . . .". The strings
+  and the font (`newarmyfont`, 12 px high) come from the original files
+  through `tools/convert_font.py`.
+
+**The ticker.** The original scrolls its messages in a strip below the
+dashboard. The MSX screen has no room there, so the port shows them in a
+band at the top of the play area (`src/msx/message.c`, segment 25):
+
+- While a message runs, the top lines show VRAM rows 0.. of the page
+  unscrolled, with their own horizontal scroll. The line interrupt then
+  switches to the play area's vertical and horizontal scroll
+  (`pan_split$` in `VDP_HBlankHandler`, now also writing R26/R27).
+- The text is written into rows 1..12, which the scenery never uses (it
+  starts at row 24). The band is 15 + scroll lines: the text rows, then sky
+  down to where the play area's rows 13.. start under its own scroll, plus
+  the 2 lines the split is requested early.
+- Overlays (plane, smoke, weapons) stay below row band + 2 (`g_TopClip`), so
+  a late split shows only sky.
+- The band's 256 px are a ring. The text moves 2 px a VBlank, entering on
+  the right. A page is drawn every other frame. It copies the pixels the
+  other page wrote since (a VDP block move, which runs alongside the CPU),
+  then writes the newest ones itself, 8 px ahead of the right edge (the
+  masked left border hides them). So each text pixel goes through the CPU
+  once, in a Z80 loop that turns two font bits into a byte (~100 T-states).
+  A rebuilt page copies its whole ring from the other page.
+- Cost: written in C, with one VRAM write per glyph row and each page
+  writing everything itself, the ticker took 10-24 ms a frame. The island
+  scene on NTSC had no room for that. Now the render pays ~1 ms (the block
+  move). The CPU writes the new pixels while the frame loop would otherwise
+  wait for its VBlank, and only with a whole frame to spare. A page shows
+  only the text it holds (`g_MessageScroll`), so on a frame with no time
+  to spare the ticker slows down instead of missing a deadline.
+- The ticker starts two updates after the island is cleared. Those two
+  frames redraw the score (bonus) on each page, which takes ~21 ms.
+- Once the text has left both pages' bands, the ticker ends and the band
+  goes away. The rows are blank by then.
 
 ## Verification
 
@@ -261,8 +320,11 @@ which wrecked huts rewrite, is in RAM. Data now ends at E1E8h, about 4.3 KB belo
   frames and +25, kills by impacts and strikes, a kill finding a lazily
   walking soldier where he is now, and the lazy walk against the
   original's step-by-step one.
+- `tests/test_island.py` also checks the island clear: the last soldier's
+  death with no gun left scores the bonus, sets the cleared bit and the
+  message, and completes the mission on the last island.
 - `tests/test_mission.py` round-trips the variant columns through the tile
-  map.
+  map, and checks the flag's pole (`POST`) at 2408.
 - `tests/test_combat.py` follows released bombs against a 16.16 model of
   the original update and checks the burst heights over sea, island and deck.
 - The emulator scenario (`tools/p0_smoke.tcl`, `island_run`) flies to island A
@@ -282,3 +344,19 @@ which wrecked huts rewrite, is in RAM. Data now ends at E1E8h, about 4.3 KB belo
   (`island_soldiers`); their frames are checked and drawn by the pixel oracle.
   The released garrison is seen walking and re-manning the dugouts (95
   snapshots on NTSC and PAL).
+- `island_clear` (after `island_soldiers`) puts island A's last soldier into
+  his death with no gun left. The `island_cleared` snapshot checks the
+  cleared bit, `left` 0, the bonus 450, the mission complete, the score
+  gain, and that the flag's cloth (drawn in `island_soldiers`) is gone. It
+  also checks the ticker: the band's height and every pixel of its text
+  rows against the original font and the executable's messages
+  (`verify_p0.ticker_rows`). The flight then goes on through the pan
+  descent over the carrier with the ticker running. `top_split_check`
+  requires the band's rows to hold only sky and ink 11.
+- Found along the way:
+  - The flag's phase counter started from uninitialized RAM, so the cloth
+    showed other frames of the smoke path.
+  - `convert_hellcat.py` had moved the pitch, turn and taxi tables into the
+    banked smoke module, where resident code read whatever bank was mapped.
+  - The atlas had grown into VRAM row 1023, which something writes once at
+    boot. The allocator now leaves that row alone.

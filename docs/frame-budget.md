@@ -131,7 +131,12 @@ Until those paths are rewritten (planned as its own step before P4), NTSC
 frames get 2 more VBlanks (10 instead of 8, on top of the weapons allowance)
 in two cases:
 - while the near view shows the carrier in normal play (not the lift);
-- when the previous frame drew 4 or more smoke, gun or soldier shapes.
+- when the previous frame drew 4 or more smoke, gun or soldier shapes;
+- when the previous frame came within one VBlank of the base deadline
+  (`s_Tight`, added 2026-11-15). Shape counts miss scenes with a few large
+  puffs: each costs several atlas pieces. Example: the plane's own engine
+  smoke over the hut smoke near the right dugout took 42 ms of smoke
+  restore and draw with only 3 shapes.
 
 The simulation keeps its 150 Hz, so an extra VBlank adds ~10 ms of slack,
 not 16.7. PAL is unchanged.
@@ -140,6 +145,24 @@ Found and fixed along the way: the wave strip moved to segment 21
 (`src/msx/waves.c`; segment 3 had 25 bytes left). `RepairGuard` repaints
 only the pixel rows the guard leaves. `Mission_Query` keeps its last run.
 The island's per-update work is skipped when nothing is due.
+
+## Island cleared (2026-11-15)
+
+The island-clear frames on NTSC were within a few ms of the deadline:
+4 soldiers, the flag, hut smoke, and the score redraw for the bonus.
+
+- **Score redraw.** It took ~21 ms on each page: digit extraction with u32
+  arithmetic, SDCC multiplications for the glyph rows, then 147 table
+  lookups. It now walks row pointers (no multiplications), and the second
+  page reuses the first page's composed field. This applies to every kill
+  and every bombed hut, not only the clear.
+- **Message ticker.** Its first C version cost 10–24 ms a frame. The render
+  now does only a VDP block move from the other page (~1 ms). The CPU writes
+  the new text pixels in the time the frame loop would spend waiting for
+  its VBlank, and only with a whole frame to spare. A page shows only the
+  text it holds, so with no time to spare the ticker slows down instead
+  of missing a frame. It starts two updates after the clear, after both
+  pages have redrawn the score.
 
 ## Candidates, in order of expected value
 

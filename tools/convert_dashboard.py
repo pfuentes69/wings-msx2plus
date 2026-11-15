@@ -402,6 +402,8 @@ def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=F
     if frames is None: frames=json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
     tiles=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']
     occupied=[bytearray(256) for _ in range(512)]
+    # VRAM row 1023 (page 3's last) is overwritten at run time: never allocate it.
+    occupied[511][:]=bytes([1])*256
     for f in frames:
         if f.get('streamed') or f.get('unused'): continue
         for y in range(f['atlas_y']-512,f['atlas_y']-512+f['height']):

@@ -84,11 +84,17 @@ void Island_Reset(void) WINGS_BANKED
         if (s_DugoutX[i] > s_GunsHigh) s_GunsHigh = s_DugoutX[i];
     }
     g_Island.out = g_Island.alive = g_Island.tick = g_Island.wait = 0;
+    g_Island.cleared = g_Island.message = g_Island.complete = 0;
+    g_Island.bonus = 0;
+    /* 0x2de8: islands with at least one hut, dugout or AA gun. */
+
     s_Releasing = s_Smoking = 0;
     for (i = 0; i < ISLAND_MAX_SOLDIERS; ++i) g_Island.soldier[i].state = ISLAND_SOLDIER_FREE;
     Soldiers_Reset();
     for (i = 0; i < ISLAND_HUTS; ++i) g_Island.soldiers[s_HutIsland[i]] += ISLAND_GARRISON;
     for (i = 0; i < ISLAND_DUGOUTS; ++i) g_Island.soldiers[s_DugoutIsland[i]] += ISLAND_GARRISON;
+    g_Island.left = 0;
+    for (i = 0; i < ISLAND_COUNT; ++i) g_Island.left += g_Island.soldiers[i] || g_Island.guns[i];
 }
 
 /* 0x4b40: the garrison comes out, the first after 60 ticks. */

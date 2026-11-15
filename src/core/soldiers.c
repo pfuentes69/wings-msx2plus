@@ -1,7 +1,7 @@
 #include "island.h"
 #include "mission.h"
 #include "../generated/mission_island.h"
-WINGS_CODE_SEGMENT(WINGS_SEGMENT_EFFECTS)
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_MISSION)
 
 /* The island soldiers' update (0x3eee) and deaths (0x1a8c), banked apart
  * from the rest of the island (segment 23 is full). island.c releases them
@@ -69,7 +69,7 @@ static int16_t NowX(const IslandSoldier* s)
     return s->dir < 0 ? s->x - (int16_t)steps : s->x + (int16_t)steps;
 }
 
-void Soldier_Now(const IslandSoldier* s)
+static void Now(const IslandSoldier* s)
 {
     uint8_t f;
     g_SoldierX = NowX(s);
@@ -82,10 +82,15 @@ void Soldier_Now(const IslandSoldier* s)
     g_SoldierFrame = f;
 }
 
+void Soldier_Now(const IslandSoldier* s) WINGS_BANKED
+{
+    Now(s);
+}
+
 /* Bring a walker's x and frame up to the current update. */
 static void Catch(IslandSoldier* s)
 {
-    Soldier_Now(s);
+    Now(s);
     s->x = g_SoldierX; s->frame = g_SoldierFrame;
     s->delay -= (uint8_t)(g_Island.tick - s->base);
     s->base = g_Island.tick;
@@ -169,6 +174,20 @@ static uint8_t Step(IslandSoldier* s)
     return 0;
 }
 
+/* 0x3f5e, 0x5694: no soldier and no AA gun left. The island's bonus
+ * (-$7b82 by map and island) is scored; the last island with targets
+ * completes the mission (there are no mission ships yet). The ticker says
+ * so: Message_Update takes g_Island.message. */
+static void Cleared(uint8_t island, uint32_t* score)
+{
+    g_Island.bonus = s_IslandBonus[island];
+    *score += g_Island.bonus;
+    g_Island.cleared |= 1 << island;
+    if (g_Island.left) --g_Island.left;
+    if (g_Island.left) g_Island.message = ISLAND_MESSAGE_CLEARED;
+    else { g_Island.message = ISLAND_MESSAGE_MISSION; g_Island.complete = 1; }
+}
+
 uint8_t Island_Soldiers(uint32_t* score) WINGS_BANKED
 {
     IslandSoldier* s = g_Island.soldier;
@@ -191,7 +210,9 @@ uint8_t Island_Soldiers(uint32_t* score) WINGS_BANKED
             *score += ISLAND_SOLDIER_POINTS;
             ++g_Island.kills;
             --g_Island.alive;
-            --g_Island.soldiers[s->state >> 4];
+            /* The island's last soldier clears it (0x3f5e). */
+            if (!--g_Island.soldiers[s->state >> 4] && !g_Island.guns[s->state >> 4])
+                Cleared(s->state >> 4, score);
             break;
         case ISLAND_SOLDIER_WALKING:
             k = (uint8_t)(g_Island.tick - s->base);
