@@ -4,6 +4,7 @@ garrison release 0x4b40 and hut smoke 0x4e18 (docs/research/amiga-island-combat.
 A stub Terrain_Remap logs the map columns the wrecked huts swap."""
 import ctypes as C
 import json
+import random
 from pathlib import Path
 import shutil
 import subprocess
@@ -43,10 +44,20 @@ class Gun(C.Structure):
     _fields_ = [('x', C.c_uint16), ('frame', C.c_uint8)]
 
 
+class Soldier(C.Structure):
+    _fields_ = [('x', C.c_int16), ('dir', C.c_int8), ('frame', C.c_uint8), ('delay', C.c_uint8),
+                ('state', C.c_uint8), ('base', C.c_uint8)]
+
+
+MAX_SOLDIERS, WALKING, DYING, DEAD = 20, 1, 2, 3
+
+
 class Island(C.Structure):
     _fields_ = [('hut', Building * MAX_HUTS), ('dugout', Building * MAX_DUGOUTS),
                 ('soldiers', C.c_uint8 * 4), ('guns', C.c_uint8 * 4), ('gun', Gun * MAX_DUGOUTS),
-                ('hits', C.c_uint16)]
+                ('hits', C.c_uint16), ('soldier', Soldier * MAX_SOLDIERS), ('kills', C.c_uint16),
+                ('out', C.c_uint8), ('alive', C.c_uint8), ('tick', C.c_uint8), ('wait', C.c_uint8),
+                ('gunwork', C.c_uint8)]
 
 
 class Projectile(C.Structure):
@@ -78,7 +89,8 @@ class IslandTests(unittest.TestCase):
         subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
                         '-DMISSION_TERRAIN', '-DWINGS_FLIGHT_MAX_Y=1200u',
                         '-DWINGS_WORLD_WIDTH=7608u', '-DWINGS_WORLD_START=7032u',
-                        *[str(ROOT / 'src' / p) for p in ('core/island.c', 'core/smoke.c', 'core/engine.c', 'core/flight.c',
+                        *[str(ROOT / 'src' / p) for p in ('core/island.c', 'core/soldiers.c', 'core/smoke.c', 'core/engine.c', 'core/mission.c',
+                                                          'generated/mission_surfaces.c', 'core/flight.c',
                                                           'core/flight_model.c')],
                         str(work / 'stub.c'), '-o', str(lib)], check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))
@@ -87,6 +99,11 @@ class IslandTests(unittest.TestCase):
         cls.core.Island_Impacts.argtypes = [C.POINTER(Combat), C.POINTER(C.c_uint32)]
         cls.core.Island_Guns.argtypes = [C.POINTER(Flight), C.c_uint16, C.c_uint8, C.POINTER(Engine), C.POINTER(Sortie)]
         cls.core.Island_Guns.restype = C.c_uint8
+        cls.core.Island_Soldiers.argtypes = [C.POINTER(C.c_uint32)]
+        cls.core.Island_Soldiers.restype = C.c_uint8
+        cls.core.Island_Kill.argtypes = [C.c_int16, C.c_uint8]
+        cls.core.Mission_Surface.argtypes = [C.c_uint16]
+        cls.core.Mission_Surface.restype = C.c_uint8
         cls.island = Island.in_dll(cls.core, 'g_Island')
         cls.remap = (C.c_uint16 * 2 * 256).in_dll(cls.core, 'g_Remap')
         cls.remap_count = C.c_uint8.in_dll(cls.core, 'g_RemapCount')
@@ -208,7 +225,7 @@ class IslandTests(unittest.TestCase):
         self.assertNotEqual(frames[359][0], GUN_NONE)
 
     def test_the_distant_view_shows_a_flash_on_half_the_updates(self):
-        frames, _, _ = self.guns(1736 + 3000, 300, 2000)
+        frames, _, _ = self.guns(1736 + 800, 300, 2000)       # on the distant screen
         shown = [f[0] for f in frames if f[0] != GUN_NONE]
         self.assertEqual(set(shown), {GUN_FAR})
         self.assertAlmostEqual(len(shown) / len(frames), 0.5, delta=0.05)
@@ -241,6 +258,172 @@ class IslandTests(unittest.TestCase):
             self.core.Island_Guns(C.byref(flight), 1736, 1, C.byref(engine), C.byref(sortie))
         (puff,) = [p for p in self.puffs if p.stage]
         self.assertEqual((puff.x, puff.y, puff.stage), (1736 - 10, 1200 - 40 - 13, 6))
+
+    # Soldiers (0x1de4, 0x1e82, 0x3eee, 0x1a8c, 0x4fee).
+    def live(self):
+        return [s for s in self.island.soldier if s.state & 15]
+
+    def ticks(self, n):
+        for _ in range(n):
+            self.core.Island_Tick()
+
+    def test_a_wrecked_hut_lets_its_garrison_out_one_by_one(self):
+        self.core.Island_Bombed(2392)
+        self.ticks(59)
+        self.assertEqual(self.live(), [])                     # the first after 60 ticks
+        self.ticks(1)
+        (s,) = self.live()
+        self.assertEqual((s.state, self.island.hut[0].waiting), (WALKING, 4))
+        # x = A + (dir & 7) * 4, frame dir & 3
+        self.assertEqual((s.x, s.frame), (2392 + (s.dir & 7) * 4, s.dir & 3))
+        out = 1
+        for _ in range(5 * 32):
+            self.ticks(1)
+            out = len(self.live())
+        self.assertEqual((out, self.island.hut[0].waiting, self.island.hut[0].release), (5, 0, 0))
+
+    def test_dugout_soldiers_walk_inland(self):
+        self.core.Island_Bombed(1736)                        # the island's leftmost dugout
+        self.core.Island_Bombed(3224)                        # its rightmost
+        self.ticks(60 + 5 * 32)
+        left = [s for s in self.live() if s.x < 2500]
+        right = [s for s in self.live() if s.x >= 2500]
+        self.assertEqual((len(left), len(right)), (5, 5))
+        # Right from A + 16, left from A - 44 (1 in 32 the other way).
+        for s in left:
+            self.assertEqual(s.x, (1736 + 16 if s.dir >= 0 else 1736 - 44) + (s.dir & 7) * 4)
+        self.assertGreaterEqual(sum(s.dir > 0 for s in left), 4)
+        self.assertGreaterEqual(sum(s.dir < 0 for s in right), 4)
+
+    def now(self, s):
+        """A walker's x now: his x at update `base`, 3 px a plain step since."""
+        if s.state & 7 != WALKING: return s.x
+        k = (self.island.tick - s.base) & 255
+        return s.x + (-3 if s.dir < 0 else 3) * k
+
+    def put(self, x, direction, frame=0):
+        s = self.island.soldier[0]
+        s.x, s.dir, s.frame, s.delay, s.state, s.base = x, direction, frame, 0, WALKING, self.island.tick
+        self.island.out = max(self.island.out, 1)
+        self.island.alive = max(self.island.alive, 1)
+        self.island.wait = 0
+        return s
+
+    def test_soldiers_walk_3_px_and_turn_at_the_water(self):
+        score = C.c_uint32(0)
+        s = self.put(2000, 1)
+        self.core.Island_Soldiers(C.byref(score))
+        self.assertEqual(self.now(s), 2003)
+        for _ in range(4):
+            self.core.Island_Soldiers(C.byref(score))
+        self.assertEqual(self.now(s), 2015)
+        s = self.put(3970, 1)                                 # the beach ends at 3976
+        self.core.Island_Soldiers(C.byref(score))
+        self.core.Island_Soldiers(C.byref(score))
+        self.assertEqual((self.now(s), s.dir), (3970, -1))   # 3976 is sea: turned round, stepped back
+        self.core.Island_Soldiers(C.byref(score))
+        self.assertEqual(self.now(s), 3967)
+
+    def test_a_soldier_walking_into_a_dugout_mans_it(self):
+        score = C.c_uint32(0)
+        self.core.Island_Bombed(3224)
+        dugout = self.island.dugout[1]
+        dugout.waiting = dugout.release = 0
+        s = self.put(3224 - 19, 1)
+        self.core.Island_Soldiers(C.byref(score))            # x 3208: inside [3208, 3240)
+        self.assertEqual((s.state, dugout.garrison, dugout.c), (0, 1, 360))
+        s = self.put(3224 + 13, -1)
+        self.core.Island_Soldiers(C.byref(score))            # a second one: no new delay
+        self.assertEqual((dugout.garrison, dugout.c), (2, 360))
+
+    def test_an_empty_dugout_sends_for_the_nearest_hut_soldier(self):
+        self.core.Island_Bombed(3224)
+        dugout = self.island.dugout[1]
+        dugout.waiting = dugout.release = 0
+        frames, _, _ = self.guns(5000, 100, 199, flying=0)
+        self.assertEqual(self.live(), [])
+        self.guns(5000, 100, 1, flying=0)                    # 200 updates
+        (s,) = self.live()
+        # From the hut at 2712 (nearer to 3224 - 44 than 2392), walking right.
+        self.assertEqual((self.island.hut[1].garrison, self.island.hut[0].garrison), (4, 5))
+        self.assertEqual((s.dir, s.x, s.frame), (1, 2712 + 4, 1))
+        self.assertEqual(dugout.e, 200)
+
+    def test_bursts_kill_within_16_px_and_score_25(self):
+        score = C.c_uint32(0)
+        for i, x in enumerate((1983, 1984, 2000, 2016, 2017)):   # x - 16 .. x + 16, inclusive
+            s = self.island.soldier[i]
+            s.x, s.dir, s.frame, s.delay, s.state, s.base = x, 1, 0, 0, WALKING, self.island.tick
+        self.island.out = self.island.alive = 5
+        self.island.wait = 0
+        self.core.Island_Kill(2000, 16)
+        self.assertEqual([s.state for s in self.island.soldier[:5]], [WALKING, DYING, DYING, DYING, WALKING])
+        self.assertEqual(self.island.soldier[1].frame, 5)
+        frames = []
+        for _ in range(10):
+            self.core.Island_Soldiers(C.byref(score))
+            frames.append(self.island.soldier[2].frame)
+        self.assertEqual(frames[:9], [5, 5, 6, 6, 6, 7, 7, 7, 8])   # 3 updates a frame
+        self.assertEqual((self.island.soldier[2].state, score.value, self.island.kills), (DEAD, 75, 3))
+        self.assertEqual(self.island.soldiers[0], 17)
+
+    def test_a_kill_finds_a_walker_where_he_is_now(self):
+        score = C.c_uint32(0)
+        s = self.put(2000, 1)
+        for _ in range(12):
+            self.core.Island_Soldiers(C.byref(score))
+        self.assertEqual(self.now(s), 2036)
+        self.core.Island_Kill(2036 - 16, 16)
+        self.assertEqual((s.state & 7, s.x, s.frame), (DYING, 2036, 5))
+
+    def test_impacts_and_strikes_kill_soldiers(self):
+        s = self.put(2600, 1)
+        combat = Combat(count=3)
+        combat.projectile[0] = Projectile(x=(2600 + 16) * 4, y=1200 * 4, life=6, kind=IMPACT)   # cannon strike
+        self.core.Island_Impacts(C.byref(combat), C.byref(C.c_uint32(0)))
+        self.assertEqual(s.state, DYING)
+        s = self.put(2600, 1)
+        combat.projectile[0].life = 5                         # not fresh
+        self.core.Island_Impacts(C.byref(combat), C.byref(C.c_uint32(0)))
+        self.assertEqual(s.state, WALKING)
+
+    def test_walkers_follow_the_original_step_by_step(self):
+        # The counted plain steps must give exactly the original's walk: a
+        # water check and a dugout check on every 3-px step.
+        rng = random.Random(5)
+        sea = lambda x: self.core.Mission_Surface(x & 0xFFFF) == 0
+        for trial in range(300):
+            self.core.Island_Reset()
+            model = []
+            for i in range(MAX_SOLDIERS):
+                x = rng.choice([rng.randrange(8, 3976), rng.randrange(1600, 1800), rng.randrange(3100, 3300),
+                                rng.randrange(8, 40), rng.randrange(3940, 3976)])
+                if any(-16 <= x - a < 16 for a in (1736, 3224)): x = 2500
+                d = rng.choice([-1, 1]) * rng.randrange(1, 128)
+                s = self.island.soldier[i]
+                s.x, s.dir, s.frame, s.delay, s.state, s.base = x, d, 0, 0, WALKING, self.island.tick
+                model.append([x, d, 0])
+            self.island.out = self.island.alive = MAX_SOLDIERS
+            self.island.wait = 0
+            for dugout in self.island.dugout[:2]:
+                dugout.garrison, dugout.c = 0, 0
+            for step in range(rng.choice([10, 100, 600])):
+                self.core.Island_Soldiers(C.byref(C.c_uint32(0)))
+                for i, m in enumerate(model):
+                    if m is None: continue
+                    m[2] = (m[2] + 1) % 5
+                    move = -3 if m[1] < 0 else 3
+                    if sea(m[0] + move): move, m[1] = -move, -m[1]
+                    m[0] += move
+                    if m[0] >= 0 and any(-16 <= m[0] - a < 16 for a in (1736, 3224)):
+                        model[i] = None
+                for i, m in enumerate(model):
+                    s = self.island.soldier[i]
+                    if m is None: self.assertEqual(s.state & 7, 0, (trial, step, i))
+                    else:
+                        self.assertEqual((self.now(s), s.dir, s.state & 7), (m[0], m[1], WALKING), (trial, step, i))
+                        k = (self.island.tick - s.base) & 255
+                        self.assertEqual((s.frame + k) % 5, m[2], (trial, step, i))
 
 
 if __name__ == '__main__':

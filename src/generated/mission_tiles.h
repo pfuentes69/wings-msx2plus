@@ -3,6 +3,8 @@
 #define TERRAIN_TILE_COUNT 503
 #define TERRAIN_MAP_BYTES 6470
 #define TERRAIN_MAP_OFFSET 16096
+#define TERRAIN_MAP_BANK 24             /* the map, from A000h in window 3 */
+#define TERRAIN_MAP_TABLE_BYTES 2168   /* the column table (RAM) */
 #define TERRAIN_MAP_ROWS 19
 #define TERRAIN_MAP_COLUMNS 1084
 #define TERRAIN_BUNDLE_BYTES 22566

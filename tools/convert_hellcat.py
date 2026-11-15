@@ -228,7 +228,13 @@ SMOKE_FAR = ('smk0', 'smk1')
 # ground-fire flash, 8thscale expl (shape 0x5a).
 SMOKE_EXTRA_NEAR = ('smk5',) + tuple(f'gun{n}' for n in range(7)) + tuple(f'gnf{n}' for n in range(7))
 SMOKE_EXTRA_FAR = ('expl',)
-SMOKE_FRAME_COUNT = len(SMOKE_NEAR) + len(SMOKE_FAR) + len(SMOKE_EXTRA_NEAR) + len(SMOKE_EXTRA_FAR)
+# Island soldiers (0x3eee): world.shp shapes 0x6f.. guy0..guy8 facing right
+# (walk 0..4, dying 5..7, corpse 8), guy9..guyf, gy10, gy11 facing left, and
+# 8thscale guy0/guy1 for the distant view.
+SOLDIER_NEAR = tuple(f'guy{c}' for c in '0123456789abcdef') + ('gy10', 'gy11')
+SOLDIER_FAR = ('guy0', 'guy1')
+SMOKE_FRAME_COUNT = (len(SMOKE_NEAR) + len(SMOKE_FAR) + len(SMOKE_EXTRA_NEAR) + len(SMOKE_EXTRA_FAR)
+                     + len(SOLDIER_NEAR) + len(SOLDIER_FAR))
 
 
 def smoke_assets(pixels, color_map, frames, wheel_sizes):
@@ -252,7 +258,8 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
     images = []
     near, far = dict(plane_constants=True), dict(allow_reduced_flag=True, plane_constants=True)
     for records, names, options in ((world, SMOKE_NEAR, near), (reduced, SMOKE_FAR, far),
-                                    (world, SMOKE_EXTRA_NEAR, near), (reduced, SMOKE_EXTRA_FAR, far)):
+                                    (world, SMOKE_EXTRA_NEAR, near), (reduced, SMOKE_EXTRA_FAR, far),
+                                    (world, SOLDIER_NEAR, near), (reduced, SOLDIER_FAR, far)):
         for name in names:
             indices, meta = decode_record(records[name], **options)
             width = meta['width']
@@ -296,6 +303,7 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
         part = records[first[f]:first[f + 1]]
         x0 = min(r['dx'] for r in part); y0 = min(r['dy'] for r in part)
         boxes += [x0, y0, max(r['dx'] + r['width'] for r in part) - x0, max(r['dy'] + r['height'] for r in part) - y0]
+    if len(images) != 43: raise ValueError('smoke frame numbering changed')
     return records, first, boxes
 
 
@@ -518,12 +526,15 @@ extern const unsigned char g_WheelFirst[21];
 /* Original smoke and ground-fire frames as atlas pieces, offsets from the
  * shape's origin: frame = stage - 1 (near smk0..smk4) or 5 + (far
  * smk0/smk1); then the hit spark smk5, barrels gun0..gun6, flashes
- * gnf0..gnf6 and the far flash expl; pieces
+ * gnf0..gnf6, the far flash expl, the soldiers guy0..gy11 and the far
+ * soldiers; pieces
  * g_SmokePieces[g_SmokeFirst[frame] .. g_SmokeFirst[frame + 1]). */
 #define SMOKE_PIECE_COUNT {len(smoke)}
 #define SMOKE_FRAME_FIRE 7
 #define SMOKE_FRAME_GUN 8
 #define SMOKE_FRAME_FAR_FLASH 22
+#define SMOKE_FRAME_SOLDIER 23      /* guy0..: + 9 facing left */
+#define SMOKE_FRAME_FAR_SOLDIER 41  /* 8thscale guy0, guy1 */
 #define SMOKE_FRAME_COUNT {SMOKE_FRAME_COUNT}
 #ifdef MISSION_TERRAIN
 extern const AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT];

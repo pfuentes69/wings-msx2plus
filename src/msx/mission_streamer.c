@@ -10,8 +10,10 @@ u8 g_TerrainFar;
 /* Close-view pan in whole tile rows x 8 (0..48) for the page being drawn:
  * the scenery is drawn this many rows lower (docs/altitude-view.md). */
 u8 g_PanRows;
-/* Column offsets then runs; terrain_patch.c rewrites column offsets. */
-u8 g_TerrainMap[TERRAIN_MAP_BYTES];
+/* The column table (u16 offsets into the map); terrain_patch.c rewrites it.
+ * The runs stay in ROM bank TERRAIN_MAP_BANK: 4.3 KB of RAM saved. */
+u8 g_TerrainMap[TERRAIN_MAP_TABLE_BYTES];
+extern u8 g_Bank3Segment;   /* crt0's shadow of the window-3 register */
 /* The tile ids each page shows per ring column, and the map column drawn
  * there (65535: invalid). Shared with the smoke eraser (smoke_draw.c). */
 u16 g_TerrainCached[2][32][TERRAIN_MAP_ROWS];
@@ -40,9 +42,9 @@ void Terrain_Load(void)
             offset += 4; address += 128;
         }
     }
-    for (i = 0; i < TERRAIN_MAP_BYTES; i += count)
+    for (i = 0; i < TERRAIN_MAP_TABLE_BYTES; i += count)
     {
-        count = TERRAIN_MAP_BYTES - i > 64 ? 64 : TERRAIN_MAP_BYTES - i;
+        count = TERRAIN_MAP_TABLE_BYTES - i > 64 ? 64 : TERRAIN_MAP_TABLE_BYTES - i;
         offset = TERRAIN_MAP_OFFSET + i;
         Scenery_Read(4 + (offset >> 13), offset & 8191, g_TerrainMap + i, count);
     }
@@ -78,9 +80,20 @@ static u16 ColumnOffset(u16 world)
     return g_TerrainMap[column] | ((u16)g_TerrainMap[column + 1] << 8);
 }
 
+/* Decode a column's runs from the map bank, mapped into window 3 for the
+ * moment (this code is resident; the caller's banked segment comes back
+ * before we return; the interrupt handlers never use window 3). */
+static void Decode(u16 offset, u16* out)
+{
+    u8 segment = g_Bank3Segment;
+    *(volatile u8*)0x7800 = g_Bank3Segment = TERRAIN_MAP_BANK;
+    Column_Decode((const u8*)0xA000 + offset, out);
+    *(volatile u8*)0x7800 = g_Bank3Segment = segment;
+}
+
 void Terrain_DecodeColumn(u16 world, u16* out)
 {
-    Column_Decode(g_TerrainMap + ColumnOffset(world), out);
+    Decode(ColumnOffset(world), out);
 }
 
 void Terrain_DrawColumn(u16 world, u8 page)
@@ -96,7 +109,7 @@ void Terrain_DrawColumn(u16 world, u8 page)
     if (g_TerrainColumns[page][slot] == offset) return;
     g_TerrainColumns[page][slot] = offset;
     // All runs/offsets are bounded and round-trip checked during generation.
-    Column_Decode(g_TerrainMap + offset, s_Decoded);
+    Decode(offset, s_Decoded);
     cached = g_TerrainCached[page][slot];
     decoded = s_Decoded;
 #ifndef WINGS_TERRAIN_C
@@ -153,7 +166,11 @@ typedef char ColumnRunsLayout[(sizeof(VDP_Command) == 15 && sizeof(g_VDP_Command
 void Terrain_DirtyOverlayColumn(u8 page, u16 world, u8 first, u8 last)
 {
     u8 slot=(world&255)>>3, count=last-first+1;   // map rows: they move with the pan
-    u16* cached=&g_TerrainCached[page][slot][first]; // index once; SDCC re-multiplies per row otherwise
+    /* &g_TerrainCached[page][slot][first] by shifts: SDCC multiplies
+     * through a library call otherwise. 19 rows: slot * 19 = 16s + 2s + s. */
+    u16* cached=(u16*)g_TerrainCached + (page ? 32 * TERRAIN_MAP_ROWS : 0) +
+                ((u16)slot << 4) + ((u16)slot << 1) + slot + first;
+    typedef char Rows19[TERRAIN_MAP_ROWS == 19 ? 1 : -1];
     g_TerrainColumns[page][slot]=65535u;
     do *cached++=65535u; while (--count);
 }

@@ -15,7 +15,9 @@ extern u8 g_PanRows;
  * show VRAM rows -heave .. fine - 1 at the heave-only scroll, so those rows
  * must stay sky: g_TopClip = fine there, else 0. */
 extern u8 g_TopClip;
-extern u8 g_TerrainMap[TERRAIN_MAP_BYTES];
+/* The map's column table: u16 offsets into the map in ROM bank
+ * TERRAIN_MAP_BANK (the runs stay in ROM). */
+extern u8 g_TerrainMap[TERRAIN_MAP_TABLE_BYTES];
 
 /* Dynamic overlays mark their affected tile rows for repaint on ring reuse.
  * Requires first <= last. */

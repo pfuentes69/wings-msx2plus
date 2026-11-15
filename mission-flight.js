@@ -1,7 +1,7 @@
 // Mission ROM: 256 KiB ASCII8 with banked code; see docs/rom-banking.md.
 const mission = JSON.parse(require("fs").readFileSync(`${ProjDir}assets_msx/mission_a/manifest.json`, "utf8"));
 ProjModules = ["src/msx/scenery_load", "src/msx/banking", "src/msx/input_sampler", "src/core/controls", "src/core/carrier", "src/world_flight", "src/msx/mission_streamer", "src/msx/column_ops", "src/core/world", "src/core/flight", "src/core/aircraft",
-    "src/msx/elevator", "src/msx/dashboard", "src/core/combat", "src/core/engine", "src/core/landing", "src/core/flight_model", "src/msx/rope", "src/core/smoke", "src/msx/smoke_draw", "src/core/island", "src/msx/terrain_patch", "src/core/game", "src/msx/menu", "src/msx/weapons", "src/msx/ship", "src/core/mission", "src/generated/mission_surfaces", "src/generated/hellcat_frames", "src/generated/mission_tiles"];
+    "src/msx/elevator", "src/msx/dashboard", "src/msx/waves", "src/core/combat", "src/core/engine", "src/core/landing", "src/core/flight_model", "src/msx/rope", "src/core/smoke", "src/msx/smoke_draw", "src/core/island", "src/core/soldiers", "src/msx/terrain_patch", "src/core/game", "src/msx/menu", "src/msx/weapons", "src/msx/ship", "src/core/mission", "src/generated/mission_surfaces", "src/generated/hellcat_frames", "src/generated/mission_tiles"];
 Target = "ROM_ASCII8";
 CustomISR = "VHBLANK";
 ROMSize = 256;
@@ -21,6 +21,7 @@ for (let segment = 0; segment < Math.ceil(aircraftBytes / 8192); ++segment) {
 }
 
 RawFiles.push({ offset: 7 * 8192, file: "assets_msx/dashboard/bank_7.bin" });
+RawFiles.push({ offset: mission.map_bank * 8192, file: `assets_msx/mission_a/bank_${mission.map_bank}.bin` });
 
 RawFiles.push({ offset: 11 * 8192, file: "assets_msx/dashboard/waves.sc5" });
 

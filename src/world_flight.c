@@ -56,13 +56,12 @@ static u8 s_Wheel = 255, s_GearPos = 5, s_RenderWheel = 255, s_RenderGear = 5;
 /* The arresting rope (src/msx/rope.c): the cable drawn, 255 none. */
 volatile u8 g_DisplayRope = 255;
 volatile u32 g_DisplayScore;
-/* The smoke puffs the shown page holds: count, then x (2), row (2), frame. */
-volatile u8 g_DisplaySmoke[1 + SMOKE_DRAWN_MAX * 5];
-static u8 s_RenderSmokePage;
 /* Smoke_Restore repainted the elevator's columns this frame. A static: a
  * local held across Render's column loops makes SDCC spill throughout. */
 static u8 s_Smoked;
 static u8 s_GunsDrawn;           /* dugout guns shown this original tick */
+static u8 s_SoldiersMoving;      /* island soldiers walking or dying */
+static u16 s_Impacts;            /* g_Combat.impacts already seen */
 static u8 s_RenderRope = 255;
 volatile u8 g_DisplayWheel = 255, g_DisplayGear = 5;
 #endif
@@ -365,7 +364,7 @@ static void PanStep(u8 page, u16 camera)
             VDP_CommandYMMM(base + 171 - rows, 0, base + 171, 172 - rows - top, 0x08); /* bottom up */
         VDP_CommandHMMV(0, base + top, 256, top + rows < 172 ? rows : 172 - top, 0);
         /* Waves drawn at no pan moved into the bottom tile row. */
-        if (!old) Terrain_RepaintBand(page, camera, 18 - s_ViewKey, 18 - s_ViewKey);
+        if (!old) Terrain_RepaintBand(page, camera, 18 - s_ViewKey, 18 - s_ViewKey, 0, 172);
     }
     else
     {
@@ -373,7 +372,7 @@ static void PanStep(u8 page, u16 camera)
          * comes up from below: repaint it, the last row moved only half in. */
         rows = (u8)(-s_PanStep) << 3;
         VDP_CommandYMMM(base + top, 0, base + top - rows, 172 - top, 0);
-        Terrain_RepaintBand(page, camera, TERRAIN_MAP_ROWS - 1 + s_PanStep - s_ViewKey, TERRAIN_MAP_ROWS - 1 - s_ViewKey);
+        Terrain_RepaintBand(page, camera, TERRAIN_MAP_ROWS - 1 + s_PanStep - s_ViewKey, TERRAIN_MAP_ROWS - 1 - s_ViewKey, 0, 172);
     }
     s_PageScale[page] = s_ViewKey;
     /* The old guard line moved with the page. */
@@ -397,7 +396,9 @@ static void RepairGuard(u8 page, u16 camera)
         if (top > 166) top = 166;
         if (old >= top || (int16_t)(camera + 255) < 16 || (int16_t)(camera + 8) >= 3973) return;
     }
-    Terrain_RepaintBand(page, camera, (old - 24 - g_PanRows) >> 3, (top - 25 - g_PanRows) >> 3);
+    /* Only the rows the guard leaves (old .. top - 1), not whole tile rows:
+     * over the carrier a full band was a long VDP wait. */
+    Terrain_RepaintBand(page, camera, (old - 24 - g_PanRows) >> 3, (top - 25 - g_PanRows) >> 3, old, top);
     s_Repainted = 1;
 }
 
@@ -526,19 +527,6 @@ static u8 SmokeActive(void)
     u8 i;
     for (i = 0; i < SMOKE_COUNT; ++i) if (g_Smoke[i].stage) return 1;
     return 0;
-}
-static void PublishSmoke(u8 page)
-{
-    u8 i, n = g_SmokeDrawnCount[page] > SMOKE_DRAWN_MAX ? SMOKE_DRAWN_MAX : g_SmokeDrawnCount[page];
-    volatile u8* out = g_DisplaySmoke + 1;
-    g_DisplaySmoke[0] = n;
-    for (i = 0; i < n; ++i)
-    {
-        const SmokeDrawn* d = &g_SmokeDrawn[page][i];
-        *out++ = (u8)d->x; *out++ = (u8)(d->x >> 8);
-        *out++ = (u8)d->row; *out++ = (u8)((u16)d->row >> 8);
-        *out++ = d->frame;
-    }
 }
 /* The plane's origin row on screen, set by DrawAircraft. A static keeps the
  * call below from holding DrawAircraft's locals live (SDCC then spills
@@ -753,7 +741,6 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     Smoke_Draw(page, camera, g_TerrainFar,
                !g_TerrainFar && WINGS_FLIGHT_MAX_Y - y > 131 ? (int16_t)(WINGS_FLIGHT_MAX_Y - y) - 131 : 0,
                (int8_t)(s_RenderHeave + (int8_t)s_RenderFine), g_Carrier.stage != CARRIER_DECK ? CARRIER_WELL_BOTTOM : 172);
-    s_RenderSmokePage = page;
 #endif
     DrawAircraft(page, frame, world, y, camera);
     Weapons_Draw(page, camera, g_TerrainFar, s_RenderHeave, &g_Combat);
@@ -836,6 +823,7 @@ static void NewPlane(void)
 static void StartCrash(void)
 {
     s_CrashSplash = Mission_Surface(s_World.x >> 8) == MISSION_SEA;
+    Island_Kill((int16_t)(s_World.x >> 8), 8);   /* 0xb338 */
     s_CrashSteps = 150;
     /* 0xafba clamps the altitude to the surface: the art plays there, not
      * where the plane's lowest point first touched. */
@@ -1048,6 +1036,14 @@ void main(void)
         // strike marks) fits the base presentation period.
         if (g_Combat.count>COMBAT_GUN_COUNT || g_Combat.secondary_cooldown ||
             g_Combat.secondary_pending || Weapons_PendingRestore()) present_ticks+=2;
+#ifdef WINGS_P1_FLIGHT
+        /* NTSC, heavy scenes: over the carrier (~95 ms of render CPU) or
+         * with 4+ smoke, gun or soldier shapes on screen, 2 more VBlanks
+         * until the render paths are rewritten (docs/frame-budget.md).
+         * PAL's frame is long enough. */
+        if (g_Game.phase==GAME_PLAY && g_Carrier.stage==CARRIER_DECK && !(g_VDP_REGSAV[9]&2) &&
+            (s_CarrierView || g_SmokeDrawnCount[g_DisplayPage] >= 4)) present_ticks+=2;
+#endif
         steps=(g_VDP_REGSAV[9]&2) ? present_ticks*3 : present_ticks*5/2;
         weapons=reset_weapons=0; input=0; turn=0;
         if (!g_HoldFlight)
@@ -1137,7 +1133,13 @@ void main(void)
 #endif
                             weapons);
 #ifdef WINGS_P1_FLIGHT
-                        Island_Impacts(&g_Combat, &g_Game.progress.score);
+                        /* Only a weapon tick with a fresh burst or strike can hit
+                         * anything (the count saturates at 65535). */
+                        if (g_Combat.impacts != s_Impacts || s_Impacts == 65535u)
+                        {
+                            s_Impacts = g_Combat.impacts;
+                            Island_Impacts(&g_Combat, &g_Game.progress.score);
+                        }
 #endif
                     }
                     }
@@ -1158,6 +1160,7 @@ advance_clocks:
                             s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps &&
                             g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
                             &g_Engine, &g_Game.sortie);
+                        s_SoldiersMoving = Island_Soldiers(&g_Game.progress.score);
 #endif
                     }
 #ifdef WINGS_P1_FLIGHT
@@ -1227,7 +1230,7 @@ advance_clocks:
             g_DisplayGauges[0] != g_Engine.oil_needle || g_DisplayGauges[1] != g_Engine.fuel_needle ||
             g_DisplayGauges[2] != g_Engine.lamps || g_DisplayCrash != s_CrashFrame ||
             g_DisplayWheel != (g_TerrainFar || s_CrashFrame != 255 ? 255 : s_Wheel) || g_DisplayGear != s_GearPos ||
-            SmokeActive() || s_GunsDrawn || g_DisplaySmoke[0] || g_TerrainDirty ||
+            SmokeActive() || s_GunsDrawn || s_SoldiersMoving || g_SmokeDrawnCount[g_DisplayPage] || g_TerrainDirty ||
 #endif
             g_DisplayWave != s_Wave || g_DisplayHeave != s_RenderHeave || camera != g_DisplayCamera || world != g_DisplayWorld || y != g_DisplayY || frame != g_SelectedFrame)
             Render(page, camera, world, y, frame);
@@ -1287,7 +1290,6 @@ advance_clocks:
         g_DisplayGauges[2]=s_RenderGauges[2]; g_DisplayCrash=s_RenderCrash;
 #ifdef WINGS_P1_FLIGHT
         g_DisplayWheel=s_RenderWheel; g_DisplayGear=s_RenderGear; g_DisplayRope=s_RenderRope;
-        PublishSmoke(page);
         g_DisplayScore = g_HudScore[page];
 #endif
         g_FramePublished ^= 1;

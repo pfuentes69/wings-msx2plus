@@ -3,14 +3,46 @@
 #include "../msx/terrain_patch.h"
 #include "../generated/mission_tiles.h"
 #include "../generated/mission_island.h"
+#include "mission.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
 
 #ifdef WINGS_P1_FLIGHT  /* smoke.h: the debug ROM keeps the P0 flight */
 
+#define ISLAND_SOLDIERS (ISLAND_GARRISON * (ISLAND_HUTS + ISLAND_DUGOUTS))
 typedef char IslandFits[(ISLAND_COUNT <= ISLAND_MAX && ISLAND_HUTS <= ISLAND_MAX_HUTS &&
-                         ISLAND_DUGOUTS <= ISLAND_MAX_DUGOUTS) ? 1 : -1];
+                         ISLAND_DUGOUTS <= ISLAND_MAX_DUGOUTS && ISLAND_SOLDIERS <= ISLAND_MAX_SOLDIERS &&
+                         ISLAND_COUNT <= 16) ? 1 : -1];
+#define STATE(s) ((s)->state & 7)   /* bit 3: PENDING, bits 4..7: island */
 
 IslandState g_Island;
+/* Buildings still releasing soldiers and wrecked huts still smoking:
+ * with neither, Island_Tick has nothing to do. */
+static uint8_t s_Releasing, s_Smoking;
+/* Barrels shown last update; all dugouts' anchors (Island_Reset). */
+static uint8_t s_GunsShown;
+static uint16_t s_GunsLow, s_GunsHigh;
+
+
+static uint16_t s_Random = 0x1d2bu;
+static uint16_t Random(void)
+{
+    s_Random ^= s_Random << 7;
+    s_Random ^= s_Random >> 9;
+    s_Random ^= s_Random << 8;
+    return s_Random;
+}
+
+/* The soldiers' own generator (directions, release gaps), so that they do
+ * not change the ground fire's hits (the original shares one). */
+static uint16_t s_Muster = 0x6b35u;
+static uint16_t Muster(void)
+{
+    s_Muster ^= s_Muster << 7;
+    s_Muster ^= s_Muster >> 9;
+    s_Muster ^= s_Muster << 8;
+    return s_Muster;
+}
+
 
 /* The wrecked hut's columns (0x46dc writes id 5, hutb, into all four): the
  * converter rendered both views of each hut wrecked into variant columns. */
@@ -42,7 +74,19 @@ void Island_Reset(void) WINGS_BANKED
         g_Island.gun[i].x = i < ISLAND_DUGOUTS ? s_DugoutX[i] : 0;
         g_Island.gun[i].frame = ISLAND_GUN_NONE;
     }
-    g_Island.hits = 0;
+    g_Island.hits = g_Island.kills = 0;
+    g_Island.gunwork = 0;
+    s_GunsShown = 1;   /* clear the barrels on the next update */
+    s_GunsLow = 65535u; s_GunsHigh = 0;
+    for (i = 0; i < ISLAND_DUGOUTS; ++i)
+    {
+        if (s_DugoutX[i] < s_GunsLow) s_GunsLow = s_DugoutX[i];
+        if (s_DugoutX[i] > s_GunsHigh) s_GunsHigh = s_DugoutX[i];
+    }
+    g_Island.out = g_Island.alive = g_Island.tick = g_Island.wait = 0;
+    s_Releasing = s_Smoking = 0;
+    for (i = 0; i < ISLAND_MAX_SOLDIERS; ++i) g_Island.soldier[i].state = ISLAND_SOLDIER_FREE;
+    Soldiers_Reset();
     for (i = 0; i < ISLAND_HUTS; ++i) g_Island.soldiers[s_HutIsland[i]] += ISLAND_GARRISON;
     for (i = 0; i < ISLAND_DUGOUTS; ++i) g_Island.soldiers[s_DugoutIsland[i]] += ISLAND_GARRISON;
 }
@@ -52,12 +96,71 @@ static void Evacuate(IslandBuilding* b)
 {
     b->waiting += b->garrison;
     b->garrison = 0;
+    if (!b->release) ++s_Releasing;
     b->release = 60;
+    g_Island.gunwork = 1;   /* an emptied dugout calls for soldiers */
 }
 
-/* An object anchored at a covers [a - 16, a + 16): the impact column's
- * anchor within columns -1..+2 (0x4ae4). */
-#define ISLAND_HIT(x, a) ((uint16_t)((x) - (a) + 16u) < 32u)
+
+/* 0x1e82: a soldier comes out of a building into the first free slot (none
+ * free: none comes out). Its direction byte is random when dir is 0; it
+ * leaves by the left exit when negative, else the right one, (dir & 7) * 4
+ * px further on, on frame dir & 3. Huts have both exits at the anchor;
+ * dugouts at A - 44 and A + 16 (record +4/+6). */
+static void Release(int16_t left, int16_t right, uint8_t island, int8_t dir)
+{
+    IslandSoldier* s = g_Island.soldier;
+    uint8_t i;
+    for (i = 0; i < ISLAND_SOLDIERS && STATE(s); ++i, ++s) {}
+    if (i == ISLAND_SOLDIERS) return;
+    if (!dir) dir = (int8_t)Muster();
+    s->state = ISLAND_SOLDIER_WALKING | (island << 4);
+    ++g_Island.out; ++g_Island.alive;
+    s->dir = dir;
+    s->frame = dir & 3;
+    s->delay = 0;                 /* no plain steps counted: */
+    s->base = g_Island.tick;      /* he takes an exact step next update */
+    g_Island.wait = 0;
+    s->x = (dir < 0 ? left : right) + (dir & 7) * 4;
+}
+
+/* 0x1de4: the next waiting soldier comes out when the release timer runs
+ * out; the next one waits (rand >> 4) & 31 ticks, or 3. */
+static uint8_t Due(IslandBuilding* b)
+{
+    uint8_t gap;
+    if (!b->release || --b->release) return 0;
+    if (--b->waiting)
+    {
+        gap = (uint8_t)(Muster() >> 4) & 31;
+        b->release = gap ? gap : 3;
+    }
+    else --s_Releasing;
+    return 1;
+}
+
+/* 0x4fee: an empty dugout takes a soldier from the nearest hut on its
+ * island that still holds 2 or more, measured from the dugout's left exit
+ * (ties: the later hut). He walks toward the dugout. */
+static void Reinforce(uint8_t d)
+{
+    int16_t exit = (int16_t)s_DugoutX[d] - 44, dx;
+    uint16_t nearest = 10000, distance;
+    uint8_t i, best = 255;
+    for (i = 0; i < ISLAND_HUTS; ++i)
+    {
+        if (s_HutIsland[i] != s_DugoutIsland[d] || g_Island.hut[i].garrison < 2) continue;
+        dx = (int16_t)s_HutX[i] - exit;
+        distance = dx < 0 ? -(uint16_t)dx : (uint16_t)dx;
+        if (!distance || distance > nearest) continue;
+        nearest = distance; best = i;
+    }
+    if (best == 255) return;
+    --g_Island.hut[best].garrison;
+    dx = (int16_t)s_HutX[best] - exit;
+    Release((int16_t)s_HutX[best], (int16_t)s_HutX[best], s_HutIsland[best], dx < 0 ? 1 : -1);
+}
+
 
 uint16_t Island_Bombed(uint16_t x) WINGS_BANKED
 {
@@ -71,6 +174,7 @@ uint16_t Island_Bombed(uint16_t x) WINGS_BANKED
         b->wrecked = 1;
         Wreck(i, 1);
         b->c = 50; b->e = 1;
+        ++s_Smoking;
         Evacuate(b);
         return ISLAND_HUT_POINTS;
     }
@@ -88,26 +192,49 @@ uint16_t Island_Bombed(uint16_t x) WINGS_BANKED
 
 void Island_Impacts(const CombatState* combat, uint32_t* score) WINGS_BANKED
 {
-    const CombatProjectile* p = &combat->projectile[COMBAT_GUN_COUNT];
-    uint16_t points = 0;
+    const CombatProjectile* p = combat->projectile;
+    uint16_t points = 0, x;
     uint8_t i;
-    /* A detonation sets life 6; Combat_Advance counts it down every tick. */
-    for (i = COMBAT_GUN_COUNT; i < combat->count; ++i, ++p)
-        if (p->kind == COMBAT_IMPACT && p->life == 6) points += Island_Bombed(p->x >> 2);
+    /* A detonation sets life 6; Combat_Advance counts it down every tick.
+     * Bombs damage buildings; bomb bursts (0x0cc0) and cannon strikes
+     * (0x19f6, slots 0..1) kill walking soldiers within 16 px. */
+    for (i = 0; i < combat->count; ++i, ++p)
+    {
+        if (p->life != 6 || p->kind < COMBAT_IMPACT) continue;
+        x = p->x >> 2;
+        if (i >= COMBAT_GUN_COUNT && p->kind == COMBAT_IMPACT) points += Island_Bombed(x);
+        Island_Kill((int16_t)x, 16);
+    }
     *score += points;
 }
 
 void Island_Tick(void) WINGS_BANKED
 {
-    IslandBuilding* b = g_Island.hut;
+    IslandBuilding* b = g_Island.dugout;
     uint8_t i;
+    int8_t dir;
+    if (!s_Releasing && !s_Smoking) return;
+    /* 0x1de4: garrisons come out, dugouts first. A dugout's soldiers walk
+     * inland: right from the island's leftmost dugout, left from its
+     * rightmost (1 in 32 the other way), random from any other. */
+    for (i = 0; i < ISLAND_DUGOUTS; ++i, ++b)
+    {
+        if (!Due(b)) continue;
+        dir = (s_DugoutSide[i] & 1) ? 1 : (s_DugoutSide[i] & 2) ? -1 : 0;
+        if (!(Muster() & 31)) dir = -dir;
+        Release((int16_t)s_DugoutX[i] - 44, (int16_t)s_DugoutX[i] + 16, s_DugoutIsland[i], dir);
+    }
+    b = g_Island.hut;
+    for (i = 0; i < ISLAND_HUTS; ++i, ++b)
+        if (Due(b)) Release((int16_t)s_HutX[i], (int16_t)s_HutX[i], s_HutIsland[i], 0);
+    b = g_Island.hut;
     /* 0x4e18: up to 49 puffs at x + 16, altitude 17, the gap growing by a
      * tick after each. */
     for (i = 0; i < ISLAND_HUTS; ++i, ++b)
         if (b->c > 1 && !--b->e)
         {
             Smoke_Emit(s_HutX[i] + 16, WINGS_FLIGHT_MAX_Y - 17);
-            --b->c;
+            if (--b->c == 1) --s_Smoking;
             b->e = 50 - b->c;
         }
 }
@@ -121,15 +248,6 @@ static const uint8_t s_Barrel[65] = {
     2, 2, 3, 3, 3, 1, 2, 3, 3, 0, 1, 2, 3, 0, 1, 2, 3,
     0, 0, 0, 3, 3, 6, 6, 6,  0, 1, 1, 3, 3, 5, 5, 6,  1, 1, 2, 3, 3, 4, 5, 5,
     1, 2, 2, 3, 3, 4, 4, 5,  2, 2, 3, 3, 3, 3, 4, 4,  1, 2, 3, 2, 1, 2, 3, 2};
-
-static uint16_t s_Random = 0x1d2bu;
-static uint16_t Random(void)
-{
-    s_Random ^= s_Random << 7;
-    s_Random ^= s_Random >> 9;
-    s_Random ^= s_Random << 8;
-    return s_Random;
-}
 
 /* The update's inputs as statics: SDCC reaches them directly, where
  * arguments and locals go through the IX frame. */
@@ -161,8 +279,16 @@ uint8_t Island_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
     uint8_t i, drawn = 0, frame, row;
     uint16_t distance;
     int16_t dx;
-    s_Flight = flight; s_World = world; s_Engine = engine; s_Sortie = sortie;
     s_Altitude = (int16_t)WINGS_FLIGHT_MAX_Y - (int16_t)(flight->y >> 8);
+    /* Nothing to do (most updates): no barrel shown, no dugout empty or
+     * holding fire, and the plane not flying or out of every gun's reach
+     * (the distant view's flash: 1100 px, beyond its screen). */
+    if (!s_GunsShown && !g_Island.gunwork &&
+        (!flying || (int16_t)(world - s_GunsLow) < -(s_Altitude > 186 ? 1100 : ISLAND_GUN_RANGE) ||
+                    (int16_t)(world - s_GunsHigh) > (s_Altitude > 186 ? 1100 : ISLAND_GUN_RANGE)))
+        return 0;
+    s_Flight = flight; s_World = world; s_Engine = engine; s_Sortie = sortie;
+    g_Island.gunwork = 0;
     /* The barrel row for dx = 0 (used up to altitude 186). */
     row = (uint8_t)(((uint8_t)(s_Altitude >> 5) - 1) * 8 + 3 + BARREL_BASE);
     for (i = ISLAND_DUGOUTS; i; --i, ++b, ++g)
@@ -171,7 +297,18 @@ uint8_t Island_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
         /* 0x3d78: an empty dugout waits for soldiers (step 4); a re-manned
          * one holds its fire for a while. 0x4d50: the gun shows and fires
          * only while the plane flies (the original's mode 0). */
-        if (!b->garrison || (b->c && --b->c) || !flying) continue;
+        if (!b->garrison || b->c) g_Island.gunwork = 1;
+        if (!b->garrison)
+        {
+            /* 0x3d8a: an empty dugout sends for a soldier every 200 updates. */
+            if ((int16_t)--b->e <= 0)
+            {
+                b->e = ISLAND_REINFORCE_TICKS;
+                Reinforce(ISLAND_DUGOUTS - i);
+            }
+            continue;
+        }
+        if ((b->c && --b->c) || !flying) continue;
         dx = (int16_t)(world - g->x);
         if (s_Altitude > 186)
         {
@@ -194,6 +331,7 @@ uint8_t Island_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
         ++drawn;
         Fire(dx);
     }
+    s_GunsShown = drawn;
     return drawn;
 }
 #endif

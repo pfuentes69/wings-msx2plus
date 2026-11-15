@@ -10,10 +10,10 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_EFFECTS)
 #ifdef WINGS_P1_FLIGHT
 SmokeDrawn g_SmokeDrawn[2][SMOKE_DRAWN_MAX];
 u8 g_SmokeDrawnCount[2];
-/* Screen rectangles to erase, per page. */
-typedef struct Rect { i16 left, right, top, bottom; } Rect;
-static Rect s_Old[2][SMOKE_DRAWN_MAX];
-static u8 s_OldCount[2];
+/* The clip each page was drawn with: Smoke_Restore works each erase box out
+ * again from the drawn list (RAM is short; no per-shape rectangles). */
+typedef struct Clip { i16 left, right, top, limit; i8 heave; } Clip;
+static Clip s_Clip[2];
 
 #define TERRAIN_TOP 24      /* first terrain row; above it the sky is plain */
 #define WAVE_TOP 159        /* smoke stays above the wave strip */
@@ -96,41 +96,70 @@ static void SkyFill(u8 page, i16 left, i16 right, i16 top, i16 bottom)
 
 void Smoke_ClearPages(void) WINGS_BANKED
 {
-    s_OldCount[0] = s_OldCount[1] = g_SmokeDrawnCount[0] = g_SmokeDrawnCount[1] = 0;
+    g_SmokeDrawnCount[0] = g_SmokeDrawnCount[1] = 0;
+}
+
+/* The page's clip in statics while it is restored or drawn: SDCC is slow
+ * through a struct pointer. */
+static i16 s_Left, s_Right, s_Top, s_Limit;
+static i8 s_Heave;
+static void UseClip(const Clip* clip)
+{
+    s_Left = clip->left; s_Right = clip->right; s_Top = clip->top;
+    s_Limit = clip->limit; s_Heave = clip->heave;
+}
+
+/* A drawn shape's box on the page, clipped as it was drawn. */
+static i16 s_BoxLeft, s_BoxRight, s_BoxTop, s_BoxBottom;
+static u8 Box(i16 x, i16 row, u8 frame)
+{
+    const signed char* box = g_SmokeBox + (frame << 2);
+    s_BoxLeft = x + box[0]; s_BoxRight = s_BoxLeft + (u8)box[2];
+    s_BoxTop = row - s_Heave + box[1]; s_BoxBottom = s_BoxTop + (u8)box[3];
+    if (s_BoxLeft < s_Left) s_BoxLeft = s_Left;
+    if (s_BoxRight > s_Right) s_BoxRight = s_Right;
+    if (s_BoxTop < s_Top) s_BoxTop = s_Top;
+    if (s_BoxBottom > s_Limit) s_BoxBottom = s_Limit;
+    return s_BoxRight > s_BoxLeft && s_BoxBottom > s_BoxTop;
 }
 
 u8 Smoke_Restore(u8 page, u8 rebuilt, u16 camera) WINGS_BANKED
 {
     u16 column;
-    u8 i, elevator = 0, first, last, n = s_OldCount[page];
-    Rect* r = s_Old[page];
+    u8 i, elevator = 0, first, last, n = g_SmokeDrawnCount[page];
+    const SmokeDrawn* d = g_SmokeDrawn[page];
     i16 left, right, top = TERRAIN_TOP + g_PanRows;   /* VRAM row of map row 0 */
     (void)camera;
-    s_OldCount[page] = 0;
+    g_SmokeDrawnCount[page] = 0;
     if (rebuilt) return 0;
-    for (i = 0; i < n; ++i, ++r)
+    UseClip(&s_Clip[page]);
+    for (i = 0; i < n; ++i, ++d)
     {
-        /* The whole rectangle, even if the camera has since moved: the
-         * page's ring still holds the pixels there. */
-        left = r->left; right = r->right;
-        if (r->bottom <= top) { SkyFill(page, left, right, r->top, r->bottom); continue; }
-        first = (u8)(((r->top < top ? top : r->top) - top) >> 3);
-        last = (u8)((r->bottom - 1 - top) >> 3);
+        /* The whole box, even if the camera has since moved: the page's
+         * ring still holds the pixels there. */
+        Box((i16)d->x, d->row, d->frame);
+        left = s_BoxLeft; right = s_BoxRight;
+        if (s_BoxBottom <= top) { SkyFill(page, left, right, s_BoxTop, s_BoxBottom); continue; }
+        first = (u8)(((s_BoxTop < top ? top : s_BoxTop) - top) >> 3);
+        last = (u8)((s_BoxBottom - 1 - top) >> 3);
         /* Over plain sky (the usual case) one fill erases the puff. */
         for (column = (u16)(left & ~7); (i16)column < right; column += 8)
             if (!SkyRows(page, column, first, last)) break;
-        if ((i16)column >= right) { SkyFill(page, left, right, r->top, r->bottom); continue; }
-        if (r->top < top) SkyFill(page, left, right, r->top, top);
-        if (!g_TerrainFar && right > ELEVATOR_LEFT && left < ELEVATOR_RIGHT) elevator = 1;
+        if ((i16)column >= right) { SkyFill(page, left, right, s_BoxTop, s_BoxBottom); continue; }
+        if (s_BoxTop < top) SkyFill(page, left, right, s_BoxTop, top);
+        /* The elevator (map rows 13.., Elevator_Draw) is redrawn only when
+         * a repaint reached its rows, not for smoke in the sky above it. */
+        if (!g_TerrainFar && right > ELEVATOR_LEFT && left < ELEVATOR_RIGHT && s_BoxBottom > top + 13 * 8)
+            elevator = 1;
         /* Otherwise repaint the tiles under it from the page's tile cache. */
-        RepaintTiles(page, left, right, r->top < top ? top : r->top, r->bottom);
+        RepaintTiles(page, left, right, s_BoxTop < top ? top : s_BoxTop, s_BoxBottom);
     }
     return elevator;
 }
 
 /* Drawing state as statics: SDCC addresses them directly, where locals go
  * through the IX frame. */
-static i16 s_X, s_Row, s_Left, s_Right, s_Top, s_Limit;
+static i16 s_X, s_Row;
 static u8 s_Page;
 
 static void Piece(const AircraftShape* piece)
@@ -158,8 +187,6 @@ static void Piece(const AircraftShape* piece)
 /* Place a shape at world (x, y) in this view (s_Far, s_Shift). */
 static u8 s_Far, s_Drawn;
 static i16 s_Shift;
-static i8 s_Heave;
-static Rect* s_Rect;
 static SmokeDrawn* s_Out;
 static void Place(u16 x, u16 y)
 {
@@ -175,49 +202,41 @@ static void Place(u16 x, u16 y)
     }
 }
 
-/* Draw frame at the placed position, clipped, and keep its box for
- * Smoke_Restore. The box is worked out in statics: SDCC is slow through a
- * struct pointer. */
-static i16 s_BoxLeft, s_BoxRight, s_BoxTop, s_BoxBottom;
+/* Draw frame at the placed position, clipped, and list it for
+ * Smoke_Restore and the verification. */
 static void Shape(u8 frame)
 {
-    const signed char* box = g_SmokeBox + (frame << 2);
     const AircraftShape* piece;
-    Rect* rect;
+    SmokeDrawn* out;
     u8 k, end;
-    if (s_Drawn == SMOKE_DRAWN_MAX) return;
-    s_BoxLeft = s_X + box[0]; s_BoxRight = s_BoxLeft + (u8)box[2];
+    if (s_Drawn == SMOKE_DRAWN_MAX || !Box(s_X, s_Row, frame)) return;
+    out = s_Out;
+    out->x = (u16)s_X; out->row = s_Row; out->frame = frame;
     s_Row -= s_Heave;
-    s_BoxTop = s_Row + box[1]; s_BoxBottom = s_BoxTop + (u8)box[3];
-    if (s_BoxLeft < s_Left) s_BoxLeft = s_Left;
-    if (s_BoxRight > s_Right) s_BoxRight = s_Right;
-    if (s_BoxTop < s_Top) s_BoxTop = s_Top;
-    if (s_BoxBottom > s_Limit) s_BoxBottom = s_Limit;
-    if (s_BoxRight <= s_BoxLeft || s_BoxBottom <= s_BoxTop) return;
-    rect = s_Rect;
-    rect->left = s_BoxLeft; rect->right = s_BoxRight;
-    rect->top = s_BoxTop; rect->bottom = s_BoxBottom;
-    s_Out->x = (u16)s_X; s_Out->row = s_Row + s_Heave; s_Out->frame = frame;
     k = g_SmokeFirst[frame]; end = g_SmokeFirst[frame + 1];
     for (piece = &g_SmokePieces[k]; k < end; ++k, ++piece) Piece(piece);
-    ++s_Rect; ++s_Out; ++s_Drawn;
+    ++s_Out; ++s_Drawn;
 }
 
 void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WINGS_BANKED
 {
     const SmokePuff* p = g_Smoke;
     const IslandGun* g = g_Island.gun;
+    const IslandSoldier* soldier = g_Island.soldier;
+    Clip* clip = &s_Clip[page];
     u8 i, frame;
-    s_Page = page; s_Far = far; s_Shift = shift; s_Heave = heave;
-    s_Rect = s_Old[page]; s_Out = g_SmokeDrawn[page]; s_Drawn = 0;
-    s_Left = (i16)camera + 8; s_Right = (i16)camera + 256;
+    s_Page = page; s_Far = far; s_Shift = shift;
+    s_Out = g_SmokeDrawn[page]; s_Drawn = 0;
+    clip->heave = heave;
+    clip->left = (i16)camera + 8; clip->right = (i16)camera + 256;
     /* In the close-view pan the top lines (the split above line heave +
      * fine) show VRAM rows -heave .. fine - 1 at the heave-only scroll: keep
      * the shapes out of them. */
-    s_Top = g_TopClip;   /* 0 in the distant view */
+    clip->top = g_TopClip;   /* 0 in the distant view */
     /* The near view stops above the wave strip; the distant view's flash
      * reaches down to its sand row. */
-    s_Limit = far ? (limit > 161 ? 161 : limit) : limit > WAVE_TOP && !g_PanRows ? WAVE_TOP : limit;
+    clip->limit = far ? (limit > 161 ? 161 : limit) : limit > WAVE_TOP && !g_PanRows ? WAVE_TOP : limit;
+    UseClip(clip);
     /* Dugout barrels, behind the puffs. */
     for (i = 0; i < ISLAND_MAX_DUGOUTS; ++i, ++g)
     {
@@ -225,6 +244,28 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
         if (frame == ISLAND_GUN_NONE || (frame == ISLAND_GUN_FAR) != far) continue;
         Place(g->x, WINGS_FLIGHT_MAX_Y - ISLAND_GUN_ALTITUDE);
         Shape(far ? SMOKE_FRAME_FAR_FLASH : SMOKE_FRAME_GUN + frame);
+    }
+    /* Island soldiers (0x3eee) at altitude 12: walking guy0..guy4, dying
+     * guy5..guy7, the corpse guy8 (+ 9 facing left). The distant view
+     * shows a 2-frame figure and no corpses. */
+    /* None out, or no island land in view: no soldier to place. */
+    i = ISLAND_MAX_SOLDIERS;
+    if (g_Island.out)
+    {
+        i16 low = far ? g_SoldierLandLow >> 3 : g_SoldierLandLow, high = far ? g_SoldierLandHigh >> 3 : g_SoldierLandHigh;
+        if ((i16)camera + 272 > low && (i16)camera - 16 < high) i = 0;
+    }
+    for (; i < ISLAND_MAX_SOLDIERS; ++i, ++soldier)
+    {
+        if (!(soldier->state & 7)) continue;
+        if (far && (soldier->state & 7) == ISLAND_SOLDIER_DEAD) continue;
+        /* Off this view: nothing to place (x alone is cheap). */
+        Soldier_Now(soldier);
+        if ((u16)((far ? g_SoldierX >> 3 : g_SoldierX) - (i16)camera + 16) > 288u) continue;
+        frame = far ? SMOKE_FRAME_FAR_SOLDIER + (g_SoldierFrame & 1)
+                    : SMOKE_FRAME_SOLDIER + g_SoldierFrame + (soldier->dir < 0 ? 9 : 0);
+        Place((u16)g_SoldierX, WINGS_FLIGHT_MAX_Y - ISLAND_SOLDIER_ALTITUDE);
+        Shape(frame);
     }
     for (i = 0; i < SMOKE_COUNT; ++i, ++p)
     {
@@ -234,7 +275,6 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
         else frame = p->stage == SMOKE_STAGE_FIRE ? SMOKE_FRAME_FIRE : p->stage - 1;
         Shape(frame);
     }
-    s_OldCount[page] = s_Drawn;
     g_SmokeDrawnCount[page] = s_Drawn;
 }
 #endif

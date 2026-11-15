@@ -21,6 +21,9 @@ STATIC_HEIGHT_CLASSES = ((6,), (7,), (8, 11), (3,), (4,), tuple(range(15, 31)))
 STATIC_HEIGHTS = (36, 35, 35, 9, 13, 12)
 
 
+
+MAP_BANK = 24   # a free ROM bank (data); see docs/rom-banking.md
+
 def static_surface_height(raw_word):
     object_id = (raw_word >> 2) & 0x1ff
     for ids, height in zip(STATIC_HEIGHT_CLASSES, STATIC_HEIGHTS):
@@ -256,6 +259,7 @@ def artifacts():
         ocean_palette_sha256=hashlib.sha256(ocean_path.read_bytes()).hexdigest(),
         palette_rgb3=[(palette[i*2]>>4,palette[i*2+1],palette[i*2]&7) for i in range(16)],
         mapper_banks=list(range(4, 4 + (len(bundle) + 8191) // 8192)),
+        map_bank=MAP_BANK, map_table_bytes=selected['columns'] * 2,
         vram=dict(first_page=2, first_row=180, tiles_per_row=32, tiles_per_page=288,
                   ordering='column-major groups of 9 tiles'),
         map_format='u16le column offsets, deduplicated count:u8/tile:u16le runs; exactly 19 tile rows',
@@ -266,6 +270,11 @@ def artifacts():
              output / 'manifest.json': (json.dumps(metadata, indent=2) + '\n').encode()}
     for bank, offset in enumerate(range(0, len(bundle), 8192), 4):
         files[output / f'bank_{bank}.bin'] = bundle[offset:offset + 8192]
+    # The map again, alone at the start of its own bank: the renderer decodes
+    # columns straight from ROM (window 3), and only the column table, which
+    # wrecked huts rewrite, is copied to RAM.
+    if len(tile_map) > 8192: raise ValueError('the map no longer fits one bank')
+    files[output / f'bank_{MAP_BANK}.bin'] = tile_map
     # Topmost scenery row per 256-px block of the close view (VRAM row =
     # scene row - 40, rounded down to a tile row), for close-view pan steps.
     block_tops = []
@@ -282,6 +291,8 @@ def artifacts():
 #define TERRAIN_TILE_COUNT {selected['tile_count']}
 #define TERRAIN_MAP_BYTES {len(tile_map)}
 #define TERRAIN_MAP_OFFSET {len(tiles)}
+#define TERRAIN_MAP_BANK {MAP_BANK}             /* the map, from A000h in window 3 */
+#define TERRAIN_MAP_TABLE_BYTES {selected['columns'] * 2}   /* the column table (RAM) */
 #define TERRAIN_MAP_ROWS {selected['rows']}
 #define TERRAIN_MAP_COLUMNS {selected['columns']}
 #define TERRAIN_BUNDLE_BYTES {len(bundle)}

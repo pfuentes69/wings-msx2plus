@@ -112,6 +112,35 @@ The remaining time is structural: about 15 ms per frame is the CPU waiting on
 the VDP, and the wave strip issues about 12 commands per frame (2-row backup
 and restore, 96-pixel wave segments, transparent top rows via LMMM).
 
+## NTSC heavy-scene allowance (2026-11-15)
+
+Measured with `set cmdtiming broken` (VDP commands instant), the approach
+over the carrier still takes ~95 ms of render CPU. The render is CPU-bound,
+not VDP-bound. The simulation takes 55–65 ms more. Most render paths are
+SDCC C at ~2,000–3,000 T-states per VDP command:
+
+| Stage over the carrier, CPU | Time |
+| --- | --- |
+| Terrain columns (`Column_Runs`, asm) | ~2.8 ms per column, 4–6 a frame |
+| Waves, after the open-sea fast path | ~8 ms (was 15.5) |
+| Signalmen / elevator / ship | ~8 / 8 / 7 ms |
+| Smoke, 5 puffs | ~8 ms |
+| Aircraft and its backup | ~10 ms |
+
+Until those paths are rewritten (planned as its own step before P4), NTSC
+frames get 2 more VBlanks (10 instead of 8, on top of the weapons allowance)
+in two cases:
+- while the near view shows the carrier in normal play (not the lift);
+- when the previous frame drew 4 or more smoke, gun or soldier shapes.
+
+The simulation keeps its 150 Hz, so an extra VBlank adds ~10 ms of slack,
+not 16.7. PAL is unchanged.
+
+Found and fixed along the way: the wave strip moved to segment 21
+(`src/msx/waves.c`; segment 3 had 25 bytes left). `RepairGuard` repaints
+only the pixel rows the guard leaves. `Mission_Query` keeps its last run.
+The island's per-update work is skipped when nothing is due.
+
 ## Candidates, in order of expected value
 
 1. **Schedule render work to overlap CPU with VDP** (the largest item over

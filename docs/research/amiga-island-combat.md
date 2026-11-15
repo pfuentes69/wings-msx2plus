@@ -118,6 +118,22 @@ island, +6.w state (0 free, 1 walking, 2 dying, 3 dead).
   guy8, or gy11 facing left), score +25, `-$42c2` + 1, island soldiers − 1,
   island check. Dead slots are not reused.
 - Soldiers never shoot. Each building has its 5 and no more.
+- Recovered 2026-11-15 (step 4):
+  - Release order: dugouts, then huts, each tick (0x1de4).
+  - A dugout soldier's direction: +1 if the dugout is the island's first
+    (`-$5bbe`), −1 if its last, otherwise random; then flipped when
+    rol(rand, 1) & 31 == 0.
+  - The kill test (0x1a8c) is (x_s − (x − r)) ≤ 2r unsigned: both ends
+    inclusive.
+  - Each death calls 0x23ac: a sample (`-$4152`) with period 0x17c and
+    a random pitch from 0x2306, probably the scream.
+  - Walking re-mans any dugout the soldier ends inside (the column id is 3,
+    and 0x4b54 finds the record within columns −1..+2); a manned one just
+    gains a soldier.
+  - Reinforcement (0x4fee → 0x5034): huts are scanned in order; the hut
+    must be on the dugout's island with +8 ≥ 2. The distance is from the
+    dugout's +4 exit, and a tie goes to the later hut. The soldier leaves
+    the hut with direction ±1 toward the dugout.
 
 ## Ground fire (0x4d50, 0x4f5c)
 

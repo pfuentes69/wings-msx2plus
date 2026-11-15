@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_HudScore g_DisplayScore g_DisplaySmoke g_Smoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_HudScore g_DisplayScore g_SmokeDrawn g_SmokeDrawnCount g_Smoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -61,6 +61,7 @@ proc finish {name then} {
 # -heave .. fine - 1 of the displayed page at the heave-only scroll. Terrain
 # starts at row 24, so they must be plain sky: anything else (smoke, the
 # plane) shows there in the wrong place.
+proc smoke_count {} {debug read memory [expr {$::addr(g_SmokeDrawnCount)+[value g_DisplayPage]}]}
 proc top_split_check {} {
     if {[value g_DisplayScale]!=1} {return}
     set fine [value g_DisplayFine];set heave [value g_DisplayHeave]
@@ -107,7 +108,7 @@ proc publishing {} {
         unset ::wanted_frame
     }
     if {[info exists ::wanted_smoke]} {
-        if {[value g_DisplaySmoke]<$::wanted_smoke} {return}
+        if {[smoke_count]<$::wanted_smoke} {return}
         unset ::wanted_smoke
     }
     if {[info exists ::wanted_y]} {
@@ -147,9 +148,12 @@ proc publishing {} {
     dump $name.flight [debug read_block memory $::addr(s_World) 37]
     dump $name.crash [debug read_block memory $::addr(g_DisplayCrash) 1]
     dump $name.wheel [binary format ccc [value g_DisplayWheel] [value g_DisplayGear] [value g_DisplayRope]]
-    dump $name.smoke [debug read_block memory $::addr(g_DisplaySmoke) 56]
+    # What the shown page drew (src/msx/smoke_draw.h): count, then x (2),
+    # row (2), frame per shape; 27 entries per page.
+    set page [value g_DisplayPage]
+    dump $name.smoke [binary format c [smoke_count]][debug read_block memory [expr {$::addr(g_SmokeDrawn)+$page*27*5}] [expr {27*5}]]
     dump $name.score [debug read_block memory $::addr(g_DisplayScore) 4]
-    dump $name.island [debug read_block memory $::addr(g_Island) 162]
+    dump $name.island [debug read_block memory $::addr(g_Island) 309]
     dump $name.palette [debug read_block {VDP palette} 0 32]
     dump $name.fine [debug read_block memory $::addr(g_DisplayFine) 1]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
@@ -189,7 +193,9 @@ proc rendering {} {
 }
 proc missed_frame {} {
     if {![info exists ::last_publish]} {return}
-    puts $::report "deadline elapsed=[expr {1000*([machine_info time]-$::last_publish)}] render=$::last_render stage=[value g_Carrier] world=[word g_DisplayWorld] vblank=[value g_VBlankTicks] viewchange=[value g_ViewChange] camera=[word g_DisplayCamera] scale=[value g_DisplayScale] y=[word g_DisplayY] hudscore=[debug read_block memory $::addr(g_HudScore) 8] score=[debug read_block memory $::addr(g_Game) 4]"
+    set puffs 0
+    for {set i 0} {$i < 8} {incr i} {if {[debug read memory [expr {$::addr(g_Smoke)+$i*10+8}]]} {incr puffs}}
+    puts $::report "deadline elapsed=[expr {1000*([machine_info time]-$::last_publish)}] render=$::last_render puffs=$puffs shapes=[smoke_count] oil=[debug read memory [expr {$::addr(g_Game)+14}]] stage=[value g_Carrier] world=[word g_DisplayWorld] vblank=[value g_VBlankTicks] viewchange=[value g_ViewChange] camera=[word g_DisplayCamera] scale=[value g_DisplayScale] y=[word g_DisplayY] hudscore=[debug read_block memory $::addr(g_HudScore) 8] score=[debug read_block memory $::addr(g_Game) 4]"
     flush $::report
 }
 debug watchpoint create -type write_mem -address $addr(g_FramePublished) -command {guard publishing}
@@ -547,6 +553,24 @@ proc cannon_settle {heading then} {
 # P3 island targets: fly left over island A low and carpet-bomb until the
 # hut at x 2392 is wrecked (g_Island: hut records of 8 bytes, wrecked +3).
 proc island_wrecked {hut} {debug read memory [expr {$::addr(g_Island)+8*$hut+3}]}
+# Soldiers drawn: a walker, a dying soldier and a corpse (facing left) put
+# in front of the camera (g_Island soldiers at +162, 7 bytes: x, dir, frame,
+# delay, state, base; out +304, alive +305, tick +306, wait +307).
+proc island_soldiers {} {
+    set base [expr {$::addr(g_Island)+162}]
+    set cam [word g_DisplayCamera]
+    set tick [debug read memory [expr {$::addr(g_Island)+306}]]
+    set i 15
+    foreach {dx dir frame delay state} {70 1 0 200 1  120 1 6 2 2  170 -1 8 0 3} {
+        debug write_block memory [expr {$base+7*$i}] [binary format sccccc [expr {$cam+$dx}] $dir $frame $delay $state $tick]
+        incr i
+    }
+    # out += 3, alive += 2, nothing waiting.
+    debug write memory [expr {$::addr(g_Island)+304}] [expr {[debug read memory [expr {$::addr(g_Island)+304}]]+3}]
+    debug write memory [expr {$::addr(g_Island)+305}] [expr {[debug read memory [expr {$::addr(g_Island)+305}]]+2}]
+    debug write memory [expr {$::addr(g_Island)+307}] 0
+    after time 0.3 {snap island_soldiers {wait_for {[world_x]>5000} pan_climb "fly back from the island" 90}}
+}
 proc island_run {} {
     game_byte 13 30;game_byte 15 192
     set ::score_before [expr {[value g_DisplayScore]}]
@@ -610,7 +634,7 @@ proc island_hit {} {
     # The bomb bursts well behind the plane: turn back over the hut and
     # capture it wrecked and smoking.
     pilot 128 1060
-    wait_for {![world_byte 11] && abs([world_x]-2400)<60} {set ::wanted_smoke 1;snap island_bombed {wait_for {[world_x]>5000} pan_climb "fly back from the island" 90}} "turn back over the hut" 20
+    wait_for {![world_byte 11] && abs([world_x]-2400)<60} {set ::wanted_smoke 1;snap island_bombed island_soldiers} "turn back over the hut" 20
 }
 # The close-view pan (original 0x26e): between altitudes 131 and 186 the
 # scene moves down with the plane. Climb into the distant view, then come

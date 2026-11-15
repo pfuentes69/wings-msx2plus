@@ -10,5 +10,7 @@ extern uint8_t g_TerrainDirty;
  * column restores the original from ROM. */
 void Terrain_Remap(uint16_t column, uint16_t source) WINGS_BANKED;
 /* Repaint tile rows first..last of the visible columns from the tile cache. */
-void Terrain_RepaintBand(uint8_t page, uint16_t camera, uint8_t first, uint8_t last) WINGS_BANKED;
+/* Only VRAM rows clip_top .. clip_bottom - 1 (of the page) are painted. */
+void Terrain_RepaintBand(uint8_t page, uint16_t camera, uint8_t first, uint8_t last,
+                         uint8_t clip_top, uint8_t clip_bottom) WINGS_BANKED;
 #endif

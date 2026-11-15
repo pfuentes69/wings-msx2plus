@@ -133,6 +133,7 @@ def main():
     required|={'landed','landed_service','deck_bounce','sea_splash','sea_crash_next','engine_splash','arrest'}
     required|={'island_bombed','pan_high','pan_mid'}
     required|={'deck_smoke_live','deck_smoke_cleared'}
+    required|={'island_soldiers'}
     assert required<=snapshots.keys(),required-snapshots.keys()
     assert (out/'paused.combat').read_bytes()==(out/'pause_wait.combat').read_bytes(),'Pause advanced weapons'
     for key in ('world','y','pose','wave','heave','ship','crew','depth','stage'):
@@ -170,6 +171,10 @@ def main():
     assert island[3]==1 and island[0]==0 and island[1]==5,('wrecked hut',list(island[:8]))
     assert score==150*sum(island[8*i+3] for i in range(2))+200*sum(island[64+8*i]==0 for i in range(2)),('island score',score)
     assert snapshots['island_bombed']['smoke']>=1
+    # Soldiers (frames 23..42 of the smoke path): a walker, the dying and a corpse.
+    raw=(out/'island_soldiers.smoke').read_bytes()
+    drawn={raw[1+5*i+4] for i in range(raw[0])}
+    assert drawn&set(range(23,28)) and drawn&set(range(28,32)) and 40 in drawn,('soldier frames',sorted(drawn))   # dying 28..30, or his corpse 31
     # Smoke over the signalmen and the elevator is drawn, then fully erased.
     assert snapshots['deck_smoke_live']['smoke']>=4 and snapshots['deck_smoke_cleared']['smoke']==0
     # Dugout guns (0x4f5c): the run passes the right dugout at low altitude.

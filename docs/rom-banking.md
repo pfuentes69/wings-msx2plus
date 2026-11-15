@@ -22,10 +22,11 @@ now banks code and grows to 256 KiB.
 | 4–15 | Raw data banks, unchanged (mission, dashboard, aircraft, waves, ship, elevator) |
 | 16 | Banked code: `WINGS_SEGMENT_SCENE` (menu, ship, carrier elevator, engine, landing) |
 | 17–20 | Raw data banks (pre-rendered HUD values) |
-| 21 | Banked code: `WINGS_SEGMENT_FLIGHT` (flight model, arresting rope) |
-| 22 | Banked code: `WINGS_SEGMENT_EFFECTS` (engine and hut smoke) |
+| 21 | Banked code: `WINGS_SEGMENT_FLIGHT` (flight model, arresting rope, the wave strip) |
+| 22 | Banked code: `WINGS_SEGMENT_EFFECTS` (engine and hut smoke, island soldiers) |
 | 23 | Banked code: `WINGS_SEGMENT_COMBAT` (weapons, island targets, terrain column remap) |
-| 24–31 | Free for code or data |
+| 24 | Raw data: the mission map (column table and runs), read in window 3 |
+| 25–31 | Free for code or data |
 
 Measured release layout (close-view pan, 2026-11-14):
 

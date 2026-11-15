@@ -9,8 +9,8 @@ describes what the MSX does and how. P3 is being built in steps:
 | 1 | Huts and dugouts: map data, wrecked huts, bomb hits, scoring, hut smoke | Done |
 | 2 | The original's bomb physics (gravity, drag, detonation at altitude 12) | Done |
 | 3 | Dugout guns: barrel art, hit-scan ground fire, engine damage | Done |
-| 4 | Soldiers: release, walking, re-manning dugouts, deaths (+25) | Next |
-| 5 | Island cleared: bonus, flag, message, mission complete | |
+| 4 | Soldiers: release, walking, re-manning dugouts, deaths (+25) | Done |
+| 5 | Island cleared: bonus, flag, message, mission complete | Next |
 | later | Rockets, AA guns (rockets only) | |
 
 ## Map data
@@ -195,6 +195,53 @@ over the right dugout) takes 41 ms of simulation and 84 ms of render: 125 of
 133 ms. That is still about 20 ms more render than without the guns. Frames
 over the carrier are back at the baseline.
 
+## Soldiers
+
+The island's soldiers follow the original (0x1de4, 0x1e82, 0x3eee, 0x1a8c,
+0x4fee). Release and reinforcement are in `src/core/island.c` (segment 23).
+The walk and the deaths are in `src/core/soldiers.c` (segment 22, since
+segment 23 was full).
+
+- **Release:** a bombed hut or dugout lets its garrison out one at a time:
+  the first after 60 ticks, then every (rand >> 4) & 31 ticks (3 if 0).
+  - Into the first free slot of `g_Island.soldier` (20 = 5 per hut and
+    dugout on map A).
+  - The direction byte is random for a hut. For the island's leftmost dugout
+    it is +1, for its rightmost −1, with a 1-in-32 flip.
+  - Exits: a hut's anchor; a dugout's A − 44 (walking left) or A + 16.
+    Then (dir & 7) × 4 px further on, on frame dir & 3.
+- **Walk:** 3 px and the next of frames 0..4 per update, turning round where
+  the next step would be sea. A walker ending inside a dugout's 32 px mans
+  it: garrison + 1, and a 360-update fire delay if it was empty and idle.
+  - An empty dugout sends for a soldier every 200 updates. The nearest hut
+    on its island that still holds 2 or more sends him, measured from the
+    dugout's left exit (ties go to the later hut), walking toward the
+    dugout.
+- **Deaths:** walking soldiers within r px (both ends inclusive) start to die.
+  - r = 16 for bomb bursts and cannon strikes (fresh impacts in
+    `Island_Impacts`), 8 for the plane's crash.
+  - Frames 5..7 for 3 updates each, then the corpse (frame 8), +25 and the
+    island's soldier count − 1. The death sound (0x23ac, a sample at a
+    random pitch, probably `scream`) waits for the sound step.
+- **Drawing:** through the smoke path, at altitude 12.
+  - Frames guy0..guy8, + 9 (guy9..gy11) facing left; the distant view uses
+    8thscale guy0/guy1 and draws no corpses.
+  - The converter adds the 20 frames to the smoke frames (43 in all).
+
+**Cost.** Stepping each soldier every update cost ~850 T-states in SDCC's C,
+too much with 20 out. A walker's steps between two of the original's checks
+(water ahead, a dugout) change only x and the frame. So each walker keeps
+x and frame as of an update `base`, plus the count of plain steps after it
+(in his death-delay byte, unused while walking), and they are worked out
+when needed. The update loop runs only when a walker's plain steps run out
+or someone is dying (`g_Island.wait`). `tests/test_island.py` checks over
+300 random cases that this walk is step for step the original's.
+
+**RAM.** The soldiers' state brought the gameplay stack within ~14 bytes of
+the variables. The map's run data (4.3 KB) now stays in ROM, in bank 24, and
+is decoded from window 3 (`Terrain_DecodeColumn`); only the column table,
+which wrecked huts rewrite, is in RAM. Data now ends at E1E8h, about 4.3 KB below the stack's start (F380h).
+
 ## Verification
 
 - `tests/test_island.py` builds `island.c` with a stub `Terrain_Remap` and
@@ -207,6 +254,13 @@ over the carrier are back at the baseline.
   the hit rate against 20% × (1 − d / 512) at three distances, none beyond
   448, and that hits spark at the nose and wear oil and fuel at the
   counter's rate.
+- `tests/test_island.py` also checks the soldiers: the release cadence and
+  exits, walking inland from the outer dugouts, the 3-px walk and the turn
+  at the water, re-manning (with and without the fire delay), the
+  reinforcement from the nearest hut, the inclusive kill range, the dying
+  frames and +25, kills by impacts and strikes, a kill finding a lazily
+  walking soldier where he is now, and the lazy walk against the
+  original's step-by-step one.
 - `tests/test_mission.py` round-trips the variant columns through the tile
   map.
 - `tests/test_combat.py` follows released bombs against a 16.16 model of
@@ -223,4 +277,8 @@ over the carrier are back at the baseline.
   runs on NTSC and PAL with no missed frame deadline. On its way in, the
   run passes the right dugout at altitude 100. The snapshot also requires
   at least one ground-fire hit (`g_Island.hits`), and the pixel checks
-  cover the drawn barrels, flashes and sparks (95 snapshots NTSC, 92 PAL).
+  cover the drawn barrels, flashes and sparks. Right after it, the run puts a
+  walker, a dying soldier and a corpse in front of the camera
+  (`island_soldiers`); their frames are checked and drawn by the pixel oracle.
+  The released garrison is seen walking and re-manning the dugouts (95
+  snapshots on NTSC and PAL).

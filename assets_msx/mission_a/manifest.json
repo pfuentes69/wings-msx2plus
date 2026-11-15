@@ -1755,6 +1755,8 @@
     5,
     6
   ],
+  "map_bank": 24,
+  "map_table_bytes": 2168,
   "vram": {
     "first_page": 2,
     "first_row": 180,
