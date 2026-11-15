@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_HudScore g_DisplayScore g_DisplaySmoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_HudScore g_DisplayScore g_DisplaySmoke g_Smoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -207,7 +207,19 @@ proc held_start {} {
     if {[view 0]!=3} {after time 0.05 held_start;return}
     require [expr {[view 4]==30 && [stat 32]==0 && [stat 30]==0}] "Held GRAPH leaked into flight"
     keymatrixup 6 4
-    lift_pose lift_start 0 31 {lift_pose lift_rise_24 0 24 {lift_pose lift_rise_16 0 16 {lift_pose lift_rise_8 0 8 {wait_lift_up {snap start {deck_height 0}}}}}}
+    lift_pose lift_start 0 31 {lift_pose lift_rise_24 0 24 {lift_pose lift_rise_16 0 16 {lift_pose lift_rise_8 0 8 {wait_lift_up {snap start deck_smoke}}}}}
+}
+# Smoke over the carrier's overlay columns (signalmen 6958.., elevator
+# 7004..7068), some low enough to cross the overlay rows: drawn, then erased
+# without leftovers once the puffs burn out (2.8 s). Puffs: x, y, xf, yf,
+# vx, vy, stage, life.
+proc deck_smoke {} {
+    set bytes {}
+    foreach {x y vx vy} {6936 1090 0 255  6950 1140 128 0  6990 1120 255 128  7000 1150 64 64  7030 1100 200 30  7040 1145 0 0  6960 1130 90 200  7010 1080 30 90} {
+        append bytes [binary format sscccccc $x $y 0 0 $vx $vy 5 6]
+    }
+    debug write_block memory $::addr(g_Smoke) $bytes
+    after time 1.0 {set ::wanted_smoke 4;snap deck_smoke_live {after time 2.4 {snap deck_smoke_cleared {deck_height 0}}}}
 }
 # P1 release: use ordinary keyboard controls to roll from the parked position.
 proc deck_height {height} {

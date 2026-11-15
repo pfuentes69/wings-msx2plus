@@ -161,6 +161,14 @@ Two changes to the shared smoke drawing came with it:
   are now clipped at VRAM row fine, and the pixel oracle does the same.
   Damage from the island run left the engine smoking for the rest of the
   run, which exposed this.
+- **Smoke over the carrier.** The signalmen and the elevator mark their
+  columns for repaint in the tile cache. The eraser skipped such columns
+  completely, so a puff passing over them left 8-px blocks of smoke in the
+  sky. It now repaints every tile the cache knows and takes the overlay rows
+  from the map (`Terrain_DecodeColumn`). The P0 run checks it: on the deck it
+  puts 8 puffs over those columns, and the `deck_smoke_live` and
+  `deck_smoke_cleared` snapshots must match the pixel oracle. The old build
+  fails the first one.
 
 There are no dugout-gun sounds yet (P5 audio).
 

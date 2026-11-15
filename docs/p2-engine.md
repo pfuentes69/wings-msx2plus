@@ -50,7 +50,7 @@ drawing, both banked in segment 22.
 | MSX choice | Why |
 | --- | --- |
 | 8 puffs; the emitter checks every 4th tick (the original: every other tick, from a 40-effect pool) | Bounds the drawing cost |
-| Puffs are drawn behind the plane and erased without VRAM backups: a sky fill over plain sky tiles, otherwise the tiles repainted from the page's tile cache (sky fill above the terrain rows) | The atlas has no room for backups |
+| Puffs are drawn behind the plane and erased without VRAM backups: a sky fill over plain sky tiles, otherwise the tiles repainted one at a time from the page's tile cache (sky fill above the terrain rows). Rows under the signalmen and the elevator, which the cache marks for repaint, are repainted from the map, and the overlays draw again on top | The atlas has no room for backups |
 | Erasing happens before the frame's new terrain columns | Puffs that scrolled out of view are still in the page's ring, and the tile cache does not know about them |
 | Smoke stays above the wave strip (row 159) | The strip has its own backup and restore |
 

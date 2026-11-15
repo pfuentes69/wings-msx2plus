@@ -78,6 +78,11 @@ static u16 ColumnOffset(u16 world)
     return g_TerrainMap[column] | ((u16)g_TerrainMap[column + 1] << 8);
 }
 
+void Terrain_DecodeColumn(u16 world, u16* out)
+{
+    Column_Decode(g_TerrainMap + ColumnOffset(world), out);
+}
+
 void Terrain_DrawColumn(u16 world, u8 page)
 {
     u8 slot = (world & 255) >> 3;

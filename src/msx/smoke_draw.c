@@ -26,7 +26,6 @@ static u8 SkyRows(u8 page, u16 world, u8 first, u8 last)
 {
     u8 slot = (world & 255) >> 3;
     const u16* cached = &g_TerrainCached[page][slot][first];
-    if (g_TerrainColumns[page][slot] == 65535u) return 0;
     for (;;)
     {
         if (*cached >= TERRAIN_TILE_COUNT || g_MissionTileColors[*cached]) return 0;
@@ -39,24 +38,36 @@ static u8 SkyRows(u8 page, u16 world, u8 first, u8 last)
  * 8-px columns that left..right touches, from the page's tile cache: one
  * VDP command per tile, a copy from the tile atlas or a fill for a solid
  * tile, cut to the rows asked for. Much cheaper than redrawing whole
- * columns for a small shape. */
+ * columns for a small shape.
+ *
+ * The cache always matches VRAM (a new page starts as all sky), except for
+ * rows under an overlay (the signalmen, the elevator), which hold 65535 so
+ * the column is repainted when the ring reuses it. Those rows are repainted
+ * from the map instead; the overlay is drawn again later in the frame. A
+ * column flagged invalid for that reason still has valid rows: skipping it
+ * left 8-px blocks of smoke in the sky over the carrier. */
+static u16 s_Decoded[TERRAIN_MAP_ROWS + 1];
 static void RepaintTiles(u8 page, i16 left, i16 right, i16 top, i16 bottom)
 {
     const u16* cached;
     u16 column, tile, base = (u16)page * 256;
     i16 y, next, origin = TERRAIN_TOP + g_PanRows;
-    u8 slot, row, first = (u8)((top - origin) >> 3), color;
+    u8 slot, row, first = (u8)((top - origin) >> 3), color, decoded;
     for (column = (u16)(left & ~7); (i16)column < right; column += 8)
     {
         slot = (column & 255) >> 3;
-        if (g_TerrainColumns[page][slot] == 65535u) continue;
         cached = &g_TerrainCached[page][slot][first];
-        row = first; y = top;
+        row = first; y = top; decoded = 0;
         do
         {
             next = origin + (i16)(row + 1) * 8;
             if (next > bottom) next = bottom;
             tile = *cached++;
+            if (tile >= TERRAIN_TILE_COUNT)
+            {
+                if (!decoded) { Terrain_DecodeColumn(column, s_Decoded); decoded = 1; }
+                tile = s_Decoded[row];
+            }
             if (tile < TERRAIN_TILE_COUNT)
             {
                 color = g_MissionTileColors[tile];

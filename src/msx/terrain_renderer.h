@@ -5,6 +5,9 @@ void Terrain_Load(void);
 void Terrain_LoadEnd(void);
 void Terrain_InitPage(u8 page);
 void Terrain_DrawColumn(u16 world, u8 page);
+/* The map's tiles for the column at world x in the current view (map rows;
+ * out holds TERRAIN_MAP_ROWS entries). */
+void Terrain_DecodeColumn(u16 world, u16* out);
 extern u8 g_TerrainFar;
 extern u8 g_PanRows;
 extern u8 g_TerrainMap[TERRAIN_MAP_BYTES];

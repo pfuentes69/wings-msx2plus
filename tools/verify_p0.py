@@ -132,6 +132,7 @@ def main():
     required|={'engine_low_fuel','engine_smoke','engine_failed','engine_next_plane','game_over'}
     required|={'landed','landed_service','deck_bounce','sea_splash','sea_crash_next','engine_splash','arrest'}
     required|={'island_bombed','pan_high','pan_mid'}
+    required|={'deck_smoke_live','deck_smoke_cleared'}
     assert required<=snapshots.keys(),required-snapshots.keys()
     assert (out/'paused.combat').read_bytes()==(out/'pause_wait.combat').read_bytes(),'Pause advanced weapons'
     for key in ('world','y','pose','wave','heave','ship','crew','depth','stage'):
@@ -169,6 +170,8 @@ def main():
     assert island[3]==1 and island[0]==0 and island[1]==5,('wrecked hut',list(island[:8]))
     assert score==150*sum(island[8*i+3] for i in range(2))+200*sum(island[64+8*i]==0 for i in range(2)),('island score',score)
     assert snapshots['island_bombed']['smoke']>=1
+    # Smoke over the signalmen and the elevator is drawn, then fully erased.
+    assert snapshots['deck_smoke_live']['smoke']>=4 and snapshots['deck_smoke_cleared']['smoke']==0
     # Dugout guns (0x4f5c): the run passes the right dugout at low altitude.
     assert struct.unpack_from('<H',island,160)[0]>=1,('ground-fire hits',island[136:162].hex())
     # The close-view pan, with the carrier in view and a bomb falling.
