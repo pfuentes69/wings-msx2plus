@@ -125,6 +125,11 @@ def main():
         # The HUD (ammo, lives, weapon, gauges) is part of the full-VRAM
         # comparison above for gameplay. Menus keep the dashboard too: check
         # it in every phase (the pilot window shows the last flight profile).
+        # The PSG driver (src/msx/sound.c): port A stays input for the
+        # joysticks, port B output; no engine or guns outside a sortie.
+        psg=(out/f'{name}.psg').read_bytes()
+        assert psg[7]&0xc0==0x80,(name,'PSG mixer port bits',hex(psg[7]))
+        if game[0]!=3: assert psg[8]==0 and psg[9]==0,(name,'sound outside a sortie',list(psg[8:11]))
         gauges=tuple((out/f'{name}.gauges').read_bytes())
         assert all(g<=22 for g in gauges[:2]) and gauges[2]<=3,(name,'gauge state',gauges)
         score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0]
@@ -223,6 +228,21 @@ def main():
         assert snapshot['scale']==1 and low<=1200-snapshot['y']-131<=high,(name,snapshot['y'])
         assert snapshot['camera']+256>6592 and snapshot['camera']<7368,(name,'carrier not in view',snapshot['camera'])
     assert any(p['kind'] in (2,3,4) for p in snapshots['pan_mid']['projectiles'][2:]),'no bomb in the panned view'
+    # Sound: the engine drones in flight (tone period 2.24 x the original's
+    # Paula period, 335..~1100), the cannon rattles on channel B (noise),
+    # the lift's motor grinds there (tone 1200 and noise), and the run hears
+    # bomb bursts, splashes, the lift's clang and the cable's screech.
+    for name in [k for k in snapshots if k.startswith('cannon_')]:
+        psg=(out/f'{name}.psg').read_bytes()
+        tone=psg[0]|(psg[1]&15)<<8
+        assert psg[8]>=6 and 700<=tone<=2600 and not psg[7]&1,(name,'engine',psg[8],tone,hex(psg[7]))
+        assert not psg[7]&0x10,(name,'cannon rattle',hex(psg[7]))
+    for name in ('lift_rise_24','lift_rise_16','lift_left_down_8','lift_left_down_16','lift_right_down_8'):
+        psg=(out/f'{name}.psg').read_bytes()
+        assert not psg[7]&0x12 and psg[2]|psg[3]<<8==1200,(name,'lift grind',hex(psg[7]),list(psg[2:4]))
+    heard={int(l.split()[1]) for l in report.splitlines() if l.startswith('sound ')}
+    print('effects heard:',sorted(heard))
+    assert {2,3,4,5}<=heard,('effects heard',sorted(heard))
     for heading in ('left','right'):
         for attitude in ('climb','level','dive'):
             snapshot=snapshots[f'cannon_{attitude}_{heading}']

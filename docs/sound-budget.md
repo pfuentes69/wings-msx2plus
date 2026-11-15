@@ -46,18 +46,18 @@ disabled, so the two never interleave. The driver must still preserve the
 PSG register-7 I/O direction bits (7 = 1 for port B output, 6 = 0 for port A
 input).
 
-## Placeholder
+## The driver
 
-Until the driver exists, `SoundBudget()` in `src/world_flight.c` is a
-calibrated busy loop. `WINGS_SOUND_TSTATES` (default 3000) sets the cost and
-0 removes it. Its cost measures as 2,976 T-states from entry to `ret` on
-openMSX, plus the tail jump and return. `tools/profile_p0.py` lists it as
-`_SoundBudget`, and its publication-latency histogram
-(`publish_tstates_*`) shows the remaining retrace margin.
+Since 2026-11-15 the release build runs the PSG effects driver here
+(`Sound_Field` in `src/msx/sound.c`, [sound-effects.md](sound-effects.md)).
+The debug profile keeps the old placeholder: `SoundBudget()` in
+`src/world_flight.c`, a busy loop calibrated at 2,976 T-states
+(`WINGS_SOUND_TSTATES`, default 3000; 0 removes it). The driver's own cost
+hasn't been measured yet. It is a few hundred T-states of Z80 plus 11
+register writes, well under the budget, so release frames got slightly
+faster. Music must fit in what is left.
 
 Measured with the placeholder (2026-11-14):
 - `verify_p0`: 89/89 snapshots on NTSC and on PAL.
 - Weapons regressions: 66 snapshots on NTSC, 69 on PAL.
 - Publication latency: typically 4,250–4,750 T-states, worst 8,000.
-
-The real driver replaces the loop body and must stay within the budget.

@@ -75,6 +75,8 @@ volatile u8 g_DisplayGauges[3] = {16, 22, 0};
 #include "rom_mapper.h"
 #include "msx/scenery_load.h"
 #include "msx/message.h"
+#include "msx/sound.h"
+#include "msx/sound_update.h"
 
 volatile u8 g_ScrollFine, g_ScrollCoarse, g_VerticalOffset, g_LineSplit;
 /* Close-view pan (docs/altitude-view.md): above altitude 131 the original
@@ -134,7 +136,10 @@ static u8 s_Joystick;
 #ifndef WINGS_SOUND_TSTATES
 #define WINGS_SOUND_TSTATES 3000
 #endif
-#if WINGS_SOUND_TSTATES
+#ifdef WINGS_P1_FLIGHT
+/* The PSG driver (msx/sound.c) in the sound budget. */
+#define WINGS_LINE_ISR_TAIL jp _Sound_Field
+#elif WINGS_SOUND_TSTATES
 #define WINGS_LINE_ISR_TAIL jp _SoundBudget
 static void SoundBudget(void) __naked
 {
@@ -879,6 +884,7 @@ static void NewPlane(void)
 static void StartCrash(void)
 {
     s_CrashSplash = Mission_Surface(s_World.x >> 8) == MISSION_SEA;
+    Sound_Effect(s_CrashSplash ? SOUND_SPLASH : SOUND_BOOM, s_World.x >> 8);
     Island_Kill((int16_t)(s_World.x >> 8), 8);   /* 0xb338 */
     s_CrashSteps = 150;
     /* 0xafba clamps the altitude to the surface: the art plays there, not
@@ -985,6 +991,11 @@ void main(void)
 #endif
     u8 page, frame, steps, step, input, tick, turn, held = 0;
     u8 base_steps, present_ticks, core_phase = 0;
+#ifdef WINGS_P1_FLIGHT
+    /* RAM is not cleared at boot: before any line interrupt runs the driver. */
+    Sound_Reset();
+    Sound_LoadEffects();
+#endif
     g_Ready = g_Rendering = g_FramePublished = g_HoldFlight = 0;
     g_MissedFrames = g_PanOverruns = 0;
     g_InputEnabled=0; g_InputInvert=g_InputOverflow=0;
@@ -1060,6 +1071,8 @@ void main(void)
     g_ScrollFine = (-camera) & 7;
     g_ScrollCoarse = ((camera & 255) + 7) >> 3;
     g_PlayFine = g_ScrollFine; g_PlayCoarse = g_ScrollCoarse;
+#ifdef WINGS_P1_FLIGHT
+#endif
     VDP_SetHBlankLine(171);
     VDP_EnableHBlank(TRUE);
     VDP_EnableDisplay(TRUE);
@@ -1175,6 +1188,7 @@ void main(void)
                         }
                         if (contact) g_LastContact=contact;
                         if (contact==LANDING_CRASH) { StartCrash(); goto advance_clocks; }
+                        if (contact==LANDING_BOUNCE) Sound_Effect(SOUND_SCREECH,s_World.x>>8);   /* 0xbb7e */
                         if (contact) Landing_Apply(&s_World.flight,contact);
 #endif
                     if (Combat_Tick(&g_Combat)
@@ -1200,6 +1214,7 @@ void main(void)
                         {
                             s_Impacts = g_Combat.impacts;
                             Island_Impacts(&g_Combat, &g_Game.progress.score);
+                            Sound_Bursts();
                         }
 #endif
                     }
@@ -1241,6 +1256,8 @@ advance_clocks:
             }
         }
 #ifdef WINGS_P1_FLIGHT
+        Sound_Update(&s_World.flight, s_World.x >> 8,
+                     (g_Game.phase == GAME_PLAY ? SOUND_PLAYING : 0) | (s_CrashSteps ? SOUND_CRASHED : 0), steps);
         /* The ticker moves 2 px a VBlank (msx/message.c). */
         if (g_Game.phase==GAME_PLAY && (g_Island.message || g_MessageActive)) Message_Update(present_ticks);
 #endif

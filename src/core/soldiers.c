@@ -1,5 +1,6 @@
 #include "island.h"
 #include "mission.h"
+#include "sound.h"
 #include "../generated/mission_island.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_MISSION)
 
@@ -110,6 +111,7 @@ void Island_Kill(int16_t x, uint8_t r) WINGS_BANKED
         now = NowX(s);
         if ((uint16_t)(now - x) > 2u * r) continue;
         s->x = now;
+        Sound_Effect(SOUND_SCREAM, (uint16_t)now);   /* 0x1ac6 */
         s->state += ISLAND_SOLDIER_DYING - ISLAND_SOLDIER_WALKING;
         s->frame = 5; s->delay = 2;
         g_Island.wait = 0;

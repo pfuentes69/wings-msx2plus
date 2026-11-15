@@ -14,7 +14,7 @@ set out $env(WINGS_TEST_OUT)
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_DisplayBand g_DisplayTicker g_MessageActive g_HudScore g_DisplayScore g_SmokeDrawn g_SmokeDrawnCount g_Smoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_SoundPlaying g_DisplayBand g_DisplayTicker g_MessageActive g_HudScore g_DisplayScore g_SmokeDrawn g_SmokeDrawnCount g_Smoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -171,6 +171,7 @@ proc publishing {} {
     dump $name.score [debug read_block memory $::addr(g_DisplayScore) 4]
     dump $name.island [debug read_block memory $::addr(g_Island) 315]
     dump $name.band [binary format cs [value g_DisplayBand] [word g_DisplayTicker]]
+    dump $name.psg [debug read_block {PSG regs} 0 16]
     dump $name.palette [debug read_block {VDP palette} 0 32]
     dump $name.fine [debug read_block memory $::addr(g_DisplayFine) 1]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
@@ -216,6 +217,10 @@ proc missed_frame {} {
     flush $::report
 }
 debug watchpoint create -type write_mem -address $addr(g_FramePublished) -command {guard publishing}
+# Each effect the PSG driver starts (src/msx/sound.c).
+debug watchpoint create -type write_mem -address $addr(g_SoundPlaying) -command {
+    if {[info exists ::armed] && [value g_SoundPlaying]} {puts $::report "sound [value g_SoundPlaying] world=[word g_DisplayWorld] stage=[value g_Carrier]"}
+}
 debug watchpoint create -type write_mem -address $addr(g_Rendering) -command {guard rendering}
 proc ready {} {
     if {[value g_Ready]!=1 || [view 2]!=3 || [view 4]!=30} {after time 0.05 ready;return}

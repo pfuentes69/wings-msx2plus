@@ -27,6 +27,12 @@ STUB = r"""
 uint8_t g_TerrainDirty;
 uint16_t g_Remap[256][2];
 uint8_t g_RemapCount;
+uint8_t g_Sounds[256][2];   /* src/msx/sound.c on the MSX: (effect, x / 32) */
+uint8_t g_SoundCount;
+void Sound_Effect(uint8_t id, uint16_t x)
+{
+    g_Sounds[g_SoundCount][0] = id; g_Sounds[g_SoundCount][1] = (uint8_t)(x >> 5); ++g_SoundCount;
+}
 void Terrain_Remap(uint16_t column, uint16_t source)
 {
     g_Remap[g_RemapCount][0] = column; g_Remap[g_RemapCount][1] = source;
@@ -357,8 +363,13 @@ class IslandTests(unittest.TestCase):
             s.x, s.dir, s.frame, s.delay, s.state, s.base = x, 1, 0, 0, WALKING, self.island.tick
         self.island.out = self.island.alive = 5
         self.island.wait = 0
+        sounds = C.c_uint8.in_dll(self.core, 'g_SoundCount')
+        heard = (C.c_uint8 * 2 * 256).in_dll(self.core, 'g_Sounds')
+        sounds.value = 0
         self.core.Island_Kill(2000, 16)
         self.assertEqual([s.state for s in self.island.soldier[:5]], [WALKING, DYING, DYING, DYING, WALKING])
+        # 0x1ac6: each soldier hit screams (SOUND_SCREAM), heard from where he is.
+        self.assertEqual([tuple(heard[i]) for i in range(sounds.value)], [(1, 1984 >> 5), (1, 2000 >> 5), (1, 2016 >> 5)])
         self.assertEqual(self.island.soldier[1].frame, 5)
         frames = []
         for _ in range(10):
