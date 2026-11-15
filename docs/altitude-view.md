@@ -113,6 +113,26 @@ The port now pans by p = altitude − 131 (0..55) in two parts.
   on a row boundary therefore doesn't step every frame. At −1 the last
   play line shows terrain row 171.
 
+**The top split, made timing-proof (2026-11-15).** The top lines show VRAM
+rows −heave .. fine − 1 of the page. While smoke and the plane could be drawn
+there, they appeared in the top band, displaced up by `fine`. A late split
+interrupt did the same for the rows just below. Measured over the P0 run,
+the split ISR runs 0–2 lines late on most fields, and rarely 3–4. Players saw
+it as fragments of smoke or of the plane at the top while descending through
+the pan band. Now:
+- **No overlays above `g_TopClip`.** The plane, its wheels and gun flash, the
+  weapons and smoke stay at VRAM rows from `g_TopClip` (`fine` in the pan,
+  else 0). In the tallest dive and climb poses (dy −2), at fine 6–7, that
+  costs the top 1–2 rows of the plane.
+- **The split is requested `min(fine, 2)` lines early.** Under the play
+  scroll those lines show VRAM rows 254..255, which hold no data (the wave
+  cache keeps them empty). A split up to 2 lines late shows rows
+  fine − 2 .. fine − 1 instead, which are sky. Either way nothing changes
+  on screen. A split 3–4 lines late can still show a 1–2-line sliver.
+- **Checked every frame.** The P0 run checks, on every published frame,
+  that the rows the top band can show are plain sky. The pixel oracle
+  clips overlays the same way and models the earlier split line.
+
 The bottom split must not depend on the line interrupt's exact timing.
 Interrupts can arrive a line or more late (other interrupt work, short
 sections with interrupts off), and two earlier attempts showed it:

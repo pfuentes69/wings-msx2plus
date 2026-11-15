@@ -57,6 +57,26 @@ proc finish {name then} {
         after time 0.06 $then
     }
 }
+# The close-view pan's top lines (above line heave + fine) show VRAM rows
+# -heave .. fine - 1 of the displayed page at the heave-only scroll. Terrain
+# starts at row 24, so they must be plain sky: anything else (smoke, the
+# plane) shows there in the wrong place.
+proc top_split_check {} {
+    if {[value g_DisplayScale]!=1} {return}
+    set fine [value g_DisplayFine];set heave [value g_DisplayHeave]
+    if {$fine>127} {set fine [expr {$fine-256}]}
+    set base [expr {[value g_DisplayPage]*32768}]
+    # The split comes up to 2 lines early: rows 254..255 show too.
+    set first [expr {$fine>0 && $heave<2 ? -2 : -$heave}]
+    for {set r $first} {$r<$fine} {incr r} {
+        binary scan [debug read_block VRAM [expr {$base+(($r+256)%256)*128}] 128] cu* bytes
+        set x 0
+        foreach b $bytes {
+            if {$b} {error "Overlay in the top split rows: world=[word g_DisplayWorld] y=[word g_DisplayY] fine=$fine heave=$heave row=$r x=[expr {$x*2}] byte=$b"}
+            incr x
+        }
+    }
+}
 proc publishing {} {
     if {![info exists ::armed]} {return}
     if {[word g_MissedFrames]} {
@@ -67,6 +87,7 @@ proc publishing {} {
             debug write memory [expr {$::addr(g_MissedFrames)+1}] 0
         } else {error "Frame deadline missed: stage=[value g_Carrier] depth=[value g_DisplayElevator] pose=[value g_SelectedFrame] render=$::last_render"}
     }
+    top_split_check
     set now [machine_info time]
     set ::last_publish $now
     set stage [value g_Carrier]

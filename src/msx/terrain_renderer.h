@@ -10,6 +10,11 @@ void Terrain_DrawColumn(u16 world, u8 page);
 void Terrain_DecodeColumn(u16 world, u16* out);
 extern u8 g_TerrainFar;
 extern u8 g_PanRows;
+/* The first VRAM row overlays (the plane, weapons, smoke) may use on the
+ * page being drawn. In the close-view pan the top lines (above the split)
+ * show VRAM rows -heave .. fine - 1 at the heave-only scroll, so those rows
+ * must stay sky: g_TopClip = fine there, else 0. */
+extern u8 g_TopClip;
 extern u8 g_TerrainMap[TERRAIN_MAP_BYTES];
 
 /* Dynamic overlays mark their affected tile rows for repaint on ring reuse.

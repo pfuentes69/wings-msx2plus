@@ -1,7 +1,7 @@
 #include "weapons.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_HUD)
 #include "dashboard.h"
-extern u8 g_PanRows;   /* terrain_renderer.h */
+extern u8 g_PanRows, g_TopClip;   /* terrain_renderer.h */
 #include "vdp.h"
 #include "vdp_inl.h"
 
@@ -54,7 +54,7 @@ static void Mark(i16 x, i16 y, u8 width, u8 height, u8 color)
     u16 ring, part;
     if (x < (i16)(s_Camera+8)) x = s_Camera+8;
     if (right > (i16)(s_Camera+256)) right = s_Camera+256;
-    if (y < 0) y = 0;
+    if (y < (i16)g_TopClip) y = g_TopClip;
     if (bottom > 171) bottom = 171;
     if (right <= x || bottom <= y) return;
     width = right-x; height = bottom-y; ring = x & 255;
@@ -97,7 +97,7 @@ void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* stat
         else { left=(x-3)&~1; right=left+8; top=y-3; bottom=y+4; }
         if (left < (i16)((camera+8)&65534u)) left = (camera+8)&65534u;
         if (right > (i16)((camera+257)&65534u)) right = (camera+257)&65534u;
-        if (top < 0) top = 0;
+        if (top < (i16)g_TopClip) top = g_TopClip;
         if (bottom > 171) bottom = 171;
         if (right <= left || bottom <= top) continue;
         f = &s_Old[page][i];

@@ -105,9 +105,11 @@ def pan_of(y, scale):
 def vram_row(row, fine, heave):
     """The VRAM row a play-area screen row shows: the top s lines keep the
     heave scroll, the rest add the fine pan (the published g_DisplayFine,
-    0..11; whole tile rows of pan are drawn in VRAM)."""
+    0..11; whole tile rows of pan are drawn in VRAM). The split is requested
+    up to 2 lines early; those lines show VRAM rows 254..255 (sky)."""
     scroll = heave + fine
-    return (row - heave) % 256 if row < scroll else row - scroll
+    early = min(fine, 2) if fine > 0 else 0
+    return (row - heave) % 256 if row < scroll - early else (row - scroll) % 256
 
 
 def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True, smoke=(), score=0, fine=None):
@@ -121,6 +123,9 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
     pan = pan_of(y, scale)
     if fine is None: fine = pan & 7
     scroll = heave + fine
+    # Overlays (plane, wheels, flash, weapons, rope) stay at VRAM rows from
+    # g_TopClip (fine in the close-view pan, else 0): screen rows from here.
+    overlay_top = scroll + max(0, fine) if scale == 1 else 0
     panned = pan - fine >= 8   # whole tile rows of pan: the wave strip is below the view
     def background_row(row):   # rows above the image are sky
         return max(row, 0) * background_width
@@ -218,7 +223,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             for sy in range(record['height']):
                 dy = pivot + record['dy'] + gear - 5 + sy
                 if elevator_active and dy >= 142 + heave: continue
-                if not 0 <= dy < 172: continue
+                if not overlay_top <= dy < 172: continue
                 for sx in range(record['width']):
                     dx = world + record['dx'] + sx - camera - 25
                     if not 0 <= dx < 256: continue
@@ -228,7 +233,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
     for sy in range(shape['height'] if crash == 255 else 0):
         dy = (129 - shape['height'] + sy + heave + (elevator_depth or 0)) if on_deck and not deck_level else pivot + shape['dy'] + sy
         if elevator_active and dy>=142+heave:continue
-        if not 0 <= dy < 172: continue
+        if not overlay_top <= dy < 172: continue
         for sx in range(shape['width']):
             dx = (world >> 3 if scale == 8 else world) + shape['dx'] + sx - camera - (25 if scale == 1 else 0)
             if not 0 <= dx < 256: continue
@@ -244,7 +249,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
         record, source = overlay
         for sy in range(record['height']):
             dy = pivot + record['dy'] + sy
-            if not 0 <= dy < 172: continue
+            if not overlay_top <= dy < 172: continue
             for sx in range(record['width']):
                 dx = world + record['dx'] + sx - camera - 25
                 if not 0 <= dx < 256: continue
@@ -268,11 +273,11 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
         else:
             runs = ((cable, cable + half + 1, origin + 6), (cable + half + 1, hook + 1, origin + 5))
         for start, end, row in runs:
-            if not 0 <= row < limit: continue
+            if not overlay_top <= row < limit: continue
             for wx in range(max(start, left), min(end, right)):
                 pixels[row][wx - camera] = 13
     def mark(x,y,w,h,color):
-        for yy in range(max(0,y),min(171+scroll,172,y+h)):   # VRAM rows < 171
+        for yy in range(max(overlay_top,y),min(171+scroll,172,y+h)):   # VRAM rows < 171
             for xx in range(max(camera+8,x),min(camera+256,x+w)):
                 pixels[yy][xx-camera] = color
     for p in projectiles:
@@ -480,7 +485,7 @@ def main():
             expected = expected_pixels(scene, frame, world, y, camera, (folder / 'far.indices').read_bytes() if scale == 8 else background, terrain['far_width'] if scale == 8 else terrain['width'], scale, wave, pilot, heave, ship_frame, projectiles, stock, weapon, lives, flash=snapshots[name].get('flash', 0))
             fine = 0   # the renderer harness never flies inside the pan band
             assert not pan_of(y, scale), (name, 'pan band snapshot needs the fine scroll')
-            assert regs[0] & 16 and regs[19] in ({(170-heave-fine) % 256, 174} | ({fine} if fine else set())), (name, 'dashboard split IRQ', regs[19])
+            assert regs[0] & 16 and regs[19] in ({(170-heave-fine) % 256, 174} | ({fine - min(fine, 2)} if fine > 0 else set())), (name, 'dashboard split IRQ', regs[19])
             for row in range(212):
                 for col in range(8, 256):
                     ring = (col if row >= 172 else camera + col) % 256

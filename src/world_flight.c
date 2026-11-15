@@ -313,8 +313,13 @@ static void PublishScroll(void)
     g_VerticalOffset = 0 - s_RenderHeave;
     g_PlayOffset = 0 - scroll;
     g_LineSplit = 170 - scroll;   /* line 170 in the play scroll */
-    /* R19 counts scrolled lines: line s with the top region's -heave. */
-    g_FirstSplit = (int8_t)s_RenderFine > 0 ? s_RenderFine : g_LineSplit;
+    /* R19 counts scrolled lines: line s with the top region's -heave. The
+     * split is requested up to 2 lines early: those lines then show VRAM
+     * rows 254..255 (kept sky) under the play scroll, and an interrupt up
+     * to 2 lines late shows rows fine - 2 .. fine - 1 (sky: g_TopClip), so
+     * a late interrupt changes nothing on screen. Measured lateness is 0-2
+     * lines on nearly every field, rarely 3-4. */
+    g_FirstSplit = (int8_t)s_RenderFine > 0 ? s_RenderFine - (s_RenderFine < 2 ? s_RenderFine : 2) : g_LineSplit;
     g_FirstState = (int8_t)s_RenderFine > 0 ? 2 : 0;
     g_DashboardSplit = g_FirstState;
     g_DisplayFine = s_RenderFine;
@@ -494,7 +499,7 @@ static const AircraftShape* GunFlash(u8 frame)
 static void CopyShape(u8 page, const AircraftShape* shape, int16_t dx, int16_t dy, u16 camera, int16_t limit)
 {
     int16_t left = dx < (int16_t)camera ? (int16_t)camera : dx, right = dx + shape->width;
-    int16_t top = dy < 0 ? 0 : dy, bottom = dy + shape->height;
+    int16_t top = dy < (int16_t)g_TopClip ? (int16_t)g_TopClip : dy, bottom = dy + shape->height;
     u16 base = (u16)page * 256;
     u8 ring, width, part, source_x;
     if (right > (int16_t)(camera + 256)) right = camera + 256;
@@ -633,7 +638,7 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     }
     if (left < (int16_t)camera) left = camera;
     if (right > (int16_t)(camera + 256)) right = camera + 256;
-    if (top < 0) top = 0;
+    if (top < (int16_t)g_TopClip) top = g_TopClip;
     if (bottom > limit) bottom = limit;
     s_Valid[page] = 0;
     if (right <= left || bottom <= top) return;
@@ -655,10 +660,12 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
 #endif
 }
 
+u8 g_TopClip;
 static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
 {
     u16 previous, next;
     g_RenderPage = page;
+    g_TopClip = !g_TerrainFar && (int8_t)s_RenderFine > 0 ? s_RenderFine : 0;
     g_ViewChange = s_PageScale[page] != s_ViewKey;
     s_PanStep = 0;
     if (g_ViewChange && s_PageScale[page] < 8 && s_ViewKey < 8)

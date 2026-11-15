@@ -214,7 +214,7 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
     /* In the close-view pan the top lines (the split above line heave +
      * fine) show VRAM rows -heave .. fine - 1 at the heave-only scroll: keep
      * the shapes out of them. */
-    s_Top = far || shift <= (i16)g_PanRows ? 0 : shift - (i16)g_PanRows;
+    s_Top = g_TopClip;   /* 0 in the distant view */
     /* The near view stops above the wave strip; the distant view's flash
      * reaches down to its sand row. */
     s_Limit = far ? (limit > 161 ? 161 : limit) : limit > WAVE_TOP && !g_PanRows ? WAVE_TOP : limit;
