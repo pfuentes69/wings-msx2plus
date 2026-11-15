@@ -13,6 +13,14 @@ void Engine_Reset(EngineState* engine, SortieState* sortie) WINGS_BANKED
     engine->fuel_needle = Engine_FuelFrame(sortie);
     engine->lamps = 0;
     if (!engine->random) engine->random = 0x5a;
+    engine->hits = 6 + (engine->random & 3);   /* 0xb82c: 6 + random(0..3) */
+}
+
+void Engine_Hit(EngineState* engine, SortieState* sortie, uint8_t random) WINGS_BANKED
+{
+    if (--engine->hits) return;
+    Engine_Damage(engine, sortie, 1, random & 3);
+    engine->hits = 6 + ((random >> 2) & 7);
 }
 
 void Engine_Damage(EngineState* engine, SortieState* sortie, uint8_t oil, uint8_t fuel) WINGS_BANKED

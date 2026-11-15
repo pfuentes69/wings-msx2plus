@@ -32,6 +32,7 @@ typedef struct EngineState {
     int8_t oil_blink, fuel_blink;
     uint8_t oil_needle, fuel_needle, lamps; /* what the instruments show */
     uint8_t random;
+    uint8_t hits;         /* ground-fire hits until the next damage (+$10) */
 } EngineState;
 
 /* Banked (segment 16): the main loop counts ENGINE_TICK_STEPS simulation
@@ -44,6 +45,10 @@ void Engine_Reset(EngineState* engine, SortieState* sortie) WINGS_BANKED;
 uint8_t Engine_Tick(EngineState* engine, SortieState* sortie, uint8_t flying, uint8_t throttle, uint8_t warnings) WINGS_BANKED;
 /* Inject damage (enemy fire arrives in P3-P5; tests use it now). */
 void Engine_Damage(EngineState* engine, SortieState* sortie, uint8_t oil, uint8_t fuel) WINGS_BANKED;
+/* A ground-fire hit (0x4f9e): the hit counter runs down; at 0 the engine
+ * loses an oil unit and 0..3 fuel units (random bits 0..1), and the counter
+ * restarts at 6 + random bits 2..4. */
+void Engine_Hit(EngineState* engine, SortieState* sortie, uint8_t random) WINGS_BANKED;
 /* Instrument targets for the current state. */
 uint8_t Engine_OilFrame(const SortieState* sortie, uint8_t throttle) WINGS_BANKED;
 uint8_t Engine_FuelFrame(const SortieState* sortie) WINGS_BANKED;

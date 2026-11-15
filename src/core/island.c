@@ -37,6 +37,12 @@ void Island_Reset(void) WINGS_BANKED
         b->c = b->e = 0;
     }
     for (i = 0; i < ISLAND_MAX; ++i) g_Island.soldiers[i] = g_Island.guns[i] = 0;
+    for (i = 0; i < ISLAND_MAX_DUGOUTS; ++i)
+    {
+        g_Island.gun[i].x = i < ISLAND_DUGOUTS ? s_DugoutX[i] : 0;
+        g_Island.gun[i].frame = ISLAND_GUN_NONE;
+    }
+    g_Island.hits = 0;
     for (i = 0; i < ISLAND_HUTS; ++i) g_Island.soldiers[s_HutIsland[i]] += ISLAND_GARRISON;
     for (i = 0; i < ISLAND_DUGOUTS; ++i) g_Island.soldiers[s_DugoutIsland[i]] += ISLAND_GARRISON;
 }
@@ -104,5 +110,90 @@ void Island_Tick(void) WINGS_BANKED
             --b->c;
             b->e = 50 - b->c;
         }
+}
+
+/* The barrel by altitude row and dx / 40 (0x4db8): DATA -$63e2, read as one
+ * byte array at ((altitude >> 5) - 1) * 8 + dx / 40 + 3. The index runs
+ * from -17 (below altitude 32, dx -512) to 47 (altitude 186, dx 512); the
+ * ends read the neighbouring constant tables, kept as they are. */
+#define BARREL_BASE 17
+static const uint8_t s_Barrel[65] = {
+    2, 2, 3, 3, 3, 1, 2, 3, 3, 0, 1, 2, 3, 0, 1, 2, 3,
+    0, 0, 0, 3, 3, 6, 6, 6,  0, 1, 1, 3, 3, 5, 5, 6,  1, 1, 2, 3, 3, 4, 5, 5,
+    1, 2, 2, 3, 3, 4, 4, 5,  2, 2, 3, 3, 3, 3, 4, 4,  1, 2, 3, 2, 1, 2, 3, 2};
+
+static uint16_t s_Random = 0x1d2bu;
+static uint16_t Random(void)
+{
+    s_Random ^= s_Random << 7;
+    s_Random ^= s_Random >> 9;
+    s_Random ^= s_Random << 8;
+    return s_Random;
+}
+
+/* The update's inputs as statics: SDCC reaches them directly, where
+ * arguments and locals go through the IX frame. */
+static const FlightState* s_Flight;
+static EngineState* s_Engine;
+static SortieState* s_Sortie;
+static uint16_t s_World;
+static int16_t s_Altitude;
+
+/* 0x4f5c: hit-scan fire at the plane, dx from the gun. */
+static void Fire(int16_t dx)
+{
+    uint16_t far = dx < 0 ? -(uint16_t)dx : (uint16_t)dx, near = (uint16_t)s_Altitude;
+    if (far > ISLAND_GUN_REACH) return;
+    if (far < near) { near = far; far = (uint16_t)s_Altitude; }
+    far += near >> 2;
+    /* About 20% x (1 - d / 512) per gun and update. */
+    if ((Random() & 511) < far || (Random() & 2047) > 409) return;
+    ++g_Island.hits;
+    Smoke_Hit(s_Flight, s_World);
+    Engine_Hit(s_Engine, s_Sortie, (uint8_t)Random());
+}
+
+uint8_t Island_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
+                    EngineState* engine, SortieState* sortie) WINGS_BANKED
+{
+    IslandBuilding* b = g_Island.dugout;
+    IslandGun* g = g_Island.gun;
+    uint8_t i, drawn = 0, frame, row;
+    uint16_t distance;
+    int16_t dx;
+    s_Flight = flight; s_World = world; s_Engine = engine; s_Sortie = sortie;
+    s_Altitude = (int16_t)WINGS_FLIGHT_MAX_Y - (int16_t)(flight->y >> 8);
+    /* The barrel row for dx = 0 (used up to altitude 186). */
+    row = (uint8_t)(((uint8_t)(s_Altitude >> 5) - 1) * 8 + 3 + BARREL_BASE);
+    for (i = ISLAND_DUGOUTS; i; --i, ++b, ++g)
+    {
+        g->frame = ISLAND_GUN_NONE;
+        /* 0x3d78: an empty dugout waits for soldiers (step 4); a re-manned
+         * one holds its fire for a while. 0x4d50: the gun shows and fires
+         * only while the plane flies (the original's mode 0). */
+        if (!b->garrison || (b->c && --b->c) || !flying) continue;
+        dx = (int16_t)(world - g->x);
+        if (s_Altitude > 186)
+        {
+            /* The distant view: a flash on half the updates, and the gun
+             * fires only then. */
+            if (!(Random() & 0x8000)) continue;
+            frame = ISLAND_GUN_FAR;
+        }
+        else
+        {
+            distance = dx < 0 ? -(uint16_t)dx : (uint16_t)dx;
+            if (distance > ISLAND_GUN_RANGE) continue;
+            /* dx / 40, truncated toward 0 (divs.w) */
+            for (frame = 0; distance >= 40; distance -= 40) ++frame;
+            frame = s_Barrel[dx < 0 ? row - frame : row + frame];
+            /* The muzzle flash on 6 updates in 16. */
+            if ((uint8_t)(Random() >> 8) >> 4 <= 5) frame += ISLAND_GUN_FLASH;
+        }
+        g->frame = frame;
+        ++drawn;
+        Fire(dx);
+    }
+    return drawn;
 }
 #endif

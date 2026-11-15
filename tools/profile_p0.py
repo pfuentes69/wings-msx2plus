@@ -33,12 +33,17 @@ def symbols():
         path = BUILD / f'{module}.sym'
         if not path.exists():
             continue
-        local = dict((n, int(v, 16)) for n, v in re.findall(r'^\s+0 (_\w+)\s+([0-9A-F]{8}) ', path.read_text(), re.M))
-        anchors = [globals_[n] - local[n] for n in globals_ if n in local]
-        if not anchors:
+        # Symbols per area: resident code is in area 0, a banked module's in
+        # its segment's area. Rebase only the area holding the code globals.
+        areas = collections.defaultdict(dict)
+        for area, n, v in re.findall(r'^\s+(\d+) (_\w+)\s+([0-9A-F]{8}) ', path.read_text(), re.M):
+            areas[area][n] = int(v, 16)
+        code = [n for n, a in globals_.items() if a < 0xC000 or a > 0xFFFF]   # not RAM
+        found = [(area, globals_[n] - local[n]) for area, local in areas.items() for n in code if n in local]
+        if not found:
             continue
-        base = anchors[0]
-        for name, offset in local.items():
+        area, base = collections.Counter(found).most_common(1)[0][0]
+        for name, offset in areas[area].items():
             table.setdefault(base + offset, name)
     keys = sorted(table)
     return keys, [table[k] for k in keys]

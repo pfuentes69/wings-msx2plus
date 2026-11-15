@@ -3,10 +3,10 @@
 #include "core.h"
 #include "banking.h"
 
-/* Drawing the engine smoke (banked, segment 22). Puffs are drawn behind the
+/* Drawing the engine smoke and the dugout guns (banked, segment 22). Puffs are drawn behind the
  * plane and erased by repainting the terrain tiles under them (sky above
  * the terrain rows): no VRAM backup is needed. */
-#define SMOKE_DRAWN_MAX 8
+#define SMOKE_DRAWN_MAX 11   /* 8 puffs and up to 3 dugout guns */
 typedef struct SmokeDrawn { u16 x; i16 row; u8 frame; } SmokeDrawn;
 /* What each page shows (for publication and the pixel oracle). */
 extern SmokeDrawn g_SmokeDrawn[2][SMOKE_DRAWN_MAX];

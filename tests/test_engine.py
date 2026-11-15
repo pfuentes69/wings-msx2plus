@@ -17,7 +17,8 @@ class Sortie(C.Structure):
 class Engine(C.Structure):
     _fields_ = [('fuel_ticks', C.c_uint8), ('leak_ticks', C.c_uint8),
                 ('dry', C.c_uint8), ('failed', C.c_uint8), ('oil_blink', C.c_int8), ('fuel_blink', C.c_int8),
-                ('oil_needle', C.c_uint8), ('fuel_needle', C.c_uint8), ('lamps', C.c_uint8), ('random', C.c_uint8)]
+                ('oil_needle', C.c_uint8), ('fuel_needle', C.c_uint8), ('lamps', C.c_uint8), ('random', C.c_uint8),
+                ('hits', C.c_uint8)]
 
 
 class EngineTests(unittest.TestCase):

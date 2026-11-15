@@ -62,6 +62,7 @@ static u8 s_RenderSmokePage;
 /* Smoke_Restore repainted the elevator's columns this frame. A static: a
  * local held across Render's column loops makes SDCC spill throughout. */
 static u8 s_Smoked;
+static u8 s_GunsDrawn;           /* dugout guns shown this original tick */
 static u8 s_RenderRope = 255;
 volatile u8 g_DisplayWheel = 255, g_DisplayGear = 5;
 #endif
@@ -1144,6 +1145,12 @@ advance_clocks:
                          * a running sortie puts out new puffs. */
                         Smoke_Tick(&s_World.flight, s_World.x >> 8, g_Game.sortie.oil, !s_CrashSteps);
                         Island_Tick();
+                        /* The dugout guns (the original updates them once per
+                         * drawn frame, probably at this rate). */
+                        s_GunsDrawn = Island_Guns(&s_World.flight, s_World.x >> 8,
+                            s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps &&
+                            g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
+                            &g_Engine, &g_Game.sortie);
 #endif
                     }
 #ifdef WINGS_P1_FLIGHT
@@ -1213,7 +1220,7 @@ advance_clocks:
             g_DisplayGauges[0] != g_Engine.oil_needle || g_DisplayGauges[1] != g_Engine.fuel_needle ||
             g_DisplayGauges[2] != g_Engine.lamps || g_DisplayCrash != s_CrashFrame ||
             g_DisplayWheel != (g_TerrainFar || s_CrashFrame != 255 ? 255 : s_Wheel) || g_DisplayGear != s_GearPos ||
-            SmokeActive() || g_DisplaySmoke[0] || g_TerrainDirty ||
+            SmokeActive() || s_GunsDrawn || g_DisplaySmoke[0] || g_TerrainDirty ||
 #endif
             g_DisplayWave != s_Wave || g_DisplayHeave != s_RenderHeave || camera != g_DisplayCamera || world != g_DisplayWorld || y != g_DisplayY || frame != g_SelectedFrame)
             Render(page, camera, world, y, frame);

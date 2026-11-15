@@ -187,8 +187,9 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
     else:
         source = (scene.folder / shape['file']).read_bytes()
     pivot = 161 - ((1200-y)//8) if scale == 8 else max(14,y-1055)
-    # Engine smoke, behind the plane: published (x, screen row, frame) per puff;
-    # x is in this view's scale. Clipped above the wave strip (VRAM row 159).
+    # Engine smoke and dugout guns, behind the plane: published (x, screen
+    # row, frame) per shape; x is in this view's scale. Clipped above the wave
+    # strip (VRAM row 159), or above the sand row (161) in the distant view.
     meta = scene.metadata
     for sx_, row, frame in smoke:
         sx_ = signed(sx_)
@@ -196,10 +197,11 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
             bank = record['data_offset'] // 8192
             data = (scene.folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
             packed = data[record['data_offset'] % 8192:record['data_offset'] % 8192 + record['bytes']]
-            vram_limit = min(142 if elevator_active else 172, 172 if panned else 159)
+            vram_limit = min(142 if elevator_active else 172, 161 if scale == 8 else 172 if panned else 159)
             for yy in range(record['height']):
                 r = row + record['dy'] + yy
-                if not 0 <= r - scroll < vram_limit or r >= 172: continue
+                # VRAM rows 0 .. fine - 1 show in the top split: none drawn there.
+                if not max(0, fine) <= r - scroll < vram_limit or r >= 172: continue
                 for xx in range(record['width']):
                     wx = sx_ + record['dx'] + xx
                     if not camera + 8 <= wx < camera + 256: continue

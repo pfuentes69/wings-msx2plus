@@ -31,18 +31,18 @@ void Smoke_Reset(void) WINGS_BANKED
     s_Phase = 0;
 }
 
-static void Puff(SmokePuff* p, uint16_t x, uint16_t y)
+static void Puff(SmokePuff* p, uint16_t x, uint16_t y, uint8_t stage)
 {
     p->x = x; p->y = y;
     p->xf = p->yf = 0;
     p->vx = Random(); p->vy = Random();
-    p->stage = SMOKE_STAGES;
+    p->stage = stage;
     p->life = SMOKE_STAGE_TICKS - 1;
 }
 
 /* 0x54e0 / 0x5460: a puff 10 px ahead of the plane's origin and 13 px above
  * it (at least 16 px above the sea), drifting 1-2 px right and up a tick. */
-static void Spawn(const FlightState* f, uint16_t world)
+static void Spawn(const FlightState* f, uint16_t world, uint8_t stage)
 {
     SmokePuff* p = g_Smoke;
     uint8_t i, t = f->turn;
@@ -57,7 +57,7 @@ static void Spawn(const FlightState* f, uint16_t world)
     }
     altitude = (int16_t)WINGS_FLIGHT_MAX_Y - (int16_t)(f->y >> 8) + 13;
     if (altitude < 16) altitude = 16;
-    Puff(p, world + dx, (uint16_t)((int16_t)WINGS_FLIGHT_MAX_Y - altitude));
+    Puff(p, world + dx, (uint16_t)((int16_t)WINGS_FLIGHT_MAX_Y - altitude), stage);
 }
 
 void Smoke_Emit(uint16_t x, uint16_t y) WINGS_BANKED
@@ -65,13 +65,73 @@ void Smoke_Emit(uint16_t x, uint16_t y) WINGS_BANKED
     SmokePuff* p = g_Smoke;
     uint8_t i;
     for (i = 0; i < SMOKE_COUNT && p->stage; ++i, ++p) {}
-    if (i < SMOKE_COUNT) Puff(p, x, y);
+    if (i < SMOKE_COUNT) Puff(p, x, y, SMOKE_STAGES);
 }
 
-void Smoke_Tick(const FlightState* flight, uint16_t world, uint8_t oil, uint8_t emit) WINGS_BANKED
+void Smoke_Hit(const FlightState* flight, uint16_t world) WINGS_BANKED
+{
+    Spawn(flight, world, SMOKE_STAGE_FIRE);
+}
+
+/* Each live puff drifts 1-2 px right and up and ages a stage every
+ * SMOKE_STAGE_TICKS. The Z80 version: SDCC's loop cost ~1,200 T-states a
+ * puff, which a damaged engine's 8 puffs turned into ~5 ms a frame. */
+typedef char SmokePuffLayout[sizeof(SmokePuff) == 10 ? 1 : -1];
+void Smoke_Advance(void);   /* not banked: Smoke_Tick only (and tests) */
+#if defined(__SDCC) && !defined(WINGS_SMOKE_C)
+void Smoke_Advance(void) __naked
+{
+    __asm
+        push    ix
+        ld      ix, #_g_Smoke
+        ld      de, #10
+        ld      b, #SMOKE_COUNT
+    00001$:
+        ld      a, 8 (ix)           ; stage
+        or      a, a
+        jr      z, 00004$
+        ld      a, 4 (ix)           ; x += 1 + carry(xf + vx)
+        add     a, 6 (ix)
+        ld      4 (ix), a
+        ld      l, 0 (ix)
+        ld      h, 1 (ix)
+        inc     hl                  ; flags untouched
+        jr      nc, 00002$
+        inc     hl
+    00002$:
+        ld      0 (ix), l
+        ld      1 (ix), h
+        ld      a, 5 (ix)           ; y -= 1 + carry(yf + vy)
+        add     a, 7 (ix)
+        ld      5 (ix), a
+        ld      l, 2 (ix)
+        ld      h, 3 (ix)
+        dec     hl
+        jr      nc, 00003$
+        dec     hl
+    00003$:
+        ld      2 (ix), l
+        ld      3 (ix), h
+        ld      a, 9 (ix)           ; life, then the next stage
+        or      a, a
+        jr      z, 00005$
+        dec     9 (ix)
+        jr      00004$
+    00005$:
+        ld      9 (ix), #(SMOKE_STAGE_TICKS - 1)
+        dec     8 (ix)
+    00004$:
+        add     ix, de
+        djnz    00001$
+        pop     ix
+        ret
+    __endasm;
+}
+#else
+void Smoke_Advance(void)
 {
     SmokePuff* p = g_Smoke;
-    uint8_t i, damage;
+    uint8_t i;
     for (i = 0; i < SMOKE_COUNT; ++i, ++p)
     {
         uint16_t xf, yf;
@@ -81,6 +141,13 @@ void Smoke_Tick(const FlightState* flight, uint16_t world, uint8_t oil, uint8_t 
         if (p->life) --p->life;
         else { p->life = SMOKE_STAGE_TICKS - 1; --p->stage; }
     }
+}
+#endif
+
+void Smoke_Tick(const FlightState* flight, uint16_t world, uint8_t oil, uint8_t emit) WINGS_BANKED
+{
+    uint8_t damage;
+    Smoke_Advance();
     /* 0x1bfc: the original checks every other tick; with its 40-entry
      * effect pool against the port's 8 puffs, the MSX checks every 4th. */
     if (!emit || (++s_Phase & 3)) return;
@@ -91,6 +158,6 @@ void Smoke_Tick(const FlightState* flight, uint16_t world, uint8_t oil, uint8_t 
         uint8_t bit = ((damage << 3) & 0xf0) + (Random() & 15);
         if (!(s_Chance[bit >> 3] & (1 << (bit & 7)))) return;
     }
-    Spawn(flight, world);
+    Spawn(flight, world, SMOKE_STAGES);
 }
 #endif

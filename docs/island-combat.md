@@ -8,8 +8,8 @@ describes what the MSX does and how. P3 is being built in steps:
 | --- | --- | --- |
 | 1 | Huts and dugouts: map data, wrecked huts, bomb hits, scoring, hut smoke | Done |
 | 2 | The original's bomb physics (gravity, drag, detonation at altitude 12) | Done |
-| 3 | Dugout guns: barrel art, hit-scan ground fire, engine damage | Next |
-| 4 | Soldiers: release, walking, re-manning dugouts, deaths (+25) | |
+| 3 | Dugout guns: barrel art, hit-scan ground fire, engine damage | Done |
+| 4 | Soldiers: release, walking, re-manning dugouts, deaths (+25) | Next |
 | 5 | Island cleared: bonus, flag, message, mission complete | |
 | later | Rockets, AA guns (rockets only) | |
 
@@ -109,12 +109,96 @@ gravity was about ten times the original's.
 Combat (`combat.c`) moved into banked segment 23 with the island code, which
 freed about 2.2 KB of resident space (3,044 bytes free).
 
+## Dugout guns
+
+A manned dugout aims at the plane and fires hit-scan rounds at it (0x3d78,
+0x4d50, 0x4f5c). `Island_Guns` (`src/core/island.c`) runs once per original
+tick, after `Island_Tick`. For each dugout:
+
+- **Who fires:** only a manned dugout (garrison > 0) whose fire delay (+c,
+  360 updates after re-manning, step 4) has run out, and only while the
+  plane flies (the original's mode 0: not on deck, not crashing, not with a
+  dead engine).
+- **Barrel:** up to altitude 186 (the close view) and within |dx| ≤ 512, the
+  shape is gun0 + the original's table (DATA `-$63e2`) at
+  ((altitude >> 5) − 1) × 8 + dx / 40 + 3, dx = plane x − gun x, truncated
+  toward 0. The index runs from −17 to 47 and reads the neighbouring
+  constant bytes at both ends, so the port copies those 65 bytes as they
+  are. On 6 updates in 16 the muzzle flash gnf0..gnf6 replaces the barrel.
+- **The distant view:** above altitude 186 the original draws `8thscale`
+  `expl` (shape 0x5a) on half the updates and fires only on those.
+- **Hit:** none beyond |dx| > 448. With d = max(|dx|, altitude) +
+  min(|dx|, altitude) / 4, a round hits when (rand & 511) ≥ d and
+  (rand & 2047) ≤ 409: about 20% × (1 − d / 512) per gun and update. The
+  original's `-$408c` check is a debug toggle (key handler 0xd184) and is
+  left out.
+- **Damage:** a hit puts out a spark at the nose (0x54e0 with effect type 6:
+  `smk5`, the fiery frame, for 7 updates, then the smoke stages `smk4` down
+  to `smk0`) and runs `Engine_Hit` (0x4f9e). The engine's hit counter (+$10)
+  counts down; at 0 the engine loses 1 oil and 0..3 fuel and the counter
+  restarts at 6 + rand(0..7). A new plane starts the counter at
+  6 + rand(0..3) (0xb82c). Lost oil then leaks on and smokes as before.
+
+The guns are drawn through the smoke path (`src/msx/smoke_draw.c`), behind
+the puffs. The converter adds `smk5`, gun0..gun6, gnf0..gnf6 and the far
+`expl` to the smoke frames (23 in all), cut into atlas pieces where they do
+not fit whole; the aircraft data bank grew by 1.1 KB. The barrel's origin is
+at the dugout's anchor x and altitude 20, placed with the same formula the
+original's world-shape draw uses (0x5174): y = 11 − altitude + base, the
+same as the puffs. Up to 3 guns and 8 puffs are drawn and published.
+
+Two changes to the shared smoke drawing came with it:
+
+- **Erasing a tile at a time.** A puff or barrel over terrain was erased by
+  rerunning `Column_Runs` on each 8-px column it touched. Now
+  `RepaintTiles` copies back only the 8×8 tiles under the shape, cut to its
+  rows, from the page's tile cache: one HMMM (or HMMV for a solid tile)
+  each. A barrel over the dugout costs a few commands instead of 3–4
+  column redraws.
+- **The top split.** In the close-view pan the top lines (above line
+  heave + fine) show VRAM rows −heave .. fine − 1 at the heave-only scroll.
+  A puff that rose into those rows showed in the wrong place there. Shapes
+  are now clipped at VRAM row fine, and the pixel oracle does the same.
+  Damage from the island run left the engine smoking for the rest of the
+  run, which exposed this.
+
+There are no dugout-gun sounds yet (P5 audio).
+
+**Frame budget.** The first build missed NTSC deadlines: over the right
+dugout (render 60 → 90 ms) and, later, over the carrier, where a few ms of
+extra simulation tipped a frame that was already at the limit. Profiling
+the island stretch (with `tools/profile_p0.py` now naming the static
+functions of banked modules; it used to credit them to the global before
+them) showed three costs:
+
+- **Erasing shapes by column.** `RepaintTiles` (above) replaced it.
+- **`Shape` through struct pointers.** It now works out the box in statics.
+- **`Smoke_Tick` with a full pool.** Once ground fire has damaged the
+  engine, it keeps about 8 puffs alive. SDCC's loop cost ~1,200 T-states a
+  puff, about 5 ms a frame at 2 ticks a frame. The advance is now Z80
+  (`Smoke_Advance`, at most 3,521 T-states for 8 puffs), checked against
+  the C reference in `tests/test_smoke_z80.py`.
+
+`Island_Guns` itself works in statics, with no division (dx / 40 by
+subtraction).
+
+After these changes the run's heaviest island frame (NTSC, three shapes
+over the right dugout) takes 41 ms of simulation and 84 ms of render: 125 of
+133 ms. That is still about 20 ms more render than without the guns. Frames
+over the carrier are back at the baseline.
+
 ## Verification
 
 - `tests/test_island.py` builds `island.c` with a stub `Terrain_Remap` and
   checks the layout, the 32-px hit boxes, single wrecking, the near/far
   column swaps and their restoration, dugout scoring, that only fresh bomb
   detonations count, and the 49-puff smoke cadence.
+- `tests/test_island.py` also checks the barrel table against the plane's
+  position, the 6/16 flash rate, the quiet cases (out of range, not flying,
+  emptied dugout), the re-manned fire delay, the distant view's 50% flash,
+  the hit rate against 20% × (1 − d / 512) at three distances, none beyond
+  448, and that hits spark at the nose and wear oil and fuel at the
+  counter's rate.
 - `tests/test_mission.py` round-trips the variant columns through the tile
   map.
 - `tests/test_combat.py` follows released bombs against a 16.16 model of
@@ -128,4 +212,7 @@ freed about 2.2 KB of resident space (3,044 bytes free).
   `verify_world_flight.island_background`, which pastes the variant columns
   over the scene for wrecked huts. It also checks the score (150 per wrecked
   hut, 200 per emptied dugout) and at least one smoke puff on screen. This
-  runs on NTSC and PAL with no missed frame deadline.
+  runs on NTSC and PAL with no missed frame deadline. On its way in, the
+  run passes the right dugout at altitude 100. The snapshot also requires
+  at least one ground-fire hit (`g_Island.hits`), and the pixel checks
+  cover the drawn barrels, flashes and sparks (95 snapshots NTSC, 92 PAL).

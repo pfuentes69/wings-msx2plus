@@ -10,9 +10,17 @@ import subprocess
 import tempfile
 import unittest
 
+from test_engine import Engine, Sortie
+from test_flight_model import Flight
+
 ROOT = Path(__file__).resolve().parents[1]
 MAX_HUTS = MAX_DUGOUTS = 8
 GUN_COUNT, COUNT, IMPACT = 2, 18, 3
+GUN_NONE, GUN_FLASH, GUN_FAR = 255, 7, 14
+# DATA -$63e2 - 17 .. +47 (0x4db8): the barrel by altitude row and dx / 40.
+BARREL = bytes([2, 2, 3, 3, 3, 1, 2, 3, 3, 0, 1, 2, 3, 0, 1, 2, 3,
+                0, 0, 0, 3, 3, 6, 6, 6, 0, 1, 1, 3, 3, 5, 5, 6, 1, 1, 2, 3, 3, 4, 5, 5,
+                1, 2, 2, 3, 3, 4, 4, 5, 2, 2, 3, 3, 3, 3, 4, 4, 1, 2, 3, 2, 1, 2, 3, 2])
 STUB = r"""
 #include <stdint.h>
 uint8_t g_TerrainDirty;
@@ -31,9 +39,14 @@ class Building(C.Structure):
                 ('c', C.c_uint16), ('e', C.c_uint16)]
 
 
+class Gun(C.Structure):
+    _fields_ = [('x', C.c_uint16), ('frame', C.c_uint8)]
+
+
 class Island(C.Structure):
     _fields_ = [('hut', Building * MAX_HUTS), ('dugout', Building * MAX_DUGOUTS),
-                ('soldiers', C.c_uint8 * 4), ('guns', C.c_uint8 * 4)]
+                ('soldiers', C.c_uint8 * 4), ('guns', C.c_uint8 * 4), ('gun', Gun * MAX_DUGOUTS),
+                ('hits', C.c_uint16)]
 
 
 class Projectile(C.Structure):
@@ -65,13 +78,15 @@ class IslandTests(unittest.TestCase):
         subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
                         '-DMISSION_TERRAIN', '-DWINGS_FLIGHT_MAX_Y=1200u',
                         '-DWINGS_WORLD_WIDTH=7608u', '-DWINGS_WORLD_START=7032u',
-                        *[str(ROOT / 'src' / p) for p in ('core/island.c', 'core/smoke.c', 'core/flight.c',
+                        *[str(ROOT / 'src' / p) for p in ('core/island.c', 'core/smoke.c', 'core/engine.c', 'core/flight.c',
                                                           'core/flight_model.c')],
                         str(work / 'stub.c'), '-o', str(lib)], check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))
         cls.core.Island_Bombed.argtypes = [C.c_uint16]
         cls.core.Island_Bombed.restype = C.c_uint16
         cls.core.Island_Impacts.argtypes = [C.POINTER(Combat), C.POINTER(C.c_uint32)]
+        cls.core.Island_Guns.argtypes = [C.POINTER(Flight), C.c_uint16, C.c_uint8, C.POINTER(Engine), C.POINTER(Sortie)]
+        cls.core.Island_Guns.restype = C.c_uint8
         cls.island = Island.in_dll(cls.core, 'g_Island')
         cls.remap = (C.c_uint16 * 2 * 256).in_dll(cls.core, 'g_Remap')
         cls.remap_count = C.c_uint8.in_dll(cls.core, 'g_RemapCount')
@@ -151,6 +166,81 @@ class IslandTests(unittest.TestCase):
         gaps = [b - a for a, b in zip(emitted, emitted[1:])]
         self.assertEqual(emitted[0], 0)
         self.assertEqual(gaps, list(range(1, 49)))
+
+    # Dugout guns (0x3d78, 0x4d50, 0x4f5c).
+    def guns(self, world, altitude, n=1, flying=1, left=True):
+        flight = Flight(y=(1200 - altitude) * 256, facing_left=left, mode=1)
+        engine, sortie = Engine(), Sortie()
+        self.core.Engine_Reset(C.byref(engine), C.byref(sortie))
+        frames = []
+        for _ in range(n):
+            self.core.Island_Guns(C.byref(flight), world, flying, C.byref(engine), C.byref(sortie))
+            frames.append([g.frame for g in self.island.gun[:2]])
+        return frames, engine, sortie
+
+    def test_the_barrel_follows_the_plane(self):
+        self.assertEqual([g.x for g in self.island.gun[:2]], [1736, 3224])
+        for dx in (-512, -400, -81, -40, -39, 0, 39, 40, 200, 512):
+            for altitude in (10, 31, 32, 100, 150, 186):
+                frames, _, _ = self.guns(1736 + dx, altitude, 8)
+                expected = BARREL[((altitude >> 5) - 1) * 8 + int(dx / 40) + 3 + 17]
+                self.assertEqual({f[0] % GUN_FLASH for f in frames}, {expected}, (dx, altitude))
+
+    def test_the_muzzle_flashes_on_6_updates_in_16(self):
+        frames, _, _ = self.guns(1736 + 100, 120, 4000)
+        flashes = sum(f[0] >= GUN_FLASH for f in frames) / len(frames)
+        self.assertAlmostEqual(flashes, 6 / 16, delta=0.03)
+
+    def test_guns_are_quiet_out_of_range_on_deck_and_when_emptied(self):
+        frames, _, _ = self.guns(1736 + 513, 100, 4)
+        self.assertEqual(frames[0], [GUN_NONE, GUN_NONE])
+        frames, engine, sortie = self.guns(1736, 100, 200, flying=0)
+        self.assertEqual({tuple(f) for f in frames}, {(GUN_NONE, GUN_NONE)})
+        self.assertEqual((self.island.hits, sortie.oil), (0, 128))
+        self.core.Island_Bombed(1736)
+        frames, _, _ = self.guns(1736, 100, 4)
+        self.assertEqual(frames[0][0], GUN_NONE)
+
+    def test_a_remanned_gun_holds_its_fire(self):
+        self.island.dugout[0].c = 360
+        frames, _, _ = self.guns(1736, 100, 360)
+        self.assertEqual(frames[358][0], GUN_NONE)
+        self.assertNotEqual(frames[359][0], GUN_NONE)
+
+    def test_the_distant_view_shows_a_flash_on_half_the_updates(self):
+        frames, _, _ = self.guns(1736 + 3000, 300, 2000)
+        shown = [f[0] for f in frames if f[0] != GUN_NONE]
+        self.assertEqual(set(shown), {GUN_FAR})
+        self.assertAlmostEqual(len(shown) / len(frames), 0.5, delta=0.05)
+
+    def hit_rate(self, dx, altitude, n=20000):
+        self.island.hits = 0
+        self.guns(1736 + dx, altitude, n)
+        return self.island.hits / n
+
+    def test_hits_fall_off_with_distance(self):
+        # Hit if (rand & 511) >= d and (rand & 2047) <= 409, d = max + min / 4.
+        for dx, altitude in ((0, 40), (200, 100), (300, 160)):
+            d = max(dx, altitude) + min(dx, altitude) // 4
+            self.assertAlmostEqual(self.hit_rate(dx, altitude), (512 - d) / 512 * 410 / 2048, delta=0.012)
+        self.assertEqual(self.hit_rate(449, 100, 2000), 0)
+        self.assertEqual(self.hit_rate(-449, 100, 2000), 0)
+
+    def test_hits_spark_and_wear_the_engine(self):
+        _, engine, sortie = self.guns(1736, 40, 400)
+        hits = self.island.hits
+        self.assertGreater(hits, 40)
+        # 6..9 hits to the first damage, then 6..13 each: oil -1, fuel -0..3.
+        lost = 128 - sortie.oil
+        self.assertTrue((hits - 9) // 13 <= lost <= (hits - 6) // 6 + 1, (hits, lost))
+        self.assertTrue(lost <= 192 - sortie.fuel <= 3 * lost)
+        self.core.Smoke_Reset()
+        self.island.hits = 0
+        flight = Flight(y=(1200 - 40) * 256, facing_left=True, mode=1)
+        while not self.island.hits:
+            self.core.Island_Guns(C.byref(flight), 1736, 1, C.byref(engine), C.byref(sortie))
+        (puff,) = [p for p in self.puffs if p.stage]
+        self.assertEqual((puff.x, puff.y, puff.stage), (1736 - 10, 1200 - 40 - 13, 6))
 
 
 if __name__ == '__main__':

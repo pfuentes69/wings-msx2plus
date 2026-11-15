@@ -169,6 +169,8 @@ def main():
     assert island[3]==1 and island[0]==0 and island[1]==5,('wrecked hut',list(island[:8]))
     assert score==150*sum(island[8*i+3] for i in range(2))+200*sum(island[64+8*i]==0 for i in range(2)),('island score',score)
     assert snapshots['island_bombed']['smoke']>=1
+    # Dugout guns (0x4f5c): the run passes the right dugout at low altitude.
+    assert struct.unpack_from('<H',island,160)[0]>=1,('ground-fire hits',island[136:162].hex())
     # The close-view pan, with the carrier in view and a bomb falling.
     for name,low,high in (('pan_high',45,55),('pan_mid',17,29)):
         snapshot=snapshots[name]

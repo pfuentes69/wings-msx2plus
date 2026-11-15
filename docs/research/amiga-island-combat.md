@@ -137,6 +137,27 @@ render-loop update, when the player flies (mode 0) within |dx| ≤ 512:
   damage site 0x4f9e: hit counter −1; at 0, oil −1, fuel − rand(0..3),
   counter 6 + rand(0..7).
 - Side effects: `-$3baa` under fire, `-$3ba8` nearest gun distance.
+- Recovered 2026-11-15 (step 3):
+  - 0x4d50 returns no shape unless the player's mode (`-$5f7a`, record
+    +$0c) is 0 (flying). The caller (0x3dca) skips the hit-scan whenever no
+    shape is drawn. So in the far view the gun fires only on the half of
+    the updates that show `expl`, and never beyond |dx| > 512 in the near
+    view.
+  - The far-view flag is `-$60ca` (3 when `-$60c8` = 1, above altitude
+    186); the `-$60c8` = 1 branch in 0x4db8 is unreachable after it.
+  - The barrel table is indexed from −17 (altitude < 32, dx −512) to 47
+    (altitude 186, dx +512). Bytes −17..−1 are other constant tables
+    (`-$63f6` is a 4-byte pattern read at 0x0662): `2, 2,3,3,3,1,2,3,3,
+    0,1,2,3,0,1,2,3`.
+  - The shape is drawn by 0x5174 (`-$7eea`) at x = gun anchor and
+    y = 11 − 20 + base − origin, the same placement as the effects.
+  - `-$408c` is toggled by a debug key (0xd184, which also refills the oil
+    and clears the mode). It is not a game mechanic.
+  - The spark (0x54e0 with d0 = 6) is an effect of type 6 at the plane's
+    nose. Its shape 0x60 + 6 = 0x66 is `smk5`; after 7 updates the type
+    drops to 5 and it continues as an ordinary smoke puff.
+  - A new plane sets the hit counter to 6 + 0xcac8(4), i.e. 6 + rand(0..3)
+    (0xb82c).
 - Not island fire: 0xde52 is enemy fighter fire, 0x4efc ship flak.
 
 ## Scoring and objectives
