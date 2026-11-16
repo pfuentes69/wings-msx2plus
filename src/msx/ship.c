@@ -66,6 +66,7 @@ void Ship_Advance(u8 ticks) WINGS_BANKED
     }
 }
 
+/* Positions and rows: OVERLAY_TOPS in tools/convert_mission.py. */
 void Ship_Draw(u8 page, u16 camera) WINGS_BANKED
 {
     u8 piece, index;
@@ -115,7 +116,8 @@ void Ship_DrawCrew(u8 page, u16 camera, u8 cleared) WINGS_BANKED
         if (piece<2 && g_Carrier.stage!=CARRIER_DECK) index=CREW_IDLE_PIECE+(piece&1);
         sx = g_CrewX[index] + left-origin;
         ring=left&255; width=right-left;
-        /* Panned down, the lower figure rows leave the view at row 172. */
+        /* Panned down, the lower figure rows leave the view at row 172.
+         * Positions and rows: OVERLAY_TOPS in tools/convert_mission.py. */
         y=116+g_PanRows+(piece&1)*7; height=7;
         if (y>=172) continue;
         if (y+height>172) height=172-y;

@@ -96,7 +96,12 @@ The port now pans by p = altitude − 131 (0..55) in two parts.
   (YMMM) shifts the rows below the scenery's top, which comes from
   `g_TerrainBlockTop`: the converter's first scenery row per 256 px. It is
   40 at the carrier's tower, 120–160 over the islands, and none over open
-  sea. Then:
+  sea. It also counts the overlays drawn over the map every frame
+  (`OVERLAY_TOPS`: ship pieces from row 46, signalmen from 116, the
+  elevator from 112). Before 2026-11-16 the stern signalmen's heads (rows
+  116–119) were above their block's top of 120, so a step left them behind.
+  The tile cache took those pixels for sky, and they reappeared over the open
+  sea when the camera reached the same ring column 768 px later. Then:
   - **Step down:** the rows uncovered above are filled with sky.
   - **Step up:** the rows uncovered at the bottom are painted from the cache
     (`Terrain_RepaintBand`). That needs no map decode: solid runs merge,

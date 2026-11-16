@@ -56,7 +56,7 @@ void Elevator_Draw(u8 page,u16 camera,u8 depth,u8 cleared) WINGS_BANKED
     s_Depth[page]=depth;s_Camera[page]=camera;
     for (column=left&65528u;column<right;column+=8)
         Terrain_DirtyOverlayColumn(page,column,13,14);
-    Copy(page,camera,0,7004,112,40,64);
+    Copy(page,camera,0,7004,112,40,64);   /* OVERLAY_TOPS in tools/convert_mission.py */
     for (i=0;i<4;++i)
         Copy(page,camera,i+1,7004+(i&1)*32,129+depth+(i>=2 ? 7 : 0),i<2 ? 7 : 6,32);
 }
