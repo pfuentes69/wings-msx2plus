@@ -79,6 +79,9 @@ proc prof_sample {} {
         set pc [reg pc]
         set sp [reg sp]
         set ret [expr {[debug read memory $sp]+256*[debug read memory [expr {($sp+1)&65535}]]}]
+        # The word above: the caller of a VDP command setup that is waiting
+        # for the VDP (VDP_CommandWait <- VDP_CommandSetupR32 <- caller).
+        set ret2 [expr {[debug read memory [expr {($sp+2)&65535}]]+256*[debug read memory [expr {($sp+3)&65535}]]}]
         set bank [debug read memory $::prof_addr(g_Bank3Segment)]
         set render [debug read memory $::prof_addr(g_Rendering)]
         # CombatState: cooldown at +145, flash_ticks at +159.
@@ -88,8 +91,8 @@ proc prof_sample {} {
         # Carrier scene: published world x inside the ship's span (heaviest render).
         set wx [expr {[debug read memory $::prof_addr(g_DisplayWorld)]+256*[debug read memory [expr {$::prof_addr(g_DisplayWorld)+1}]]}]
         set carrier [expr {$wx >= 6500 && $wx <= 7450}]
-        if {$render} {lappend ::prof_render_samples [list $pc $bank $render $guns $ret $vdp $carrier]} else {
-            incr ::prof_hist([list $pc $bank $render $guns $ret $vdp $carrier])
+        if {$render} {lappend ::prof_render_samples [list $pc $bank $render $guns $ret $vdp $carrier $ret2]} else {
+            incr ::prof_hist([list $pc $bank $render $guns $ret $vdp $carrier $ret2])
         }
     }
     after time $::prof_period prof_sample

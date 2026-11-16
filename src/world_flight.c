@@ -77,6 +77,7 @@ volatile u8 g_DisplayGauges[3] = {16, 22, 0};
 #include "msx/message.h"
 #include "msx/sound.h"
 #include "msx/sound_update.h"
+#include "msx/vdp_ring.h"
 
 volatile u8 g_ScrollFine, g_ScrollCoarse, g_VerticalOffset, g_LineSplit;
 /* Close-view pan (docs/altitude-view.md): above altitude 131 the original
@@ -477,16 +478,19 @@ static void Background(u8 page, u8 save)
     u16 ring = s_OldX[page];
     u16 base = (u16)page * 256;
     u8 offset = 0, width = s_OldWidth[page], part;
+    if (!save)
+    {
+        /* Restore: a ring copy from the backup (Z80, msx/vdp_ring.c). */
+        VDP_RING_SET(0, base + 212, base + s_OldY[page], s_OldHeight[page], VDP_CMD_HMMM);
+        Vdp_RingCopy((u8)ring, width);
+        return;
+    }
     while (width)
     {
         part = width;
         if ((u16)(ring & 255) + part > 256) part = 256 - (ring & 255);
-        if (save)
-            VDP_CommandHMMM(ring & 255, base + s_OldY[page],
-                            offset, base + 212, part, s_OldHeight[page]);
-        else
-            VDP_CommandHMMM(offset, base + 212, ring & 255,
-                            base + s_OldY[page], part, s_OldHeight[page]);
+        VDP_CommandHMMM(ring & 255, base + s_OldY[page],
+                        offset, base + 212, part, s_OldHeight[page]);
         offset += part;
         width -= part;
         ring = (ring + part) & 255;
@@ -559,24 +563,12 @@ static void CopyShape(u8 page, const AircraftShape* shape, int16_t dx, int16_t d
 {
     int16_t left = dx < (int16_t)camera ? (int16_t)camera : dx, right = dx + shape->width;
     int16_t top = dy < (int16_t)g_TopClip ? (int16_t)g_TopClip : dy, bottom = dy + shape->height;
-    u16 base = (u16)page * 256;
-    u8 ring, width, part, source_x;
     if (right > (int16_t)(camera + 256)) right = camera + 256;
     if (bottom > limit) bottom = limit;
     if (right <= left || bottom <= top) return;
-    ring = left & 255;
-    width = right - left;
-    source_x = shape->atlas_x + left - dx;
-    while (width)
-    {
-        part = width;
-        if ((u16)ring + part > 256) part = 256 - ring;
-        VDP_CommandLMMM(source_x, shape->atlas_y + top - dy, ring,
-                        base + top, part, bottom - top, VDP_OP_TIMP);
-        width -= part;
-        source_x += part;
-        ring += part;
-    }
+    VDP_RING_SET((u8)(shape->atlas_x + left - dx), shape->atlas_y + top - dy,
+                 (u16)page * 256 + top, bottom - top, VDP_CMD_LMMM + VDP_OP_TIMP);
+    Vdp_RingCopy((u8)left, right - left);
 }
 
 #ifdef WINGS_P1_FLIGHT

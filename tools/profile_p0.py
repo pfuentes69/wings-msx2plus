@@ -97,16 +97,20 @@ def main():
     totals = collections.Counter()
     busy = collections.Counter()      # samples with the VDP command engine running
     busy_in = collections.Counter()   # render samples by function while the VDP is busy
+    waits = collections.defaultdict(collections.Counter)   # VDP waits by issuing function
     counted = collections.Counter()
     for line in (out / 'profile.txt').read_text().splitlines():
         if line.startswith('call '):
             _, name, guns, count = line.split()
             counted[(name, int(guns))] += int(count)
             continue
-        pc, bank, render, guns, ret, vdp, carrier, count = map(int, line.split())
+        fields = list(map(int, line.split()))
+        if len(fields) == 8: fields.insert(7, 0)       # profiles from before ret2
+        pc, bank, render, guns, ret, vdp, carrier, ret2, count = fields
         group = ('render' if render else 'sim/idle') + (' +guns' if guns else '')
         if carrier == 2 and render: group = 'render heavy (>85 ms)'
         elif carrier and render: group = 'render over carrier'
+        elif carrier: group = 'sim/idle over carrier'
         name = resolve(keys, names, pc, bank)
         groups[group][name] += count
         totals[group] += count
@@ -115,6 +119,12 @@ def main():
             busy_in[name] += count
         if name.startswith('__') or name in LEAF_HELPERS:
             callers[(group, name)][resolve(keys, names, ret, bank)] += count
+        # Waiting for the VDP: charge the function that issued the command.
+        if render and name == '_VDP_CommandWait':
+            caller = resolve(keys, names, ret, bank)
+            if caller in ('_VDP_CommandSetupR32', '_VDP_CommandSetupR36'):
+                caller = resolve(keys, names, ret2, bank)
+            waits[group][caller] += count
     carrier_frames = sum(c for (n, g), c in counted.items() if n == 'carrier_frames')
     heavy_frames = sum(c for (n, g), c in counted.items() if n == 'heavyrender_frames')
     per_frame = {'render over carrier': carrier_frames, 'render heavy (>85 ms)': heavy_frames}
@@ -132,6 +142,12 @@ def main():
                 top = callers[(group, name)].most_common(3)
                 extra = '  <- ' + ', '.join(f'{caller} {c}' for caller, c in top)
             print(f'{100 * count / total:6.2f}% {count:7d}  {name}{extra}')
+    for group in sorted(waits):
+        frames = per_frame.get(group)
+        print(f'\n== {group}: waiting for the VDP, by the function issuing the next command')
+        for name, count in waits[group].most_common(12):
+            per = f' ({count * args.period * 1000 / frames:.2f} ms/frame)' if frames else ''
+            print(f'{count:7d}  {name}{per}')
     costs = [(int(n.split('_')[2]), int(n.split('_')[3]), c) for (n, g), c in counted.items()
              if n.startswith('frame_cost_')]
     rebuilds = sum(c for (n, g), c in counted.items() if n.startswith('rebuild_cost_'))

@@ -6,6 +6,7 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCENE)
 #include "terrain_renderer.h"
 #include "scenery_load.h"
 #include "vdp.h"
+#include "vdp_ring.h"
 #ifdef WINGS_P1_FLIGHT
 static u8 s_Depth[2];
 static u16 s_Camera[2];
@@ -27,7 +28,7 @@ void Elevator_Load(void) WINGS_BANKED
 }
 static void Copy(u8 page,u16 camera,u8 index,u16 origin,u8 y,u8 height,u8 width)
 {
-    u16 left=(camera+8)&65534u,right=(camera+257)&65534u,sx;
+    u16 left=(camera+8)&65534u,right=(camera+257)&65534u;
     if (left<origin) left=origin;
     if (right>origin+width) right=origin+width;
     if (left>=right) return;
@@ -39,9 +40,9 @@ static void Copy(u8 page,u16 camera,u8 index,u16 origin,u8 y,u8 height,u8 width)
         if (y>=bottom) return;
         if (y+height>bottom) height=bottom-y;
     }
-    sx=g_ElevatorX[index]+left-origin;
-    if (index) VDP_CommandLMMM(sx,g_ElevatorY[index],left&255,(u16)page*256+y,right-left,height,VDP_OP_TIMP);
-    else VDP_CommandHMMM(sx,g_ElevatorY[0],left&255,(u16)page*256+y,right-left,height);
+    VDP_RING_SET(g_ElevatorX[index]+left-origin, g_ElevatorY[index], (u16)page*256+y, height,
+                 index ? VDP_CMD_LMMM + VDP_OP_TIMP : VDP_CMD_HMMM);
+    Vdp_RingCopy((u8)left, right-left);
 }
 void Elevator_Draw(u8 page,u16 camera,u8 depth,u8 cleared) WINGS_BANKED
 {
