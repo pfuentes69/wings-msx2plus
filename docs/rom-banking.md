@@ -18,11 +18,11 @@ now banks code and grows to 256 KiB.
 | ROM segment | Use |
 | --- | --- |
 | 0–2 | Resident code and constants |
-| 3 | Banked code: `WINGS_SEGMENT_HUD` (dashboard, weapons) |
+| 3 | Banked code: `WINGS_SEGMENT_HUD` (dashboard, weapons, arresting rope) |
 | 4–15 | Raw data banks, unchanged (mission, dashboard, aircraft, waves, ship, elevator) |
 | 16 | Banked code: `WINGS_SEGMENT_SCENE` (menu, ship, carrier elevator, engine, landing) |
 | 17–20 | Raw data banks (pre-rendered HUD values) |
-| 21 | Banked code: `WINGS_SEGMENT_FLIGHT` (flight model, arresting rope, the wave strip) |
+| 21 | Banked code: `WINGS_SEGMENT_FLIGHT` (flight model, the wave strip) |
 | 22 | Banked code: `WINGS_SEGMENT_EFFECTS` (engine and hut smoke; the smoke path: its drawing and frame tables; the sound effects' game side and steps) |
 | 23 | Banked code: `WINGS_SEGMENT_COMBAT` (weapons, island targets, terrain column remap) |
 | 24 | Raw data: the mission map (column table and runs), read in window 3 |

@@ -88,6 +88,34 @@ static void Dive(FlightState* f, int16_t amount)
     if (f->climb < CLIMB_MIN) f->climb = CLIMB_MIN;
 }
 
+/* Pitch pose 1..10 for a climb (s_Pose). */
+static uint8_t Pose(int16_t climb)
+{
+    uint8_t index = (uint8_t)((climb + 5000) / 500);
+    return s_Pose[index > 17 ? 17 : index];
+}
+
+/* MSX adaptation of DOWN: the input is read once per presented frame, so
+ * even a quick tap lasts 2-4 ticks, and at the original's 1,200 a tick it
+ * dived two or three poses. The first tick of a press now noses down to the
+ * next pose only, at that pose's steepest climb (s_PoseFloor; level is 0).
+ * The shallow end would not descend: at -6 degrees or less the path rounds
+ * to 5, and speed 1000 x sin 5 truncates to no vertical step. A press still
+ * held after DIVE_REPEAT ticks dives on at the original's rate. */
+#define DIVE_REPEAT 4
+static const int16_t s_PoseFloor[11] = {0, 3500, 2500, 1500, 500, 0, -1000, -2000, -3000, -4000, CLIMB_MIN};
+static void DiveInput(FlightState* f, int16_t amount)
+{
+    uint8_t hold = g_FlightDiveHold, pose;
+    if (hold < DIVE_REPEAT) g_FlightDiveHold = hold + 1;
+    if (!hold)
+    {
+        pose = Pose(f->climb);
+        if (pose < 10) f->climb = s_PoseFloor[pose + 1];
+    }
+    else if (hold == DIVE_REPEAT) Dive(f, amount);
+}
+
 /* 0xbff4: controls in the air. */
 static void AirControls(FlightState* f, uint8_t input)
 {
@@ -121,7 +149,7 @@ static void AirControls(FlightState* f, uint8_t input)
             if (f->speed > SPEED_MAX) f->speed = SPEED_MAX;
         }
         else TurnAdvance(f, 0);   /* pushing the other way turns */
-        if (input & FLIGHT_DOWN) Dive(f, f->turn ? ACCEL / 2 : ACCEL);
+        if (input & FLIGHT_DOWN) DiveInput(f, f->turn ? ACCEL / 2 : ACCEL);
         else if (input & FLIGHT_UP)
         {
             f->climb += f->speed > SPEED_MIN ? ACCEL : f->facing_left ? ACCEL / 8 : ACCEL / 4;
@@ -135,7 +163,7 @@ static void AirControls(FlightState* f, uint8_t input)
     if (input & FLIGHT_DOWN)
     {
         f->throttle = 1;
-        Dive(f, 2 * ACCEL);
+        DiveInput(f, 2 * ACCEL);
     }
     else if (f->facing_left)
     {
@@ -323,13 +351,12 @@ static void Fall(FlightState* f, uint16_t world)
 void Flight_Tick(FlightState* f, uint16_t world, uint8_t input) WINGS_BANKED
 {
     if ((input & (FLIGHT_UP | FLIGHT_DOWN)) == (FLIGHT_UP | FLIGHT_DOWN)) input &= ~FLIGHT_UP; /* DOWN wins */
+    if (!(input & FLIGHT_DOWN) || f->mode != FLIGHT_AIRBORNE) g_FlightDiveHold = 0;
     if (f->mode == FLIGHT_AIRBORNE || f->mode == FLIGHT_DEAD)
     {
-        uint8_t index;
         if (f->mode == FLIGHT_DEAD) Fall(f, world);
         else { AirControls(f, input); Integrate(f, input, world); }
-        index = (uint8_t)((f->climb + 5000) / 500);
-        f->frame = f->turn ? 4 : s_Pose[index > 17 ? 17 : index] - 1;
+        f->frame = f->turn ? 4 : Pose(f->climb) - 1;
         return;
     }
     f->landing = 0;

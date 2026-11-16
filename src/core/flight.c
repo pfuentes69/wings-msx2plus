@@ -50,11 +50,13 @@ void Flight_Reset(FlightState* state)
     state->turn_clock = 2;
     state->xrem = state->yrem = 0;
     state->speed = state->climb = state->path = state->cancel = state->boost = 0;
+    g_FlightDiveHold = 0;
 #endif
 }
 
 #ifdef WINGS_P1_FLIGHT
 uint8_t g_FlightCable;
+uint8_t g_FlightDiveHold;
 
 /* Every simulation step: run the original's tick on the first step of each
  * group of FLIGHT_TICK_STEPS, then move by this tick's per-step share. The

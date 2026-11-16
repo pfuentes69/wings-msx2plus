@@ -97,6 +97,9 @@ uint8_t Flight_GearDown(const FlightState* state, uint16_t world);
 /* The cable (0..3) holding the plane during the arrest (the original's
  * -$42c4); drawn as the stretched rope. Its x is FLIGHT_CABLE_X(cable). */
 extern uint8_t g_FlightCable;
+/* Ticks DOWN has been held in the air, up to the dive repeat delay
+ * (flight_model.c, DiveInput). */
+extern uint8_t g_FlightDiveHold;
 #define FLIGHT_CABLE_X(cable) (FLIGHT_CARRIER_X + FLIGHT_CABLE_FIRST + (cable) * FLIGHT_CABLE_SPACING)
 #endif
 

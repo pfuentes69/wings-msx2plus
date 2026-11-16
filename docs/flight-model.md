@@ -120,6 +120,7 @@ The contact rules are in [p2-landing.md](p2-landing.md).
 | Item | Choice |
 | --- | --- |
 | Directions tapped between two frames | Count for that frame's ticks, so a one-tick Down tap starts a held dive |
+| Down tap (2026-11-16) | Input is read once per presented frame, so a tap lasts 2–4 ticks and used to dive two or three poses at once. The first tick of a press now noses down to the next pose only, at that pose's steepest climb: level, −10°, −20°, −30°, −40°, −45°. A shallower −6° would not descend at all at speed 1000 (the path rounds to 5°, and 1000 × sin 5° truncates to 0 px). A press held 4 ticks (0.32 s) then dives at the original's rate (`DiveInput`, `DIVE_REPEAT`) |
 | Wheel overlay pieces | The original's `wh01`..`wh14` (0x0550) are drawn behind the plane on every pose except turns and the slow deck poses, sliding up 5 px as the gear retracts. They don't fit the atlas whole, so each splits into its 2–3 blobs (41 distinct pieces, at most 6×6) packed into leftover atlas gaps. The slide moves 1 px per presented frame (the original: per drawn frame) |
 | Deck-turn poses | The original's 6 deck frames map onto the existing 5-step taxi sequence |
 | Leaving over a deck end | The plane may sink 4 px over the last 16 px without crashing. The original's bow and stern geometry is not mapped |

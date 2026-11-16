@@ -219,17 +219,35 @@ class FlightModelTests(unittest.TestCase):
         self.assertEqual(poses, [3, 3, 2, 2, 1, 1])        # +6..+30 degrees
         self.assertEqual(w.flight.climb, 3000)
         w = self.air(speed=1200)
-        poses = [self.ticks(w, LEFT | DOWN).flight.frame for _ in range(8)]
-        self.assertEqual(poses, [5, 6, 6, 7, 7, 8, 9, 9])  # down to -45 degrees
+        poses = [self.ticks(w, LEFT | DOWN).flight.frame for _ in range(11)]
+        # One pose on the press (-10 degrees), a 4-tick repeat delay, then 6 a tick.
+        self.assertEqual(poses, [5, 5, 5, 5, 6, 7, 7, 8, 8, 9, 9])  # down to -45 degrees
         self.assertEqual(w.flight.climb, -4500)
         self.assertEqual([self.shape(w)], ['hc0a-left'])
 
     def test_down_alone_dives_fast_and_release_holds_the_dive(self):
         w = self.air()
-        self.ticks(w, DOWN, 2)
-        self.assertEqual(w.flight.climb, -2400)
+        self.ticks(w, DOWN, 6)
+        self.assertEqual(w.flight.climb, -1000 - 2400)   # the press, the delay, then 12 degrees a tick
         self.ticks(w, 0, 3)
-        self.assertEqual(w.flight.climb, -2400)          # a dive is kept
+        self.assertEqual(w.flight.climb, -3400)          # a dive is kept
+
+    def test_a_down_tap_noses_down_one_pose(self):
+        # Input is read once per presented frame, so a tap lasts 2-4 ticks.
+        w = self.air()
+        poses = []
+        for _ in range(6):
+            self.ticks(w, DOWN, 4)
+            self.ticks(w, 0, 2)
+            poses.append(w.flight.frame)
+        self.assertEqual(poses, [5, 6, 7, 8, 9, 9])      # one pose per tap, to -45 degrees
+        self.assertEqual(w.flight.climb, -4500)
+        w = self.air(left=False)
+        self.ticks(w, RIGHT | DOWN, 4)                   # with power, too
+        self.assertEqual((w.flight.climb, w.flight.frame), (-1000, 5))
+        y = w.flight.y
+        self.ticks(w, 0, 12)
+        self.assertGreater(w.flight.y, y + 6 * 256)      # the first pose below level descends
 
     def test_a_released_climb_flattens(self):
         w = self.air()
@@ -409,7 +427,7 @@ class FlightModelTests(unittest.TestCase):
         self.ticks(w, UP)
         self.assertEqual((self.shape(w), self.wheel(w)), ('hc04-left', 13))   # the flare
         w = self.air(x=4000, altitude=600, left=False)
-        self.ticks(w, RIGHT | DOWN, 8)
+        self.ticks(w, RIGHT | DOWN, 11)
         self.assertEqual((self.shape(w), self.wheel(w)), ('hc0a', 9))
         w.flight.turn = 5
         self.assertEqual(self.wheel(w), 255)                                  # none while turning

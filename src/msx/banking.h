@@ -15,9 +15,9 @@
  * mission-flight.js reads the WINGS_SEGMENT_* values below to link each
  * segment at (segment << 16) | A000h; tools/check_rom_layout.py verifies it. */
 
-#define WINGS_SEGMENT_HUD 3     /* dashboard, weapons */
+#define WINGS_SEGMENT_HUD 3     /* dashboard, weapons, arresting rope */
 #define WINGS_SEGMENT_SCENE 16  /* menu, ship, carrier elevator, engine, landing */
-#define WINGS_SEGMENT_FLIGHT 21 /* flight model, arresting rope */
+#define WINGS_SEGMENT_FLIGHT 21 /* flight model, wave strip */
 #define WINGS_SEGMENT_EFFECTS 22 /* engine smoke */
 #define WINGS_SEGMENT_COMBAT 23 /* weapons, island targets */
 #define WINGS_SEGMENT_MISSION 25 /* island soldiers, island cleared, messages (24 is the map data) */

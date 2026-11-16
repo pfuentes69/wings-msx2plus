@@ -2,7 +2,7 @@
 #include "vdp.h"
 #include "vdp_inl.h"
 #include "../generated/hellcat_frames.h"
-WINGS_CODE_SEGMENT(WINGS_SEGMENT_FLIGHT)
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_HUD)
 
 /* The original's colour 3 is red (12-bit 13,3,0); the 16-colour playfield
  * has no red, so the nearest entry, the dark orange-brown, is used. */
