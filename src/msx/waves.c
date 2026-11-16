@@ -4,6 +4,7 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_FLIGHT)
 #include "vdp_inl.h"
 #include "../generated/dashboard_tables.h"
 #include "../generated/mission_surfaces.h"
+#include "wave_band.h"
 extern u8 g_PanRows;   /* terrain_renderer.h */
 
 /* The animated wave strip (rows 161..171), banked apart from the rest of
@@ -38,57 +39,19 @@ void Dashboard_RestoreWaves(u8 page, u8 reset) WINGS_BANKED
             VDP_CommandHMMM(0, g_WaveBackdropY[page] + 2, 0, (u16)page * 256 + 161, 256, 2);
 }
 
-/* x mod 96 for a signed x >= -30720, without SDCC's slow library modulo:
- * subtract 96 << k from the biased value, k = 9 .. 0. */
-static u8 Mod96(int16_t x)
-{
-    u16 v = (u16)(x + 30720), step = 49152u;   /* 30720 = 96 * 320 */
-    do { if (v >= step) v -= step; step >>= 1; } while (step >= 96);
-    return (u8)v;
-}
-
+/* One band through the Z80 band loop (src/msx/wave_band.c). */
 static void DrawWaterBand(u8 page, u16 source_x, u16 source_y,
                           u16 start, u16 end, u8 row, u8 height, u8 frame)
 {
-    u8 take, piece, special = (frame & 3) == 3;
-    /* Texture phase from the signed position, so the waves run on
-     * continuously into the sea left of the map (negative x). */
-    u16 left, part, seam, position, sx, sy, limit, start_left = Mod96((int16_t)start);
-    while (height)
-    {
-        take = height;
-        if (special && row < 9 && row + take > 9) take = 9 - row;
-
-        position = start; left = start_left;
-        while ((int16_t)(end - position) > 0)
-        {
-            sx = source_x + left; sy = source_y + row; limit = 96 - left;
-            if (special && row >= 9)
-            {
-                piece = frame >> 2;
-                sx = g_WaveTailX[piece] + left; sy = g_WaveTailY[piece] + row - 9;
-            }
-            part = end - position; if (part > limit) part = limit;
-            seam = 256 - (position & 255); if (part > seam) part = seam;
-            if (row < 2)
-                VDP_CommandLMMM(sx, sy, position & 255,
-                    (u16)page * 256 + 161 + row - s_WaveHeave[page], part, take, VDP_OP_TIMP);
-            else if ((position & 1) || part == 1)
-            {
-                part = 1;
-                VDP_CommandLMMM(sx, sy, position & 255,
-                    (u16)page * 256 + 161 + row - s_WaveHeave[page], 1, take, VDP_OP_IMP);
-            }
-            else
-            {
-                part &= 65534u;
-                VDP_CommandHMMM(sx, sy, position & 255,
-                    (u16)page * 256 + 161 + row - s_WaveHeave[page], part, take);
-            }
-            position += part; left += part; if (left == 96) left = 0;
-        }
-        row += take; height -= take;
-    }
+    WaveBand* b = &g_WaveBand;
+    u8 piece = frame >> 2;
+    b->source_x = source_x; b->source_y = source_y;
+    b->special = (frame & 3) == 3;
+    if (b->special) { b->tail_x = g_WaveTailX[piece]; b->tail_y = g_WaveTailY[piece] - 9; }
+    b->start = start; b->end = end;
+    b->dy = (u16)page * 256 + 161 - s_WaveHeave[page];
+    b->row = row; b->height = height;
+    Waves_DrawBand();
 }
 
 void Dashboard_Waves(u8 page, u16 camera, u8 frame, u8 heave) WINGS_BANKED
