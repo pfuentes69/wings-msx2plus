@@ -233,6 +233,15 @@ void VDP_HBlankHandler(void) __naked
         // 170..175 read dark pixels under either scroll (the guard line
         // drawn at VRAM 170 - scroll .. 171, then the dashboard's solid top
         // rows 172..175), so a late interrupt changes nothing on screen.
+        // R19 before R23: the VDP fires on line R19 - R23, and the old R19
+        // with the new R23 could name the next line (see pan_split$).
+        ld a, #1
+        ld (_g_DashboardSplit), a
+        // Leave time to return from this ISR before requesting the next.
+        ld a, #174
+        out (0x99), a
+        ld a, #0x93
+        out (0x99), a
         xor a
         out (0x99), a
         ld a, #0x97
@@ -244,13 +253,6 @@ void VDP_HBlankHandler(void) __naked
         xor a
         out (0x99), a
         ld a, #0x9a
-        out (0x99), a
-        ld a, #1
-        ld (_g_DashboardSplit), a
-        // Leave time to return from this ISR before requesting the next.
-        ld a, #174
-        out (0x99), a
-        ld a, #0x93
         out (0x99), a
         // Stage the upper dashboard colors on the dark lines, leaving a
         // short final transfer before the icons at 183.
@@ -284,8 +286,18 @@ void VDP_HBlankHandler(void) __naked
     pan_split$:
         // Top lines done: scroll the play area by heave + fine pan, and
         // request the dashboard split (counted in the new scroll).
+        // R19 first: the VDP fires on line R19 - R23. Writing R23 first left
+        // the old R19 (this split) with the new scroll for a few
+        // instructions, naming a line just ahead; with a small pan the
+        // interrupt fired there, and once this one returned the dashboard
+        // branch ran at the top of the screen, with its scroll and palette
+        // (the plane in other colours during the pan, 2026-11-17).
         xor a
         ld (_g_DashboardSplit), a
+        ld a, (_g_LineSplit)
+        out (0x99), a
+        ld a, #0x93
+        out (0x99), a
         ld a, (_g_PlayOffset)
         out (0x99), a
         ld a, #0x97
@@ -297,10 +309,6 @@ void VDP_HBlankHandler(void) __naked
         ld a, (_g_PlayCoarse)
         out (0x99), a
         ld a, #0x9a
-        out (0x99), a
-        ld a, (_g_LineSplit)
-        out (0x99), a
-        ld a, #0x93
         out (0x99), a
         ret
     dashboard_low_palette$:

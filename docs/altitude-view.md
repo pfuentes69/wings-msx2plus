@@ -118,6 +118,25 @@ The port now pans by p = altitude − 131 (0..55) in two parts.
   on a row boundary therefore doesn't step every frame. At −1 the last
   play line shows terrain row 171.
 
+**The split order (2026-11-17).** The VDP fires the line interrupt on line
+R19 − R23. `pan_split$` used to write the new scroll (R23) before the next
+split line (R19). For a few instructions, the old R19 and the new R23 named
+the line just ahead: 2 × scroll + 13 with the message band, about 2 × fine −
+2 + heave without it. With a small pan, the interrupt fired there. Once the
+split handler returned, the dashboard branch ran near line 19 instead of
+170, with the dashboard's scroll and colours 6..15. The plane and smoke then
+showed in other colours for whole frames during the pan. With the band, a
+pan of 2 failed on every field.
+
+An openMSX trace of every interrupt entry (time since VBlank, split state,
+R19, R23) found it. So did a video of the pan, recorded and decoded with
+ZMBV: 16 fields with dashboard red in the play area, none after the fix.
+Both handlers now write R19 first.
+
+Single fields still show 1-line slips when an interrupt is 3+ lines late: the
+top row of a puff near the split, or part of the dashboard's top border line
+in the flight colours.
+
 **The top split, made timing-proof (2026-11-15).** The top lines show VRAM
 rows −heave .. fine − 1 of the page. While smoke and the plane could be drawn
 there, they appeared in the top band, displaced up by `fine`. A late split
