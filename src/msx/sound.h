@@ -29,7 +29,12 @@ extern volatile u16 g_SoundEngineTone;
 extern volatile u8 g_SoundEngineVolume, g_SoundGun, g_SoundGunRate, g_SoundGrind;
 extern u16 g_SoundListener;   /* the plane's world x */
 extern u8 g_SoundPlaying;     /* the effect on channel C, SOUND_NONE when quiet */
+extern volatile u8 g_SoundRequest, g_SoundRequestAtten;   /* the effect to start next field */
 void Sound_Field(void);
-/* Silence everything (boot, a new game). */
+/* One MSX-MUSIC register write (A register, E value), with the chip's waits;
+ * for the FM driver (sound_fm.c). */
+void Sound_OPLLWrite(void);
+/* Silence everything and turn the FM driver off until Sound_InitFM (boot:
+ * before any line interrupt runs the driver). */
 void Sound_Reset(void);
 #endif

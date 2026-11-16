@@ -1,5 +1,6 @@
 #include "sound.h"
 #include "../core/flight.h"
+#include "sound_fm.h"
 
 /* The PSG driver (docs/sound-effects.md). Resident: it runs inside the
  * line interrupt, which never maps window 3, and Sound_Effect is called
@@ -16,7 +17,7 @@ static const u8 s_Priority[SOUND_COUNT] = {0, 1, 2, 2, 3, 4};
 volatile u16 g_SoundEngineTone;
 volatile u8 g_SoundEngineVolume, g_SoundGun, g_SoundGunRate, g_SoundGrind;
 u16 g_SoundListener;
-static volatile u8 s_Request, s_RequestAtten;
+volatile u8 g_SoundRequest, g_SoundRequestAtten;   /* read by the FM driver too */
 static const SoundStep* s_Step;
 u8 g_SoundPlaying; static u8 s_Fields, s_Volume, s_Atten, s_Field, s_GunPhase;
 static u16 s_Tone;
@@ -24,9 +25,10 @@ static u8 s_Regs[11];
 
 void Sound_Reset(void)
 {
+    g_SoundFM = 0;   /* until Sound_InitFM has loaded the FM driver */
     g_SoundEngineVolume = g_SoundGun = g_SoundGrind = 0;
     g_SoundGunRate = 6;
-    s_Request = g_SoundPlaying = 0;
+    g_SoundRequest = g_SoundPlaying = 0;
 }
 
 void Sound_Effect(u8 id, u16 x)
@@ -35,9 +37,9 @@ void Sound_Effect(u8 id, u16 x)
     u16 distance = d < 0 ? (u16)-d : (u16)d;
     /* 0x2306: volume 64 - distance / 32 of 64; a PSG step per 128 px. */
     u8 atten = distance >= 15 * 128 ? 15 : (u8)(distance >> 7);
-    if (s_Priority[id] < s_Priority[g_SoundPlaying] || s_Priority[id] < s_Priority[s_Request]) return;
-    s_RequestAtten = atten;
-    s_Request = id;
+    if (s_Priority[id] < s_Priority[g_SoundPlaying] || s_Priority[id] < s_Priority[g_SoundRequest]) return;
+    g_SoundRequestAtten = atten;
+    g_SoundRequest = id;
 }
 
 /* In Z80: SDCC's C for this was 600 bytes, and resident space is short.
@@ -47,6 +49,10 @@ typedef char SoundStepLayout[sizeof(SoundStep) == 7 ? 1 : -1];
 void Sound_Field(void) __naked
 {
     __asm
+        ; MSX-MUSIC, when found: its driver, copied into RAM (sound_fm.c)
+        ld a, (_g_SoundFM)
+        or a
+        call nz, _g_FMDriver
         ld hl, #_s_Field
         inc (hl)
         ld c, (hl)              ; c: the field count
@@ -130,7 +136,7 @@ void Sound_Field(void) __naked
         ld a, b
         ld (_s_Regs + 9), a
         ; C: a new effect starts
-        ld a, (_s_Request)
+        ld a, (_g_SoundRequest)
         or a
         jr z, sound_c$
         cp #SOUND_COUNT
@@ -146,10 +152,10 @@ void Sound_Field(void) __naked
         ld h, (hl)
         ld l, a
         ld (_s_Step), hl
-        ld a, (_s_RequestAtten)
+        ld a, (_g_SoundRequestAtten)
         ld (_s_Atten), a
         xor a
-        ld (_s_Request), a
+        ld (_g_SoundRequest), a
         call sound_load$
     sound_c$:
         ld b, #0
@@ -256,6 +262,21 @@ void Sound_Field(void) __naked
         ld h, (hl)
         ld l, a
         ld (_s_Tone), hl
+        ret
+    __endasm;
+}
+
+/* An MSX-MUSIC register write: A the register, E the value. The YM2413
+ * needs 12 of its cycles (T-states at 3.58 MHz) after the address, which
+ * this gives, and 84 after the data, which the caller must leave before its
+ * next write (tests/test_sound_fm_z80.py checks the FM driver's). Preserves
+ * everything but A. */
+void Sound_OPLLWrite(void) __naked
+{
+    __asm
+        out (0x7c), a
+        ld a, e
+        out (0x7d), a
         ret
     __endasm;
 }

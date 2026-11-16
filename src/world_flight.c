@@ -1110,13 +1110,14 @@ void main(void)
         if (g_Combat.count>COMBAT_GUN_COUNT || g_Combat.secondary_cooldown ||
             g_Combat.secondary_pending || Weapons_PendingRestore()) present_ticks+=2;
 #ifdef WINGS_P1_FLIGHT
-        /* NTSC, heavy scenes: over the carrier (~95 ms of render CPU), with
-         * 4+ smoke, gun or soldier shapes on screen, or after a frame that
-         * came within a VBlank of the base deadline (large puffs cost
-         * several pieces each), 2 more VBlanks until the render paths are
-         * rewritten (docs/frame-budget.md). PAL's frame is long enough. */
-        if (g_Game.phase==GAME_PLAY && g_Carrier.stage==CARRIER_DECK && !(g_VDP_REGSAV[9]&2) &&
-            (s_CarrierView || g_SmokeDrawnCount[g_DisplayPage] >= 4 || s_Tight)) present_ticks+=2;
+        /* Heavy scenes: with 4+ smoke, gun or soldier shapes on screen, or
+         * after a frame that came within a VBlank of the base deadline
+         * (large puffs cost several pieces each), and on NTSC also over the
+         * carrier (~95 ms of render CPU), 2 more VBlanks until the render
+         * paths are rewritten (docs/frame-budget.md). PAL's longer frame
+         * covers the carrier, but no longer the island with its soldiers. */
+        if (g_Game.phase==GAME_PLAY && g_Carrier.stage==CARRIER_DECK &&
+            ((s_CarrierView && !(g_VDP_REGSAV[9]&2)) || g_SmokeDrawnCount[g_DisplayPage] >= 4 || s_Tight)) present_ticks+=2;
 #endif
         steps=(g_VDP_REGSAV[9]&2) ? present_ticks*3 : present_ticks*5/2;
         weapons=reset_weapons=0; input=0; turn=0;

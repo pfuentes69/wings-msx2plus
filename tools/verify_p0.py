@@ -36,6 +36,8 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--machine',default='Panasonic_FS-A1WX-512K')
     parser.add_argument('--headless',action='store_true')
+    parser.add_argument('--no-fm',action='store_true',help='turn the MSX-MUSIC driver off: PSG-only sound')
+    parser.add_argument('--record',type=Path,help="save the run's sound to this WAV file")
     parser.add_argument('--output',type=Path,default=ROOT/'tools/.build/p0-ntsc')
     args=parser.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'verification.json').unlink(missing_ok=True)
@@ -49,7 +51,7 @@ def main():
     for number in (12,17,18,19,20):
         bank=(ROOT/f'assets_msx/dashboard/bank_{number}.bin').read_bytes()
         assert data[number*8192:number*8192+len(bank)]==bank,('dashboard bank',number)
-    env=dict(os.environ,WINGS_ROOT=str(ROOT),WINGS_TEST_OUT=str(out),WINGS_HEADLESS='1' if args.headless else '0',
+    env=dict(os.environ,WINGS_ROOT=str(ROOT),WINGS_TEST_OUT=str(out),WINGS_HEADLESS='1' if args.headless else '0',WINGS_NO_FM='1' if args.no_fm else '0',WINGS_RECORD=str(args.record.resolve()) if args.record else '',
              OPENMSX_HOME=str(out/'openmsx-home'),SDL_AUDIODRIVER='dummy')
     env.setdefault('OPENMSX_USER_DATA',str(Path.home()/'.openMSX/share'))
     settings=[]
@@ -130,6 +132,14 @@ def main():
         psg=(out/f'{name}.psg').read_bytes()
         assert psg[7]&0xc0==0x80,(name,'PSG mixer port bits',hex(psg[7]))
         if game[0]!=3: assert psg[8]==0 and psg[9]==0,(name,'sound outside a sortie',list(psg[8:11]))
+        # MSX-MUSIC: both test machines have it, so the driver runs unless
+        # turned off; the engine then plays there (silent outside a sortie)
+        # and the PSG's engine channel stays quiet.
+        fm=(out/f'{name}.fm').read_bytes()
+        assert fm[0]==(0 if args.no_fm else 1),(name,'FM driver',fm[0])
+        if fm[0]:
+            assert psg[8]==0,(name,'PSG engine with FM',psg[8])
+            if game[0]!=3: assert fm[1+0x30]&15==15 and fm[1+0x31]&15==15,(name,'FM engine outside a sortie',fm[1+0x30:1+0x32].hex())
         gauges=tuple((out/f'{name}.gauges').read_bytes())
         assert all(g<=22 for g in gauges[:2]) and gauges[2]<=3,(name,'gauge state',gauges)
         score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0]
@@ -234,8 +244,16 @@ def main():
     # bomb bursts, splashes, the lift's clang and the cable's screech.
     for name in [k for k in snapshots if k.startswith('cannon_')]:
         psg=(out/f'{name}.psg').read_bytes()
-        tone=psg[0]|(psg[1]&15)<<8
-        assert psg[8]>=6 and 700<=tone<=2600 and not psg[7]&1,(name,'engine',psg[8],tone,hex(psg[7]))
+        fm=(out/f'{name}.fm').read_bytes()
+        if fm[0]:
+            # Two channels a few % apart, block 2, keyed on; fnum 131,700 / P.
+            for ch in (0,1):
+                fnum=fm[1+0x10+ch]|(fm[1+0x20+ch]&1)<<8
+                assert fm[1+0x20+ch]&0x1e==0x14 and 120<=fnum<=470 and fm[1+0x30+ch]>>4==0 and fm[1+0x30+ch]&15<=8,(name,'FM engine',ch,fm[1+0x10:1+0x12].hex(),fm[1+0x20:1+0x22].hex(),fm[1+0x30:1+0x32].hex())
+            assert fm[1+0x0e]&0x20,(name,'FM rhythm mode',hex(fm[1+0x0e]))
+        else:
+            tone=psg[0]|(psg[1]&15)<<8
+            assert psg[8]>=6 and 700<=tone<=2600 and not psg[7]&1,(name,'engine',psg[8],tone,hex(psg[7]))
         assert not psg[7]&0x10,(name,'cannon rattle',hex(psg[7]))
     for name in ('lift_rise_24','lift_rise_16','lift_left_down_8','lift_left_down_16','lift_right_down_8'):
         psg=(out/f'{name}.psg').read_bytes()

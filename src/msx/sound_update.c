@@ -1,6 +1,7 @@
 #include "sound_update.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_EFFECTS)
 #include "sound.h"
+#include "sound_fm.h"
 #include "../core/carrier.h"
 #include "../core/island.h"
 
@@ -26,6 +27,19 @@ static const SoundStep s_Steps[] = {
     /* SOUND_BOOM: a thump, then 0.75 s of low rumble */
     {3, 0xf0, 0, T | N(31), 1800, 40}, {43, 0xf0, -6, N(31), 0, 0}, END};
 typedef char SoundStepsFit[sizeof(s_Steps) <= sizeof(g_SoundSteps) ? 1 : -1];
+/* With MSX-MUSIC (sound_fm.c) the FM plays the voices; the PSG keeps the
+ * noise. Silent steps hold the effect's priority for its FM length. */
+static const SoundStep s_StepsFM[] = {
+    /* SOUND_SCREAM: the FM violin alone */
+    {47, 0, 0, 0, 0, 0}, END,
+    /* SOUND_SCREECH: the scrape under the FM squeal */
+    {20, 0x90, -3, N(1), 0, 0}, {20, 0x60, -3, N(1), 0, 0}, END,
+    /* SOUND_CLANG: the strike; the FM rings */
+    {2, 0xd0, 0, T | N(1), 100, 0}, {41, 0, 0, 0, 0, 0}, END,
+    /* SOUND_SPLASH and SOUND_BOOM: the hiss and the rumble under the drums */
+    {10, 0xa0, 0, N(6), 0, 0}, {12, 0xa0, 0, N(10), 0, 0}, {18, 0xa0, -9, N(14), 0, 0}, END,
+    {3, 0xf0, 0, T | N(31), 1800, 40}, {43, 0xf0, -6, N(31), 0, 0}, END};
+typedef char SoundStepsFMFit[sizeof(s_StepsFM) <= sizeof(g_SoundSteps) ? 1 : -1];
 
 static u16 s_Period;          /* the engine's Paula period (-$5bd0) */
 static u8 s_Volume;           /* its volume of 64 (-$5bd2) */
@@ -34,13 +48,17 @@ static u8 s_Ticks, s_Stage, s_Mode;   /* s_Ticks: flight steps toward the next t
 /* Into RAM, where the interrupt reads them (it cannot map this bank). */
 void Sound_LoadEffects(void) WINGS_BANKED
 {
-    u8 i, id = SOUND_SCREAM;
+    u8 i, id = SOUND_SCREAM, count;
+    const SoundStep* steps;
+    Sound_InitFM();
+    steps = g_SoundFM ? s_StepsFM : s_Steps;
+    count = g_SoundFM ? sizeof(s_StepsFM) / sizeof(SoundStep) : sizeof(s_Steps) / sizeof(SoundStep);
     g_SoundEffects[0] = 0;
     g_SoundEffects[id] = g_SoundSteps;
-    for (i = 0; i < sizeof(s_Steps) / sizeof(SoundStep); ++i)
+    for (i = 0; i < count; ++i)
     {
-        g_SoundSteps[i] = s_Steps[i];
-        if (!s_Steps[i].fields && ++id < SOUND_COUNT) g_SoundEffects[id] = g_SoundSteps + i + 1;
+        g_SoundSteps[i] = steps[i];
+        if (!steps[i].fields && ++id < SOUND_COUNT) g_SoundEffects[id] = g_SoundSteps + i + 1;
     }
     /* The engine starts idling, quiet (RAM is not cleared at boot). */
     s_Period = 808; s_Volume = s_Ticks = 0;
@@ -59,6 +77,7 @@ void Sound_Update(const FlightState* f, u16 world, u8 flags, u8 steps) WINGS_BAN
     {
         g_SoundEngineVolume = g_SoundGun = g_SoundGrind = 0;
         s_Volume = 0;
+        Sound_FMEngine(s_Period, 0);
         return;
     }
     /* The engine (0xc0e2, 0xc144, 0xc528, 0xc566, 0xc74e): target volume
@@ -84,7 +103,8 @@ void Sound_Update(const FlightState* f, u16 world, u8 flags, u8 steps) WINGS_BAN
     /* The engine sample's waveform repeats every 71 samples: 49,956 / P Hz,
      * a PSG tone period of 2.24 P. */
     g_SoundEngineTone = (s_Period << 1) + (s_Period >> 2);
-    g_SoundEngineVolume = (u8)((s_Volume * 11u) >> 6);
+    g_SoundEngineVolume = g_SoundFM ? 0 : (u8)((s_Volume * 11u) >> 6);
+    Sound_FMEngine(s_Period, s_Volume);
     /* Guns: the cannon (0x21c0, while firing), else the dugout guns in
      * range (their own channel in the original), louder nearer. */
     g_SoundGun = 0;

@@ -17,10 +17,11 @@ Sizing:
 | PSG sound effects (one or two prioritised channels) | 200–500 |
 | Headroom | rest |
 
-Optional MSX-MUSIC (OPLL) playback must fit inside the same budget. If it
-does, it replaces PSG music, and effects stay on the PSG. OPLL register writes
-need waits between them, so its driver should spread note changes over fields
-rather than burst them.
+Optional MSX-MUSIC (OPLL) playback must fit inside the same budget. OPLL
+register writes need waits between them, so its driver should spread note
+changes over fields rather than burst them. The FM effects driver
+(2026-11-16, [sound-effects.md](sound-effects.md)) does: at most 4 writes a
+field.
 
 The original effects are 8-bit PCM samples (`assets_src/audio`). Playing PCM
 through PSG volume needs the CPU continuously and cannot share a frame with
@@ -53,9 +54,19 @@ Since 2026-11-15 the release build runs the PSG effects driver here
 The debug profile keeps the old placeholder: `SoundBudget()` in
 `src/world_flight.c`, a busy loop calibrated at 2,976 T-states
 (`WINGS_SOUND_TSTATES`, default 3000; 0 removes it). The driver's own cost
-hasn't been measured yet. It is a few hundred T-states of Z80 plus 11
-register writes, well under the budget, so release frames got slightly
-faster. Music must fit in what is left.
+was measured on 2026-11-16 (`tests/test_sound_fm_z80.py`, same code on an
+emulated Z80). Music must fit in what is left.
+
+| Field | T-states |
+| --- | --- |
+| PSG only, idle | ~1,000 (11 register writes) |
+| PSG only, an effect playing, guns | ~1,100–1,250 |
+| With MSX-MUSIC, idle | ~1,130 |
+| With MSX-MUSIC, worst (effect start, gun hit, engine change at once) | 2,992 |
+
+Each FM write costs ~170–270 T-states with the script handling. A presented
+frame typically sees 2–3 engine writes and a few script writes: about 1 ms
+of a 133 or 160 ms frame.
 
 Measured with the placeholder (2026-11-14):
 - `verify_p0`: 89/89 snapshots on NTSC and on PAL.

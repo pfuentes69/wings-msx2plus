@@ -27,7 +27,8 @@ now banks code and grows to 256 KiB.
 | 23 | Banked code: `WINGS_SEGMENT_COMBAT` (weapons, island targets, terrain column remap) |
 | 24 | Raw data: the mission map (column table and runs), read in window 3 |
 | 25 | Banked code: `WINGS_SEGMENT_MISSION` (island soldiers, island cleared, the message ticker and its font) |
-| 26–31 | Free for code or data |
+| 26 | Banked code: `WINGS_SEGMENT_SOUND` (MSX-MUSIC detection, its driver and effect scripts, copied into RAM at boot; the engine's pitch table) |
+| 27–31 | Free for code or data |
 
 Measured release layout (close-view pan, 2026-11-14):
 

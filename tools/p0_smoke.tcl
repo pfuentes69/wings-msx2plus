@@ -11,10 +11,12 @@ bind -layer codex_verification "keyb SPACE" {set ::ignored_host_input 1}
 activate_input_layer -blocking codex_verification
 foreach {r m} {3 24 4 138 5 2 6 6 7 132 8 255} {keymatrixup $r $m}
 set out $env(WINGS_TEST_OUT)
+# WINGS_RECORD=file.wav: the whole run's sound, for listening.
+if {[info exists env(WINGS_RECORD)] && $env(WINGS_RECORD) ne ""} {set mute false;record start -audioonly $env(WINGS_RECORD)}
 set report [open [file join $out emulator-report.txt] w]
 set sf [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
 set symbols [read $sf];close $sf
-foreach n {Input_JoySample g_SoundPlaying g_DisplayBand g_DisplayTicker g_MessageActive g_HudScore g_DisplayScore g_SmokeDrawn g_SmokeDrawnCount g_Smoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
+foreach n {Input_JoySample g_SoundPlaying g_SoundFM g_DisplayBand g_DisplayTicker g_MessageActive g_HudScore g_DisplayScore g_SmokeDrawn g_SmokeDrawnCount g_Smoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -27,7 +29,7 @@ proc word {n} {expr {[value $n]+256*[debug read memory [expr {$::addr($n)+1}]]}}
 proc view {i} {debug read memory [expr {$::addr(g_GameView)+$i}]}
 proc stat {offset} {incr offset 122;expr {[debug read memory [expr {$::addr(g_Combat)+$offset}]]+256*[debug read memory [expr {$::addr(g_Combat)+$offset+1}]]}}
 proc require {ok message} {if {!$ok} {error $message}}
-proc bgerror {m} {puts $::report "FAIL $m\n$::errorInfo";flush $::report;close $::report;exit}
+proc bgerror {m} {puts $::report "FAIL $m\n$::errorInfo";flush $::report;close $::report;catch {record stop};exit}
 proc guard {code} {if {[catch {uplevel #0 $code} m]} {bgerror $m}}
 proc dump {name bytes} {set f [open [file join $::out $name] wb];puts -nonewline $f $bytes;close $f}
 proc phase {wanted then} {
@@ -172,6 +174,8 @@ proc publishing {} {
     dump $name.island [debug read_block memory $::addr(g_Island) 315]
     dump $name.band [binary format cs [value g_DisplayBand] [word g_DisplayTicker]]
     dump $name.psg [debug read_block {PSG regs} 0 16]
+    # MSX-MUSIC (src/msx/sound_fm.c): whether the driver runs, its registers.
+    dump $name.fm [binary format c [value g_SoundFM]][expr {$::fm_regs eq "" ? "" : [debug read_block $::fm_regs 0 0x39]}]
     dump $name.palette [debug read_block {VDP palette} 0 32]
     dump $name.fine [debug read_block memory $::addr(g_DisplayFine) 1]
     dump $name.game [debug read_block memory $::addr(g_GameView) 8]
@@ -217,6 +221,14 @@ proc missed_frame {} {
     flush $::report
 }
 debug watchpoint create -type write_mem -address $addr(g_FramePublished) -command {guard publishing}
+# The machine's MSX-MUSIC registers, if any. WINGS_NO_FM=1 turns the FM
+# driver off as it loads, to test the PSG-only sound.
+set fm_regs [lsearch -inline -nocase [debug list] "*music regs"]
+if {[info exists env(WINGS_NO_FM)] && $env(WINGS_NO_FM) eq "1"} {
+    debug watchpoint create -type write_mem -address $addr(g_SoundFM) -command {
+        if {[value g_SoundFM]} {debug write memory $::addr(g_SoundFM) 0}
+    }
+}
 # Each effect the PSG driver starts (src/msx/sound.c).
 debug watchpoint create -type write_mem -address $addr(g_SoundPlaying) -command {
     if {[info exists ::armed] && [value g_SoundPlaying]} {puts $::report "sound [value g_SoundPlaying] world=[word g_DisplayWorld] stage=[value g_Carrier]"}
@@ -929,7 +941,7 @@ proc engine_wait_game_over {} {
 proc done {} {
     require [expr {[value g_InputOverflow]==0}] "Input queue overflow in normal scenarios"
     puts $::report "pan_overruns [word g_PanOverruns]"
-    puts $::report "PASS";flush $::report;close $::report;exit
+    puts $::report "PASS";flush $::report;close $::report;catch {record stop};exit
 }
 debug watchpoint create -type write_mem -address $addr(g_MissedFrames) -command {guard missed_frame}
 after time 1 {guard ready}

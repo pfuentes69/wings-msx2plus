@@ -146,6 +146,16 @@ Found and fixed along the way: the wave strip moved to segment 21
 only the pixel rows the guard leaves. `Mission_Query` keeps its last run.
 The island's per-update work is skipped when nothing is due.
 
+## PAL heavy scenes (2026-11-16)
+
+The PAL smoke run measured island frames with soldiers, 6 puffs and 10
+shapes at 160.6–163 ms of work without MSX-MUSIC, against PAL's 160 ms.
+They passed only when bombs in flight had already added 2 VBlanks. The FM
+sound adds 0.4–1.6 ms to those frames, and the frame after `island_soldiers`
+then missed (165 ms). PAL now also gets the 2 extra VBlanks with 4+ shapes
+or after a tight frame. The carrier condition stays NTSC-only: PAL frames
+there have room.
+
 ## Island cleared (2026-11-15)
 
 The island-clear frames on NTSC were within a few ms of the deadline:

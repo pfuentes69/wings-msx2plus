@@ -2,8 +2,9 @@
 
 The original plays 8-bit samples on the Amiga's four Paula channels. The
 MSX can't afford sample playback during gameplay
-([sound-budget.md](sound-budget.md)), so each effect is resynthesized on the
-PSG from what the executable does with it. Music is a later step.
+([sound-budget.md](sound-budget.md)), so each effect is resynthesized from
+what the executable does with it: on the PSG, and with MSX-MUSIC when the
+machine has it ([below](#msx-music-2026-11-16)). Music is a later step.
 
 ## What the original plays
 
@@ -92,7 +93,61 @@ a cable. The rest are hooked where they happen:
 
 Everything is silent outside a sortie.
 
+## MSX-MUSIC (2026-11-16)
+
+When the machine has MSX-MUSIC (the YM2413 FM chip), it plays the voices
+and the PSG keeps the noise. It is built into the FS-A1WX, most other
+MSX2+ machines and the turbo R, and openMSX's C-BIOS machines have it too.
+`src/msx/sound_fm.c` is in segment 26.
+
+- **Detection** at boot (`Sound_InitFM`, from `Sound_LoadEffects`). Every
+  slot and subslot is read through the BIOS's RDSLT:
+  - `APRLOPLL` at 4018h is a built-in MSX-MUSIC;
+  - `OPLL` at 401Ch alone is an FM-PAC, whose ports are opened with bit 0 of
+    7FF6h.
+  
+  Without either, the PSG plays everything, as before.
+- **The driver runs from RAM.** The line interrupt cannot map a bank, and
+  only 127 bytes of always-loaded code are left. So the driver, written
+  with relative jumps only, is copied into a 300-byte RAM buffer with its
+  effect scripts. `Sound_Field` calls it each field before the PSG part.
+  The always-loaded part is 4 bytes for the call and 6 bytes of
+  `Sound_OPLLWrite`.
+- **Rhythm mode:**
+
+| Part | Sound |
+| --- | --- |
+| Channels 0, 1 | The engine: the custom instrument, a buzzy modulator (half-wave, full feedback) with a 3.7 Hz amplitude throb. Two channels 1/32 apart (3%) beat like a radial engine. The pitch is the PSG version's (fnum 131,700 / P in block 2, from a table: `tools/convert_fm_pitch.py`). The volume is 3 dB a step: full throttle 3, flying 6, on deck 9, failed 12. It is keyed off when silent |
+| Channels 2, 3 | Clang: two vibraphone notes, 1.07 and 1.58 kHz, struck with the cymbal. Screech: an oboe at ~1.7 kHz, wobbling. Scream: a violin following the PSG contour, 600–900 Hz, falling to 400 Hz |
+| Channels 4, 5 | Free (for music) |
+| Rhythm | Guns: snare and hi-hat, at the PSG's rate and volume. Boom: bass drum (an octave low), tom and cymbal, then a second thump. Splash: cymbal and hi-hat, twice |
+
+- **The PSG with FM.** The engine channel is quiet. The guns, boom, splash
+  and grind are unchanged. The clang keeps only its strike and the screech
+  only its scrape. The scream is silent on the PSG, but its steps still
+  hold its priority for its length.
+- **Scripts** are (register, value) pairs with waits, so the effects follow
+  the PSG's ones in timing. Volume registers drop one step per 128 px of
+  distance, as on the PSG.
+- **Cost.** At most 4 FM writes a field: the engine 2 (it changes once per
+  presented frame), a gun hit 3. Whatever does not fit waits a field. The
+  whole sound routine stays under 3,000 T-states a field
+  ([sound-budget.md](sound-budget.md)).
+  - The chip needs 12 of its cycles after an address and 84 after data.
+    `Sound_OPLLWrite` gives the first; the driver's own code between writes
+    gives the second, with padding in the gun hit.
+  - `tests/test_sound_fm_z80.py` runs the real `sound.c` and `sound_fm.c`
+    on an emulated Z80. It checks every gap, the detection paths, the
+    engine writes and each script against its data, and measures the worst
+    field: 2,992 T-states.
+
 ## Listening
+
+`python3 tools/preview_effects.py OUTPUT_DIR` records each effect alone,
+through the game's own drivers in openMSX: `effects-fm.wav` (MSX-MUSIC
+with the PSG) and `effects-psg.wav` (the PSG alone). The order is boom,
+splash, clang, screech, scream, 1.5 s apart. `tools/verify_p0.py --record
+FILE.wav` records a whole smoke run, and `--no-fm` gives the PSG-only sound.
 
 `python3 tools/preview_sound.py OUTPUT_DIR` renders each effect, the
 engine's four modes, both gun rattles and the grind to WAV files. It uses
