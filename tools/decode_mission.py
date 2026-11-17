@@ -140,7 +140,12 @@ def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False, shi
             continue
         ident = cell['shape_id']
         name = evidence['shape_names'][ident] if ident < len(evidence['shape_names']) else None
-        ship = ships and SHIP_FIRST_ID <= ident < SHIP_FIRST_ID + len(evidence['ship_names']) and not reduced
+        ship = ships and SHIP_FIRST_ID <= ident < SHIP_FIRST_ID + len(evidence['ship_names'])
+        if ship and reduced:
+            # The distant view: 8thscale.shp holds the hull pieces reduced,
+            # under the same names (dstb, batf, crus, jcrf...).
+            name = evidence['ship_names'][ident - SHIP_FIRST_ID][1]
+            ship = False
         if ship:
             # A ship's hull piece, from its own archive. Ships never move;
             # sinking (0x1cd8) draws the same pieces lower, at run time.

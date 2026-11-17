@@ -302,7 +302,7 @@ def artifacts(map_name='a.map', generated=None, ships=False):
     # Opaque source hulls can contain black; palette index zero is our sky key.
     mapping[0] = mapping[6]
     pixels = bytes(mapping[v] for v in source_pixels)
-    far_source, far_scene = reconstruct(mission, evidence, reduced=True)
+    far_source, far_scene = reconstruct(mission, evidence, reduced=True, ships=ships)
     far_pixels = bytes(mapping[v] for v in far_source)
     # Original distant-view sea fill uses ocean color 10. The reduced beach
     # artwork supplies a one-pixel foreground strip in sand color 17; preserve
@@ -333,7 +333,7 @@ def artifacts(map_name='a.map', generated=None, ships=False):
                  for c in mission['cells']]
         wrecked = dict(mission, cells=cells)
         near = bytes(mapping[v] for v in reconstruct(wrecked, evidence, ships=ships)[0])
-        far_src, far_wrecked = reconstruct(wrecked, evidence, reduced=True)
+        far_src, far_wrecked = reconstruct(wrecked, evidence, reduced=True, ships=ships)
         far = far_finish(far_src, far_wrecked)
         nf, nc = columns_differ(pixels, near, scene['width'])
         ff, fc = columns_differ(far_pixels, far, far_scene['width'])

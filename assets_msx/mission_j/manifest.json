@@ -417,18 +417,18 @@
   ],
   "selected": {
     "size": 8,
-    "tile_count": 841,
-    "tile_bytes": 26912,
+    "tile_count": 872,
+    "tile_bytes": 27904,
     "columns": 1120,
     "rows": 19,
-    "unique_columns": 281,
+    "unique_columns": 304,
     "dense_map_bytes": 42560,
-    "compressed_map_bytes": 8741,
-    "total_bytes": 35653
+    "compressed_map_bytes": 9029,
+    "total_bytes": 36933
   },
-  "bundle_bytes": 35671,
-  "tile_map_offset": 26912,
-  "bundle_sha256": "68491d06bb8921b76e15c192877c5eecdadd8e8940e46c4a2510324546f70c4f",
+  "bundle_bytes": 36951,
+  "tile_map_offset": 27904,
+  "bundle_sha256": "4a0ce32d39896e5b80618d0d24390b5bc51d5e0fd730e3a1aafc535a9be6b1ef",
   "palette_sha256": "0b37b14c0c7d721406951e121885f75479ae3d439bd8429cee8bb2986e7715f9",
   "ocean_palette_sha256": "701a351ccfbae78c8285f9d7ffab0d532dcaf6716395930b7055e2bfc4d70902",
   "palette_rgb3": [
@@ -527,7 +527,7 @@
   "map_table_bytes": 2240,
   "tile_cache": {
     "strip_tiles": 8,
-    "strips": 106,
+    "strips": 109,
     "slots": 56,
     "uniform": 2,
     "worst_view_strips": 32,
@@ -536,7 +536,7 @@
     "ordering": "uniform tiles first, then first-seen; strips of 8 ids, 8 x 64 px"
   },
   "map_format": "u16le column offsets, deduplicated count:u8/tile:u16le runs, no run crossing an 8 KiB bank; exactly 19 tile rows",
-  "map_and_cache_ram_bytes": 5256,
+  "map_and_cache_ram_bytes": 5259,
   "island": {
     "islands": [],
     "huts": [],

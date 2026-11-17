@@ -24,6 +24,14 @@ Without `WINGS_MAP` the build is map a, in `out/mission-flight/` as before.
   come from the map. The sources include those tables by name, from the
   map's folder on the include path.
 
+## Enemy ships in the scenery
+
+With `--ships` the converter draws each ship's hull pieces into the
+terrain: world.shp's archives (destroyer.shp, battleship.shp...) in the close
+view, and 8thscale.shp's reduced pieces of the same names (dstb, batf...) in
+the distant view. Until 2026-11-17 the distant view left them out, so a
+ship could not be seen from high up.
+
 ## What fits the terrain engine
 
 Updated 2026-11-17 with the tile cache. Tiles live in ROM from bank 32 and
@@ -33,7 +41,7 @@ the converter:
 | Map | Tiles | Strips (worst view ≤ 44) | Map width | Result |
 | --- | --- | --- | --- | --- |
 | a | 510 | 64 (25) | 7,608 px | built and verified |
-| j | 841 with ships | 106 (32) | 7,944 px | built: open sea, no islands, a destroyer and a battleship |
+| j | 872 with ships | 109 (32) | 7,944 px | built: open sea, no islands, a destroyer (x 8..655) and a battleship (x 7160..7935); `WINGS_MAP=j ./launch.sh` |
 | b, d, f | 564..606 | 71..76 (25) | 13,920..14,328 px | converts |
 | c, e, g, i, k, l, n, o | 614..661 | 77..83 (25..26) | 15,576..27,712 px | converts |
 | h, m | | | | the surface lookup is over its index/coordinate limits |
