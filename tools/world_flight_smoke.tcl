@@ -37,7 +37,7 @@ foreach name {g_Ready g_Rendering g_FramePublished g_DisplayCamera g_DisplayWorl
 if {$project eq "mission-flight"} {
     if {![regexp {DEF _g_DisplaySurfaceWord (0x[0-9A-Fa-f]+)} $symbols -> address]} { error "Missing surface diagnostic" }
     set addr(g_DisplaySurfaceWord) $address
-    foreach name {g_DisplayScale g_DisplayWave g_DisplayPilot g_ViewChange g_DisplayHeave g_DisplayShipFrame g_Combat g_GameView} {
+    foreach name {g_DisplayScale g_DisplayWave g_DisplayPilot g_ViewChange g_DisplayHeave g_DisplayShipFrame g_Combat g_GameView g_TerrainSlotStrip} {
         if {![regexp "DEF _$name (0x\[0-9A-Fa-f\]+)" $symbols -> address]} { error "Missing $name" }
         set addr($name) $address
     }
@@ -80,6 +80,8 @@ proc snapshot {name} {
     if {$::project eq "mission-flight"} {
         dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
         dump $name.game [debug read_block memory $::addr(g_GameView) 8]
+        # The tile cache: each VRAM slot's strip (src/msx/mission_streamer.c).
+        dump $name.slots [debug read_block memory $::addr(g_TerrainSlotStrip) 56]
     }
     dump $name.palette [debug read_block {VDP palette} 0 32]
     if {$::project eq "mission-flight"} {

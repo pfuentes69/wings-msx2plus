@@ -347,9 +347,13 @@ def main():
     folder = ROOT / 'assets_msx/mission_a'
     terrain = json.loads((folder / 'manifest.json').read_text())
     background = (folder / 'scene.indices').read_bytes()
-    bundle = (folder / 'tiles.sc5').read_bytes() + (folder / 'map.bin').read_bytes()
-    assert len(rom_bytes) == 262144
-    assert rom_bytes[32768:32768 + len(bundle)] == bundle, 'incorrect ROM asset bank placement'
+    # The terrain (tools/convert_mission.py): tile strips from bank 32, the
+    # column map from bank 40.
+    tiles = (folder / 'tiles.sc5').read_bytes()
+    assert len(rom_bytes) == 524288
+    assert rom_bytes[terrain['tile_banks'][0] * 8192:][:len(tiles)] == tiles, 'incorrect tile bank placement'
+    tile_map = (folder / 'map.bin').read_bytes()
+    assert rom_bytes[terrain['map_banks'][0] * 8192:][:len(tile_map)] == tile_map, 'incorrect map bank placement'
     tables=(ROOT/'assets_msx/dashboard/bank_7.bin').read_bytes()
     assert rom_bytes[7*8192:7*8192+len(tables)]==tables
     # Aircraft pixels: banks 8-10, then 14 (same rule as mission-flight.js).
@@ -429,16 +433,13 @@ def main():
             assert (output / f'{name}.palette').read_bytes() == scene.palette, name
             vram = (output / f'{name}.vram').read_bytes()
             assert (output / f'{name}.rom').read_bytes() == rom_bytes[:32768], (name, 'cartridge bank restoration')
-            tiles = (folder / 'tiles.sc5').read_bytes()
-            size = terrain['selected']['size']
-            tile_bytes = size * size // 2
-            for tile in range(terrain['selected']['tile_count']):
-                sy = (tile // 288 + 2) * 256 + 180 + (tile % 9) * 8
-                sx = (tile % 288 // 9) * 8
-                for row in range(size):
-                    address = (sy + row) * 128 + sx // 2
-                    stride = size // 2
-                    assert vram[address:address + stride] == tiles[tile * tile_bytes + row * stride:tile * tile_bytes + (row + 1) * stride], (name, 'terrain cache corrupted')
+            # The tile cache: every loaded slot holds its strip of 8 tiles
+            # (256 bytes) as 64 rows of 4 bytes at rows 180.. of page 2 or 3.
+            if args.project == 'mission-flight':
+                for slot, strip in enumerate((output / f'{name}.slots').read_bytes()):
+                    if strip == 255: continue
+                    got = b''.join(vram[0x10000 + ((slot >> 5) * 256 + 180 + row) * 128 + (slot & 31) * 4:][:4] for row in range(64))
+                    assert got == tiles[strip * 256:strip * 256 + 256], (name, 'terrain cache corrupted', slot, strip)
             for shape in scene.frames:
                 if shape.get('streamed') or shape.get('unused'):continue
                 source = (scene.folder / shape['file']).read_bytes()

@@ -9,6 +9,8 @@
  * behind the plane, 5 px below the origin). The playfield strip under it is
  * saved and restored like the plane's background. */
 /* Restore the strip saved on this page (skipped on a full page rebuild). */
+/* Nothing saved yet (boot: RAM is not cleared). */
+void Rope_Reset(void) WINGS_BANKED;
 void Rope_Restore(u8 page, u8 rebuilt) WINGS_BANKED;
 /* Save the strip, then draw the rope from cable x to hook x (world pixels)
  * for a plane whose origin is on screen row origin_row. */

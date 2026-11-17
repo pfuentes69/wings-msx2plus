@@ -30,7 +30,7 @@ static u8 SkyRows(u8 page, u16 world, u8 first, u8 last)
     const u16* cached = &g_TerrainCached[page][slot][first];
     for (;;)
     {
-        if (*cached >= TERRAIN_TILE_COUNT || g_MissionTileColors[*cached]) return 0;
+        if (*cached >= TERRAIN_TILE_COUNT || TERRAIN_TILE_COLOR(*cached)) return 0;
         if (first++ == last) return 1;
         ++cached;
     }
@@ -52,7 +52,7 @@ static u16 s_Decoded[TERRAIN_MAP_ROWS + 1];
 static void RepaintTiles(u8 page, i16 left, i16 right, i16 top, i16 bottom)
 {
     const u16* cached;
-    u16 column, tile, base = (u16)page * 256;
+    u16 column, tile, base = (u16)page * 256, source;
     i16 y, next, origin = TERRAIN_TOP + g_PanRows;
     u8 slot, row, first = (u8)((top - origin) >> 3), color, decoded;
     for (column = (u16)(left & ~7); (i16)column < right; column += 8)
@@ -72,10 +72,13 @@ static void RepaintTiles(u8 page, i16 left, i16 right, i16 top, i16 bottom)
             }
             if (tile < TERRAIN_TILE_COUNT)
             {
-                color = g_MissionTileColors[tile];
+                color = TERRAIN_TILE_COLOR(tile);
                 if (color != 255) VDP_CommandHMMV(column & 255, base + y, 8, next - y, color * 17);
-                else VDP_CommandHMMM(g_MissionTileX[tile], g_MissionTileY[tile] + (u8)(y - origin) - row * 8,
-                                     column & 255, base + y, 8, next - y);
+                else
+                {
+                    source = Terrain_TileY(tile) + (u8)(y - origin) - row * 8;
+                    VDP_CommandHMMM(g_TileSourceX, source, column & 255, base + y, 8, next - y);
+                }
             }
             y = next; ++row;
         } while (y < bottom);

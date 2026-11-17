@@ -1,10 +1,11 @@
 # Mission ROM code banking
 
-Updated 2026-11-13. Applies to `mission-flight` and `mission-flight-debug`.
+Updated 2026-11-17. Applies to `mission-flight` and `mission-flight-debug`.
 
 The P1/elevator release had filled the four resident ASCII8 segments
 (32,472 of 32,768 bytes). Later phases need far more code, so the mission ROM
-now banks code and grows to 256 KiB.
+now banks code. It was 256 KiB; the terrain tile cache
+([tile-cache.md](tile-cache.md)) grew it to 512 KiB.
 
 ## Memory map
 
@@ -19,17 +20,20 @@ now banks code and grows to 256 KiB.
 | --- | --- |
 | 0–2 | Resident code and constants |
 | 3 | Banked code: `WINGS_SEGMENT_HUD` (dashboard, weapons, arresting rope) |
-| 4–15 | Raw data banks, unchanged (mission, dashboard, aircraft, waves, ship, elevator) |
+| 4–15 | Raw data banks (dashboard, aircraft, waves, ship, elevator); 4–6 held the static terrain tiles and are free now |
 | 16 | Banked code: `WINGS_SEGMENT_SCENE` (menu, ship, carrier elevator, engine, landing) |
 | 17–20 | Raw data banks (pre-rendered HUD values) |
 | 21 | Banked code: `WINGS_SEGMENT_FLIGHT` (flight model, the wave strip) |
 | 22 | Banked code: `WINGS_SEGMENT_EFFECTS` (engine and hut smoke; the smoke path: its drawing and frame tables; the sound effects' game side and steps) |
 | 23 | Banked code: `WINGS_SEGMENT_COMBAT` (weapons, island targets, terrain column remap) |
-| 24 | Raw data: the mission map (column table and runs), read in window 3 |
+| 24 | Free (was the mission map; now in banks 40+) |
 | 25 | Banked code: `WINGS_SEGMENT_MISSION` (island soldiers, island cleared, the message ticker and its font) |
 | 26 | Banked code: `WINGS_SEGMENT_SOUND` (MSX-MUSIC detection, its driver and effect scripts, copied into RAM at boot; the engine's pitch table) |
 | 27 | Banked code: `WINGS_SEGMENT_GAME` (the game state: phases, rank, missions and lives, `core/game.c`) |
 | 28–31 | Free for code or data |
+| 32–39 | Raw data: terrain tile strips, 32 per bank, mapped into window 3 by `UploadStrip` (map a: 32–33; map j: 32–35) |
+| 40–47 | Raw data: the column map (column table and runs), read in window 3; no column record crosses a bank (maps a, j: 40–41 at most) |
+| 48–63 | Free |
 
 Measured release layout (close-view pan, 2026-11-14):
 
@@ -75,7 +79,9 @@ P1 elevator). Every build prints these figures in its post-build step.
 3. Do not call banked functions through function pointers; that bypasses
    the trampoline.
 4. Banked code reads raw data through `Scenery_Read` (window 1), as before.
-   It never maps data into window 3.
+   It never maps data into window 3. Only resident code does (the column
+   decoder and `UploadStrip` in `mission_streamer.c`), and it restores
+   `g_Bank3Segment` afterwards.
 5. Keep each banked call coarse; the trampoline costs roughly 150 T-states.
 
 Adding a module: pick or add a `WINGS_SEGMENT_*` value in `banking.h`, add the

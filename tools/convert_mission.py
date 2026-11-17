@@ -29,7 +29,6 @@ OVERLAY_TOPS = ((-126, -94, 46),     # flag and superstructure pieces
                 (-74, -52, 116),     # bow signalmen
                 (-28, 36, 112),      # elevator
                 (302, 324, 116))     # stern signalmen
-MAP_BANK = 24   # a free ROM bank (data); see docs/rom-banking.md
 
 def static_surface_height(raw_word):
     object_id = (raw_word >> 2) & 0x1ff
@@ -171,8 +170,57 @@ def decode_column(data, column, columns, rows, tile_count):
     return decoded
 
 
-def artifacts(map_name='a.map', generated=None):
-    evidence, mission, scene, source_pixels, inventory = mission_artifacts(map_name)
+# The dynamic tile cache (src/msx/mission_streamer.c, docs/tile-cache.md):
+# tiles load from ROM into VRAM in strips of 8 consecutive ids (8 x 64 px),
+# into TERRAIN_SLOTS slots: the 56 whole 8 x 72 columns at rows 180..251 of
+# VRAM pages 2 and 3 that map a's static tiles filled (the shape atlas,
+# tools/convert_dashboard.py, is laid out around them; the 57th column was
+# partly free and holds pilot-window frames).
+STRIP = 8
+TERRAIN_SLOTS = 56
+TILE_BANK = 32   # tile pixels: 32 strips (8 KiB) per bank, from bank 32
+MAP_BANK = 40    # the column map, from bank 40; no record crosses a bank
+
+
+def is_uniform(tile):
+    return tile == bytes([tile[0]]) * 32 and tile[0] >> 4 == tile[0] & 15
+
+
+def strip_layout(tiles, tile_map, stats):
+    """Uniform tiles first (their colour is drawn with HMMV and needs no VRAM),
+    then the others in first-seen order, which keeps a column's new tiles
+    consecutive. Rebuild the map with those ids, padded so no column record
+    crosses an 8 KiB bank (the renderer reads a record from one window)."""
+    count, rows, ncol = stats['tile_count'], stats['rows'], stats['columns']
+    data = [tiles[i * 32:(i + 1) * 32] for i in range(count)]
+    uniform = [i for i in range(count) if is_uniform(data[i])]
+    if uniform[:1] != [0]:
+        raise ValueError('renderer requires tile zero to be uniform sky')
+    order = uniform + [i for i in range(count) if i not in set(uniform)]
+    new_id = {old: new for new, old in enumerate(order)}
+    columns = [[new_id[t] for t in decode_column(tile_map, c, ncol, rows, count)] for c in range(ncol)]
+    table_bytes = ncol * 2
+    unique, payload, offsets = {}, bytearray(), []
+    for column in columns:
+        key = tuple(column)
+        if key not in unique:
+            record = b''.join(struct.pack('<BH', len(list(g)), t) for t, g in itertools.groupby(column))
+            at = table_bytes + len(payload)
+            if at // 8192 != (at + len(record) - 1) // 8192:
+                payload.extend(bytes(8192 - at % 8192))
+            unique[key] = table_bytes + len(payload)
+            payload.extend(record)
+        offsets.append(unique[key])
+    if table_bytes + len(payload) > 65535:
+        raise ValueError('terrain map exceeds 16-bit offsets')
+    new_map = b''.join(struct.pack('<H', o) for o in offsets) + payload
+    new_tiles = b''.join(data[i] for i in order)
+    colors = [data[i][0] >> 4 for i in uniform]
+    return new_tiles, new_map, columns, colors
+
+
+def artifacts(map_name='a.map', generated=None, ships=False):
+    evidence, mission, scene, source_pixels, inventory = mission_artifacts(map_name, ships)
     generated = generated or ROOT / f'src/generated/map_{map_name[0]}'
     palette_manifest = json.loads((ROOT / 'assets_msx/terrain/manifest.json').read_text())
     mapping = {int(i): value for i, value in palette_manifest['source_to_msx_index'].items()}
@@ -218,7 +266,7 @@ def artifacts(map_name='a.map', generated=None):
         cells = [dict(c, shape_id=5, raw_word=(c['raw_word'] & ~0x7fc) | (5 << 2)) if c['x'] == hut['x'] else c
                  for c in mission['cells']]
         wrecked = dict(mission, cells=cells)
-        near = bytes(mapping[v] for v in reconstruct(wrecked, evidence)[0])
+        near = bytes(mapping[v] for v in reconstruct(wrecked, evidence, ships=ships)[0])
         far_src, far_wrecked = reconstruct(wrecked, evidence, reduced=True)
         far = far_finish(far_src, far_wrecked)
         nf, nc = columns_differ(pixels, near, scene['width'])
@@ -244,13 +292,24 @@ def artifacts(map_name='a.map', generated=None):
     tiles, tile_map, selected = compile_scene(combined, combined_width, 8)
     if tiles[:32] != bytes(32):
         raise ValueError('renderer requires tile zero to be uniform sky')
-    if selected['tile_count'] > 576:
-        raise ValueError('mission tile dictionary exceeds cached lower atlas bands')
+    tiles, tile_map, columns, uniform_colors = strip_layout(tiles, tile_map, selected)
+    strips = (selected['tile_count'] + STRIP - 1) // STRIP
+    if strips > 255 or len(uniform_colors) > STRIP:
+        raise ValueError('terrain strips exceed the cache tables')
+    # The views draw from the strips of about 40 columns at once (both pages'
+    # 33 plus scrolling): those must fit the slots, with room to spare.
+    worst = max(len({t // STRIP for c in columns[s:s + 40] for t in c if t >= len(uniform_colors)})
+                for s in range(0, max(1, len(columns) - 40)))
+    if worst > TERRAIN_SLOTS - 12:
+        raise ValueError(f'a view needs {worst} tile strips; the cache has {TERRAIN_SLOTS}')
+    if len(tiles) > 8 * 8192 or len(tile_map) > 4 * 8192:
+        raise ValueError('terrain exceeds its ROM banks')
     bundle = tiles + tile_map
-    if len(bundle) > 32768:
-        raise ValueError('mission bundle exceeds 64 KiB cartridge data segments')
-    # Keep enough of the 16 KiB RAM page for the ISR, stack and BIOS workspace.
-    ram_budget = len(tile_map) + 2 * 32 * selected['rows'] * 2 + 2 * 32 * 2 + selected['rows'] * 2
+    # Keep enough of the 16 KiB RAM page for the ISR, stack and BIOS workspace:
+    # the column table (RAM, wrecked huts rewrite it), both pages' tile caches
+    # and the strip cache's tables.
+    ram_budget = (selected['columns'] * 2 + 2 * 32 * selected['rows'] * 2 + 2 * 32 * 2 + selected['rows'] * 2
+                  + strips + TERRAIN_SLOTS + 256)
     if ram_budget > 12000:
         raise ValueError('mission map/cache exceeds conservative static RAM budget')
     output = ROOT / f'assets_msx/mission_{map_name[0]}'
@@ -260,29 +319,30 @@ def artifacts(map_name='a.map', generated=None):
         far_sand_height=far_scene['sand_height'],far_sand_source_index=17,far_sand_msx_index=mapping[17],
         far_width=far_scene['width'], far_source_width=(mission['width'] + 7) // 8, far_column_offset=scene['width'] // 8,
         reset_x=mission['reset_x'], camera_max=mission['width'] - 256,
-        scene_scope=scene['scope'], baseline=scene['baseline'], fill=scene['fill'],
+        ships=ships, scene_scope=scene['scope'], baseline=scene['baseline'], fill=scene['fill'],
         placed=scene['placed'], unresolved=scene['unresolved'], comparisons=comparisons,
         selected=selected, bundle_bytes=len(bundle), tile_map_offset=len(tiles),
         bundle_sha256=hashlib.sha256(bundle).hexdigest(), palette_sha256=hashlib.sha256(palette).hexdigest(),
         ocean_palette_sha256=hashlib.sha256(ocean_path.read_bytes()).hexdigest(),
         palette_rgb3=[(palette[i*2]>>4,palette[i*2+1],palette[i*2]&7) for i in range(16)],
-        mapper_banks=list(range(4, 4 + (len(bundle) + 8191) // 8192)),
+        tile_banks=list(range(TILE_BANK, TILE_BANK + (len(tiles) + 8191) // 8192)),
+        map_banks=list(range(MAP_BANK, MAP_BANK + (len(tile_map) + 8191) // 8192)),
         map_bank=MAP_BANK, map_table_bytes=selected['columns'] * 2,
-        vram=dict(first_page=2, first_row=180, tiles_per_row=32, tiles_per_page=288,
-                  ordering='column-major groups of 9 tiles'),
-        map_format='u16le column offsets, deduplicated count:u8/tile:u16le runs; exactly 19 tile rows',
+        tile_cache=dict(strip_tiles=STRIP, strips=strips, slots=TERRAIN_SLOTS, uniform=len(uniform_colors),
+                        worst_view_strips=worst, first_page=2, first_row=180,
+                        ordering='uniform tiles first, then first-seen; strips of 8 ids, 8 x 64 px'),
+        map_format='u16le column offsets, deduplicated count:u8/tile:u16le runs, no run crossing an 8 KiB bank; exactly 19 tile rows',
         map_and_cache_ram_bytes=ram_budget, island=island, hut_variants=variants)
     files = {output / 'tiles.sc5': tiles, output / 'map.bin': tile_map,
              output / 'hut-variants.indices': b''.join(row for st in stripes_near + stripes_far for row in st),
              output / 'scene.indices': pixels, output / 'far.indices': far_pixels, output / 'palette.bin': palette,
              output / 'manifest.json': (json.dumps(metadata, indent=2) + '\n').encode()}
-    for bank, offset in enumerate(range(0, len(bundle), 8192), 4):
-        files[output / f'bank_{bank}.bin'] = bundle[offset:offset + 8192]
-    # The map again, alone at the start of its own bank: the renderer decodes
-    # columns straight from ROM (window 3), and only the column table, which
-    # wrecked huts rewrite, is copied to RAM.
-    if len(tile_map) > 8192: raise ValueError('the map no longer fits one bank')
-    files[output / f'bank_{MAP_BANK}.bin'] = tile_map
+    for bank, offset in enumerate(range(0, len(tiles), 8192), TILE_BANK):
+        files[output / f'bank_{bank}.bin'] = tiles[offset:offset + 8192]
+    # The renderer decodes columns straight from ROM (window 3); only the
+    # column table, which wrecked huts rewrite, is copied to RAM.
+    for bank, offset in enumerate(range(0, len(tile_map), 8192), MAP_BANK):
+        files[output / f'bank_{bank}.bin'] = tile_map[offset:offset + 8192]
     # Topmost scenery row per 256-px block of the close view (VRAM row =
     # scene row - 40, rounded down to a tile row), for close-view pan steps.
     # A pan step moves only the rows from there down, so the overlays drawn
@@ -304,28 +364,30 @@ def artifacts(map_name='a.map', generated=None):
     header = f'''/* Generated by tools/convert_mission.py; do not edit. */
 #pragma once
 #define TERRAIN_TILE_COUNT {selected['tile_count']}
+/* The tile cache: ids 0..TERRAIN_UNIFORM_COUNT - 1 are one colour each
+ * (g_TerrainUniformColor, drawn with HMMV); the others load from ROM in
+ * strips of 8 (id >> 3) into TERRAIN_SLOTS VRAM slots. */
+#define TERRAIN_UNIFORM_COUNT {len(uniform_colors)}
+#define TERRAIN_STRIPS {strips}
+#define TERRAIN_SLOTS {TERRAIN_SLOTS}
+#define TERRAIN_TILE_BANK {TILE_BANK}           /* strip k: bank + k / 32, offset (k % 32) * 256 */
 #define TERRAIN_MAP_BYTES {len(tile_map)}
-#define TERRAIN_MAP_OFFSET {len(tiles)}
-#define TERRAIN_MAP_BANK {MAP_BANK}             /* the map, from A000h in window 3 */
-#define TERRAIN_MAP_TABLE_BYTES {selected['columns'] * 2}   /* the column table (RAM) */
+#define TERRAIN_MAP_BANK {MAP_BANK}             /* offset o: bank + o / 8192, A000h + o % 8192 in window 3 */
+#define TERRAIN_MAP_TABLE_BYTES {selected['columns'] * 2}   /* the column table (RAM), at offset 0 */
 #define TERRAIN_MAP_ROWS {selected['rows']}
 #define TERRAIN_MAP_COLUMNS {selected['columns']}
 #define TERRAIN_BUNDLE_BYTES {len(bundle)}
 #define TERRAIN_FAR_COLUMN {scene['width'] // 8}
 #define TERRAIN_FAR_COLUMNS {far_scene['width'] // 8}
-extern const unsigned char g_MissionTileX[TERRAIN_TILE_COUNT], g_MissionTileLimit[TERRAIN_TILE_COUNT];
-extern const unsigned short g_MissionTileY[TERRAIN_TILE_COUNT];
 extern const unsigned char g_TerrainPalette[32];
-extern const unsigned char g_MissionTileColors[TERRAIN_TILE_COUNT];
+extern const unsigned char g_TerrainUniformColor[TERRAIN_UNIFORM_COUNT];
 /* Per 256 px of the close view: the first VRAM row (tile-aligned) with any
  * scenery; above it the view is sky. A pan step moves only rows below it. */
 #define TERRAIN_BLOCKS {len(block_tops)}
 extern const unsigned char g_TerrainBlockTop[TERRAIN_BLOCKS];
 '''
     files[generated / 'mission_tiles.h'] = header.encode()
-    colors = bytes(tile[0] >> 4 if tile == bytes([tile[0]]) * 32 and tile[0] >> 4 == tile[0] & 15 else 255
-                   for tile in (tiles[i:i + 32] for i in range(0, len(tiles), 32)))
-    files[generated / 'mission_tiles.c'] = ('/* Generated by tools/convert_mission.py; do not edit. */\n#include "mission_tiles.h"\n' + c_array('g_TerrainPalette', palette, '[32]') + c_array('g_MissionTileColors', colors, '[TERRAIN_TILE_COUNT]')
+    files[generated / 'mission_tiles.c'] = ('/* Generated by tools/convert_mission.py; do not edit. */\n#include "mission_tiles.h"\n' + c_array('g_TerrainPalette', palette, '[32]') + c_array('g_TerrainUniformColor', bytes(uniform_colors), '[TERRAIN_UNIFORM_COUNT]')
         + c_array('g_TerrainBlockTop', bytes(block_tops), '[TERRAIN_BLOCKS]')).encode()
     # Collision queries use every strip word, including entries without draw flags.
     # Preserve exactly the fields returned by the executable's 0x50f0 query.
@@ -378,9 +440,6 @@ extern const MissionSurfaceRun g_MissionSurfaceRuns[MISSION_SURFACE_RUNS];
     files[generated / 'mission_surfaces.h'] = surface_header.encode()
     files[generated / 'mission_island.h'] = island_header(island, variants).encode()
     files[generated / 'mission_surfaces.c'] = surface_data.encode()
-    files[generated / 'mission_tiles.c'] += (c_array('g_MissionTileX', bytes((t % 288 // 9) * 8 for t in range(selected['tile_count'])), '[TERRAIN_TILE_COUNT]') +
-        c_array('g_MissionTileLimit', bytes(9 - t % 9 for t in range(selected['tile_count'])), '[TERRAIN_TILE_COUNT]') +
-        'const unsigned short g_MissionTileY[TERRAIN_TILE_COUNT] = {' + ','.join(str(512 + 180 + t % 9 * 8 + t // 288 * 256) for t in range(selected['tile_count'])) + '};\n').encode()
     im = Image.frombytes('P', (scene['width'], 212), pixels)
     colors = bytes(v * 255 // 7 for c in metadata['palette_rgb3'] for v in c)
     im.putpalette(colors + bytes(768 - len(colors)))
@@ -394,8 +453,9 @@ def main():
     parser.add_argument('--check', action='store_true')
     parser.add_argument('--map', default='a', help='map letter a..o')
     parser.add_argument('--generated', type=Path, help='where the C tables go (default src/generated/map_<map>)')
+    parser.add_argument('--ships', action='store_true', help="draw the map's enemy ships into the scene")
     args = parser.parse_args()
-    files, metadata = artifacts(f'{args.map}.map', args.generated)
+    files, metadata = artifacts(f'{args.map}.map', args.generated, args.ships)
     for path, data in files.items():
         if args.check:
             if not path.is_file() or path.read_bytes() != data:

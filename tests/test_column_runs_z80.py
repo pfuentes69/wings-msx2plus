@@ -22,23 +22,47 @@ except ImportError:  # optional dev dependency (requirements.txt)
 ROOT = Path(__file__).resolve().parents[1]
 ROWS = 19
 TILES = 400
-COLORS, LIMITS, TILE_X, TILE_Y, COMMAND = 0xD400, 0xD600, 0xD800, 0xDA00, 0xC800
+COLORS, SOURCE_X, COMMAND = 0xD400, 0xD600, 0xC800
+UNIFORM = 3   # ids 0..2 are one colour each (TERRAIN_UNIFORM_COUNT)
 LOG_POINTER, LOG = 0xC900, 0xE000
 CACHE, DECODED, STACK, SENTINEL = 0xD000, 0xD100, 0xF000, 0x3000
 COLUMNS, CACHED = 0xA000, 0xA100   # g_TerrainColumns[2][32], g_TerrainCached[2][32][ROWS]
 STUB = f"""
     .module stub
-    .globl _g_MissionTileColors, _g_MissionTileLimit, _g_MissionTileX, _g_MissionTileY
+    .globl _g_TerrainUniformColor, _g_TileSourceX, _Terrain_TileY
     .globl _g_VDP_Command, _VDP_CommandSetupR32, _VDP_CommandSetupR36
     .globl _g_TerrainColumns, _g_TerrainCached
     _g_TerrainColumns = {COLUMNS:#06x}
     _g_TerrainCached = {CACHED:#06x}
-    _g_MissionTileColors = {COLORS:#06x}
-    _g_MissionTileLimit = {LIMITS:#06x}
-    _g_MissionTileX = {TILE_X:#06x}
-    _g_MissionTileY = {TILE_Y:#06x}
+    _g_TerrainUniformColor = {COLORS:#06x}
+    _g_TileSourceX = {SOURCE_X:#06x}
     _g_VDP_Command = {COMMAND:#06x}
     .area _CODE
+; The tile cache stand-in: tile in HL; source y in DE = 692 + (strip & 1) * 256
+; + (tile & 7) * 8, source x = (strip % 32) * 8 = tile & F8h. Clobbers like C.
+_Terrain_TileY:
+    ld a, l
+    and #7
+    add a, a
+    add a, a
+    add a, a
+    ld e, a
+    ld d, #0
+    bit 3, l
+    jr z, tile_page$
+    inc d
+tile_page$:
+    push hl
+    ld hl, #692
+    add hl, de
+    ex de, hl
+    pop hl
+    ld a, l
+    and #0xF8
+    ld ({SOURCE_X:#06x}), a
+    ld bc, #0xA5A5
+    ld hl, #0x5A5A
+    ret
 _VDP_CommandSetupR32:
     ld a, #32
     jr log
@@ -61,7 +85,15 @@ log:
 """
 
 
-def model(cache, decoded, x, y, colors, limits, tile_x, tile_y):
+def tile_x(tile):
+    return tile & 0xF8
+
+
+def tile_y(tile):
+    return 692 + ((tile >> 3) & 1) * 256 + (tile & 7) * 8
+
+
+def model(cache, decoded, x, y, uniform):
     """The C loop of Terrain_DrawColumn (decoded ends with the 65534 sentinel).
     Rows panned below the playfield (y % 256 >= 172) update the cache only."""
     decoded, cache = decoded + [65534], cache + [0x1234]
@@ -75,12 +107,13 @@ def model(cache, decoded, x, y, colors, limits, tile_x, tile_y):
             return log, cache[:ROWS], y
         i += k
         y += k * 8
-        tile, count, color = decoded[i], 1, colors[decoded[i]]
+        tile, count = decoded[i], 1
+        color = uniform[tile] if tile < UNIFORM else 255
         if color != 255:
             while row + count < ROWS and decoded[i + count] == tile:
                 count += 1
         else:
-            while row + count < ROWS and count < limits[tile] and decoded[i + count] == tile + count:
+            while row + count < ROWS and count < 8 - (tile & 7) and decoded[i + count] == tile + count:
                 count += 1
         height = count * 8
         if y % 256 + height > 172:
@@ -90,7 +123,7 @@ def model(cache, decoded, x, y, colors, limits, tile_x, tile_y):
         elif color != 255:
             log.append(('HMMV', x, y, 8, height, color * 17))
         else:
-            log.append(('HMMM', tile_x[tile], tile_y[tile], x, y, 8, height))
+            log.append(('HMMM', tile_x(tile), tile_y(tile), x, y, 8, height))
         cache[i:i + count] = decoded[i:i + count]
         row += count
         i += count
@@ -104,7 +137,7 @@ class ColumnRunsZ80Tests(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory()
         work = Path(cls.temp.name)
         sdcc = shutil.which('sdcc')
-        subprocess.run([sdcc, '-mz80', f'-DTERRAIN_MAP_ROWS={ROWS}', '-c', str(ROOT / 'src/msx/column_ops.c'),
+        subprocess.run([sdcc, '-mz80', f'-DTERRAIN_MAP_ROWS={ROWS}', f'-DTERRAIN_UNIFORM_COUNT={UNIFORM}', '-c', str(ROOT / 'src/msx/column_ops.c'),
                         '-o', str(work) + '/'], check=True, capture_output=True)
         (work / 'stub.s').write_text(STUB)
         subprocess.run([shutil.which('sdasz80'), '-o', 'stub.rel', 'stub.s'], cwd=work, check=True, capture_output=True)
@@ -160,13 +193,9 @@ class ColumnRunsZ80Tests(unittest.TestCase):
     def words(self, values):
         return b''.join(v.to_bytes(2, 'little') for v in values)
 
-    def run_column(self, cache, decoded, x, y, tables):
+    def run_column(self, cache, decoded, x, y, uniform):
         m = self.machine
-        colors, limits, tile_x, tile_y = tables
-        m.set_memory_block(COLORS, bytes(colors))
-        m.set_memory_block(LIMITS, bytes(limits))
-        m.set_memory_block(TILE_X, bytes(tile_x))
-        m.set_memory_block(TILE_Y, self.words(tile_y))
+        m.set_memory_block(COLORS, bytes(uniform))
         m.set_memory_block(COMMAND, bytes([0x77] * 15))
         m.set_memory_block(LOG_POINTER, LOG.to_bytes(2, 'little'))
         m.set_memory_block(CACHE, self.words(cache + [0x1234]))
@@ -200,15 +229,13 @@ class ColumnRunsZ80Tests(unittest.TestCase):
         rng = random.Random(7)
         worst = 0
         for trial in range(1500):
-            colors = [rng.randrange(16) if rng.random() < 0.3 else 255 for _ in range(TILES)]
-            limits = [rng.randint(1, 9) for _ in range(TILES)]
-            tile_x = [rng.randrange(0, 256, 8) for _ in range(TILES)]
-            tile_y = [512 + rng.randrange(512) for _ in range(TILES)]
+            uniform = [rng.randrange(16) for _ in range(UNIFORM)]
             decoded, left = [], ROWS
             while left:
                 kind, n = rng.random(), rng.randint(1, left)
                 start = rng.randrange(TILES - 20)
                 if kind < 0.4:
+                    if rng.random() < 0.5: start = rng.randrange(UNIFORM)
                     decoded += [start] * n          # repeated tile (solid-colour runs)
                 elif kind < 0.8:
                     decoded += list(range(start, start + n))   # stacked atlas tiles
@@ -220,8 +247,8 @@ class ColumnRunsZ80Tests(unittest.TestCase):
                 cache = list(decoded)                        # nothing to draw
             x = rng.randrange(0, 256, 8)
             y = rng.choice([0, 256]) + 24 + 8 * rng.randrange(7)   # close-view pan 0..6 rows
-            expected = model(list(cache), decoded, x, y, colors, limits, tile_x, tile_y)
-            log, cache_out, y_out, ticks = self.run_column(cache, decoded, x, y, (colors, limits, tile_x, tile_y))
+            expected = model(list(cache), decoded, x, y, uniform)
+            log, cache_out, y_out, ticks = self.run_column(cache, decoded, x, y, uniform)
             self.assertEqual(log, expected[0], trial)
             self.assertEqual(cache_out, expected[1], trial)
             self.assertEqual(y_out, expected[2], trial)

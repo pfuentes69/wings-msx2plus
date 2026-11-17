@@ -16,8 +16,8 @@ void Terrain_Remap(uint16_t column, uint16_t source) WINGS_BANKED
     uint16_t offset;
     if (source == column)
     {
-        offset = TERRAIN_MAP_OFFSET + column * 2;
-        Scenery_Read(4 + (offset >> 13), offset & 8191, g_TerrainMap + column * 2, 2);
+        offset = column * 2;   /* the table starts the map's first bank */
+        Scenery_Read(TERRAIN_MAP_BANK + (offset >> 13), offset & 8191, g_TerrainMap + column * 2, 2);
     }
     else
     {
@@ -46,7 +46,7 @@ void Terrain_RepaintBand(uint8_t page, uint16_t camera, uint8_t first, uint8_t l
                          uint8_t clip_top, uint8_t clip_bottom) WINGS_BANKED
 {
     uint8_t row, count, color, run_color = 0, ring, height, start_ring, skip;
-    u16 y, tile, run_x = 0, run_width;
+    u16 y, tile, run_x = 0, run_width, source;
     const u16* cell;
     const u16* column0 = g_TerrainCached[page][0];
     camera &= 65528u;
@@ -69,9 +69,10 @@ void Terrain_RepaintBand(uint8_t page, uint16_t camera, uint8_t first, uint8_t l
         {
             /* Open sea: every column shows the same tile. Paint one and
              * double it across the page (5 copies instead of 32). */
-            color = g_MissionTileColors[tile];
+            color = TERRAIN_TILE_COLOR(tile);
             if (color != 255) { VDP_CommandHMMV(0, y, 256, height, color * 17); continue; }
-            VDP_CommandHMMM(g_MissionTileX[tile], g_MissionTileY[tile] + skip, 0, y, 8, height);
+            source = Terrain_TileY(tile) + skip;
+            VDP_CommandHMMM(g_TileSourceX, source, 0, y, 8, height);
             for (run_width = 8; run_width < 256; run_width <<= 1)
                 VDP_CommandHMMM(0, y, run_width, y, run_width, height);
             continue;
@@ -79,7 +80,7 @@ void Terrain_RepaintBand(uint8_t page, uint16_t camera, uint8_t first, uint8_t l
         do
         {
             tile = *cell;
-            color = tile < TERRAIN_TILE_COUNT ? g_MissionTileColors[tile] : 254;
+            color = tile < TERRAIN_TILE_COUNT ? TERRAIN_TILE_COLOR(tile) : 254;
             if (run_width && (!ring || color != run_color))
             {
                 VDP_CommandHMMV(run_x, y, run_width, height, run_color * 17);
@@ -92,7 +93,11 @@ void Terrain_RepaintBand(uint8_t page, uint16_t camera, uint8_t first, uint8_t l
                     if (!run_width) { run_x = ring; run_color = color; }
                     run_width += 8;
                 }
-                else VDP_CommandHMMM(g_MissionTileX[tile], g_MissionTileY[tile] + skip, ring, y, 8, height);
+                else
+                {
+                    source = Terrain_TileY(tile) + skip;
+                    VDP_CommandHMMM(g_TileSourceX, source, ring, y, 8, height);
+                }
             }
             ring += 8;
             if (ring) cell += TERRAIN_MAP_ROWS; else cell = column0 + row;

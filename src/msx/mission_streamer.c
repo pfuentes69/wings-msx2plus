@@ -25,28 +25,140 @@ typedef char TerrainSentinelFree[(TERRAIN_TILE_COUNT < TERRAIN_SENTINEL) ? 1 : -
 
 static u16 s_Decoded[TERRAIN_MAP_ROWS + 1];
 
-// Scenery_Read restores the resident bank before each upload call.
+/* The tile cache: strips of 8 tiles (ids 8k..8k+7, 8 x 64 px) load from
+ * ROM into TERRAIN_SLOTS VRAM slots as columns need them: slot s is at
+ * x (s % 32) * 8, y 692 + (s / 32) * 256 (rows 180.. of pages 2, 3). A clock
+ * picks the slot to reuse: an access marks it, a load passes marked slots
+ * once (clearing the mark) and takes the first unmarked one. Whatever the
+ * pages still show of an evicted strip stays there; copying a tile again
+ * loads its strip again. */
+u8 g_TileSourceX;
+static u8 s_StripSlot[TERRAIN_STRIPS];   /* 255: not in VRAM */
+u8 g_TerrainSlotStrip[TERRAIN_SLOTS];    /* 255: free; read by tools/verify_p0.py */
+static u8 s_SlotMark[TERRAIN_SLOTS];
+static u8 s_Hand;
+typedef char TerrainStripTables[(TERRAIN_STRIPS <= 255 && TERRAIN_SLOTS <= 64) ? 1 : -1];
+
+static void ResetTiles(void)
+{
+    u8 i;
+    for (i = 0; i < TERRAIN_STRIPS; ++i) s_StripSlot[i] = 255;
+    for (i = 0; i < TERRAIN_SLOTS; ++i) g_TerrainSlotStrip[i] = 255, s_SlotMark[i] = 0;
+    s_Hand = 0;
+}
+
+/* Upload strip s_UploadStrip's 256 bytes (8 tiles x 8 rows x 4 bytes, its
+ * 64 rows in order) from its ROM bank, mapped into window 3, straight to
+ * VRAM at s_UploadAddress (in the upper 64 KiB). All 64 rows lie in one
+ * 16 KiB block (rows 180..243 of page 2 or 3), so R14 is set once. ~6,400
+ * T-states; the C version through RAM and MSXgl's writes cost ~25,000. */
+static u16 s_UploadAddress;
+static u8 s_UploadStrip;
+static void UploadStrip(void) __naked
+{
+    __asm
+        ld      a, (_g_Bank3Segment)
+        push    af
+        ld      a, (_s_UploadStrip)
+        ld      c, a
+        rlca                            ; bank = TERRAIN_TILE_BANK + strip / 32
+        rlca
+        rlca
+        and     a, #7
+        add     a, #TERRAIN_TILE_BANK
+        ld      (_g_Bank3Segment), a
+        ld      (0x7800), a
+        ld      a, c                    ; source = A000h + (strip % 32) * 256
+        and     a, #31
+        add     a, #0xA0
+        ld      h, a
+        ld      l, #0
+        ld      de, (_s_UploadAddress)
+        ld      a, d                    ; R14: address bits 14..16 (bit 16 set)
+        rlca
+        rlca
+        and     a, #3
+        or      a, #4
+        di
+        out     (0x99), a
+        ld      a, #0x8e
+        out     (0x99), a
+        ei
+        ld      b, #64
+    upload_row$:
+        ld      a, e
+        di
+        out     (0x99), a
+        ld      a, d
+        and     a, #0x3f
+        or      a, #0x40
+        ei
+        out     (0x99), a
+        ld      c, #0x98
+        outi
+        outi
+        outi
+        outi
+        inc     b                       ; outi counted B down 4 times
+        inc     b
+        inc     b
+        inc     b
+        ex      de, hl                  ; address += 128
+        ld      a, #128
+        add     a, l
+        ld      l, a
+        jr      nc, upload_next$
+        inc     h
+    upload_next$:
+        ex      de, hl
+        djnz    upload_row$
+        pop     af
+        ld      (_g_Bank3Segment), a
+        ld      (0x7800), a
+        ret
+    __endasm;
+}
+
+static u8 LoadStrip(u8 strip)
+{
+    u8 slot;
+    for (;;)
+    {
+        slot = s_Hand;
+        if (++s_Hand == TERRAIN_SLOTS) s_Hand = 0;
+        if (!s_SlotMark[slot]) break;
+        s_SlotMark[slot] = 0;
+    }
+    if (g_TerrainSlotStrip[slot] != 255) s_StripSlot[g_TerrainSlotStrip[slot]] = 255;
+    g_TerrainSlotStrip[slot] = strip; s_StripSlot[strip] = slot;
+    /* A copy still running may read the slot. */
+    VDP_CommandWait();
+    s_UploadStrip = strip;
+    s_UploadAddress = ((u16)(180 + ((slot >> 5) << 8)) << 7) + ((slot & 31) << 2);
+    UploadStrip();
+    return slot;
+}
+
+u16 Terrain_TileY(u16 tile)
+{
+    u8 strip = (u8)(tile >> 3), slot = s_StripSlot[strip];
+    if (slot == 255) slot = LoadStrip(strip);
+    s_SlotMark[slot] = 1;
+    g_TileSourceX = (slot & 31) << 3;
+    return 512 + 180 + ((u16)(slot >> 5) << 8) + ((tile & 7) << 3);
+}
+
+/* The column table into RAM; the strips load as columns need them. */
 void Terrain_Load(void)
 {
-    u16 tile, offset, address, i;
-    u8 row, scratch[64], count;
+    u16 i;
+    u8 count;
     s_Decoded[TERRAIN_MAP_ROWS] = TERRAIN_SENTINEL;
-    for (tile = 0; tile < TERRAIN_TILE_COUNT; ++tile)
-    {
-        offset = tile * 32;
-        address = (g_MissionTileY[tile] - 512) * 128 + g_MissionTileX[tile] / 2;
-        for (row = 0; row < 8; ++row)
-        {
-            Scenery_Read(4 + (offset >> 13), offset & 8191, scratch, 4);
-            VDP_WriteVRAM(scratch, address, 1, 4);
-            offset += 4; address += 128;
-        }
-    }
+    ResetTiles();
     for (i = 0; i < TERRAIN_MAP_TABLE_BYTES; i += count)
     {
         count = TERRAIN_MAP_TABLE_BYTES - i > 64 ? 64 : TERRAIN_MAP_TABLE_BYTES - i;
-        offset = TERRAIN_MAP_OFFSET + i;
-        Scenery_Read(4 + (offset >> 13), offset & 8191, g_TerrainMap + i, count);
+        Scenery_Read(TERRAIN_MAP_BANK + (i >> 13), i & 8191, g_TerrainMap + i, count);
     }
 }
 
@@ -86,9 +198,38 @@ static u16 ColumnOffset(u16 world)
 static void Decode(u16 offset, u16* out)
 {
     u8 segment = g_Bank3Segment;
-    *(volatile u8*)0x7800 = g_Bank3Segment = TERRAIN_MAP_BANK;
-    Column_Decode((const u8*)0xA000 + offset, out);
+    /* No column record crosses a bank (tools/convert_mission.py). */
+    *(volatile u8*)0x7800 = g_Bank3Segment = TERRAIN_MAP_BANK + (offset >> 13);
+    Column_Decode((const u8*)0xA000 + (offset & 8191), out);
     *(volatile u8*)0x7800 = g_Bank3Segment = segment;
+}
+
+/* Spare time before a VBlank: load one strip that the next columns ahead
+ * of the camera (in the direction of flight) will need, so new terrain
+ * mostly finds its strips in VRAM. 1 when a strip was loaded. */
+static u16 s_Ahead[TERRAIN_MAP_ROWS + 1];
+static u16 s_PrefetchCamera = 65535u;
+u8 Terrain_Prefetch(u16 camera, i8 direction)
+{
+    u8 column, row, strip;
+    u16 x, tile;
+    if (camera == s_PrefetchCamera) return 0;   /* nothing left ahead of it */
+    for (column = 1; column <= 4; ++column)
+    {
+        x = direction > 0 ? camera + 255 + ((u16)column << 3) : camera + 8 - ((u16)column << 3);
+        Decode(ColumnOffset(x), s_Ahead);
+        for (row = 0; row < TERRAIN_MAP_ROWS; ++row)
+        {
+            tile = s_Ahead[row];
+            if (tile < TERRAIN_UNIFORM_COUNT) continue;
+            strip = (u8)(tile >> 3);
+            if (s_StripSlot[strip] != 255) { s_SlotMark[s_StripSlot[strip]] = 1; continue; }
+            s_SlotMark[LoadStrip(strip)] = 1;
+            return 1;
+        }
+    }
+    s_PrefetchCamera = camera;
+    return 0;
 }
 
 void Terrain_DecodeColumn(u16 world, u16* out)
@@ -130,15 +271,15 @@ void Terrain_DrawColumn(u16 world, u8 page)
         dest_y += count * 8;
         tile = *decoded;
         count = 1;
-        color = g_MissionTileColors[tile];
+        color = TERRAIN_TILE_COLOR(tile);
         if (color != 255)
         {
             while (row + count < TERRAIN_MAP_ROWS && decoded[count] == tile) ++count;
         }
         else
         {
-            // Consecutive IDs are stacked vertically within an atlas column.
-            while (row + count < TERRAIN_MAP_ROWS && count < g_MissionTileLimit[tile] &&
+            // Consecutive IDs are stacked vertically within a strip.
+            while (row + count < TERRAIN_MAP_ROWS && count < 8 - (tile & 7) &&
                    decoded[count] == tile + count) ++count;
         }
         height = count * 8;
@@ -148,8 +289,8 @@ void Terrain_DrawColumn(u16 world, u8 page)
             VDP_CommandHMMV(world & 255, dest_y, 8, height, color * 17);
         else
         {
-            source_y = g_MissionTileY[tile];
-            VDP_CommandHMMM(g_MissionTileX[tile], source_y, world & 255, dest_y, 8, height);
+            source_y = Terrain_TileY(tile);
+            VDP_CommandHMMM(g_TileSourceX, source_y, world & 255, dest_y, 8, height);
         }
         // The next command waits before submission; update the cache in parallel.
         for (i = 0; i < count; ++i) *cached++ = *decoded++;

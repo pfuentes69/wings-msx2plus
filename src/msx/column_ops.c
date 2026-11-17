@@ -81,13 +81,13 @@ unsigned char Column_Equal(const unsigned short* a, const unsigned short* b) __n
  *   row = 0
  *   loop: skip rows equal to the cache (the decoded sentinel stops it);
  *         if row >= ROWS return
- *         tile = decoded[0]; count = 1; color = g_MissionTileColors[tile]
+ *         tile = decoded[0]; count = 1; color = TERRAIN_TILE_COLOR(tile)
  *         solid colour (color != 255): extend over equal tiles
- *         atlas tile: extend over tile+1, tile+2 ... up to g_MissionTileLimit
+ *         copied tile: extend over tile+1, tile+2 ... to the strip's end
  *         below the playfield (y % 256 >= 172, a close-view pan): cache only
  *         height = count * 8, cut at playfield row 172
  *         HMMV x, y, 8, height, color * 17   or
- *         HMMM tileX, tileY, x, y, 8, height
+ *         HMMM from Terrain_TileY(tile), x, y, 8, height
  *         copy the run into the cache; row += count
  *
  * In: HL = cache (TERRAIN_MAP_ROWS words), DE = decoded column (plus the
@@ -142,7 +142,8 @@ void Column_Runs(unsigned short* cache, const unsigned short* decoded) __naked
         ld      bc, (_g_ColumnY)
         add     hl, bc
         ld      (_g_ColumnY), hl
-        ; tile = decoded[0]; color = g_MissionTileColors[tile]
+        ; tile = decoded[0]; color: g_TerrainUniformColor[tile] for the
+        ; uniform tiles (the lowest ids), else 255 (copied from VRAM)
         ex      de, hl                  ; HL = decoded
         ld      e, (hl)
         inc     hl
@@ -150,9 +151,19 @@ void Column_Runs(unsigned short* cache, const unsigned short* decoded) __naked
         dec     hl
         ld      (_s_Tile), de
         push    hl                      ; [decoded][cache]
-        ld      hl, #_g_MissionTileColors
+        ld      a, d
+        or      a, a
+        jr      nz, column_runs_detail$
+        ld      a, e
+        cp      a, #TERRAIN_UNIFORM_COUNT
+        jr      nc, column_runs_detail$
+        ld      hl, #_g_TerrainUniformColor
         add     hl, de
         ld      a, (hl)
+        jr      column_runs_color$
+    column_runs_detail$:
+        ld      a, #255
+    column_runs_color$:
         ld      (_s_Color), a
         ld      b, #1                   ; count
         inc     a
@@ -178,10 +189,12 @@ void Column_Runs(unsigned short* cache, const unsigned short* decoded) __naked
         inc     b
         jr      column_runs_solid$
     column_runs_atlas$:
-        ; Atlas tile: extend while count < limit and decoded[count] == tile + count.
-        ld      hl, #_g_MissionTileLimit
-        add     hl, de
-        ld      a, (hl)
+        ; Copied tile: extend while count < limit and decoded[count] == tile + count;
+        ; the limit is the strip's end, 8 - (tile & 7).
+        ld      a, e
+        and     a, #7
+        neg
+        add     a, #8
         ld      (_s_Limit), a
         pop     hl
         push    hl
@@ -259,21 +272,15 @@ void Column_Runs(unsigned short* cache, const unsigned short* decoded) __naked
         call    _VDP_CommandSetupR36
         jr      column_runs_cache$
     column_runs_copy$:
-        ld      de, (_s_Tile)
-        ld      hl, #_g_MissionTileX
-        add     hl, de
-        ld      a, (hl)
+        ; The tile's strip in VRAM, loaded if need be (mission_streamer.c;
+        ; sdcccall(1): HL tile, DE the source y; it leaves g_VDP_Command).
+        ld      hl, (_s_Tile)
+        call    _Terrain_TileY
+        ld      (_g_VDP_Command + 2), de  ; SY
+        ld      a, (_g_TileSourceX)
         ld      (_g_VDP_Command + 0), a   ; SX
         xor     a, a
         ld      (_g_VDP_Command + 1), a
-        ld      hl, #_g_MissionTileY
-        add     hl, de
-        add     hl, de
-        ld      a, (hl)
-        inc     hl
-        ld      h, (hl)
-        ld      l, a
-        ld      (_g_VDP_Command + 2), hl  ; SY
         ld      a, #COLUMN_CMD_HMMM
         ld      (_g_VDP_Command + 14), a
         call    _VDP_CommandSetupR32

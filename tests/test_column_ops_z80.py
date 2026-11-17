@@ -24,22 +24,22 @@ class ColumnOpsZ80Tests(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory()
         work = Path(cls.temp.name)
         sdcc = shutil.which('sdcc')
-        subprocess.run([sdcc, '-mz80', f'-DTERRAIN_MAP_ROWS={ROWS}', '-c', str(ROOT / 'src/msx/column_ops.c'),
+        subprocess.run([sdcc, '-mz80', f'-DTERRAIN_MAP_ROWS={ROWS}', '-DTERRAIN_UNIFORM_COUNT=3', '-c', str(ROOT / 'src/msx/column_ops.c'),
                         '-o', str(work) + '/'], check=True, capture_output=True)
         # Column_Runs (tested in test_column_runs_z80.py) needs these symbols.
         (work / 'stub.s').write_text('''
     .module stub
-    .globl _g_MissionTileColors, _g_MissionTileLimit, _g_MissionTileX, _g_MissionTileY
+    .globl _g_TerrainUniformColor, _g_TileSourceX, _Terrain_TileY
     .globl _g_VDP_Command, _VDP_CommandSetupR32, _VDP_CommandSetupR36
     .globl _g_TerrainColumns, _g_TerrainCached
     _g_TerrainColumns = 0xA000
     _g_TerrainCached = 0xA100
-    _g_MissionTileColors = 0xD400
-    _g_MissionTileLimit = 0xD600
-    _g_MissionTileX = 0xD800
-    _g_MissionTileY = 0xDA00
+    _g_TerrainUniformColor = 0xD400
+    _g_TileSourceX = 0xD600
     _g_VDP_Command = 0xC800
     .area _CODE
+_Terrain_TileY:
+    ret
 _VDP_CommandSetupR32:
 _VDP_CommandSetupR36:
     ret

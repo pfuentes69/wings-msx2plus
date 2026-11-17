@@ -27,6 +27,15 @@ static void Strip(u8 page, u8 save)
     }
 }
 
+/* RAM is not cleared at boot: no strip is saved yet. Before 2026-11-17 the
+ * first frame could restore a garbage strip; with the statics at other
+ * addresses it wrote 2 rows of zeros over atlas art (the signalmen's
+ * frames). */
+void Rope_Reset(void) WINGS_BANKED
+{
+    s_Valid[0] = s_Valid[1] = 0;
+}
+
 void Rope_Restore(u8 page, u8 rebuilt) WINGS_BANKED
 {
     if (s_Valid[page] && !rebuilt) Strip(page, 0);

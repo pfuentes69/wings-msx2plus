@@ -6,11 +6,14 @@ so part-filled segments waste space; the projection allows about 15% for that.
 
 ## Today: 21 of 32 segments, ~130 KB of data
 
+The ROM is 512 KiB since 2026-11-17: the terrain tile cache keeps tiles in
+banks 32+ and the column map in banks 40+. Banks 4–6 and 24 are free.
+
 | Content | Segments | Bytes |
 | --- | --- | --- |
 | Resident code + constants | 0–2 | 22.9 K |
 | Banked code (HUD; menus/ship/elevator/engine/landing) | 3, 16 | 13.0 K |
-| Mission A terrain: 493 tiles + map | 4–6 | 22.2 K |
+| Mission A terrain: 510 tiles + map (moved 2026-11-17, [tile-cache.md](tile-cache.md)) | 32–33, 40 | 22.2 K |
 | Aircraft (Hellcat, cannon flash, crash art) | 8–10, 14 | 28.1 K |
 | Dashboard: panel, pilot views, waves, tables | 7, 11, 12 | 14.7 K |
 | Ship, crew, elevator | 13, 15 | 7.0 K |

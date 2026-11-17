@@ -1080,6 +1080,7 @@ void main(void)
     Terrain_Load();
 #ifdef WINGS_P1_FLIGHT
     StartMission(); g_TerrainDirty = 0;
+    Rope_Reset();
 #endif
     for (page = 0; page < 2; ++page)
     {
@@ -1378,6 +1379,9 @@ advance_clocks:
             /* The ticker's text, with a whole frame still to spare. */
             if (g_MessageActive && g_Game.phase == GAME_PLAY && page != g_DisplayPage &&
                 (u8)(g_VBlankTicks - tick) + 1 < present_ticks && Message_Work(page)) continue;
+            /* The tile strips ahead, with a whole frame still to spare. */
+            if (g_Game.phase == GAME_PLAY && (u8)(g_VBlankTicks - tick) + 1 < present_ticks &&
+                Terrain_Prefetch(camera, s_World.flight.facing_left ? -1 : 1)) continue;
 #endif
             WaitVBlank();
         }

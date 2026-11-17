@@ -14,10 +14,91 @@
   "far_column_offset": 994,
   "reset_x": 3960,
   "camera_max": 7688,
+  "ships": true,
   "scene_scope": "static normal-scale world shapes; special markers, dynamic ship parts and mission behavior are not emulated",
   "baseline": 201,
   "fill": "foreground source-color-17 island sand with original beach silhouettes; cyan sky/sea index 1",
   "placed": [
+    {
+      "index": 17,
+      "file_offset": 42,
+      "x": 136,
+      "raw_word": 33681,
+      "draw": true,
+      "shape_id": 228,
+      "surface": 1,
+      "depth": 0,
+      "y_offset": 0,
+      "name": "dstb",
+      "archive": "destroyer",
+      "drawing_x": 9,
+      "drawing_y": 161,
+      "shape_offset": 11164,
+      "shape_sha256": "2422d59481fe76ba8ae8813515033d2dea057477526e2706e691d045f38b27bf",
+      "width": 256,
+      "height": 41,
+      "visible_pixels": 10496
+    },
+    {
+      "index": 43,
+      "file_offset": 94,
+      "x": 344,
+      "raw_word": 33689,
+      "draw": true,
+      "shape_id": 230,
+      "surface": 1,
+      "depth": 0,
+      "y_offset": 0,
+      "name": "dstm",
+      "archive": "destroyer",
+      "drawing_x": 265,
+      "drawing_y": 148,
+      "shape_offset": 20596,
+      "shape_sha256": "81df1f69cee37991bfca0dfd8a75b23200a42358a096293eb7dde8c3b14ec784",
+      "width": 160,
+      "height": 54,
+      "visible_pixels": 8640
+    },
+    {
+      "index": 66,
+      "file_offset": 140,
+      "x": 528,
+      "raw_word": 33693,
+      "draw": true,
+      "shape_id": 231,
+      "surface": 1,
+      "depth": 0,
+      "y_offset": 0,
+      "name": "dtft",
+      "archive": "destroyer",
+      "drawing_x": 409,
+      "drawing_y": 124,
+      "shape_offset": 24936,
+      "shape_sha256": "6067541a81cec02ddbb8f93a22a9876cfc84aa97ad7949cced1a41038268a2a5",
+      "width": 80,
+      "height": 41,
+      "visible_pixels": 3280
+    },
+    {
+      "index": 67,
+      "file_offset": 142,
+      "x": 536,
+      "raw_word": 33685,
+      "draw": true,
+      "shape_id": 229,
+      "surface": 1,
+      "depth": 0,
+      "y_offset": 0,
+      "name": "dstf",
+      "archive": "destroyer",
+      "drawing_x": 425,
+      "drawing_y": 165,
+      "shape_offset": 16432,
+      "shape_sha256": "244395f6e1b6e57f4e6a6d084207b23715b7e18791944d8b58c5c4e2ebc3f4d8",
+      "width": 224,
+      "height": 37,
+      "visible_pixels": 8288
+    },
     {
       "index": 456,
       "file_offset": 920,
@@ -207,60 +288,6 @@
       "width": 16,
       "height": 3,
       "visible_pixels": 48
-    }
-  ],
-  "unresolved": [
-    {
-      "index": 17,
-      "file_offset": 42,
-      "x": 136,
-      "raw_word": 33681,
-      "draw": true,
-      "shape_id": 228,
-      "surface": 1,
-      "depth": 0,
-      "y_offset": 0,
-      "name": null,
-      "reason": "outside fixed 184-entry world table; special marker or other archive"
-    },
-    {
-      "index": 43,
-      "file_offset": 94,
-      "x": 344,
-      "raw_word": 33689,
-      "draw": true,
-      "shape_id": 230,
-      "surface": 1,
-      "depth": 0,
-      "y_offset": 0,
-      "name": null,
-      "reason": "outside fixed 184-entry world table; special marker or other archive"
-    },
-    {
-      "index": 66,
-      "file_offset": 140,
-      "x": 528,
-      "raw_word": 33693,
-      "draw": true,
-      "shape_id": 231,
-      "surface": 1,
-      "depth": 0,
-      "y_offset": 0,
-      "name": null,
-      "reason": "outside fixed 184-entry world table; special marker or other archive"
-    },
-    {
-      "index": 67,
-      "file_offset": 142,
-      "x": 536,
-      "raw_word": 33685,
-      "draw": true,
-      "shape_id": 229,
-      "surface": 1,
-      "depth": 0,
-      "y_offset": 0,
-      "name": null,
-      "reason": "outside fixed 184-entry world table; special marker or other archive"
     },
     {
       "index": 911,
@@ -272,8 +299,15 @@
       "surface": 1,
       "depth": 0,
       "y_offset": 0,
-      "name": null,
-      "reason": "outside fixed 184-entry world table; special marker or other archive"
+      "name": "batf",
+      "archive": "battleship",
+      "drawing_x": 7161,
+      "drawing_y": 145,
+      "shape_offset": 4756,
+      "shape_sha256": "f8c742839a1334f3244808b2ab599b543511f780428efc5918d11c26f419ba9e",
+      "width": 256,
+      "height": 57,
+      "visible_pixels": 14592
     },
     {
       "index": 912,
@@ -285,8 +319,15 @@
       "surface": 1,
       "depth": 0,
       "y_offset": 0,
-      "name": null,
-      "reason": "outside fixed 184-entry world table; special marker or other archive"
+      "name": "btft",
+      "archive": "battleship",
+      "drawing_x": 7417,
+      "drawing_y": 92,
+      "shape_offset": 34348,
+      "shape_sha256": "48f9ef9a3da6b8515b524b745d3536dac3608ba40ebdff1d8d3a7c1e057ea2c3",
+      "width": 64,
+      "height": 39,
+      "visible_pixels": 2496
     },
     {
       "index": 943,
@@ -298,8 +339,15 @@
       "surface": 1,
       "depth": 0,
       "y_offset": 0,
-      "name": null,
-      "reason": "outside fixed 184-entry world table; special marker or other archive"
+      "name": "batm",
+      "archive": "battleship",
+      "drawing_x": 7417,
+      "drawing_y": 131,
+      "shape_offset": 12072,
+      "shape_sha256": "c376df30250042b7958d5ac5fd427b1cbcfc11f1fcf2b2bff8956cd7d4f4faee",
+      "width": 256,
+      "height": 71,
+      "visible_pixels": 18176
     },
     {
       "index": 944,
@@ -311,8 +359,15 @@
       "surface": 1,
       "depth": 0,
       "y_offset": 0,
-      "name": null,
-      "reason": "outside fixed 184-entry world table; special marker or other archive"
+      "name": "btmt",
+      "archive": "battleship",
+      "drawing_x": 7625,
+      "drawing_y": 93,
+      "shape_offset": 35616,
+      "shape_sha256": "e5341b2f84cb38290f5edf0febe7e89304bc045443b7fd5e8abc8fb005a9dd76",
+      "width": 16,
+      "height": 38,
+      "visible_pixels": 86
     },
     {
       "index": 975,
@@ -324,48 +379,56 @@
       "surface": 1,
       "depth": 0,
       "y_offset": 0,
-      "name": null,
-      "reason": "outside fixed 184-entry world table; special marker or other archive"
+      "name": "batb",
+      "archive": "battleship",
+      "drawing_x": 7673,
+      "drawing_y": 165,
+      "shape_offset": 0,
+      "shape_sha256": "c165f9f351b5a7ce888800d239f20ed7b8f4df06ad17a2427600b4b06b9b9c8a",
+      "width": 256,
+      "height": 37,
+      "visible_pixels": 9472
     }
   ],
+  "unresolved": [],
   "comparisons": [
     {
       "size": 8,
-      "tile_count": 288,
-      "tile_bytes": 9216,
+      "tile_count": 823,
+      "tile_bytes": 26336,
       "columns": 994,
       "rows": 19,
-      "unique_columns": 93,
+      "unique_columns": 268,
       "dense_map_bytes": 37772,
-      "compressed_map_bytes": 4139,
-      "total_bytes": 13355
+      "compressed_map_bytes": 8333,
+      "total_bytes": 34669
     },
     {
       "size": 16,
-      "tile_count": 120,
-      "tile_bytes": 15360,
+      "tile_count": 327,
+      "tile_bytes": 41856,
       "columns": 497,
       "rows": 10,
-      "unique_columns": 48,
+      "unique_columns": 137,
       "dense_map_bytes": 9940,
-      "compressed_map_bytes": 1756,
-      "total_bytes": 17116
+      "compressed_map_bytes": 3208,
+      "total_bytes": 45064
     }
   ],
   "selected": {
     "size": 8,
-    "tile_count": 306,
-    "tile_bytes": 9792,
+    "tile_count": 841,
+    "tile_bytes": 26912,
     "columns": 1120,
     "rows": 19,
-    "unique_columns": 106,
+    "unique_columns": 281,
     "dense_map_bytes": 42560,
-    "compressed_map_bytes": 4547,
-    "total_bytes": 14339
+    "compressed_map_bytes": 8741,
+    "total_bytes": 35653
   },
-  "bundle_bytes": 14339,
-  "tile_map_offset": 9792,
-  "bundle_sha256": "9c4d7afc9ab58d32bf3538016d2e1bbc8a0df7f39cd5c0e5bbbb4e0b9e252812",
+  "bundle_bytes": 35671,
+  "tile_map_offset": 26912,
+  "bundle_sha256": "68491d06bb8921b76e15c192877c5eecdadd8e8940e46c4a2510324546f70c4f",
   "palette_sha256": "0b37b14c0c7d721406951e121885f75479ae3d439bd8429cee8bb2986e7715f9",
   "ocean_palette_sha256": "701a351ccfbae78c8285f9d7ffab0d532dcaf6716395930b7055e2bfc4d70902",
   "palette_rgb3": [
@@ -450,21 +513,30 @@
       0
     ]
   ],
-  "mapper_banks": [
-    4,
-    5
+  "tile_banks": [
+    32,
+    33,
+    34,
+    35
   ],
-  "map_bank": 24,
+  "map_banks": [
+    40,
+    41
+  ],
+  "map_bank": 40,
   "map_table_bytes": 2240,
-  "vram": {
+  "tile_cache": {
+    "strip_tiles": 8,
+    "strips": 106,
+    "slots": 56,
+    "uniform": 2,
+    "worst_view_strips": 32,
     "first_page": 2,
     "first_row": 180,
-    "tiles_per_row": 32,
-    "tiles_per_page": 288,
-    "ordering": "column-major groups of 9 tiles"
+    "ordering": "uniform tiles first, then first-seen; strips of 8 ids, 8 x 64 px"
   },
-  "map_format": "u16le column offsets, deduplicated count:u8/tile:u16le runs; exactly 19 tile rows",
-  "map_and_cache_ram_bytes": 7145,
+  "map_format": "u16le column offsets, deduplicated count:u8/tile:u16le runs, no run crossing an 8 KiB bank; exactly 19 tile rows",
+  "map_and_cache_ram_bytes": 5256,
   "island": {
     "islands": [],
     "huts": [],

@@ -84,6 +84,14 @@ def main():
         terrain_palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
         assert (out/f'{name}.palette').read_bytes()[:2]==terrain_palette[:2],(name,'sky colour 0',(out/f'{name}.palette').read_bytes()[:2])
         vram=(out/f'{name}.vram').read_bytes()
+        # Tile cache: every loaded slot holds its strip's 8 tiles (ROM banks
+        # from 32, 256 bytes a strip), as 64 rows of 4 bytes at rows 180..
+        # of VRAM page 2 or 3.
+        for slot,strip in enumerate((out/f'{name}.slots').read_bytes()):
+            if strip==255: continue
+            want=data[(32*8192)+strip*256:(32*8192)+strip*256+256]
+            got=b''.join(vram[0x10000+((slot>>5)*256+180+row)*128+(slot&31)*4:][:4] for row in range(64))
+            assert got==want,(name,'tile slot',slot,'strip',strip,[r for r in range(64) if got[r*4:r*4+4]!=want[r*4:r*4+4]][:8])
         fine=struct.unpack('b',(out/f'{name}.fine').read_bytes())[0]   # -1..7
         scale,wave_view,pilot=(out/f'{name}.view').read_bytes()
         stage,depth,lift_tick=(out/f'{name}.lift').read_bytes()

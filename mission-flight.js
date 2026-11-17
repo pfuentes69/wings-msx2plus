@@ -1,4 +1,4 @@
-// Mission ROM: 256 KiB ASCII8 with banked code; see docs/rom-banking.md.
+// Mission ROM: 512 KiB ASCII8 with banked code; see docs/rom-banking.md.
 // WINGS_MAP picks the map (a..o, default a): its converted assets in
 // assets_msx/mission_<map>, its C tables in src/generated/map_<map>
 // (tools/convert_mission.py --map). Maps other than a build to
@@ -9,7 +9,7 @@ ProjModules = ["src/msx/scenery_load", "src/msx/banking", "src/msx/vdp_ring", "s
     "src/msx/elevator", "src/msx/dashboard", "src/msx/waves", "src/msx/wave_band", "src/core/combat", "src/core/engine", "src/core/landing", "src/core/flight_model", "src/msx/rope", "src/core/smoke", "src/msx/smoke_draw", "src/core/island", "src/core/soldiers", "src/msx/message", "src/msx/sound", "src/msx/sound_update", "src/msx/sound_fm", "src/msx/terrain_patch", "src/core/game", "src/msx/menu", "src/msx/weapons", "src/msx/ship", "src/core/mission", `src/generated/map_${map}/mission_surfaces`, "src/generated/hellcat_frames", "src/generated/smoke_frames", "src/generated/font", `src/generated/map_${map}/mission_tiles`];
 Target = "ROM_ASCII8";
 CustomISR = "VHBLANK";
-ROMSize = 256;
+ROMSize = 512;
 // Segments 0..2 stay resident in windows 0..2; window 3 (A000h) is banked code.
 ROMMainSegments = 3;
 AddROMSignature = true;
@@ -17,7 +17,8 @@ LibModules = ["bios", "vdp", "input"];
 CompileOpt += ` -DWINGS_BANKED_CODE -DTILE_TERRAIN -DMISSION_TERRAIN -DWINGS_PRESENT_TICKS=8 -DWINGS_FLIGHT_MAX_Y=1200u -DWINGS_FLIGHT_START_Y=1108u -DWINGS_WORLD_WIDTH=${mission.source_width}u -DWINGS_WORLD_START=${mission.reset_x}u -DWINGS_CARRIER_X=${mission.reset_x}u -I${ProjDir}src/generated/map_${map}`;
 OutDir = map === "a" ? `${ProjDir}out/mission-flight/` : `${ProjDir}out/mission-flight-${map}/`;
 require("fs").mkdirSync(OutDir, { recursive: true });
-RawFiles = mission.mapper_banks.map(bank => ({ offset: bank * 8192, file: `assets_msx/mission_${map}/bank_${bank}.bin` }));
+// The terrain: tile strips from bank 32, the column map from bank 40 (tools/convert_mission.py).
+RawFiles = mission.tile_banks.concat(mission.map_banks).map(bank => ({ offset: bank * 8192, file: `assets_msx/mission_${map}/bank_${bank}.bin` }));
 
 const aircraftBytes = JSON.parse(require("fs").readFileSync(`${ProjDir}assets_msx/hellcat/manifest.json`, "utf8")).animation.pixel_bytes;
 for (let segment = 0; segment < Math.ceil(aircraftBytes / 8192); ++segment) {
@@ -26,7 +27,6 @@ for (let segment = 0; segment < Math.ceil(aircraftBytes / 8192); ++segment) {
 }
 
 RawFiles.push({ offset: 7 * 8192, file: "assets_msx/dashboard/bank_7.bin" });
-RawFiles.push({ offset: mission.map_bank * 8192, file: `assets_msx/mission_${map}/bank_${mission.map_bank}.bin` });
 
 RawFiles.push({ offset: 11 * 8192, file: "assets_msx/dashboard/waves.sc5" });
 
