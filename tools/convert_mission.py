@@ -22,12 +22,13 @@ STATIC_HEIGHTS = (36, 35, 35, 9, 13, 12)
 
 
 
-# Overlays drawn over the close view every frame: world x range and top VRAM
+# Overlays drawn over the close view every frame: x range relative to the
+# carrier (the map's reset_x, CARRIER_X in src/core/flight.h) and top VRAM
 # row at no pan (src/msx/ship.c Ship_Draw and Ship_DrawCrew, src/msx/elevator.c).
-OVERLAY_TOPS = ((6906, 6938, 46),    # flag and superstructure pieces
-                (6958, 6980, 116),   # bow signalmen
-                (7004, 7068, 112),   # elevator
-                (7334, 7356, 116))   # stern signalmen
+OVERLAY_TOPS = ((-126, -94, 46),     # flag and superstructure pieces
+                (-74, -52, 116),     # bow signalmen
+                (-28, 36, 112),      # elevator
+                (302, 324, 116))     # stern signalmen
 MAP_BANK = 24   # a free ROM bank (data); see docs/rom-banking.md
 
 def static_surface_height(raw_word):
@@ -295,6 +296,7 @@ def artifacts():
                 top = 24 + (row - 64) // 8 * 8
                 break
         for left, right, row in OVERLAY_TOPS:
+            left += mission['reset_x']; right += mission['reset_x']
             if left < block + 256 and right > block:
                 top = min(top, 24 + (row - 24) // 8 * 8)
         block_tops.append(top)

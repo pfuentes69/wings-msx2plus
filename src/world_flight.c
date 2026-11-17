@@ -1306,7 +1306,7 @@ advance_clocks:
           camera = camera < 128 ? 0 : camera - 128; if (camera > maximum) camera = maximum; }
 #endif
         g_ViewChange = 0;
-        s_RenderHeave = !g_TerrainFar && (u16)(camera + 256) > 6592 && camera < 7368 ? g_ShipHeave : 0;
+        s_RenderHeave = !g_TerrainFar && (u16)(camera + 256) > CARRIER_X - 440u && camera < CARRIER_X + 336u ? g_ShipHeave : 0;
         { int16_t altitude = (int16_t)(WINGS_FLIGHT_MAX_Y - y);
           u8 pan = !g_TerrainFar && altitude > 131 ? (u8)(altitude - 131) : 0;  /* original 0x26e */
           /* Tile rows (software) plus a fine scroll of -1..7 px (hardware):
@@ -1317,7 +1317,7 @@ advance_clocks:
               s_ViewKey = pan >> 3;
           s_RenderFine = g_TerrainFar ? 0 : (u8)(pan - (s_ViewKey << 3)); }
 #ifdef WINGS_P1_FLIGHT
-        s_CarrierView = !g_TerrainFar && (u16)(camera + 256) > 6592 && camera < 7368;
+        s_CarrierView = !g_TerrainFar && (u16)(camera + 256) > CARRIER_X - 440u && camera < CARRIER_X + 336u;
 #endif
         frame = s_Aircraft.shape;
         page = g_DisplayPage ^ 1;

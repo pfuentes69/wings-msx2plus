@@ -15,14 +15,21 @@
 /* Carrier geometry. Deck bounds follow the fcar/mcar/rcar drawing extents
  * (the original's landing range is the carrier map extents x 4, 16 px inward
  * at each end); the deck row rests a plane on its wheels at deck height. */
-#define FLIGHT_DECK_LEFT 6593u
-#define FLIGHT_DECK_RIGHT 7361u
+/* The carrier's position in the map: where a new plane starts (reset_x,
+ * given by the build per map; 7032 on map a). Everything about the carrier
+ * is relative to it. */
+#ifndef WINGS_WORLD_START
+#define WINGS_WORLD_START 7032u
+#endif
+#define CARRIER_X WINGS_WORLD_START
+#define FLIGHT_DECK_LEFT (CARRIER_X - 439u)
+#define FLIGHT_DECK_RIGHT (CARRIER_X + 329u)
 #define FLIGHT_DECK_EDGE 16u
 #define FLIGHT_DECK_Y 1160u
 /* The original's carrier position (-$5c6c): the elevator, where a new plane
  * starts. Gear comes down within FLIGHT_GEAR_RANGE of it, and the four
  * arresting cables lie at +70, +126, +182, +238 (0xb92e). */
-#define FLIGHT_CARRIER_X 7032u
+#define FLIGHT_CARRIER_X CARRIER_X
 #define FLIGHT_GEAR_RANGE 1280u
 #define FLIGHT_CABLE_FIRST 70u
 #define FLIGHT_CABLE_SPACING 56u

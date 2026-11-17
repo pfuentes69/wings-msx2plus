@@ -19,8 +19,8 @@ static Clip s_Clip[2];
 
 #define TERRAIN_TOP 24      /* first terrain row; above it the sky is plain */
 #define WAVE_TOP 159        /* smoke stays above the wave strip */
-#define ELEVATOR_LEFT 7004
-#define ELEVATOR_RIGHT 7068
+#define ELEVATOR_LEFT ((int)CARRIER_X - 28)
+#define ELEVATOR_RIGHT ((int)CARRIER_X + 36)
 
 /* 1 when the page's tiles in this column, tile rows first..last, are all
  * plain sky (solid colour 0): the puff can be erased with a fill. */

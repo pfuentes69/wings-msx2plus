@@ -48,18 +48,18 @@ void Elevator_Draw(u8 page,u16 camera,u8 depth,u8 cleared) WINGS_BANKED
 {
     u16 left=(camera+8)&65534u,right=(camera+257)&65534u;
     u8 i;
-    if (left<7004) left=7004;
-    if (right>7068) right=7068;
+    if (left<CARRIER_X-28u) left=CARRIER_X-28u;
+    if (right>CARRIER_X+36u) right=CARRIER_X+36u;
     if (left>=right) {s_Depth[page]=255;return;}
     if (!cleared && s_Depth[page]==depth &&
-        (s_Camera[page]==camera || (s_Camera[page]>=6812 && s_Camera[page]<=6996 && camera>=6812 && camera<=6996)))
+        (s_Camera[page]==camera || (s_Camera[page]>=CARRIER_X-220u && s_Camera[page]<=CARRIER_X-36u && camera>=CARRIER_X-220u && camera<=CARRIER_X-36u)))
     {s_Camera[page]=camera;return;}
     s_Depth[page]=depth;s_Camera[page]=camera;
     g_DirtyRange.left=left;g_DirtyRange.right=right;g_DirtyRange.page=page;
     g_DirtyRange.first=13;g_DirtyRange.last=14;
     Terrain_DirtyOverlay();
-    Copy(page,camera,0,7004,112,40,64);   /* OVERLAY_TOPS in tools/convert_mission.py */
+    Copy(page,camera,0,CARRIER_X-28u,112,40,64);   /* OVERLAY_TOPS in tools/convert_mission.py */
     for (i=0;i<4;++i)
-        Copy(page,camera,i+1,7004+(i&1)*32,129+depth+(i>=2 ? 7 : 0),i<2 ? 7 : 6,32);
+        Copy(page,camera,i+1,CARRIER_X-28u+(i&1)*32,129+depth+(i>=2 ? 7 : 0),i<2 ? 7 : 6,32);
 }
 #endif

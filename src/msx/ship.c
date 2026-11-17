@@ -72,10 +72,10 @@ void Ship_Draw(u8 page, u16 camera) WINGS_BANKED
 {
     u8 piece, index;
     u16 left, right, origin;
-    if (camera + 256 <= 6906 || camera >= 6938) return;
+    if (camera + 256 <= CARRIER_X - 126u || camera >= CARRIER_X - 94u) return;
     for (piece = 0; piece < 6; ++piece)
     {
-        origin = 6906 + (piece & 1) * 16;
+        origin = CARRIER_X - 126u + (piece & 1) * 16;
         left = (camera + 8) & 65534u; if (left < origin) left = origin;
         right = (camera + 257) & 65534u; if (right > origin + 16) right = origin + 16;
         if (left >= right) continue;
@@ -100,7 +100,7 @@ void Ship_DrawCrew(u8 page, u16 camera, u8 cleared) WINGS_BANKED
     s_CrewCamera[page] = camera;
     for (piece=0; piece<4; ++piece)
     {
-        origin = piece < 2 ? 6958 : 7334;
+        origin = piece < 2 ? CARRIER_X - 74u : CARRIER_X + 302u;
         left = (camera+8)&65534u; if (left < origin) left=origin;
         right = (camera+257)&65534u; if (right > origin+22) right=origin+22;
         if (left>=right) continue;
