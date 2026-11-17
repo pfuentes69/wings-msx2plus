@@ -40,6 +40,7 @@
 #define ISLAND_MESSAGE_NONE 0
 #define ISLAND_MESSAGE_CLEARED 1   /* "All enemy forces on island ... Bonus %ld points" */
 #define ISLAND_MESSAGE_MISSION 2   /* ... + "Good work ! ... return to carrier ..." */
+#define ISLAND_MESSAGE_PROMOTION 3 /* ... + "Congratulations! ... victory ceremony!!" (the rank's last mission) */
 /* An object anchored at a covers [a - 16, a + 16): the impact column's
  * anchor within columns -1..+2 (0x4ae4). */
 #define ISLAND_HIT(x, a) ((uint16_t)((x) - (a) + 16u) < 32u)

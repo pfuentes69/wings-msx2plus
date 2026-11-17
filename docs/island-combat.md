@@ -260,7 +260,7 @@ the island has no soldier and no AA gun left. `Cleared()` in
 - **Mission:** `g_Island.left` counts the islands with targets not yet
   cleared (`-$5c7b`). The last one completes the mission
   (`g_Island.complete`). Map A has one island, so clearing it completes the
-  mission. Returning to the carrier for the next mission is P4.
+  mission. Returning to the carrier for the next mission: [mission-flow.md](mission-flow.md).
 - **Message:** the original's ticker shows "All enemy forces on island have
   been destroyed . . . Bonus 450 points . . ." For the mission's last island,
   0x5694 drops the final full stop and appends "Good work ! You are ordered

@@ -19,6 +19,7 @@ static uint8_t Valid(const SessionState* state)
         state->game.sortie.weapon<=WEAPON_TORPEDO &&
         state->game.sortie.stock<=Game_WeaponStock(state->game.sortie.weapon) &&
         state->game.invert<=1 && state->game.mission.map<15 &&
+        state->game.mission.number>=1 && state->game.mission.number<=3 &&
         state->x<7608 && state->y<=1200 && state->left<=1 &&
         state->vx>=-205 && state->vx<=205 && state->vy>=-154 && state->vy<=154;
 }
@@ -31,7 +32,7 @@ uint8_t Session_Encode(const SessionState* s, uint8_t on_carrier, uint8_t* p)
     p[7]=s->game.sortie.weapon;p[8]=s->game.sortie.stock;
     p[9]=s->game.sortie.oil;p[10]=s->game.sortie.fuel;p[11]=s->game.invert;
     Put16(p+12,score);Put16(p+14,score>>16);
-    Put16(p+16,s->game.progress.kills);Put16(p+18,s->game.mission.map);
+    Put16(p+16,s->game.progress.kills);p[18]=s->game.mission.map;p[19]=s->game.mission.number;
     Put16(p+20,s->game.mission.objectives);Put16(p+22,s->x);Put16(p+24,s->y);
     Put16(p+26,s->vx);Put16(p+28,s->vy);p[30]=s->left;p[31]=Check(p);
     return 1;
@@ -46,7 +47,7 @@ uint8_t Session_Decode(const uint8_t* p, uint16_t size, SessionState* out)
     next.game.sortie.weapon=p[7];next.game.sortie.stock=p[8];
     next.game.sortie.oil=p[9];next.game.sortie.fuel=p[10];next.game.invert=p[11];
     next.game.progress.score=Get16(p+12)|((uint32_t)Get16(p+14)<<16);
-    next.game.progress.kills=Get16(p+16);next.game.mission.map=Get16(p+18);
+    next.game.progress.kills=Get16(p+16);next.game.mission.map=p[18];next.game.mission.number=p[19];
     next.game.mission.objectives=Get16(p+20);next.x=Get16(p+22);next.y=Get16(p+24);
     next.vx=(int16_t)Get16(p+26);next.vy=(int16_t)Get16(p+28);next.left=p[30];
     next.game.phase=GAME_PLAY;

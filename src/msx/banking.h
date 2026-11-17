@@ -22,6 +22,7 @@
 #define WINGS_SEGMENT_COMBAT 23 /* weapons, island targets */
 #define WINGS_SEGMENT_MISSION 25 /* island soldiers, island cleared, messages (24 is the map data) */
 #define WINGS_SEGMENT_SOUND 26  /* MSX-MUSIC: detection, its driver and effects (copied into RAM) */
+#define WINGS_SEGMENT_GAME 27   /* the game state: phases, rank, missions, lives (core/game.c) */
 
 #if defined(WINGS_BANKED_CODE) && defined(__SDCC)
 #define WINGS_BANKED __banked

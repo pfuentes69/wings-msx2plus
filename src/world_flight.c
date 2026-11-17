@@ -906,6 +906,17 @@ static void LosePlane(void)
  * between two frames still drives the flight model for this frame's ticks:
  * one tick of DOWN alone, for instance, starts a dive that then holds. */
 static u8 s_Tapped;
+/* The mission's last island fell: advanced once (0x5694), its promotion
+ * plane joins at the hold (0x0122). */
+static u8 s_MissionAdvanced, s_Promotion;
+/* A new mission (game start or the next one): the island restored, no
+ * ticker, nothing advanced yet. */
+static void StartMission(void)
+{
+    Island_Reset();
+    g_MessageActive = g_MessageWait = 0;
+    s_MissionAdvanced = s_Promotion = 0;
+}
 #endif
 static u8 ReadActions(void)
 {
@@ -915,7 +926,11 @@ static u8 ReadActions(void)
 #ifdef WINGS_P1_FLIGHT
     if (g_Game.phase==GAME_PLAY && g_Carrier.stage==CARRIER_HOLD)
     {
-        Game_OpenService(&g_Game);Engine_Reset(&g_Engine,&g_Game.sortie);
+        /* Back in the hold with the mission done: the next mission's
+         * briefing instead of the service (0x0122). */
+        if (g_Island.complete) Game_NextMission(&g_Game,s_Promotion);
+        else Game_OpenService(&g_Game);
+        Engine_Reset(&g_Engine,&g_Game.sortie);
         s_UiDirty=1;ConsumeActions();return 0;
     }
 #endif
@@ -931,8 +946,10 @@ static u8 ReadActions(void)
         old_phase=g_Game.phase; old_cursor=g_Game.cursor;
         old_notice=g_Game.notice; old_invert=g_Game.invert;
 #ifdef WINGS_P1_FLIGHT
+        /* A fire button on the elevator lowers it, unless Ctrl-R comes with
+         * it: that restarts from anywhere (manual). */
         if (g_Game.phase==GAME_PLAY && (pressed & (ACTION_PRIMARY|ACTION_SECONDARY)) &&
-            Carrier_Request(&g_Carrier,&s_World.flight,s_World.x>>8))
+            !(pressed & ACTION_RESTART) && Carrier_Request(&g_Carrier,&s_World.flight,s_World.x>>8))
         {
             Combat_Reset(&g_Combat);action=GAME_CONTEXT_CHANGED;
         }
@@ -948,7 +965,13 @@ static u8 ReadActions(void)
             Island_Reset();
 #endif
         }
-        if (action & GAME_START_SORTIE) { NewPlane(); reset_weapons=1; }
+        if (action & GAME_START_SORTIE)
+        {
+#ifdef WINGS_P1_FLIGHT
+            StartMission();
+#endif
+            NewPlane(); reset_weapons=1;
+        }
 #ifdef WINGS_P1_FLIGHT
         if (action & GAME_LEAVE_SERVICE) {Carrier_Raise(&g_Carrier);Combat_Reset(&g_Combat);reset_weapons=1;}
 #endif
@@ -1056,7 +1079,7 @@ void main(void)
 #endif
     Terrain_Load();
 #ifdef WINGS_P1_FLIGHT
-    Island_Reset(); g_TerrainDirty = 0;
+    StartMission(); g_TerrainDirty = 0;
 #endif
     for (page = 0; page < 2; ++page)
     {
@@ -1257,6 +1280,14 @@ advance_clocks:
             }
         }
 #ifdef WINGS_P1_FLIGHT
+        /* The last island fell this frame: the next mission number, and the
+         * rank's last mission promotes (its ticker says so). */
+        if (g_Island.complete && !s_MissionAdvanced)
+        {
+            s_MissionAdvanced = 1;
+            s_Promotion = Game_AdvanceMission(&g_Game);
+            if (s_Promotion && g_Island.message == ISLAND_MESSAGE_MISSION) g_Island.message = ISLAND_MESSAGE_PROMOTION;
+        }
         Sound_Update(&s_World.flight, s_World.x >> 8,
                      (g_Game.phase == GAME_PLAY ? SOUND_PLAYING : 0) | (s_CrashSteps ? SOUND_CRASHED : 0), steps);
         /* The ticker moves 2 px a VBlank (msx/message.c). */

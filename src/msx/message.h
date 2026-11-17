@@ -9,7 +9,7 @@
  * lines show VRAM rows 0.. of the page (never scenery: it starts at row 24)
  * at their own horizontal scroll, the text (rows 1..12, the original's
  * font) entering on the right. Segment 25. */
-#define MESSAGE_TEXT_MAX 180
+#define MESSAGE_TEXT_MAX 204
 /* Text rows 1..12, then sky down to the play area's own top lines under
  * its scroll, plus the 2 lines the split is requested early. */
 #define MESSAGE_BAND(scroll) (15 + (scroll))

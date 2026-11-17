@@ -2,7 +2,7 @@
 #define WINGS_SESSION_H
 #include "game.h"
 #define SESSION_SIZE 32
-#define SESSION_VERSION 1
+#define SESSION_VERSION 2   /* 2: map and mission number in bytes 18, 19 */
 /* P0 schema for portable state and inventory round trips. P2/P6 extend it for
  * deck/elevator/enemy state before enabling user-facing disk saves. */
 typedef struct SessionState {

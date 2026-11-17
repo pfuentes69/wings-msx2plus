@@ -10,7 +10,7 @@ ROOT=Path(__file__).resolve().parents[1]
 class Progress(C.Structure):
     _fields_=[('score',C.c_uint32),('kills',C.c_uint16),('rank',C.c_uint8),('lives',C.c_uint8)]
 class Mission(C.Structure):
-    _fields_=[('map',C.c_uint16),('objectives',C.c_uint16)]
+    _fields_=[('map',C.c_uint8),('number',C.c_uint8),('objectives',C.c_uint16)]
 class Sortie(C.Structure):
     _fields_=[('weapon',C.c_uint8),('stock',C.c_uint8),('oil',C.c_uint8),('fuel',C.c_uint8)]
 class Game(C.Structure):
@@ -67,6 +67,33 @@ class GameTests(unittest.TestCase):
         self.assertEqual((g.phase,flags),(3,10))
         self.assertEqual((g.progress.score,g.progress.rank,g.progress.lives,g.mission.objectives),(12345,3,2,17))
 
+    def test_missions_advance_through_the_ranks_and_promote(self):
+        # 0x5694: missions per rank 3, 3, 2, 2, 1, 1, 3; maps by rank * 4 +
+        # mission (-$7b9f); past the 7th rank the rank stays.
+        self.core.Game_AdvanceMission.argtypes=[C.POINTER(Game)];self.core.Game_AdvanceMission.restype=C.c_uint8
+        g=self.game()
+        self.assertEqual((g.progress.rank,g.mission.number,g.mission.map),(0,1,0))
+        seen=[]
+        for _ in range(17):
+            promoted=self.core.Game_AdvanceMission(C.byref(g))
+            seen.append((g.progress.rank,g.mission.number,g.mission.map,promoted))
+        self.assertEqual(seen,[(0,2,1,0),(0,3,2,0),(1,1,3,1),(1,2,4,0),(1,3,5,0),(2,1,6,1),(2,2,7,0),
+                               (3,1,8,1),(3,2,9,0),(4,1,10,1),(5,1,11,1),(6,1,12,1),(6,2,13,0),(6,3,14,0),
+                               (6,1,12,1),(6,2,13,0),(6,3,14,0)])
+    def test_back_in_the_hold_the_next_mission_is_briefed(self):
+        self.core.Game_NextMission.argtypes=[C.POINTER(Game),C.c_uint8]
+        g=self.game();g.phase=3;g.progress.score=4321;g.progress.lives=2;g.sortie.oil=10;g.sortie.fuel=20
+        self.core.Game_NextMission(C.byref(g),0)
+        self.assertEqual((g.phase,g.progress.lives,g.progress.score,g.sortie.oil,g.sortie.fuel),(1,2,4321,128,192))
+        self.core.Game_NextMission(C.byref(g),1);self.assertEqual(g.progress.lives,3)   # the promotion's plane
+        g.progress.lives=9;self.core.Game_NextMission(C.byref(g),1);self.assertEqual(g.progress.lives,9)
+        # The briefing leads to the loadout and a new sortie, as at game start.
+        self.action(g,32);self.assertEqual(g.phase,2)
+        flags=self.action(g,64);self.assertEqual((g.phase,flags),(3,3))
+    def test_rank_selection_starts_that_ranks_first_mission(self):
+        g=self.game()
+        for _ in range(4): self.action(g,8)
+        self.action(g,16);self.assertEqual((g.progress.rank,g.mission.number,g.mission.map),(4,1,10))
     def test_seven_ranks_plus_separate_load_command(self):
         g=self.game();self.action(g,1);self.assertEqual(g.cursor,7)
         self.action(g,16);self.assertEqual((g.phase,g.progress.rank),(5,0))

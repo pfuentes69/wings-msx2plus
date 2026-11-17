@@ -15,3 +15,4 @@ extern const unsigned char g_FontBits[2076];
  * the bonus for %ld) and "Good work ! You are ordered to return to carrier to receive your next mission ! . . .". */
 extern const char g_MessageCleared[76];
 extern const char g_MessageMission[86];
+extern const char g_MessagePromotion[120];

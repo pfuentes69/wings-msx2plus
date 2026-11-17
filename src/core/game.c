@@ -1,29 +1,66 @@
 #include "game.h"
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_GAME)
 #include "engine.h"
 
-uint8_t Game_WeaponStock(uint8_t weapon)
+uint8_t Game_WeaponStock(uint8_t weapon) WINGS_BANKED
 {
     return weapon==WEAPON_BOMBS ? 30 : weapon==WEAPON_ROCKETS ? 15 : weapon==WEAPON_TORPEDO ? 1 : 0;
 }
 
-void Game_SetLoadout(GameState* game, uint8_t weapon)
+void Game_SetLoadout(GameState* game, uint8_t weapon) WINGS_BANKED
 {
     if (weapon>WEAPON_TORPEDO) return;
     game->sortie.weapon=weapon;
     game->sortie.stock=Game_WeaponStock(weapon);
 }
 
-void Game_Reset(GameState* game)
+/* Missions per rank (-$5ab6) and each mission's map by rank * 4 + number
+ * (-$7b9f): 15 maps over 7 ranks. Only map 0 (mission A) is decoded yet;
+ * the others fly it too until the campaign is (P6). */
+static const uint8_t s_MissionsPerRank[7] = {3, 3, 2, 2, 1, 1, 3};
+static const uint8_t s_MissionMap[28] = {
+    0, 0, 1, 2,  0, 3, 4, 5,  0, 6, 7, 0,  0, 8, 9, 0,
+    0, 10, 0, 0, 0, 11, 0, 0, 0, 12, 13, 14};
+
+static void FirstMission(GameState* game)
+{
+    game->mission.number=1;
+    game->mission.map=s_MissionMap[(uint8_t)(game->progress.rank<<2)+1];
+}
+
+uint8_t Game_AdvanceMission(GameState* game) WINGS_BANKED
+{
+    uint8_t promoted=0;
+    if (++game->mission.number>s_MissionsPerRank[game->progress.rank])
+    {
+        game->mission.number=1;
+        if (game->progress.rank<6) ++game->progress.rank;
+        promoted=1;
+    }
+    game->mission.map=s_MissionMap[(uint8_t)(game->progress.rank<<2)+game->mission.number];
+    return promoted;
+}
+
+void Game_NextMission(GameState* game, uint8_t promoted) WINGS_BANKED
+{
+    /* The HUD shows one digit of planes. */
+    if (promoted && game->progress.lives<9) ++game->progress.lives;
+    /* The hold repairs and refuels, as for a service. */
+    game->sortie.oil=ENGINE_OIL_FULL; game->sortie.fuel=ENGINE_FUEL_FULL;
+    game->phase=GAME_BRIEFING; game->cursor=game->notice=0;
+}
+
+void Game_Reset(GameState* game) WINGS_BANKED
 {
     game->progress.score=0; game->progress.kills=0;
     game->progress.rank=0; game->progress.lives=3;
-    game->mission.map=0; game->mission.objectives=0;
+    game->mission.objectives=0; FirstMission(game);
     Game_SetLoadout(game,WEAPON_BOMBS);
     game->sortie.oil=ENGINE_OIL_FULL; game->sortie.fuel=ENGINE_FUEL_FULL;
     game->phase=GAME_RANK; game->cursor=game->invert=game->notice=0;
 }
 
-uint8_t Game_LosePlane(GameState* game)
+uint8_t Game_LosePlane(GameState* game) WINGS_BANKED
 {
     if (game->progress.lives) --game->progress.lives;
     if (game->progress.lives) return 1;
@@ -31,7 +68,7 @@ uint8_t Game_LosePlane(GameState* game)
     return 0;
 }
 
-void Game_OpenService(GameState* game)
+void Game_OpenService(GameState* game) WINGS_BANKED
 {
     game->phase=GAME_SERVICE;game->cursor=game->sortie.weapon;game->notice=0;
     Game_SetLoadout(game,game->sortie.weapon);
@@ -39,7 +76,7 @@ void Game_OpenService(GameState* game)
     game->sortie.oil=ENGINE_OIL_FULL; game->sortie.fuel=ENGINE_FUEL_FULL;
 }
 
-uint8_t Game_HandleAction(GameState* game, uint16_t pressed)
+uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
 {
     uint8_t old=game->phase, prev, next, count;
     if (pressed & ACTION_RESTART)
@@ -86,7 +123,7 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed)
     if (old==GAME_RANK)
     {
         if (game->cursor==7) { game->phase=GAME_LOAD_MENU; game->cursor=GAME_RANK; }
-        else { game->progress.rank=game->cursor; game->phase=GAME_BRIEFING; }
+        else { game->progress.rank=game->cursor; FirstMission(game); game->phase=GAME_BRIEFING; }
     }
     else if (old==GAME_BRIEFING)
     {
@@ -105,7 +142,7 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed)
     return game->phase!=old ? GAME_CONTEXT_CHANGED : 0;
 }
 
-void Game_View(const GameState* game, uint8_t* view)
+void Game_View(const GameState* game, uint8_t* view) WINGS_BANKED
 {
     view[0]=game->phase; view[1]=game->progress.rank; view[2]=game->progress.lives;
     view[3]=game->sortie.weapon; view[4]=game->sortie.stock; view[5]=game->invert;

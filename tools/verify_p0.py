@@ -173,6 +173,9 @@ def main():
     required|={'island_bombed','pan_high','pan_mid'}
     required|={'deck_smoke_live','deck_smoke_cleared'}
     required|={'island_soldiers','island_cleared'}
+    # P4: back on the carrier with the mission complete, the next mission.
+    required|={'return_arrest','return_landed','mission_briefing','mission_two'}
+    assert snapshots['mission_briefing']['phase']==1 and snapshots['mission_two']['phase']==3,('next mission',snapshots['mission_briefing']['phase'],snapshots['mission_two']['phase'])
     assert required<=snapshots.keys(),required-snapshots.keys()
     assert (out/'paused.combat').read_bytes()==(out/'pause_wait.combat').read_bytes(),'Pause advanced weapons'
     for key in ('world','y','pose','wave','heave','ship','crew','depth','stage'):

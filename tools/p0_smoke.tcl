@@ -705,7 +705,35 @@ proc open_sea {} {
     # Past the map's right end (7608) the ocean goes on and the camera keeps
     # the plane centred, as in the original.
     pilot 128 1060
-    wait_for {[world_x]>7900} {snap open_sea_right {pilot_off;fly 1;keymatrixup 8 1;after time 0.3 restart_game}} "fly past the map end" 30
+    wait_for {[world_x]>7900} {snap open_sea_right {pilot_off;fly 1;keymatrixup 8 1;after time 0.3 mission_return}} "fly past the map end" 30
+}
+# P4: the island is cleared, so the mission is complete. Land, go down the
+# lift, and the hold briefs the next mission instead of servicing the plane
+# (0x0122); rank 0 has three, so no promotion yet. The loadout then starts a
+# new sortie with the island restored. The landing reuses the circuit with
+# the snapshots named return_*.
+proc mission_return {} {
+    require [expr {[debug read memory [expr {$::addr(g_Island)+314}]]==1}] "Mission not complete before the return"
+    set ::mission_return 1
+    set ::return_lives [view 2]
+    # Head back over the carrier first: the circuit's outbound leg is timed
+    # from a takeoff.
+    pilot 16 1140
+    wait_for {[world_x]<7000} {circuit land_flare} "fly back to the carrier" 20
+}
+proc sname {name} {expr {[info exists ::mission_return] ? "return_$name" : $name}}
+proc mission_briefed {} {
+    # g_Game: rank +6, lives +7, mission map +8, number +9.
+    set rank [debug read memory [expr {$::addr(g_Game)+6}]]
+    set map [debug read memory [expr {$::addr(g_Game)+8}]]
+    set number [debug read memory [expr {$::addr(g_Game)+9}]]
+    require [expr {$rank==0 && $number==2 && $map==1 && [view 2]==$::return_lives}] "Next mission: rank=$rank number=$number map=$map lives=[view 2] (was $::return_lives)"
+    snap mission_briefing {pulse 7 128 {phase 2 {pulse 7 128 {phase 3 {wait_lift_up mission_two}}}}}
+}
+proc mission_two {} {
+    require [expr {![island_wrecked 0] && [debug read memory [expr {$::addr(g_Island)+314}]]==0 && ![value g_MessageActive]}] "The next mission must restore the island"
+    unset ::mission_return
+    snap mission_two {after time 0.3 restart_game}
 }
 proc restart_game {} {
     fly 0
@@ -868,12 +896,12 @@ proc land_touch {} {
     require [expr {[value g_LastContact]==1 && [world_byte 12]!=1 && [world_y]==1160 && [world_byte 11]}] "Stall onto the deck must land: contact=[value g_LastContact] mode=[world_byte 12] y=[world_y]"
     puts $::report "touchdown x=[world_x] speed=[speed]"
     # Caught: the original draws the stretched rope while the cable holds.
-    wait_for {[world_byte 12]==2} {set ::wanted_rope 1;snap arrest {wait_for {[world_byte 12]==0 && [speed]==0} land_stopped "arrest" 3}} "cable catch" 2
+    wait_for {[world_byte 12]==2} {set ::wanted_rope 1;snap [sname arrest] {wait_for {[world_byte 12]==0 && [speed]==0} land_stopped "arrest" 3}} "cable catch" 2
 }
 proc land_stopped {} {
     fly 0
     require [expr {[world_x]>7038 && [world_y]==1160}] "Arrested past the elevator: x=[world_x]"
-    snap landed land_taxi
+    snap [sname landed] land_taxi
 }
 proc land_taxi {} {
     set ::wait_deadline [expr {[machine_info time]+30}]
@@ -892,6 +920,7 @@ proc land_taxi_wait {} {
     if {[speed]==0 && abs($d)<=6} {
         fly 0
         require [expr {abs([world_x]-7032)<=6}] "Taxi did not stop on the elevator: x=[world_x]"
+        if {[info exists ::mission_return]} {pulse 8 1 {phase 1 mission_briefed};return}
         pulse 8 1 {phase 7 {snap landed_service {pulse 7 128 {phase 3 {wait_lift_up {engine_takeoff bounce_circuit}}}}}}
         return
     }

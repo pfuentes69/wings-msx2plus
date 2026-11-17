@@ -19,10 +19,12 @@ static u8 s_Next[2];
 
 /* Both texts and the bonus fit (no bounds checks in the copies). */
 typedef char TextFits[sizeof(g_MessageCleared) + sizeof(g_MessageMission) + 5 <= MESSAGE_TEXT_MAX ? 1 : -1];
+typedef char PromotionFits[sizeof(g_MessageCleared) + sizeof(g_MessagePromotion) + 5 <= MESSAGE_TEXT_MAX ? 1 : -1];
 
 /* The island's message (0x3f6e) with the executable's sprintf for its one
  * %ld, the bonus; the mission's last island (0x5694) appends "Good work
- * ..." over the final full stop. Digits by subtraction: SDCC divides
+ * ..." over the final full stop, or "Congratulations! ..." when the rank's
+ * last mission brings a promotion. Digits by subtraction: SDCC divides
  * through a slow call. */
 static void Compose(u16 value, u8 mission)
 {
@@ -43,7 +45,7 @@ static void Compose(u16 value, u8 mission)
     --out;
     if (mission)
     {
-        text = g_MessageMission;
+        text = mission == ISLAND_MESSAGE_PROMOTION ? g_MessagePromotion : g_MessageMission;
         --out;
         while ((*out++ = *text++)) {}
     }
@@ -62,7 +64,7 @@ void Message_Update(u8 vblanks) WINGS_BANKED
          * island is cleared and the next): the ticker starts after them. */
         if (!g_MessageWait) g_MessageWait = 3;
         if (--g_MessageWait) return;
-        Compose(g_Island.bonus, g_Island.message == ISLAND_MESSAGE_MISSION);
+        Compose(g_Island.bonus, g_Island.message == ISLAND_MESSAGE_CLEARED ? 0 : g_Island.message);
         g_Island.message = ISLAND_MESSAGE_NONE;
         s_TextEnd = 0xFFFF;   /* Message_Draw finds it */
         /* A ticker still running restarts: blank both bands first. */
