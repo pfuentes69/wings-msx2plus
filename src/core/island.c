@@ -4,6 +4,7 @@
 #include "mission_tiles.h"
 #include "mission_island.h"
 #include "mission.h"
+#include "ships.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
 
 #ifdef WINGS_P1_FLIGHT  /* smoke.h: the debug ROM keeps the P0 flight */
@@ -168,15 +169,21 @@ static void Reinforce(uint8_t d)
 }
 
 
+/* 1 when the last Island_Bombed wrecked a hut or struck a dugout: a rocket
+ * then flashes red (0x4744, 0x4812). */
+static uint8_t s_Struck;
+
 uint16_t Island_Bombed(uint16_t x) WINGS_BANKED
 {
     uint8_t i;
     IslandBuilding* b;
+    s_Struck = 0;
     for (i = 0; i < ISLAND_HUTS; ++i)
     {
         if (!ISLAND_HIT(x, s_HutX[i])) continue;
         b = &g_Island.hut[i];
-        if (b->wrecked) return 0;
+        if (b->wrecked) return 0;   /* now hutb, id 5: no target */
+        s_Struck = 1;
         b->wrecked = 1;
         Wreck(i, 1);
         b->c = 50; b->e = 1;
@@ -188,6 +195,7 @@ uint16_t Island_Bombed(uint16_t x) WINGS_BANKED
     {
         if (!ISLAND_HIT(x, s_DugoutX[i])) continue;
         b = &g_Island.dugout[i];
+        s_Struck = 1;
         if (!b->garrison) return 0;   /* dugouts cannot be destroyed */
         b->e = 200;
         Evacuate(b);
@@ -196,19 +204,36 @@ uint16_t Island_Bombed(uint16_t x) WINGS_BANKED
     return 0;
 }
 
-void Island_Impacts(const CombatState* combat, uint32_t* score) WINGS_BANKED
+/* 0x46dc: a rocket impact flashes the background white, red when it hit
+ * something. */
+static void Flash(CombatState* combat, uint8_t color)
+{
+    if (!color) return;
+    combat->sky_flash = 5;
+    combat->sky_color = color;
+}
+
+void Island_Impacts(CombatState* combat, uint32_t* score) WINGS_BANKED
 {
     const CombatProjectile* p = combat->projectile;
     uint16_t points = 0, x;
     uint8_t i;
     /* A detonation sets life 6; Combat_Advance counts it down every tick.
-     * Bombs damage buildings; bomb bursts (0x0cc0) and cannon strikes
-     * (0x19f6, slots 0..1) kill walking soldiers within 16 px. */
+     * Bombs and rockets damage buildings; their bursts (0x0cc0) and cannon
+     * strikes (0x19f6, slots 0..1) kill walking soldiers within 16 px. */
     for (i = 0; i < combat->count; ++i, ++p)
     {
         if (p->life != 6 || p->kind < COMBAT_IMPACT) continue;
         x = p->x >> 2;
+        s_Struck = 0;
         if (i >= COMBAT_GUN_COUNT && p->kind == COMBAT_IMPACT) points += Island_Bombed(x);
+        if (p->vx == COMBAT_ROCKET_BURST)
+        {
+            /* On land any impact flashes; over the sea or a deck only near
+             * a hull, where a rocket may destroy a ship's gun (0x4986). */
+            if (Mission_Surface(x) == MISSION_ISLAND) Flash(combat, s_Struck ? COMBAT_SKY_RED : COMBAT_SKY_WHITE);
+            else Flash(combat, Ships_Rocket(x, score));
+        }
         Island_Kill((int16_t)x, 16);
     }
     *score += points;

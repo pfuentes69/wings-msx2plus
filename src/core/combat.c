@@ -1,6 +1,8 @@
 #include "combat.h"
 #include "flight.h"
 #include "mission.h"
+#include "ships.h"
+#include "rockets.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
 #if WINGS_WORLD_WIDTH > 8191
 #error Combat Q2 coordinates require a world no wider than 8191 pixels
@@ -26,6 +28,9 @@ void Combat_Reset(CombatState* state) WINGS_BANKED
     state->count = COMBAT_GUN_COUNT; state->aim_pitch=4;
     state->shots_fired = state->secondary_fired = state->impacts = 0;
     state->flash = state->flash_ticks = 0;
+    for (i = 0; i < COMBAT_ROCKETS; ++i) state->rocket[i].live = 0;
+    state->rockets = state->rocket_tick = 0;
+    state->sky_flash = state->sky_color = 0;
 }
 
 /* height <= COMBAT_GUN_RANGE and tracer runs <= 11 keep this in 16 bits. */
@@ -83,11 +88,35 @@ static void Fall(CombatProjectile* p)
     else { while (v >= 10) { v -= 10; ++q; } p->vx -= 2 * q; }
 }
 
+/* 0x0bf0: the altitude ordnance bursts at over x: 12 above the sea or an
+ * island, 11 above a deck. The carrier's deck stands at 33 (as the port
+ * lands on it); an enemy ship's at its +e less the bob (0x5714). */
+static uint8_t s_Surface;
+static uint8_t BurstAltitude(CombatState* state, uint16_t x)
+{
+    uint8_t ship;
+    s_Surface = Mission_Surface(x);
+    if (s_Surface != MISSION_CARRIER) return 12;
+    ship = Ships_Find(x);
+    if (ship == SHIP_NONE || ship == SHIP_CARRIER) return 44;
+    return Ships_Deck(ship) - state->bob + 11;
+}
+
+/* A burst at x, drawn on the surface under it (12 px below the burst):
+ * a splash on the sea, an impact on land or a deck. Bomb bursts use their
+ * own slot; a rocket takes a free one. */
+static void Burst(CombatState* state, CombatProjectile* p, uint16_t x, uint8_t altitude, int8_t source)
+{
+    p->x = x * 4u; p->y = (WINGS_FLIGHT_MAX_Y - altitude + 12) * 4u;
+    p->vx = source; p->vy = 0; p->life = 6;
+    p->kind = s_Surface == MISSION_SEA ? COMBAT_SPLASH : COMBAT_IMPACT;
+    if (state->impacts != 65535u) ++state->impacts;
+}
+
 static void Advance(CombatState* state, CombatProjectile* p)
 {
     int16_t next;
-    uint16_t floor;
-    uint8_t surface;
+    uint8_t altitude;
     if (!p->kind) return;
     if (!--p->life) { p->kind = 0; return; }
     if (p->kind >= COMBAT_IMPACT) return;
@@ -102,14 +131,8 @@ static void Advance(CombatState* state, CombatProjectile* p)
      * huts and trees), or 11 above the deck. The burst is drawn on the
      * surface (32 px up on the carrier). */
     if (p->y < COMBAT_DECK_BURST_Y * 4) return;
-    surface = Mission_Surface(p->x >> 2);
-    if (p->y >= (surface == MISSION_CARRIER ? COMBAT_DECK_BURST_Y : COMBAT_BURST_Y) * 4u)
-    {
-        floor = surface == MISSION_CARRIER ? 1168u * 4 : 1200u * 4;
-        p->y = floor; p->life = 6;
-        p->kind = surface == MISSION_SEA ? COMBAT_SPLASH : COMBAT_IMPACT;
-        if (state->impacts != 65535u) ++state->impacts;
-    }
+    altitude = BurstAltitude(state, p->x >> 2);
+    if (p->y >= (WINGS_FLIGHT_MAX_Y - altitude) * 4u) Burst(state, p, p->x >> 2, altitude, 0);
 }
 
 void Combat_Advance(CombatState* state, SortieState* sortie, uint16_t x, uint16_t y,
@@ -126,6 +149,8 @@ void Combat_Advance(CombatState* state, SortieState* sortie, uint16_t x, uint16_
     // reading the loop bound from unrelated RAM (see docs/sdcc-pitfalls.md).
     for (i = state->count, p = state->projectile; i; --i, ++p) Advance(state, p);
     while (state->count>COMBAT_GUN_COUNT && !state->projectile[state->count-1].kind) --state->count;
+    /* Rockets move on the original's 12.5 Hz tick: every second call. */
+    if (state->rockets && (state->rocket_tick ^= 1)) Rockets_Step(state, x, y, left);
     if (fire && !state->cooldown && x < WINGS_WORLD_WIDTH)
     {
         state->cooldown = 3;
@@ -140,7 +165,20 @@ void Combat_Advance(CombatState* state, SortieState* sortie, uint16_t x, uint16_
         state->secondary_pending = 0;
         for (i=COMBAT_GUN_COUNT;i<state->count;++i)
             if (!state->projectile[i].kind) break;
-        if (sortie->weapon==WEAPON_BOMBS && sortie->stock && !state->secondary_cooldown &&
+        if (sortie->weapon==WEAPON_ROCKETS && sortie->stock && !state->secondary_cooldown &&
+            x < WINGS_WORLD_WIDTH)
+        {
+            /* Held, rockets repeat at the bombs' rate (the user's observed
+             * rate; docs/combat-prototype.md). */
+            if (Rockets_Launch(state, x, y, vx, vy, left))
+            {
+                state->secondary_cooldown = 6;
+                if (++state->secondary_phase==4) {state->secondary_phase=0;++state->secondary_cooldown;}
+                --sortie->stock;
+                if (state->secondary_fired != 65535u) ++state->secondary_fired;
+            }
+        }
+        else if (sortie->weapon==WEAPON_BOMBS && sortie->stock && !state->secondary_cooldown &&
             i<COMBAT_COUNT && x < WINGS_WORLD_WIDTH)
         {
             if (i==state->count) ++state->count;

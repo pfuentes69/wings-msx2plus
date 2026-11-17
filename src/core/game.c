@@ -131,9 +131,9 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
     }
     else if (old==GAME_LOADOUT || old==GAME_SERVICE)
     {
-        // P3/P4 implement rocket/torpedo behavior. Never consume their stock
-        // or launch a bomb disguised as a different selected weapon.
-        if (game->sortie.weapon!=WEAPON_BOMBS) { game->notice=1; return 0; }
+        // The torpedo comes with the ships' later steps: never consume its
+        // stock or launch something else in its place.
+        if (game->sortie.weapon==WEAPON_TORPEDO) { game->notice=1; return 0; }
         game->phase=GAME_PLAY;
         return GAME_CONTEXT_CHANGED|(old==GAME_SERVICE ? GAME_LEAVE_SERVICE : GAME_START_SORTIE);
     }

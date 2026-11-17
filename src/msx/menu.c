@@ -101,7 +101,7 @@ void Menu_Draw(u8 page, const GameState* game) WINGS_BANKED
         Text(page,62,game->cursor==0 ? "> BOMBS 30" : "  BOMBS 30");
         Text(page,80,game->cursor==1 ? "> ROCKETS 15" : "  ROCKETS 15");
         Text(page,98,game->cursor==2 ? "> TORPEDO 1" : "  TORPEDO 1");
-        if (game->cursor || game->notice) Text(page,122,"NOT AVAILABLE IN THIS BUILD");
+        if (game->cursor==WEAPON_TORPEDO || game->notice) Text(page,122,"NOT AVAILABLE IN THIS BUILD");
         Text(page,151,"ENTER OR BUTTON TO CONFIRM");
     }
     else if (game->phase==GAME_OVER)

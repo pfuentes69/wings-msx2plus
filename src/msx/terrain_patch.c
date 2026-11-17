@@ -4,7 +4,7 @@
 #include "mission_tiles.h"
 #include "vdp.h"
 #include "vdp_inl.h"
-WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_PATCH)
 
 uint8_t g_TerrainDirty;
 

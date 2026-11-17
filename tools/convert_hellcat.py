@@ -236,8 +236,16 @@ SOLDIER_FAR = ('guy0', 'guy1')
 # The island flag (0x3b52): waving flg0..flg2 while the island holds out,
 # then POST, a bare pole. Drawn in the close view only.
 FLAG_NEAR = ('flg0', 'flg1', 'flg2')   # the cloth only: the pole is in the scenery
+# Rockets (0x0702): torpedo.shp shapes 0x4c + frame once lit (rc01..rc14,
+# with its flame) and 0x74 + frame before ignition (ro01..ro14); frames 0..9
+# face right from the steepest climb to the steepest dive, 10..19 face left.
+# The distant view draws 8thscale shape 9, bumb.
+ROCKET_LIT = tuple(f'rc{n:02x}' for n in range(1, 21))
+ROCKET_UNLIT = tuple(f'ro{n:02x}' for n in range(1, 21))
+ROCKET_FAR = ('bumb',)
 SMOKE_FRAME_COUNT = (len(SMOKE_NEAR) + len(SMOKE_FAR) + len(SMOKE_EXTRA_NEAR) + len(SMOKE_EXTRA_FAR)
-                     + len(SOLDIER_NEAR) + len(SOLDIER_FAR) + len(FLAG_NEAR))
+                     + len(SOLDIER_NEAR) + len(SOLDIER_FAR) + len(FLAG_NEAR)
+                     + len(ROCKET_LIT) + len(ROCKET_UNLIT) + len(ROCKET_FAR))
 
 
 def smoke_assets(pixels, color_map, frames, wheel_sizes):
@@ -254,6 +262,7 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
     shapes = root / 'reference_assets/original_files/Wings_of_Fury/shapes'
     world = {n: r for n, _, r in read_ppkc(unpack_rpck((shapes / 'world.shp').read_bytes()))}
     reduced = {n: r for n, _, r in read_ppkc(unpack_rpck((shapes / '8thscale.shp').read_bytes()))}
+    torpedo = {n: r for n, _, r in read_ppkc(unpack_rpck((shapes / 'torpedo.shp').read_bytes()))}
     # The sprite colours (16..31) map as the aircraft's; the playfield colours
     # some new frames use (fire, flash, barrel outline) as the terrain's.
     terrain = json.loads((root / 'assets_msx/terrain/manifest.json').read_text())['source_to_msx_index']
@@ -263,7 +272,8 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
     for records, names, options in ((world, SMOKE_NEAR, near), (reduced, SMOKE_FAR, far),
                                     (world, SMOKE_EXTRA_NEAR, near), (reduced, SMOKE_EXTRA_FAR, far),
                                     (world, SOLDIER_NEAR, near), (reduced, SOLDIER_FAR, far),
-                                    (world, FLAG_NEAR, near)):
+                                    (world, FLAG_NEAR, near), (torpedo, ROCKET_LIT, near),
+                                    (torpedo, ROCKET_UNLIT, near), (reduced, ROCKET_FAR, far)):
         for name in names:
             indices, meta = decode_record(records[name], **options)
             width = meta['width']
@@ -276,7 +286,16 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
             images.append((name, colors, x0, y0, (x1 - x0 + 1) // 2 * 2, y1 - y0, ox, oy,
                            hashlib.sha256(records[name]).hexdigest()))
     # Pieces: (frame, row offset, height); split the largest until all fit.
-    pieces = [(f, 0, img[5]) for f, img in enumerate(images)]
+    # The rockets come last, in the cells the tile cache freed (atlas_slots),
+    # so the other frames keep their places.
+    rocket_first = SMOKE_FRAME_COUNT - len(ROCKET_LIT) - len(ROCKET_UNLIT) - len(ROCKET_FAR)
+    def split(pieces):
+        big = max(range(len(pieces)), key=lambda i: images[pieces[i][0]][4] * pieces[i][2])
+        f, top, h = pieces[big]
+        if h < 2:
+            raise ValueError('smoke frames exceed the atlas gaps')
+        pieces[big:big + 1] = [(f, top, h // 2), (f, top + h // 2, h - h // 2)]
+    pieces = [(f, 0, img[5]) for f, img in enumerate(images[:rocket_first])]
     while True:
         sizes = [(images[f][4], h) for f, _, h in pieces]
         try:
@@ -284,11 +303,17 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
                                     reserve_wheels=wheel_sizes, reserve_rope=True, reserve_smoke=sizes)
             break
         except ValueError:
-            big = max(range(len(pieces)), key=lambda i: images[pieces[i][0]][4] * pieces[i][2])
-            f, top, h = pieces[big]
-            if h < 2:
-                raise
-            pieces[big:big + 1] = [(f, top, h // 2), (f, top + h // 2, h - h // 2)]
+            split(pieces)
+    rocket = [(f, 0, images[f][5]) for f in range(rocket_first, len(images))]
+    while True:
+        try:
+            *_, rocket_cells = atlas_slots(27, True, True, True, True, frames=frames,
+                                           reserve_wheels=wheel_sizes, reserve_rope=True, reserve_smoke=sizes,
+                                           reserve_rockets=[(images[f][4], h) for f, _, h in rocket])
+            break
+        except ValueError:
+            split(rocket)
+    pieces += rocket; smoke = list(smoke) + list(rocket_cells)
     records, first = [], []
     for f, img in enumerate(images):
         first.append(len(records))
@@ -309,7 +334,7 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
         part = records[first[f]:first[f + 1]]
         x0 = min(r['dx'] for r in part); y0 = min(r['dy'] for r in part)
         boxes += [x0, y0, max(r['dx'] + r['width'] for r in part) - x0, max(r['dy'] + r['height'] for r in part) - y0]
-    if len(images) != 46: raise ValueError('smoke frame numbering changed')
+    if len(images) != 87: raise ValueError('smoke frame numbering changed')
     return records, first, boxes
 
 
@@ -542,6 +567,9 @@ extern const unsigned char g_WheelFirst[21];
 #define SMOKE_FRAME_SOLDIER 23      /* guy0..: + 9 facing left */
 #define SMOKE_FRAME_FAR_SOLDIER 41  /* 8thscale guy0, guy1 */
 #define SMOKE_FRAME_FLAG 43         /* the flag's cloth, flg0..flg2 */
+#define SMOKE_FRAME_ROCKET 46       /* lit rc01..rc14: + 10 facing left */
+#define SMOKE_FRAME_ROCKET_UNLIT 66 /* before ignition, ro01..ro14 */
+#define SMOKE_FRAME_FAR_ROCKET 86   /* 8thscale bumb */
 #define SMOKE_FRAME_COUNT {SMOKE_FRAME_COUNT}
 /* In smoke_frames.c, banked (segment 22): use from that segment only. */
 #ifdef MISSION_TERRAIN

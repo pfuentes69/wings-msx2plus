@@ -62,17 +62,20 @@ extern const unsigned char g_WheelFirst[21];
  * gnf0..gnf6, the far flash expl, the soldiers guy0..gy11 and the far
  * soldiers; pieces
  * g_SmokePieces[g_SmokeFirst[frame] .. g_SmokeFirst[frame + 1]). */
-#define SMOKE_PIECE_COUNT 108
+#define SMOKE_PIECE_COUNT 167
 #define SMOKE_FRAME_FIRE 7
 #define SMOKE_FRAME_GUN 8
 #define SMOKE_FRAME_FAR_FLASH 22
 #define SMOKE_FRAME_SOLDIER 23      /* guy0..: + 9 facing left */
 #define SMOKE_FRAME_FAR_SOLDIER 41  /* 8thscale guy0, guy1 */
 #define SMOKE_FRAME_FLAG 43         /* the flag's cloth, flg0..flg2 */
-#define SMOKE_FRAME_COUNT 46
+#define SMOKE_FRAME_ROCKET 46       /* lit rc01..rc14: + 10 facing left */
+#define SMOKE_FRAME_ROCKET_UNLIT 66 /* before ignition, ro01..ro14 */
+#define SMOKE_FRAME_FAR_ROCKET 86   /* 8thscale bumb */
+#define SMOKE_FRAME_COUNT 87
 /* In smoke_frames.c, banked (segment 22): use from that segment only. */
 #ifdef MISSION_TERRAIN
 extern const AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT];
-extern const unsigned char g_SmokeFirst[47];
-extern const signed char g_SmokeBox[184];   /* per frame: dx, dy, width, height */
+extern const unsigned char g_SmokeFirst[88];
+extern const signed char g_SmokeBox[348];   /* per frame: dx, dy, width, height */
 #endif

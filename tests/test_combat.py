@@ -17,12 +17,20 @@ class Projectile(ctypes.Structure):
 class Sortie(ctypes.Structure):
     _fields_=[('weapon',ctypes.c_uint8),('stock',ctypes.c_uint8),('oil',ctypes.c_uint8),('fuel',ctypes.c_uint8)]
 
+class Rocket(ctypes.Structure):
+    _fields_ = [('x',ctypes.c_int32),('vx',ctypes.c_int32),('vy',ctypes.c_int32),('ax',ctypes.c_int16),
+               ('ay',ctypes.c_int16),('y',ctypes.c_int16),('delay',ctypes.c_uint8),('frame',ctypes.c_uint8),
+               ('angle',ctypes.c_int8),('speed',ctypes.c_uint8),('live',ctypes.c_uint8)]
+
 class Combat(ctypes.Structure):
     _fields_ = [('projectile',Projectile*18),('phase',ctypes.c_uint8),('cooldown',ctypes.c_uint8),
                ('secondary_cooldown',ctypes.c_uint8),('secondary_pending',ctypes.c_uint8),
                ('primary_pending',ctypes.c_uint8),('secondary_phase',ctypes.c_uint8),('count',ctypes.c_uint8),('aim_pitch',ctypes.c_uint8),
                ('shots_fired',ctypes.c_uint16),('secondary_fired',ctypes.c_uint16),
-               ('impacts',ctypes.c_uint16),('flash',ctypes.c_uint8),('flash_ticks',ctypes.c_uint8)]
+               ('impacts',ctypes.c_uint16),('flash',ctypes.c_uint8),('flash_ticks',ctypes.c_uint8),
+               ('rocket',Rocket*15),('rockets',ctypes.c_uint8),('rocket_tick',ctypes.c_uint8),
+               ('path',ctypes.c_int16),('speed',ctypes.c_int16),('far',ctypes.c_uint8),('bob',ctypes.c_uint8),
+               ('sky_flash',ctypes.c_uint8),('sky_color',ctypes.c_uint8)]
 
 class CombatTests(unittest.TestCase):
     @classmethod
@@ -30,9 +38,9 @@ class CombatTests(unittest.TestCase):
         cls.directory = tempfile.TemporaryDirectory()
         library = Path(cls.directory.name)/'combat.so'
         wrapper=Path(cls.directory.name)/'optimized.c'
-        wrapper.write_text('#include "combat.h"\nvoid Combat_OptimizedStep(CombatState* s, SortieState* stock, uint16_t x,uint16_t y,int16_t vx,int16_t vy,uint8_t left,uint8_t controls) { if(Combat_Clock(s,controls) && Combat_Required(s,controls)) Combat_Advance(s,stock,x,y,vx,vy,left,controls); }\n')
+        wrapper.write_text('#include "combat.h"\nvoid Smoke_Emit(uint16_t x, uint16_t y) { (void)x; (void)y; }\nvoid Combat_OptimizedStep(CombatState* s, SortieState* stock, uint16_t x,uint16_t y,int16_t vx,int16_t vy,uint8_t left,uint8_t controls) { if(Combat_Clock(s,controls) && Combat_Required(s,controls)) Combat_Advance(s,stock,x,y,vx,vy,left,controls); }\n')
         subprocess.run([shutil.which('cc') or 'cc','-std=c99', '-I'+str(ROOT/'src/generated/map_a'),'-Wall','-Wextra','-Werror',
-            '-shared','-fPIC','-DWINGS_WORLD_WIDTH=7608u','-I'+str(ROOT/'src/core'),str(wrapper),str(ROOT/'src/core/combat.c'),
+            '-shared','-fPIC','-DWINGS_WORLD_WIDTH=7608u','-DWINGS_FLIGHT_MAX_Y=1200u','-I'+str(ROOT/'src/core'),str(wrapper),str(ROOT/'src/core/combat.c'),str(ROOT/'src/core/rockets.c'),str(ROOT/'src/core/rocket_move.c'),str(ROOT/'src/core/ships.c'),
             str(ROOT/'src/core/mission.c'),str(ROOT/'src/generated/map_a/mission_surfaces.c'),
             '-o',str(library)],check=True,capture_output=True)
         cls.core = ctypes.CDLL(str(library))
@@ -68,7 +76,9 @@ class CombatTests(unittest.TestCase):
                     self.assertEqual(bytes(reference.sortie),bytes(optimized.sortie))
 
     def test_reset_and_capture_layout(self):
-        self.assertEqual(ctypes.sizeof(Combat),160)
+        # The verifiers dump the first 160 bytes (projectiles to flash_ticks);
+        # the rockets follow.
+        self.assertEqual(Combat.rocket.offset,160)
         s=self.state();self.advance(s,100,3);self.core.Combat_Reset(ctypes.byref(s))
         self.assertEqual(bytes(s),bytes(self.state()))
         self.assertEqual((s.sortie.stock,s.sortie.weapon),(27,0))
@@ -98,7 +108,7 @@ class CombatTests(unittest.TestCase):
         self.assertTrue(all(p.kind==0 for p in s.projectile))
 
     def test_empty_or_unimplemented_secondary_never_consumes_or_queues(self):
-        for weapon,stock in [(0,0),(1,15),(2,1)]:
+        for weapon,stock in [(0,0),(1,0),(2,1)]:   # the torpedo is not implemented yet
             s=self.state();s.sortie.weapon=weapon;s.sortie.stock=stock
             self.advance(s,100,2)
             self.assertEqual((s.sortie.stock,s.secondary_fired),(stock,0))

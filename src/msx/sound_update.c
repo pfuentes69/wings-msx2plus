@@ -1,5 +1,5 @@
 #include "sound_update.h"
-WINGS_CODE_SEGMENT(WINGS_SEGMENT_EFFECTS)
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_SOUND)
 #include "sound.h"
 #include "sound_fm.h"
 #include "../core/carrier.h"

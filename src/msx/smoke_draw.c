@@ -5,6 +5,8 @@
 #include "terrain_renderer.h"
 #include "../core/smoke.h"
 #include "../core/island.h"
+#include "../core/combat.h"
+extern CombatState g_Combat;   /* world_flight.c */
 #include "mission_island.h"
 #include "../generated/hellcat_frames.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_EFFECTS)
@@ -246,6 +248,9 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
     }
     /* The island flag's cloth (0x3b52), close view only, waving through
      * flg0..flg2 until the island is cleared; the pole is in the scenery. */
+#if ISLAND_COUNT
+    /* (A map without islands, j, must not compile this loop: SDCC 4.6
+     * dropped the rest of the function after it, docs/sdcc-pitfalls.md.) */
     if (!far)
         for (i = 0; i < ISLAND_COUNT; ++i)
         {
@@ -256,6 +261,7 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
             Place(s_IslandFlagX[i], WINGS_FLIGHT_MAX_Y - 11);
             Shape(SMOKE_FRAME_FLAG + s_FlagPhase);
         }
+#endif
     /* Island soldiers (0x3eee) at altitude 12: walking guy0..guy4, dying
      * guy5..guy7, the corpse guy8 (+ 9 facing left). The distant view
      * shows a 2-frame figure and no corpses. */
@@ -285,6 +291,21 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
         if (far) frame = 5 + (p->stage > 3);
         else frame = p->stage == SMOKE_STAGE_FIRE ? SMOKE_FRAME_FIRE : p->stage - 1;
         Shape(frame);
+    }
+    /* Rockets (0x0702), drawn like the original's ordnance at 11 px below
+     * their altitude: ro01.. before ignition, rc01.. lit, bumb far off. */
+    if (g_Combat.rockets)
+    {
+        const CombatRocket* r = g_Combat.rocket;
+        u16 x;
+        for (i = 0; i < COMBAT_ROCKETS; ++i, ++r)
+        {
+            if (!r->live) continue;
+            x = (u16)r->x.w.whole;
+            if ((u16)((far ? x >> 3 : x) - camera + 24) > 304u) continue;
+            Place(x, WINGS_FLIGHT_MAX_Y - r->y);
+            Shape(far ? SMOKE_FRAME_FAR_ROCKET : r->frame + (r->live == 1 ? SMOKE_FRAME_ROCKET_UNLIT : SMOKE_FRAME_ROCKET));
+        }
     }
     g_SmokeDrawnCount[page] = s_Drawn;
 }

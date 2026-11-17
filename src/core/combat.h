@@ -27,6 +27,29 @@ typedef struct CombatProjectile {
     uint8_t life, kind;
 } CombatProjectile;
 
+/* A rocket (Amiga ordnance type 0, docs/rockets.md), on the original's
+ * 12.5 Hz tick in its own units: x and velocities in 16.16 pixels, the
+ * altitude above the sea in whole pixels (the original keeps no fraction),
+ * the acceleration as the sine table's Q15 (doubled when applied, so at
+ * most 1 px per tick per tick). */
+#define COMBAT_ROCKETS 15
+/* 16.16, with its whole pixels as a word: the Z80 reads them directly, where
+ * SDCC shifts a long 16 times. Both targets are little-endian. */
+typedef union CombatFixed {
+    int32_t v;
+    struct { uint16_t fraction; int16_t whole; } w;
+} CombatFixed;
+typedef struct CombatRocket {
+    CombatFixed x, vx, vy;
+    int16_t ax, ay;
+    int16_t y;
+    uint8_t delay;   /* ticks to ignition; 0 once lit */
+    uint8_t frame;   /* 0..9 facing right, 10..19 left (torpedo.shp rc/ro) */
+    int8_t angle;    /* +$26: the flight path, 1024 steps a turn */
+    uint8_t speed;   /* +$28 / 100: the airspeed at launch, the aim's speed */
+    uint8_t live;    /* 0 free, 1 not lit yet, 2 lit (aimed) */
+} CombatRocket;
+
 typedef struct CombatState {
     CombatProjectile projectile[COMBAT_COUNT];
     uint8_t phase, cooldown, secondary_cooldown, secondary_pending, primary_pending, secondary_phase;
@@ -37,7 +60,24 @@ typedef struct CombatState {
      * last shot. The renderer alternates 1/2 on every presented frame, as
      * the original alternates fa/fb on game frames. */
     uint8_t flash, flash_ticks;
+    /* Rockets. path, speed, far and bob are inputs the caller sets before
+     * each Combat_Advance: the flight path (-$555c, hundredths of a
+     * degree), the airspeed (-$5bea), the distant view (-$60ca), the ships'
+     * bob in pixels (-$5c50). */
+    CombatRocket rocket[COMBAT_ROCKETS];
+    uint8_t rockets;          /* rockets in flight */
+    uint8_t rocket_tick;      /* the weapon tick within the 12.5 Hz tick */
+    int16_t path, speed;
+    uint8_t far, bob;
+    /* The background flash (0x031a) a rocket impact starts: frames left
+     * (it shows on odd counts) and its colour, 1 white or 2 red. */
+    uint8_t sky_flash, sky_color;
 } CombatState;
+
+/* A burst from a rocket: impact slots mark it in vx (bombs leave 0). */
+#define COMBAT_ROCKET_BURST 1
+#define COMBAT_SKY_WHITE 1
+#define COMBAT_SKY_RED 2
 
 /* A bomb's life in weapon ticks: longer than any fall (6 s from the
  * ceiling). Its tumble pose follows its age. */
@@ -71,7 +111,7 @@ static inline uint8_t Combat_Required(const CombatState* state,uint8_t controls)
 {
     return controls || state->primary_pending || state->secondary_pending || state->cooldown ||
         state->secondary_cooldown || state->count>COMBAT_GUN_COUNT || state->flash_ticks ||
-        state->projectile[0].kind || state->projectile[1].kind;
+        state->projectile[0].kind || state->projectile[1].kind || state->rockets;
 }
 static inline uint8_t Combat_Clock(CombatState* state, uint8_t controls)
 {

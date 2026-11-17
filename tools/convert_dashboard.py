@@ -398,7 +398,7 @@ def bomb_frames():
 def bomb_pixels():
     return bomb_frames()[0]
 
-def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=False, reserve_crew=False, frames=None, reserve_wheels=(), reserve_rope=False, reserve_smoke=()):
+def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=False, reserve_crew=False, frames=None, reserve_wheels=(), reserve_rope=False, reserve_smoke=(), reserve_rockets=()):
     if frames is None: frames=json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
     tiles=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']
     occupied=[bytearray(256) for _ in range(512)]
@@ -452,6 +452,23 @@ def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=F
                                             order=sorted(range(len(reserve_smoke)),key=lambda i:-reserve_smoke[i][0]*reserve_smoke[i][1])
                                             smoke=[None]*len(reserve_smoke)
                                             for i in order:smoke[i]=allocate(1,*reserve_smoke[i])[0]
+                                            if reserve_rockets:
+                                                # Rocket pieces, last of all: the static tile cells
+                                                # the tile cache does not use come free for them (the
+                                                # cache fills rows 180..243 of 56 columns,
+                                                # src/msx/mission_streamer.c), so nothing above moves.
+                                                cache=set()
+                                                for slot in range(56):
+                                                    sx,sy=slot%32*8,slot//32*256+180
+                                                    cache.update((row,sx) for row in range(sy,sy+64))
+                                                for tile in range(tiles):
+                                                    x=tile%288//9*8;y=tile//288*256+180+tile%9*8
+                                                    for row in range(y,y+8):
+                                                        if (row,x) not in cache:occupied[row][x:x+8]=bytes(8)
+                                                order=sorted(range(len(reserve_rockets)),key=lambda i:-reserve_rockets[i][0]*reserve_rockets[i][1])
+                                                rockets=[None]*len(reserve_rockets)
+                                                for i in order:rockets[i]=allocate(1,*reserve_rockets[i])[0]
+                                                return slots,backups,ships,tails,weapons,crew,bombs,cells,rope,smoke,rockets
                                             return slots,backups,ships,tails,weapons,crew,bombs,cells,rope,smoke
                                         return slots,backups,ships,tails,weapons,crew,bombs,cells,rope
                                     return slots,backups,ships,tails,weapons,crew,bombs,cells

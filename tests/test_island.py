@@ -72,13 +72,21 @@ class Projectile(C.Structure):
                 ('life', C.c_uint8), ('kind', C.c_uint8)]
 
 
+class Rocket(C.Structure):
+    _fields_ = [('x',C.c_int32),('vx',C.c_int32),('vy',C.c_int32),('ax',C.c_int16),
+               ('ay',C.c_int16),('y',C.c_int16),('delay',C.c_uint8),('frame',C.c_uint8),
+               ('angle',C.c_int8),('speed',C.c_uint8),('live',C.c_uint8)]
+
 class Combat(C.Structure):
     _fields_ = [('projectile', Projectile * COUNT), ('phase', C.c_uint8), ('cooldown', C.c_uint8),
                 ('secondary_cooldown', C.c_uint8), ('secondary_pending', C.c_uint8),
                 ('primary_pending', C.c_uint8), ('secondary_phase', C.c_uint8),
                 ('count', C.c_uint8), ('aim_pitch', C.c_uint8),
                 ('shots_fired', C.c_uint16), ('secondary_fired', C.c_uint16), ('impacts', C.c_uint16),
-                ('flash', C.c_uint8), ('flash_ticks', C.c_uint8)]
+                ('flash', C.c_uint8), ('flash_ticks', C.c_uint8),
+                ('rocket', Rocket * 15), ('rockets', C.c_uint8), ('rocket_tick', C.c_uint8),
+                ('path', C.c_int16), ('speed', C.c_int16), ('far', C.c_uint8), ('bob', C.c_uint8),
+                ('sky_flash', C.c_uint8), ('sky_color', C.c_uint8)]
 
 
 class Puff(C.Structure):
@@ -97,7 +105,7 @@ class IslandTests(unittest.TestCase):
                         '-DMISSION_TERRAIN', '-DWINGS_FLIGHT_MAX_Y=1200u',
                         '-DWINGS_WORLD_WIDTH=7608u', '-DWINGS_WORLD_START=7032u',
                         *[str(ROOT / 'src' / p) for p in ('core/island.c', 'core/soldiers.c', 'core/smoke.c', 'core/engine.c', 'core/mission.c',
-                                                          'generated/map_a/mission_surfaces.c', 'core/flight.c',
+                                                          'generated/map_a/mission_surfaces.c', 'core/flight.c', 'core/ships.c',
                                                           'core/flight_model.c')],
                         str(work / 'stub.c'), '-o', str(lib)], check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))

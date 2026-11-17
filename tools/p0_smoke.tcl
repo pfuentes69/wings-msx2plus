@@ -169,7 +169,7 @@ proc publishing {} {
     # What the shown page drew (src/msx/smoke_draw.h): count, then x (2),
     # row (2), frame per shape; 27 entries per page.
     set page [value g_DisplayPage]
-    dump $name.smoke [binary format c [smoke_count]][debug read_block memory [expr {$::addr(g_SmokeDrawn)+$page*27*5}] [expr {27*5}]]
+    dump $name.smoke [binary format c [smoke_count]][debug read_block memory [expr {$::addr(g_SmokeDrawn)+$page*42*5}] [expr {42*5}]]
     dump $name.score [debug read_block memory $::addr(g_DisplayScore) 4]
     dump $name.island [debug read_block memory $::addr(g_Island) 315]
     dump $name.band [binary format cs [value g_DisplayBand] [word g_DisplayTicker]]
@@ -259,7 +259,9 @@ proc notice {then} {
 }
 proc rockets {} {
     require [expr {[view 3]==1 && [view 4]==15}] "Rocket inventory"
-    snap rockets {pulse 7 128 {notice {require [expr {[view 0]==2 && [view 4]==15}] "Unavailable rocket consumed"; pulse 8 64 {cursor 2 torpedo}}}}
+    # Rockets are playable: no confirmation here. The wait keeps the old
+    # confirmation's 0.85 s, so the flights after it keep their timing.
+    snap rockets {after time 0.85 {pulse 8 64 {cursor 2 torpedo}}}
 }
 proc torpedo {} {
     require [expr {[view 3]==2 && [view 4]==1}] "Torpedo inventory"
@@ -324,7 +326,7 @@ proc lift_resume {} {
 }
 proc service_left_menu {} {
     require [expr {[view 4]==30 && [stat 30]==0 && [stat 32]==0}] "Service did not reload or elevator fired weapons"
-    snap service_left {pulse 8 64 {cursor 1 {pulse 7 128 {notice {require [expr {[view 0]==7 && [view 4]==15}] "Service rocket preview";pulse 8 32 {cursor 0 {pulse 7 128 {phase 3 {lift_pose lift_left_up_24 0 24 {lift_pose lift_left_up_8 0 8 {wait_lift_up service_left_return}}}}}}}}}}}
+    snap service_left {pulse 8 64 {cursor 1 {require [expr {[view 0]==7 && [view 4]==15}] "Service rocket preview";after time 0.85 {pulse 8 32 {cursor 0 {pulse 7 128 {phase 3 {lift_pose lift_left_up_24 0 24 {lift_pose lift_left_up_8 0 8 {wait_lift_up service_left_return}}}}}}}}}}
 }
 proc service_left_return {} {
     require [expr {[value g_SelectedFrame]==52 && [view 4]==30}] "Left heading lost across service"

@@ -97,9 +97,9 @@ void Island_Reset(void) WINGS_BANKED;
 /* A bomb (or rocket) detonating on the ground at world x: wrecks a hut or
  * empties a manned dugout whose 32 px it falls in. Returns the points. */
 uint16_t Island_Bombed(uint16_t x) WINGS_BANKED;
-/* Island_Bombed for every bomb that hit the ground this weapon tick; the
- * points go to *score. */
-void Island_Impacts(const CombatState* combat, uint32_t* score) WINGS_BANKED;
+/* Island_Bombed for every bomb or rocket that hit the ground this weapon
+ * tick, and a rocket's flash and ship guns; the points go to *score. */
+void Island_Impacts(CombatState* combat, uint32_t* score) WINGS_BANKED;
 /* One original 12.5 Hz tick: wrecked huts smoke, garrisons come out. */
 void Island_Tick(void) WINGS_BANKED;
 /* One original update of the soldiers: walking, dying (+25 each, into

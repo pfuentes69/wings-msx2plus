@@ -11,7 +11,7 @@ describes what the MSX does and how. P3 is being built in steps:
 | 3 | Dugout guns: barrel art, hit-scan ground fire, engine damage | Done |
 | 4 | Soldiers: release, walking, re-manning dugouts, deaths (+25) | Done |
 | 5 | Island cleared: bonus, flag, message, mission complete | Done |
-| later | Rockets, AA guns (rockets only) | |
+| later | Rockets: done ([rockets.md](rockets.md)); AA guns (rockets only): no map so far has them | |
 
 ## Map data
 

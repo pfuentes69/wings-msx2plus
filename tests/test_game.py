@@ -61,8 +61,9 @@ class GameTests(unittest.TestCase):
         self.core.Game_OpenService(C.byref(g))
         self.assertEqual((g.phase,g.sortie.stock,g.sortie.oil,g.sortie.fuel),(7,30,128,192))
         self.action(g,4);self.assertEqual((g.phase,g.cursor,g.sortie.stock),(7,1,15))
-        self.action(g,64);self.assertEqual((g.phase,g.notice),(7,1))
-        self.action(g,1);self.assertEqual((g.cursor,g.sortie.stock),(0,30))
+        self.action(g,4);self.assertEqual((g.phase,g.cursor,g.sortie.stock),(7,2,1))
+        self.action(g,64);self.assertEqual((g.phase,g.notice),(7,1))   # no torpedo yet
+        self.action(g,1);self.action(g,1);self.assertEqual((g.cursor,g.sortie.stock),(0,30))
         flags=self.action(g,64)
         self.assertEqual((g.phase,flags),(3,10))
         self.assertEqual((g.progress.score,g.progress.rank,g.progress.lives,g.mission.objectives),(12345,3,2,17))
@@ -106,7 +107,7 @@ class GameTests(unittest.TestCase):
         for weapon,count in [(0,30),(1,15),(2,1)]:
             self.core.Game_SetLoadout(C.byref(g),weapon)
             self.assertEqual(g.sortie.stock,count)
-            if weapon:
+            if weapon==2:   # the torpedo comes later; rockets launch the sortie
                 self.action(g,64);self.assertEqual((g.phase,g.sortie.stock,g.notice),(2,count,1))
         before=bytes(g);self.core.Game_SetLoadout(C.byref(g),255);self.assertEqual(bytes(g),before)
     def test_pause_only_esc_resumes_and_restart_preserves_setting(self):

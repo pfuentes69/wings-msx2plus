@@ -10,6 +10,7 @@
 #include "msx/smoke_draw.h"
 #include "core/smoke.h"
 #include "core/island.h"
+#include "core/ships.h"
 #include "core/flight_model.h"
 #include "msx/elevator.h"
 CarrierState g_Carrier;
@@ -339,6 +340,27 @@ static u8 s_Band[2];   /* per page: the message band's height, 0 without */
 /* The published band and its text pixel at the right edge (verification). */
 volatile u8 g_DisplayBand;
 volatile u16 g_DisplayTicker;
+#ifdef WINGS_P1_FLIGHT
+/* A rocket impact's background flash (0x031a): of its 5 published frames
+ * the odd counts show white or red in colour 0, the sky (the dashboard does
+ * not use it; the line interrupts never write it). Set in VBlank, so the
+ * change and the new page come together. */
+static u8 s_SkyShown;
+static void SkyFlash(void)
+{
+    u8 show = 0;
+    if (g_Combat.sky_flash)
+    {
+        if (g_Combat.sky_flash & 1) show = g_Combat.sky_color;
+        --g_Combat.sky_flash;
+    }
+    if (show == s_SkyShown) return;
+    s_SkyShown = show;
+    VDP_SetPaletteEntry(0, show == COMBAT_SKY_RED ? 0x0070 : show ? 0x0777 :
+        g_TerrainPalette[0] | ((u16)g_TerrainPalette[1] << 8));
+}
+#endif
+
 static void PublishScroll(u8 page, u16 camera)
 {
     u8 scroll = s_RenderHeave + s_RenderFine;
@@ -914,6 +936,7 @@ static u8 s_MissionAdvanced, s_Promotion;
 static void StartMission(void)
 {
     Island_Reset();
+    Ships_Reset();
     g_MessageActive = g_MessageWait = 0;
     s_MissionAdvanced = s_Promotion = 0;
 }
@@ -963,6 +986,7 @@ static u8 ReadActions(void)
             Combat_Reset(&g_Combat);
 #ifdef WINGS_P1_FLIGHT
             Island_Reset();
+            Ships_Reset();
 #endif
         }
         if (action & GAME_START_SORTIE)
@@ -1018,6 +1042,7 @@ void main(void)
     /* RAM is not cleared at boot: before any line interrupt runs the driver. */
     Sound_Reset();
     Sound_LoadEffects();
+    s_SkyShown = 0;
 #endif
     g_Ready = g_Rendering = g_FramePublished = g_HoldFlight = 0;
     g_MissedFrames = g_PanOverruns = 0;
@@ -1128,11 +1153,11 @@ void main(void)
         steps = base_steps;
         if (!(g_VDP_REGSAV[9] & 2)) { steps += core_phase; core_phase ^= 1; }
 #endif
-        // Reserve draw time for bombs while retaining the 150 Hz flight and
+        // Reserve draw time for bombs and rockets while retaining the 150 Hz flight and
         // weapon simulation clock. Hit-scan gunfire (flash overlay plus short
         // strike marks) fits the base presentation period.
         if (g_Combat.count>COMBAT_GUN_COUNT || g_Combat.secondary_cooldown ||
-            g_Combat.secondary_pending || Weapons_PendingRestore()) present_ticks+=2;
+            g_Combat.secondary_pending || g_Combat.rockets || Weapons_PendingRestore()) present_ticks+=2;
 #ifdef WINGS_P1_FLIGHT
         /* Heavy scenes: with 4+ smoke, gun or soldier shapes on screen, or
          * after a frame that came within a VBlank of the base deadline
@@ -1224,6 +1249,14 @@ void main(void)
                     {
                         if (((weapons & COMBAT_FIRE) || g_Combat.primary_pending) && g_Combat.cooldown<2)
                             g_Combat.aim_pitch=Aircraft_FlightPitch(&s_World.flight);
+#ifdef WINGS_P1_FLIGHT
+                        /* The rockets' inputs: launch angle and speed, the view, the ships' bob. */
+                        if (g_Game.sortie.weapon==WEAPON_ROCKETS)
+                        {
+                            g_Combat.path=s_World.flight.path; g_Combat.speed=s_World.flight.speed;
+                            g_Combat.far=g_TerrainFar; g_Combat.bob=g_ShipHeave+2;
+                        }
+#endif
                         Combat_Advance(&g_Combat,&g_Game.sortie,s_World.x>>8,s_World.flight.y>>8,
                             s_World.flight.vx,s_World.flight.vy,
 #ifdef WINGS_P1_FLIGHT
@@ -1255,6 +1288,7 @@ advance_clocks:
                          * a running sortie puts out new puffs. */
                         Smoke_Tick(&s_World.flight, s_World.x >> 8, g_Game.sortie.oil, !s_CrashSteps);
                         Island_Tick();
+                        if (g_Ships.smoking) Ships_Tick(s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps);
                         /* The dugout guns (the original updates them once per
                          * drawn frame, probably at this rate). */
                         s_GunsDrawn = Island_Guns(&s_World.flight, s_World.x >> 8,
@@ -1420,6 +1454,9 @@ advance_clocks:
 #ifdef WINGS_P1_FLIGHT
         g_DisplayWheel=s_RenderWheel; g_DisplayGear=s_RenderGear; g_DisplayRope=s_RenderRope;
         g_DisplayScore = g_HudScore[page];
+#endif
+#ifdef WINGS_P1_FLIGHT
+        if (g_Combat.sky_flash || s_SkyShown) SkyFlash();
 #endif
         g_FramePublished ^= 1;
     }
