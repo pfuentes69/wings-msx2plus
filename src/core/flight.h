@@ -16,12 +16,12 @@
  * (the original's landing range is the carrier map extents x 4, 16 px inward
  * at each end); the deck row rests a plane on its wheels at deck height. */
 /* The carrier's position in the map: where a new plane starts (reset_x,
- * given by the build per map; 7032 on map a). Everything about the carrier
- * is relative to it. */
-#ifndef WINGS_WORLD_START
-#define WINGS_WORLD_START 7032u
+ * given by the build per map as WINGS_CARRIER_X; 7032 on map a).
+ * Everything about the carrier is relative to it. */
+#ifndef WINGS_CARRIER_X
+#define WINGS_CARRIER_X 7032u
 #endif
-#define CARRIER_X WINGS_WORLD_START
+#define CARRIER_X WINGS_CARRIER_X
 #define FLIGHT_DECK_LEFT (CARRIER_X - 439u)
 #define FLIGHT_DECK_RIGHT (CARRIER_X + 329u)
 #define FLIGHT_DECK_EDGE 16u
