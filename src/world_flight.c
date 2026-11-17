@@ -1295,6 +1295,11 @@ advance_clocks:
                             s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps &&
                             g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
                             &g_Engine, &g_Game.sortie);
+                        /* The ships' guns (0x4c3e): barrels, fire, shell splashes. */
+                        if (g_Ships.present) s_GunsDrawn |= Ships_Guns(&s_World.flight, s_World.x >> 8,
+                            s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps &&
+                            g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
+                            &g_Engine, &g_Game.sortie);
                         s_SoldiersMoving = Island_Soldiers(&g_Game.progress.score);
 #endif
                     }

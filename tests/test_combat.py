@@ -38,7 +38,7 @@ class CombatTests(unittest.TestCase):
         cls.directory = tempfile.TemporaryDirectory()
         library = Path(cls.directory.name)/'combat.so'
         wrapper=Path(cls.directory.name)/'optimized.c'
-        wrapper.write_text('#include "combat.h"\nvoid Smoke_Emit(uint16_t x, uint16_t y) { (void)x; (void)y; }\nvoid Combat_OptimizedStep(CombatState* s, SortieState* stock, uint16_t x,uint16_t y,int16_t vx,int16_t vy,uint8_t left,uint8_t controls) { if(Combat_Clock(s,controls) && Combat_Required(s,controls)) Combat_Advance(s,stock,x,y,vx,vy,left,controls); }\n')
+        wrapper.write_text('#include "combat.h"\n#include "ships.h"\n#include "smoke.h"\nvoid Smoke_Emit(uint16_t x, uint16_t y) { (void)x; (void)y; }\nvoid Smoke_Hit(const FlightState* f, uint16_t w) { (void)f; (void)w; }\nvoid Engine_Hit(EngineState* e, SortieState* s, uint8_t r) { (void)e; (void)s; (void)r; }\nvoid Combat_OptimizedStep(CombatState* s, SortieState* stock, uint16_t x,uint16_t y,int16_t vx,int16_t vy,uint8_t left,uint8_t controls) { if(Combat_Clock(s,controls) && Combat_Required(s,controls)) Combat_Advance(s,stock,x,y,vx,vy,left,controls); }\n')
         subprocess.run([shutil.which('cc') or 'cc','-std=c99', '-I'+str(ROOT/'src/generated/map_a'),'-Wall','-Wextra','-Werror',
             '-shared','-fPIC','-DWINGS_WORLD_WIDTH=7608u','-DWINGS_FLIGHT_MAX_Y=1200u','-I'+str(ROOT/'src/core'),str(wrapper),str(ROOT/'src/core/combat.c'),str(ROOT/'src/core/rockets.c'),str(ROOT/'src/core/rocket_move.c'),str(ROOT/'src/core/ships.c'),
             str(ROOT/'src/core/mission.c'),str(ROOT/'src/generated/map_a/mission_surfaces.c'),

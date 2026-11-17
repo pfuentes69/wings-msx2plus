@@ -528,7 +528,7 @@
   "tile_cache": {
     "strip_tiles": 8,
     "strips": 109,
-    "slots": 56,
+    "slots": 52,
     "uniform": 2,
     "worst_view_strips": 32,
     "first_page": 2,
@@ -536,7 +536,7 @@
     "ordering": "uniform tiles first, then first-seen; strips of 8 ids, 8 x 64 px"
   },
   "map_format": "u16le column offsets, deduplicated count:u8/tile:u16le runs, no run crossing an 8 KiB bank; exactly 19 tile rows",
-  "map_and_cache_ram_bytes": 5259,
+  "map_and_cache_ram_bytes": 5255,
   "island": {
     "islands": [],
     "huts": [],

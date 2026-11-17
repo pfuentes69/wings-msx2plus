@@ -4,6 +4,7 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_SOUND)
 #include "sound_fm.h"
 #include "../core/carrier.h"
 #include "../core/island.h"
+#include "../core/ships.h"
 
 /* What the PSG driver plays, from the game state, once per presented
  * frame (the original's sound update, 0x2132; docs/sound-effects.md). */
@@ -118,6 +119,12 @@ void Sound_Update(const FlightState* f, u16 world, u8 flags, u8 steps) WINGS_BAN
             v = dx >= 512 ? 1 : 9 - (u8)(dx >> 6);
             if (v > g_SoundGun) { g_SoundGun = v; g_SoundGunRate = 10; }
         }
+    /* Ship guns: "under fire" (0x38ea), louder by the nearest gun firing. */
+    if (!g_Combat.flash && g_Ships.nearest < 512)
+    {
+        v = 9 - (u8)(g_Ships.nearest >> 6);
+        if (v > g_SoundGun) { g_SoundGun = v; g_SoundGunRate = 10; }
+    }
     /* The lift: its motor grinds while it moves (0x222a), and it clangs
      * at either stop (0x149e, 0x14ce). */
     g_SoundGrind = g_Carrier.stage == CARRIER_RAISING || g_Carrier.stage == CARRIER_LOWERING;

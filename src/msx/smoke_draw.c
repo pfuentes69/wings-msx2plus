@@ -6,6 +6,7 @@
 #include "../core/smoke.h"
 #include "../core/island.h"
 #include "../core/combat.h"
+#include "../core/ships.h"
 extern CombatState g_Combat;   /* world_flight.c */
 #include "mission_island.h"
 #include "../generated/hellcat_frames.h"
@@ -246,6 +247,15 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
         Place(g->x, WINGS_FLIGHT_MAX_Y - ISLAND_GUN_ALTITUDE);
         Shape(far ? SMOKE_FRAME_FAR_FLASH : SMOKE_FRAME_GUN + frame);
     }
+    /* Ship guns (0x4c3e): barrels and their flashes, expl far off. */
+    for (i = 0; i < g_Ships.shown_count; ++i)
+    {
+        const ShipGunShown* gun = &g_Ships.shown[i];
+        /* Off this view (most of a ship's guns): skip before any clipping. */
+        if ((u16)((far ? (i16)gun->x >> 3 : (i16)gun->x) - (i16)camera + 24) > 304u) continue;
+        Place(gun->x, WINGS_FLIGHT_MAX_Y - gun->altitude);
+        Shape(far ? SMOKE_FRAME_FAR_FLASH : SMOKE_FRAME_GUN + gun->frame);
+    }
     /* The island flag's cloth (0x3b52), close view only, waving through
      * flg0..flg2 until the island is cleared; the pole is in the scenery. */
 #if ISLAND_COUNT
@@ -291,6 +301,20 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
         if (far) frame = 5 + (p->stage > 3);
         else frame = p->stage == SMOKE_STAGE_FIRE ? SMOKE_FRAME_FIRE : p->stage - 1;
         Shape(frame);
+    }
+    /* Shell splashes (0x52f8): spl6 down to spl1 at altitude 13, a
+     * ricochet on land at 9; far off, the last three frames only. */
+    if (g_Ships.splashes)
+    {
+        const ShipSplash* s = g_Ships.splash;
+        for (i = 0; i < SHIP_SPLASHES; ++i, ++s)
+        {
+            if (!s->life || (far && (s->land || s->life > 3))) continue;
+            if ((u16)((far ? s->x >> 3 : s->x) - (i16)camera + 24) > 304u) continue;
+            Place((u16)s->x, WINGS_FLIGHT_MAX_Y - (s->land ? 9 : 13));
+            Shape(far ? SMOKE_FRAME_FAR_SPLASH + s->life - 1 :
+                  s->land ? SMOKE_FRAME_RICOCHET : SMOKE_FRAME_SPLASH + s->life - 1);
+        }
     }
     /* Rockets (0x0702), drawn like the original's ordnance at 11 px below
      * their altitude: ro01.. before ignition, rc01.. lit, bumb far off. */

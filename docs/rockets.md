@@ -59,7 +59,7 @@ copied out of the executable by `tools/convert_rockets.py` into
 - **Drawing** (`src/msx/smoke_draw.c`): rockets are smoke-path frames 46..86,
   drawn after the puffs and erased by the tile repaint, so they need no VRAM
   backup. Their 59 atlas pieces sit in the static-tile cells the tile cache
-  freed (rows 244..251 under the 56 cache columns and the old 57th column).
+  freed ([tile-cache.md](tile-cache.md)): one piece each.
 - **Open sea past the map** (2026-11-17, user report): the plane flies up
   to 16,000 px past either end of the map, but every weapon was off
   outside it (on map a just right of the carrier). Projectile x is now a

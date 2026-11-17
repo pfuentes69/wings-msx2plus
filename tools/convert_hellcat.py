@@ -243,9 +243,14 @@ FLAG_NEAR = ('flg0', 'flg1', 'flg2')   # the cloth only: the pole is in the scen
 ROCKET_LIT = tuple(f'rc{n:02x}' for n in range(1, 21))
 ROCKET_UNLIT = tuple(f'ro{n:02x}' for n in range(1, 21))
 ROCKET_FAR = ('bumb',)
+# Shell splashes from ship guns (0x52b0/0x52f8): shape 0x67 + life, world.shp
+# spl6 down to spl1 over the sea, ric0 on land; 8thscale spl1..spl3 in the
+# distant view (its spl4..spl6 do not exist: those frames draw nothing).
+SPLASH_NEAR = tuple(f'spl{n}' for n in range(1, 7)) + ('ric0',)
+SPLASH_FAR = ('spl1', 'spl2', 'spl3')
+LATE_FRAMES = ROCKET_LIT + ROCKET_UNLIT + ROCKET_FAR + SPLASH_NEAR + SPLASH_FAR
 SMOKE_FRAME_COUNT = (len(SMOKE_NEAR) + len(SMOKE_FAR) + len(SMOKE_EXTRA_NEAR) + len(SMOKE_EXTRA_FAR)
-                     + len(SOLDIER_NEAR) + len(SOLDIER_FAR) + len(FLAG_NEAR)
-                     + len(ROCKET_LIT) + len(ROCKET_UNLIT) + len(ROCKET_FAR))
+                     + len(SOLDIER_NEAR) + len(SOLDIER_FAR) + len(FLAG_NEAR) + len(LATE_FRAMES))
 
 
 def smoke_assets(pixels, color_map, frames, wheel_sizes):
@@ -273,7 +278,8 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
                                     (world, SMOKE_EXTRA_NEAR, near), (reduced, SMOKE_EXTRA_FAR, far),
                                     (world, SOLDIER_NEAR, near), (reduced, SOLDIER_FAR, far),
                                     (world, FLAG_NEAR, near), (torpedo, ROCKET_LIT, near),
-                                    (torpedo, ROCKET_UNLIT, near), (reduced, ROCKET_FAR, far)):
+                                    (torpedo, ROCKET_UNLIT, near), (reduced, ROCKET_FAR, far),
+                                    (world, SPLASH_NEAR, near), (reduced, SPLASH_FAR, far)):
         for name in names:
             indices, meta = decode_record(records[name], **options)
             width = meta['width']
@@ -288,14 +294,18 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
     # Pieces: (frame, row offset, height); split the largest until all fit.
     # The rockets come last, in the cells the tile cache freed (atlas_slots),
     # so the other frames keep their places.
-    rocket_first = SMOKE_FRAME_COUNT - len(ROCKET_LIT) - len(ROCKET_UNLIT) - len(ROCKET_FAR)
+    rocket_first = SMOKE_FRAME_COUNT - len(LATE_FRAMES)
     def split(pieces):
         big = max(range(len(pieces)), key=lambda i: images[pieces[i][0]][4] * pieces[i][2])
         f, top, h = pieces[big]
         if h < 2:
             raise ValueError('smoke frames exceed the atlas gaps')
         pieces[big:big + 1] = [(f, top, h // 2), (f, top + h // 2, h - h // 2)]
-    pieces = [(f, 0, img[5]) for f, img in enumerate(images[:rocket_first])]
+    # The muzzle flashes (gnf0..gnf6, frames 15..21) go late too: squeezed
+    # into the first pass's gaps they split into up to 8 one-row pieces, a
+    # VDP command each, on every flashing barrel.
+    late = set(range(15, 22)) | set(range(rocket_first, len(images)))
+    pieces = [(f, 0, img[5]) for f, img in enumerate(images) if f not in late]
     while True:
         sizes = [(images[f][4], h) for f, _, h in pieces]
         try:
@@ -304,7 +314,7 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
             break
         except ValueError:
             split(pieces)
-    rocket = [(f, 0, images[f][5]) for f in range(rocket_first, len(images))]
+    rocket = [(f, 0, images[f][5]) for f in sorted(late)]
     while True:
         try:
             *_, rocket_cells = atlas_slots(27, True, True, True, True, frames=frames,
@@ -334,7 +344,7 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
         part = records[first[f]:first[f + 1]]
         x0 = min(r['dx'] for r in part); y0 = min(r['dy'] for r in part)
         boxes += [x0, y0, max(r['dx'] + r['width'] for r in part) - x0, max(r['dy'] + r['height'] for r in part) - y0]
-    if len(images) != 87: raise ValueError('smoke frame numbering changed')
+    if len(images) != 97: raise ValueError('smoke frame numbering changed')
     return records, first, boxes
 
 
@@ -570,6 +580,9 @@ extern const unsigned char g_WheelFirst[21];
 #define SMOKE_FRAME_ROCKET 46       /* lit rc01..rc14: + 10 facing left */
 #define SMOKE_FRAME_ROCKET_UNLIT 66 /* before ignition, ro01..ro14 */
 #define SMOKE_FRAME_FAR_ROCKET 86   /* 8thscale bumb */
+#define SMOKE_FRAME_SPLASH 87       /* + life - 1: spl1..spl6 */
+#define SMOKE_FRAME_RICOCHET 93     /* ric0 */
+#define SMOKE_FRAME_FAR_SPLASH 94   /* + life - 1, lives 1..3: 8thscale spl1..spl3 */
 #define SMOKE_FRAME_COUNT {SMOKE_FRAME_COUNT}
 /* In smoke_frames.c, banked (segment 22): use from that segment only. */
 #ifdef MISSION_TERRAIN

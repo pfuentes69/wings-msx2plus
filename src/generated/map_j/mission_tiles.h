@@ -6,7 +6,7 @@
  * strips of 8 (id >> 3) into TERRAIN_SLOTS VRAM slots. */
 #define TERRAIN_UNIFORM_COUNT 2
 #define TERRAIN_STRIPS 109
-#define TERRAIN_SLOTS 56
+#define TERRAIN_SLOTS 52
 #define TERRAIN_TILE_BANK 32           /* strip k: bank + k / 32, offset (k % 32) * 256 */
 #define TERRAIN_MAP_BYTES 9047
 #define TERRAIN_MAP_BANK 40             /* offset o: bank + o / 8192, A000h + o % 8192 in window 3 */

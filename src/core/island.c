@@ -5,6 +5,7 @@
 #include "mission_island.h"
 #include "mission.h"
 #include "ships.h"
+#include "xorshift.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
 
 #ifdef WINGS_P1_FLIGHT  /* smoke.h: the debug ROM keeps the P0 flight */
@@ -27,10 +28,7 @@ static uint16_t s_GunsLow, s_GunsHigh;
 static uint16_t s_Random = 0x1d2bu;
 static uint16_t Random(void)
 {
-    s_Random ^= s_Random << 7;
-    s_Random ^= s_Random >> 9;
-    s_Random ^= s_Random << 8;
-    return s_Random;
+    return Xorshift(&s_Random);
 }
 
 /* The soldiers' own generator (directions, release gaps), so that they do
@@ -38,10 +36,7 @@ static uint16_t Random(void)
 static uint16_t s_Muster = 0x6b35u;
 static uint16_t Muster(void)
 {
-    s_Muster ^= s_Muster << 7;
-    s_Muster ^= s_Muster >> 9;
-    s_Muster ^= s_Muster << 8;
-    return s_Muster;
+    return Xorshift(&s_Muster);
 }
 
 
@@ -271,15 +266,7 @@ void Island_Tick(void) WINGS_BANKED
         }
 }
 
-/* The barrel by altitude row and dx / 40 (0x4db8): DATA -$63e2, read as one
- * byte array at ((altitude >> 5) - 1) * 8 + dx / 40 + 3. The index runs
- * from -17 (below altitude 32, dx -512) to 47 (altitude 186, dx 512); the
- * ends read the neighbouring constant tables, kept as they are. */
-#define BARREL_BASE 17
-static const uint8_t s_Barrel[65] = {
-    2, 2, 3, 3, 3, 1, 2, 3, 3, 0, 1, 2, 3, 0, 1, 2, 3,
-    0, 0, 0, 3, 3, 6, 6, 6,  0, 1, 1, 3, 3, 5, 5, 6,  1, 1, 2, 3, 3, 4, 5, 5,
-    1, 2, 2, 3, 3, 4, 4, 5,  2, 2, 3, 3, 3, 3, 4, 4,  1, 2, 3, 2, 1, 2, 3, 2};
+#include "barrel.h"
 
 /* The update's inputs as statics: SDCC reaches them directly, where
  * arguments and locals go through the IX frame. */

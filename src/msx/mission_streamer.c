@@ -139,13 +139,65 @@ static u8 LoadStrip(u8 strip)
     return slot;
 }
 
-u16 Terrain_TileY(u16 tile)
+/* In Z80: every terrain repaint and copy calls it (the C was ~1,100
+ * T-states). The C it implements:
+ *     u8 strip = (u8)(tile >> 3), slot = s_StripSlot[strip];
+ *     if (slot == 255) slot = LoadStrip(strip);
+ *     s_SlotMark[slot] = 1;
+ *     g_TileSourceX = (slot & 31) << 3;
+ *     return 512 + 180 + ((u16)(slot >> 5) << 8) + ((tile & 7) << 3);
+ * HL = tile (below 2048: strips fit a byte); returns DE. */
+u16 Terrain_TileY(u16 tile) __naked
 {
-    u8 strip = (u8)(tile >> 3), slot = s_StripSlot[strip];
-    if (slot == 255) slot = LoadStrip(strip);
-    s_SlotMark[slot] = 1;
-    g_TileSourceX = (slot & 31) << 3;
-    return 512 + 180 + ((u16)(slot >> 5) << 8) + ((tile & 7) << 3);
+    (void)tile;
+    __asm
+        ld      a, l
+        and     a, #7
+        add     a, a
+        add     a, a
+        add     a, a
+        add     a, #0xb4            ; 692 = 0x2b4: the low byte, no carry (<= 0xec)
+        push    af
+        srl     h
+        rr      l
+        srl     h
+        rr      l
+        srl     h
+        rr      l                   ; L = strip
+        ld      e, l
+        ld      d, #0
+        ld      hl, #_s_StripSlot
+        add     hl, de
+        ld      a, (hl)
+        inc     a
+        jr      nz, cached$
+        ld      a, e
+        call    _LoadStrip          ; A = strip -> A = slot
+        inc     a
+cached$:
+        dec     a                   ; A = slot
+        ld      e, a
+        ld      d, #0
+        ld      hl, #_s_SlotMark
+        add     hl, de
+        ld      (hl), #1
+        ld      d, a
+        and     a, #31
+        add     a, a
+        add     a, a
+        add     a, a
+        ld      (_g_TileSourceX), a
+        ld      a, d
+        rlca
+        rlca
+        rlca
+        and     a, #1               ; slot >> 5 (slots < 64)
+        add     a, #0x02
+        ld      d, a
+        pop     af
+        ld      e, a
+        ret
+    __endasm;
 }
 
 /* The column table into RAM; the strips load as columns need them. */

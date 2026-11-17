@@ -238,12 +238,13 @@ def decode_column(data, column, columns, rows, tile_count):
 
 # The dynamic tile cache (src/msx/mission_streamer.c, docs/tile-cache.md):
 # tiles load from ROM into VRAM in strips of 8 consecutive ids (8 x 64 px),
-# into TERRAIN_SLOTS slots: the 56 whole 8 x 72 columns at rows 180..251 of
-# VRAM pages 2 and 3 that map a's static tiles filled (the shape atlas,
-# tools/convert_dashboard.py, is laid out around them; the 57th column was
-# partly free and holds pilot-window frames).
+# into TERRAIN_SLOTS slots: whole 8 x 64 columns at rows 180..243 of VRAM
+# pages 2 and 3, within the 56 that map a's static tiles filled (the shape
+# atlas, tools/convert_dashboard.py, is laid out around them; the 57th column
+# was partly free and holds pilot-window frames; the rest of the old cells
+# hold rocket and splash frames).
 STRIP = 8
-TERRAIN_SLOTS = 56
+TERRAIN_SLOTS = 52   # 4 of the 56 cells left to the shape atlas (rockets, splashes)
 TILE_BANK = 32   # tile pixels: 32 strips (8 KiB) per bank, from bank 32
 MAP_BANK = 40    # the column map, from bank 40; no record crosses a bank
 

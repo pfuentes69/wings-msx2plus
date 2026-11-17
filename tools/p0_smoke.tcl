@@ -169,13 +169,13 @@ proc publishing {} {
     # What the shown page drew (src/msx/smoke_draw.h): count, then x (2),
     # row (2), frame per shape; 27 entries per page.
     set page [value g_DisplayPage]
-    dump $name.smoke [binary format c [smoke_count]][debug read_block memory [expr {$::addr(g_SmokeDrawn)+$page*42*5}] [expr {42*5}]]
+    dump $name.smoke [binary format c [smoke_count]][debug read_block memory [expr {$::addr(g_SmokeDrawn)+$page*66*5}] [expr {66*5}]]
     dump $name.score [debug read_block memory $::addr(g_DisplayScore) 4]
     dump $name.island [debug read_block memory $::addr(g_Island) 315]
     dump $name.band [binary format cs [value g_DisplayBand] [word g_DisplayTicker]]
     dump $name.psg [debug read_block {PSG regs} 0 16]
     # The tile cache (src/msx/mission_streamer.c): each slot's strip.
-    dump $name.slots [debug read_block memory $::addr(g_TerrainSlotStrip) 56]
+    dump $name.slots [debug read_block memory $::addr(g_TerrainSlotStrip) 52]
     # MSX-MUSIC (src/msx/sound_fm.c): whether the driver runs, its registers.
     dump $name.fm [binary format c [value g_SoundFM]][expr {$::fm_regs eq "" ? "" : [debug read_block $::fm_regs 0 0x39]}]
     dump $name.palette [debug read_block {VDP palette} 0 32]

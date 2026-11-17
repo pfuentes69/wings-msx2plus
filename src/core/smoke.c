@@ -1,4 +1,5 @@
 #include "smoke.h"
+#include "xorshift.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_EFFECTS)
 
 #ifdef WINGS_P1_FLIGHT
@@ -18,9 +19,7 @@ static const uint8_t s_TurnOffset[9] = {3, 7, 11, 12, 11, 7, 3, 12, 15};
 static uint8_t Random(void)
 {
     /* 16-bit xorshift (7, 9, 8); the high byte is well mixed. */
-    s_Random ^= s_Random << 7;
-    s_Random ^= s_Random >> 9;
-    s_Random ^= s_Random << 8;
+    Xorshift(&s_Random);
     return (uint8_t)(s_Random >> 8);
 }
 

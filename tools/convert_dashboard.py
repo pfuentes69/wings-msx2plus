@@ -455,10 +455,11 @@ def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=F
                                             if reserve_rockets:
                                                 # Rocket pieces, last of all: the static tile cells
                                                 # the tile cache does not use come free for them (the
-                                                # cache fills rows 180..243 of 56 columns,
+                                                # cache fills rows 180..243 of its columns,
                                                 # src/msx/mission_streamer.c), so nothing above moves.
                                                 cache=set()
-                                                for slot in range(56):
+                                                from convert_mission import TERRAIN_SLOTS
+                                                for slot in range(TERRAIN_SLOTS):
                                                     sx,sy=slot%32*8,slot//32*256+180
                                                     cache.update((row,sx) for row in range(sy,sy+64))
                                                 for tile in range(tiles):

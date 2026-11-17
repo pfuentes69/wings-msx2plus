@@ -28,6 +28,11 @@ void Smoke_Emit(uint16_t x, uint16_t y)
     if (g_PuffCount < 64) { g_Puffs[g_PuffCount][0] = x; g_Puffs[g_PuffCount][1] = y; }
     ++g_PuffCount;
 }
+#include "ships.h"
+#include "smoke.h"
+uint16_t g_EngineHits;
+void Smoke_Hit(const FlightState* flight, uint16_t world) { (void)flight; (void)world; }
+void Engine_Hit(EngineState* engine, SortieState* sortie, uint8_t random) { (void)engine; (void)sortie; (void)random; ++g_EngineHits; }
 """
 
 
@@ -54,9 +59,30 @@ class Combat(C.Structure):
                 ('sky_flash', C.c_uint8), ('sky_color', C.c_uint8), ('plane_x', C.c_int16)]
 
 
+class Shown(C.Structure):
+    _fields_ = [('x', C.c_uint16), ('altitude', C.c_uint8), ('frame', C.c_uint8)]
+
+
+class Splash(C.Structure):
+    _fields_ = [('x', C.c_int16), ('life', C.c_uint8), ('land', C.c_uint8)]
+
+
 class Ships(C.Structure):
     _fields_ = [('down', C.c_uint8 * 40), ('puffs', C.c_uint8 * 40), ('timer', C.c_uint8 * 40),
-                ('smoking', C.c_uint8), ('guns_down', C.c_uint16)]
+                ('smoking', C.c_uint8), ('guns_down', C.c_uint16), ('shown', Shown * 16),
+                ('shown_count', C.c_uint8), ('splash', Splash * 4), ('splashes', C.c_uint8),
+                ('nearest', C.c_uint16), ('hits', C.c_uint16), ('present', C.c_uint8)]
+
+
+class Flight(C.Structure):   # FlightState's head: ships.c reads y only
+    _fields_ = [('x', C.c_uint16), ('y', C.c_uint32), ('pad', C.c_uint8 * 64)]
+
+
+GUN_NONE, GUN_FLASH, GUN_FAR = 255, 7, 14
+# DATA -$63e2 - 17 .. +47 (0x4db8), as tests/test_island.py.
+BARREL = bytes([2, 2, 3, 3, 3, 1, 2, 3, 3, 0, 1, 2, 3, 0, 1, 2, 3,
+                0, 0, 0, 3, 3, 6, 6, 6, 0, 1, 1, 3, 3, 5, 5, 6, 1, 1, 2, 3, 3, 4, 5, 5,
+                1, 2, 2, 3, 3, 4, 4, 5, 2, 2, 3, 3, 3, 3, 4, 4, 1, 2, 3, 2, 1, 2, 3, 2])
 
 
 def s16(v):
@@ -199,11 +225,13 @@ class RocketTests(unittest.TestCase):
         cls.core.Ships_Aim.argtypes = [C.c_int16, C.c_int16]
         cls.core.Ships_Aim.restype = C.c_uint16
         cls.core.Ships_Tick.argtypes = [C.c_uint8]
+        cls.core.Ships_Guns.argtypes = [C.POINTER(Flight), C.c_uint16, C.c_uint8, C.c_void_p, C.c_void_p]
+        cls.core.Ships_Guns.restype = C.c_uint8
         cls.core.Mission_Surface.argtypes = [C.c_uint16]
         cls.core.Mission_Surface.restype = C.c_uint8
         header = (MAP / 'mission_ships.h').read_text()
-        cls.guns = [int(v) for v in re.search(r's_ShipGunX\[\d+\] = \{([^}]*)\}', header).group(1).split(',')]
-        cls.original = Original(cls.guns)
+        cls.gun_x = [int(v) for v in re.search(r's_ShipGunX\[\d+\] = \{([^}]*)\}', header).group(1).split(',')]
+        cls.original = Original(cls.gun_x)
 
     @classmethod
     def tearDownClass(cls):
@@ -318,6 +346,70 @@ class RocketTests(unittest.TestCase):
         score = C.c_uint32(0)
         self.core.Ships_Rocket(86, C.byref(score))
         self.assertEqual(self.core.Ships_Aim(80, 90), 86)   # destroyed guns still draw rockets
+
+    # Ship guns (0x4c3e, 0x4db8, 0x4efc, 0x4f5c).
+    def guns(self, world, altitude, n=1, flying=1):
+        """n updates with the plane at (world, altitude): the frames of the
+        destroyer's first gun (x 86) each update, and the splashes made."""
+        flight = Flight(y=(1200 - altitude) << 8)
+        frames, splashes = [], []
+        buf = C.create_string_buffer(64)
+        for _ in range(n):
+            self.core.Ships_Guns(C.byref(flight), world, flying, buf, buf)
+            frames.append({s.x: s.frame for s in self.ships.shown[:self.ships.shown_count]})
+            splashes += [(s.x, s.life) for s in self.ships.splash if s.life == 6]
+        return frames, splashes
+
+    def test_the_barrels_follow_the_plane(self):
+        self.assertEqual(self.ships.present, 1)
+        for dx in (-512, -400, -81, -40, 0, 39, 40, 200, 512):
+            for altitude in (10, 31, 32, 100, 150, 186):
+                frames, _ = self.guns(86 + dx, altitude, 8)
+                expected = BARREL[((altitude >> 5) - 1) * 8 + int(dx / 40) + 3 + 17]
+                self.assertEqual({f[86] % GUN_FLASH for f in frames}, {expected}, (dx, altitude))
+        frames, _ = self.guns(86 + 100, 120, 4000)
+        self.assertAlmostEqual(sum(f[86] >= GUN_FLASH for f in frames) / 4000, 1 / 2, delta=0.03)
+        # The battleship's guns stand at its deck, 27 + 13.
+        self.guns(7203, 100)
+        self.assertEqual({s.altitude for s in self.ships.shown[:self.ships.shown_count]}, {40})
+
+    def test_out_of_reach_not_flying_or_destroyed_guns_are_quiet(self):
+        frames, _ = self.guns(606 + 513, 100, 4)
+        self.assertNotIn(606, frames[0])
+        frames, splashes = self.guns(86, 100, 50, flying=0)
+        self.assertEqual((frames[-1], splashes, self.ships.hits), ({}, [], 0))
+        score = C.c_uint32(0)
+        self.core.Ships_Rocket(86, C.byref(score))
+        frames, _ = self.guns(86, 100, 4)
+        self.assertNotIn(86, frames[0])
+        self.assertIn(96, frames[0])
+
+    def test_the_distant_view_flashes_every_gun_on_screen(self):
+        frames, _ = self.guns(1600, 300, 2000)   # 994 px from the bow guns, past close reach
+        shown = [f.get(606) for f in frames]
+        self.assertEqual(set(shown), {GUN_FAR, None})
+        self.assertAlmostEqual(shown.count(GUN_FAR) / 2000, 1 / 2, delta=0.04)
+        self.assertEqual(self.ships.nearest, 65535)   # out of reach: no fire
+
+    def test_fire_damages_the_engine_and_is_heard(self):
+        hits = C.c_uint16.in_dll(self.core, 'g_EngineHits')
+        hits.value = 0
+        self.guns(600, 60, 2000)
+        # 8 guns, 0..40 px off at altitude 60: each hits about 20% x (1 - d/512).
+        self.assertGreater(hits.value, 2000 * 4 * 0.12)
+        self.assertEqual(hits.value, self.ships.hits)
+        self.guns(606 + 300, 60)
+        self.assertEqual(self.ships.nearest, 300)
+
+    def test_shell_splashes_fall_near_a_low_plane(self):
+        _, splashes = self.guns(600, 150, 2000)
+        self.assertTrue(splashes)
+        self.assertTrue(all(568 <= x <= 631 for x, _ in splashes), splashes[:5])
+        for _ in range(6):
+            self.guns(5000, 150)
+        self.assertEqual(self.ships.splashes, 0)   # each lives 6 updates
+        _, splashes = self.guns(600, 201, 500)
+        self.assertEqual(splashes, [])             # above altitude 200, none
 
 
 if __name__ == '__main__':

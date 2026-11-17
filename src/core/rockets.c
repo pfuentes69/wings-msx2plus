@@ -4,6 +4,7 @@
 #include "mission.h"
 #include "ships.h"
 #include "../generated/rocket_tables.h"
+#include "xorshift.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_ROCKETS)
 
 /* 0x0bf0: the altitude ordnance bursts at over x: 12 above the sea or an
@@ -125,9 +126,7 @@ uint8_t Rockets_Launch(CombatState* state, uint16_t x, uint16_t y, int16_t vx, i
     r->ay = Sine(r->angle);
     r->ax = r->vx.v < 0 ? -Cosine(r->angle) : Cosine(r->angle);
     /* Ignition after 4, 8 or 12 ticks, 8 twice as likely. */
-    s_RocketRandom ^= s_RocketRandom << 7;
-    s_RocketRandom ^= s_RocketRandom >> 9;
-    s_RocketRandom ^= s_RocketRandom << 8;
+    Xorshift(&s_RocketRandom);
     delay = (uint8_t)((s_RocketRandom << 1 | s_RocketRandom >> 15) & 12);
     r->delay = delay ? delay : 8;
     frame = 4 - (angle >> 5);
