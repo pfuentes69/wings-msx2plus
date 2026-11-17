@@ -79,7 +79,7 @@ void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* stat
     {
         p = &state->projectile[i]; kind = p->kind;
         if (!kind) continue;
-        x = p->x >> 2;
+        x = Combat_WorldX(state, p->x);
         y = p->y >> 2;
         if (far) { x >>= 3; y = 161-((1200-y)>>3); }
         else y = y-1039-heave+g_PanRows;

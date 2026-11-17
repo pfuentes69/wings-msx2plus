@@ -141,6 +141,6 @@ void Sound_Bursts(void) WINGS_BANKED
     u8 i;
     for (i = COMBAT_GUN_COUNT; i < g_Combat.count; ++i, ++p)
         if (p->kind >= COMBAT_IMPACT && p->life == 6)
-            Sound_Effect(p->kind == COMBAT_SPLASH ? SOUND_SPLASH : SOUND_BOOM, p->x >> 2);
+            Sound_Effect(p->kind == COMBAT_SPLASH ? SOUND_SPLASH : SOUND_BOOM, (u16)Combat_WorldX(&g_Combat, p->x));
 }
 #endif

@@ -18,9 +18,12 @@
 #define COMBAT_IMPACT 3
 #define COMBAT_SPLASH 4
 
-/* Unsigned Q2 world positions, signed Q2 velocity per 25 Hz weapon tick
- * (two units = one pixel per original 12.5 Hz tick). Bombs follow the
- * original (0x0b58): see docs/island-combat.md. */
+/* Q2 positions, signed Q2 velocity per 25 Hz weapon tick (two units = one
+ * pixel per original 12.5 Hz tick). x is a 16-bit ring (16384 px): the
+ * plane flies 16000 px of open sea past either end of the map, and every
+ * projectile stays within a few thousand px of it, so Combat_WorldX
+ * recovers its world x. Bombs follow the original (0x0b58): see
+ * docs/island-combat.md. */
 typedef struct CombatProjectile {
     uint16_t x, y;
     int8_t vx, vy;
@@ -72,7 +75,14 @@ typedef struct CombatState {
     /* The background flash (0x031a) a rocket impact starts: frames left
      * (it shows on odd counts) and its colour, 1 white or 2 red. */
     uint8_t sky_flash, sky_color;
+    int16_t plane_x;          /* the plane's world x at the last Combat_Advance */
 } CombatState;
+
+/* A projectile's world x from its ring x, read relative to the plane. */
+static inline int16_t Combat_WorldX(const CombatState* state, uint16_t qx)
+{
+    return state->plane_x + ((int16_t)(qx - ((uint16_t)state->plane_x << 2)) >> 2);
+}
 
 /* A burst from a rocket: impact slots mark it in vx (bombs leave 0). */
 #define COMBAT_ROCKET_BURST 1

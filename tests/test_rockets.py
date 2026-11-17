@@ -51,7 +51,7 @@ class Combat(C.Structure):
                 ('flash', C.c_uint8), ('flash_ticks', C.c_uint8),
                 ('rocket', Rocket * 15), ('rockets', C.c_uint8), ('rocket_tick', C.c_uint8),
                 ('path', C.c_int16), ('speed', C.c_int16), ('far', C.c_uint8), ('bob', C.c_uint8),
-                ('sky_flash', C.c_uint8), ('sky_color', C.c_uint8)]
+                ('sky_flash', C.c_uint8), ('sky_color', C.c_uint8), ('plane_x', C.c_int16)]
 
 
 class Ships(C.Structure):
@@ -163,7 +163,7 @@ class Original:
         r['x'] = s32(r['x'] + r['vx'])
         d1 = abs(s32((px << 16) - r['x']))
         d1 = s16(s16(d1 >> 16) - 0x280 - (0x1180 if far else 0))
-        if d1 > 0x280 or r['x'] < 0 or (r['x'] >> 16) >= WORLD:
+        if d1 > 0x280:
             return 'gone'
         r['y'] = s16((r['y'] << 16) + r['vy'] + r['ay'] >> 16)
         if r['y'] <= 44:
@@ -230,7 +230,7 @@ class RocketTests(unittest.TestCase):
         self.assertEqual(self.core.Rockets_Launch(C.byref(s), x, y, vx, vy, left), 1)
         c = s.rocket[0]
         self.assertIn(c.delay, (4, 8, 12))
-        o = self.original.launch(path, speed, hstep, vstep, left, x, 1200 - y - 4, c.delay)
+        o = self.original.launch(path, speed, hstep, vstep, left, x, 1200 - y + 11, c.delay)
         self.assertEqual((c.x, c.y, c.vx, c.vy, c.ax * 2, c.ay * 2, c.frame, c.angle, c.speed),
                          (o['x'], o['y'], o['vx'], o['vy'], o['ax'], o['ay'], o['frame'], o['angle'], speed // 100))
         px, alt = x, 1200 - y
@@ -248,7 +248,8 @@ class RocketTests(unittest.TestCase):
             if outcome != 'gone':
                 _, bx, altitude = outcome
                 p = next(p for p in s.projectile[2:] if p.kind)
-                self.assertEqual((p.x >> 2, p.y >> 2, p.life, p.vx), (bx, 1200 - altitude + 12, 6, 1))
+                # x is a 16384 px ring (open sea past the map's ends).
+                self.assertEqual((p.x >> 2, p.y >> 2, p.life, p.vx), (bx % 16384, 1200 - altitude + 12, 6, 1))
             return outcome, t
         self.fail('the rocket neither burst nor left')
 

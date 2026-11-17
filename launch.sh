@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 cd "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-# Default: the game (mission ROM). "wings" is the original 32 KiB viewer.
+# Default: the game (mission ROM), map a; WINGS_MAP=j for map j.
+# "wings" is the original 32 KiB viewer.
 target="${1:-mission-flight}"
 case "$target" in
     wings)
@@ -11,6 +12,10 @@ case "$target" in
     hardware-scroll|mission-flight|mission-flight-debug)
         ./build.sh "projname=$target"
         rom="out/$target/$target.rom"
+        # WINGS_MAP=j ./launch.sh: another map (docs/maps.md; j has the ships).
+        if [ "$target" = mission-flight ] && [ -n "${WINGS_MAP:-}" ] && [ "$WINGS_MAP" != a ]; then
+            rom="out/mission-flight-$WINGS_MAP/mission-flight.rom"
+        fi
         ;;
     *)
         echo "Usage: $0 [mission-flight|mission-flight-debug|wings|hardware-scroll]" >&2

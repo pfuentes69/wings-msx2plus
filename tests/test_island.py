@@ -86,7 +86,7 @@ class Combat(C.Structure):
                 ('flash', C.c_uint8), ('flash_ticks', C.c_uint8),
                 ('rocket', Rocket * 15), ('rockets', C.c_uint8), ('rocket_tick', C.c_uint8),
                 ('path', C.c_int16), ('speed', C.c_int16), ('far', C.c_uint8), ('bob', C.c_uint8),
-                ('sky_flash', C.c_uint8), ('sky_color', C.c_uint8)]
+                ('sky_flash', C.c_uint8), ('sky_color', C.c_uint8), ('plane_x', C.c_int16)]
 
 
 class Puff(C.Structure):

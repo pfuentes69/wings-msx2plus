@@ -297,13 +297,13 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
     if (g_Combat.rockets)
     {
         const CombatRocket* r = g_Combat.rocket;
-        u16 x;
+        i16 x;
         for (i = 0; i < COMBAT_ROCKETS; ++i, ++r)
         {
             if (!r->live) continue;
-            x = (u16)r->x.w.whole;
+            x = r->x.w.whole;   /* signed: open sea past the map's ends */
             if ((u16)((far ? x >> 3 : x) - camera + 24) > 304u) continue;
-            Place(x, WINGS_FLIGHT_MAX_Y - r->y);
+            Place((u16)x, WINGS_FLIGHT_MAX_Y - r->y);
             Shape(far ? SMOKE_FRAME_FAR_ROCKET : r->frame + (r->live == 1 ? SMOKE_FRAME_ROCKET_UNLIT : SMOKE_FRAME_ROCKET));
         }
     }

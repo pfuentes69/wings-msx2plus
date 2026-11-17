@@ -218,13 +218,14 @@ void Island_Impacts(CombatState* combat, uint32_t* score) WINGS_BANKED
     const CombatProjectile* p = combat->projectile;
     uint16_t points = 0, x;
     uint8_t i;
-    /* A detonation sets life 6; Combat_Advance counts it down every tick.
+    /* World x is signed: past the map's ends it matches no target. A
+     * detonation sets life 6; Combat_Advance counts it down every tick.
      * Bombs and rockets damage buildings; their bursts (0x0cc0) and cannon
      * strikes (0x19f6, slots 0..1) kill walking soldiers within 16 px. */
     for (i = 0; i < combat->count; ++i, ++p)
     {
         if (p->life != 6 || p->kind < COMBAT_IMPACT) continue;
-        x = p->x >> 2;
+        x = (uint16_t)Combat_WorldX(combat, p->x);
         s_Struck = 0;
         if (i >= COMBAT_GUN_COUNT && p->kind == COMBAT_IMPACT) points += Island_Bombed(x);
         if (p->vx == COMBAT_ROCKET_BURST)

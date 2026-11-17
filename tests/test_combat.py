@@ -30,7 +30,7 @@ class Combat(ctypes.Structure):
                ('impacts',ctypes.c_uint16),('flash',ctypes.c_uint8),('flash_ticks',ctypes.c_uint8),
                ('rocket',Rocket*15),('rockets',ctypes.c_uint8),('rocket_tick',ctypes.c_uint8),
                ('path',ctypes.c_int16),('speed',ctypes.c_int16),('far',ctypes.c_uint8),('bob',ctypes.c_uint8),
-               ('sky_flash',ctypes.c_uint8),('sky_color',ctypes.c_uint8)]
+               ('sky_flash',ctypes.c_uint8),('sky_color',ctypes.c_uint8),('plane_x',ctypes.c_int16)]
 
 class CombatTests(unittest.TestCase):
     @classmethod
@@ -72,7 +72,9 @@ class CombatTests(unittest.TestCase):
                         reference.primary_pending=optimized.primary_pending=1
                     for fn,state in ((self.core.Combat_Step,reference),(self.core.Combat_OptimizedStep,optimized)):
                         fn(ctypes.byref(state),ctypes.byref(state.sortie),x,y,-154 if left else 154,0,left,controls)
-                    self.assertEqual(bytes(reference),bytes(optimized))
+                    # plane_x is the last advance's input: skipped ticks leave it.
+                    limit=Combat.plane_x.offset
+                    self.assertEqual(bytes(reference)[:limit],bytes(optimized)[:limit])
                     self.assertEqual(bytes(reference.sortie),bytes(optimized.sortie))
 
     def test_reset_and_capture_layout(self):
@@ -194,12 +196,17 @@ class CombatTests(unittest.TestCase):
         p=s.projectile[0]
         self.assertEqual((p.x,p.y,p.kind),((7032+28*5//9)*4,1168*4,3))
 
-    def test_strikes_never_wrap_world_edges_and_both_slots_bound_the_rate(self):
+    def test_strikes_reach_the_open_sea_past_the_map_and_both_slots_bound_the_rate(self):
+        # The plane flies on past either end of the map, over open sea: the
+        # line of fire meets the sea there (x is a ring read as signed).
         for x,left in [(3,1),(7604,0)]:
             s=self.state();s.aim_pitch=5;self.advance(s,6,1,x=x,y=1160,left=left)
-            self.assertEqual((s.shots_fired,s.impacts),(1,0))
-        s=self.state();self.advance(s,12,1,x=7608)
-        self.assertEqual(s.shots_fired,0)
+            p=s.projectile[0]
+            self.assertEqual((s.shots_fired,s.impacts,p.kind),(1,1,4))
+            wx=s.plane_x+(ctypes.c_int16((p.x-s.plane_x*4)&0xffff).value>>2)
+            self.assertTrue(wx<0 if left else wx>=7608,wx)
+        s=self.state();self.advance(s,12,1,x=7700)
+        self.assertEqual(s.shots_fired,1)
         # Six-tick strikes and three-tick shots: two slots sustain held fire.
         s=self.state();s.aim_pitch=9
         self.advance(s,600,1,x=4500,y=1160)

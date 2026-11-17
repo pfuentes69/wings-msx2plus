@@ -116,7 +116,7 @@ uint8_t Rockets_Launch(CombatState* state, uint16_t x, uint16_t y, int16_t vx, i
     r->vy.w.whole = vy > 0 ? -step : step;   /* the port's y grows downward */
     r->vy.w.fraction = 0;
     r->x.w.whole = (int16_t)x; r->x.w.fraction = 0;
-    r->y = (int16_t)(WINGS_FLIGHT_MAX_Y - y - 4);       /* where a bomb leaves */
+    r->y = (int16_t)(WINGS_FLIGHT_MAX_Y - y + 11);      /* 0x08ba: altitude + 11 */
     /* -$5bfa = path x 1024 / 18000 (2048 steps a turn); the rocket's angle
      * is half that. Acceleration 2 cos, 2 sin in 16.16. */
     angle = (int16_t)(((int32_t)state->path * 1024) / 18000);
@@ -151,8 +151,7 @@ static void Fly(CombatState* state, CombatRocket* r)
     d = s_PlaneX - r->x.w.whole;
     if (d > 0 || (!d && !r->x.w.fraction)) { if (r->x.w.fraction) --d; }
     else d = -d;
-    if (d - 640 - (state->far ? 4480 : 0) > 640 || r->x.w.whole < 0 ||
-        (uint16_t)r->x.w.whole >= WINGS_WORLD_WIDTH)
+    if (d - 640 - (state->far ? 4480 : 0) > 640)
     {
         r->live = 0; --state->rockets;
         return;

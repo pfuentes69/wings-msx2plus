@@ -11,7 +11,8 @@ CODE-hunk offsets and A4-relative variables, as in the research notes.
   secondary button fires them at the bombs' rate (4 a second, the user's
   observed rate, [combat-prototype.md](combat-prototype.md)). The torpedo is
   still refused.
-- A rocket leaves where a bomb does and falls back from the plane, unlit,
+- A rocket leaves level with the plane (its altitude + 11, drawn 11 px
+  lower) and falls back from it, unlit,
   for 4, 8 or 12 ticks (8 twice as likely). Then it lights and accelerates
   along the plane's flight path at that moment.
 - Fired in a dive steeper than about 15°, a rocket that lights with a ship
@@ -59,6 +60,12 @@ copied out of the executable by `tools/convert_rockets.py` into
   drawn after the puffs and erased by the tile repaint, so they need no VRAM
   backup. Their 59 atlas pieces sit in the static-tile cells the tile cache
   freed (rows 244..251 under the 56 cache columns and the old 57th column).
+- **Open sea past the map** (2026-11-17, user report): the plane flies up
+  to 16,000 px past either end of the map, but every weapon was off
+  outside it (on map a just right of the carrier). Projectile x is now a
+  16-bit ring of quarter pixels (16,384 px) read relative to the plane
+  (`Combat_WorldX`); past the ends the shots, bombs and rockets meet the
+  open sea.
 - **Flash** (`src/world_flight.c`, `SkyFlash`): set at publication, in
   VBlank, by writing palette colour 0 (the sky; the dashboard does not use
   it and the line interrupts never write it): white 777, red 700.
