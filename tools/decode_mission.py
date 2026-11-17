@@ -14,6 +14,13 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'reference_assets/original_files/Wings_of_Fury'
 
 
+# Ship archives in shape-table order (0x535a): the archive, the first names
+# of its list in the executable's data, and the list's length.
+SHIP_ARCHIVES = (('cruiseship', b'cl1 cl2 cl3 ', 24), ('destroyer', b'db1 db2 db3 ', 27),
+                 ('japcarrier', b'flg0flg1flg2flg3flg4flg5jcrb', 13), ('battleship', b'bb1 bb2 bb3 ', 25))
+SHIP_FIRST_ID = 184
+
+
 def executable_evidence(blob):
     # File offsets, checked directly. Disassembly was exploratory, not a runtime dependency.
     guards = {
@@ -58,8 +65,20 @@ def executable_evidence(blob):
     names = [raw[i:i + 4].decode('ascii') for i in range(0, len(raw), 4)]
     if any(len(n) != 4 or not n.isalnum() for n in names):
         raise ValueError('invalid world shape name table')
+    # The ship archives fill the shape table on from id 184 (0x535a):
+    # cruiser 0xb8.., destroyer 0xd0.., Japanese carrier 0xeb.., battleship
+    # 0xf8..; each from its own name list (docs/research/amiga-ships.md).
+    ship_names = []
+    for archive, first, count in SHIP_ARCHIVES:
+        at = data['payload'].find(first)
+        if at < 0 or data['payload'].find(first, at + 1) >= 0:
+            raise ValueError(f'missing or ambiguous {archive} name list')
+        listed = [data['payload'][at + 4 * i:at + 4 * i + 4] for i in range(count + 1)]
+        if listed[count] != bytes(4) or bytes(4) in listed[:count]:
+            raise ValueError(f'{archive} name list length differs')
+        ship_names += [(archive, n.decode('ascii')) for n in listed[:count]]
     return dict(view_rules=dict(close_baseline=151, far_scale=8, far_altitude_exclusive=186, wave_frames=12, wave_direction=-1), executable_sha256=hashlib.sha256(blob).hexdigest(),
-                shape_table_file_offset=data['file_offset'] + start, shape_names=names,
+                shape_table_file_offset=data['file_offset'] + start, shape_names=names, ship_names=ship_names,
                 instruction_guards=[dict(file_offset=o, bytes=h) for o,h in guards.items()])
 
 
@@ -91,7 +110,7 @@ def parse_map(blob):
                 reset_x=spawn, width=width, columns=len(cells), cells=cells, surface_runs=runs)
 
 
-def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False):
+def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False, ships=False):
     """Return a static side-view adaptation; report every unresolved flagged entry.
 
     Object X/depth/shape/origins follow the source. Baseline translation, ground
@@ -115,11 +134,41 @@ def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False):
                 start, end = (run['start'] // 8, (run['end'] + 7) // 8) if reduced else (run['start'], run['end'])
                 ground[y * width + start:y * width + end] = bytes([17]) * (end - start)
     placed, unresolved = [], []
+    ship_records = {}
     for cell in map_data['cells']:
         if not cell['draw']:
             continue
         ident = cell['shape_id']
         name = evidence['shape_names'][ident] if ident < len(evidence['shape_names']) else None
+        ship = ships and SHIP_FIRST_ID <= ident < SHIP_FIRST_ID + len(evidence['ship_names']) and not reduced
+        if ship:
+            # A ship's hull piece, from its own archive. Ships never move;
+            # sinking (0x1cd8) draws the same pieces lower, at run time.
+            archive, name = evidence['ship_names'][ident - SHIP_FIRST_ID]
+            if archive not in ship_records:
+                ship_records[archive] = {n: (o, r) for n, o, r in read_ppkc(unpack_rpck(
+                    (SOURCE / f'shapes/{archive}.shp').read_bytes()))}
+            if name not in ship_records[archive]:
+                unresolved.append(dict(**cell, name=name, reason=f'not present in {archive}.shp'))
+                continue
+            offset, raw = ship_records[archive][name]
+            # btmt sets planes 3, 4 constant (header byte 13 = 24), as the
+            # reduced shapes do; the plane-mask rules are the same.
+            data, meta = decode_record(raw, allow_reduced_flag=True, plane_constants=True)
+            ox, oy = meta['origin_candidate']
+            x, y = cell['x'] - ox, baseline + cell['y_offset'] - oy
+            visible = 0
+            for sy in range(meta['height']):
+                for sx in range(meta['width']):
+                    dx, dy = x + sx, y + sy
+                    color = data[sy * meta['width'] + sx]
+                    if (color or meta['opaque_rectangle']) and 0 <= dx < width and 0 <= dy < height:
+                        pixels[dy * width + dx] = color
+                        visible += 1
+            placed.append(dict(**cell, name=name, archive=archive, drawing_x=x, drawing_y=y,
+                               shape_offset=offset, shape_sha256=hashlib.sha256(raw).hexdigest(),
+                               width=meta['width'], height=meta['height'], visible_pixels=visible))
+            continue
         if ident == 0x113 and not reduced:
             # The island flag (0x3b52, close view only): its pole is baked
             # into the scenery as POST; the waving cloth is drawn over it at
@@ -195,12 +244,12 @@ def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False):
         scope='static normal-scale world shapes; special markers, dynamic ship parts and mission behavior are not emulated')
 
 
-def artifacts(map_name='a.map'):
+def artifacts(map_name='a.map', ships=False):
     executable = (SOURCE / 'wings').read_bytes()
     evidence = executable_evidence(executable)
     maps = {p.name: parse_map(p.read_bytes()) for p in sorted((SOURCE / 'maps').glob('*.map'))}
     mission = maps[map_name]
-    pixels, scene = reconstruct(mission, evidence)
+    pixels, scene = reconstruct(mission, evidence, ships=ships)
     summary = {name: dict(bytes=m['bytes'], sha256=m['sha256'], width=m['width'], columns=m['columns'],
                            reset_x=m['reset_x'], draw_entries=sum(c['draw'] for c in m['cells']),
                            surface_runs=m['surface_runs']) for name,m in maps.items()}
