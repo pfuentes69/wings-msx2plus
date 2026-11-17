@@ -305,3 +305,124 @@ void Column_Runs(unsigned short* cache, const unsigned short* decoded) __naked
         jp      column_runs_loop$
     __endasm;
 }
+
+/* Mark the overlay's map rows first..last dirty in every ring column from
+ * left & ~7 up to right (Z80: ~150 T-states a column; SDCC's per-column
+ * function cost ~440 a call, 2 ms a frame over the carrier). */
+DirtyRange g_DirtyRange;
+static unsigned short s_ColBase, s_CacheBase;
+static unsigned char s_Count;
+/* The column stride, 2 * 19 bytes, is built from shifts below. */
+typedef char DirtyRows19[TERRAIN_MAP_ROWS == 19 ? 1 : -1];
+typedef char DirtyRangeLayout[sizeof(DirtyRange) == 7 ? 1 : -1];
+void Terrain_DirtyOverlay(void) __naked
+{
+    __asm
+        ; n = ((right + 7) >> 3) - (left >> 3) columns
+        ld hl, (_g_DirtyRange + 2)
+        ld de, #7
+        add hl, de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de, hl
+        ld hl, (_g_DirtyRange + 0)
+        ld a, l
+        rrca
+        rrca
+        rrca
+        and #31
+        ld c, a                         ; c: the first ring column
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ex de, hl
+        or a
+        sbc hl, de
+        bit 7, h
+        ret nz
+        ld a, l
+        or a
+        ret z
+        ld b, a                         ; b: columns
+        ld a, (_g_DirtyRange + 6)       ; rows: last - first + 1
+        ld hl, #_g_DirtyRange + 5
+        sub (hl)
+        inc a
+        ld (_s_Count), a
+        ld hl, #_g_TerrainColumns
+        ld de, #_g_TerrainCached
+        ld a, (_g_DirtyRange + 4)
+        or a
+        jr z, dirty_page$
+        ld hl, #_g_TerrainColumns + 64
+        ld de, #_g_TerrainCached + 32 * TERRAIN_MAP_ROWS * 2
+    dirty_page$:
+        ld (_s_ColBase), hl
+        ld a, (_g_DirtyRange + 5)       ; + first row
+        add a, a
+        add a, e
+        ld e, a
+        jr nc, dirty_first$
+        inc d
+    dirty_first$:
+        ld (_s_CacheBase), de
+        ld l, c                         ; + column * 38 bytes
+        ld h, #0
+        add hl, hl
+        push de
+        ld d, h
+        ld e, l
+        add hl, hl
+        add hl, hl
+        add hl, hl
+        add hl, hl
+        add hl, de
+        add hl, de
+        add hl, de
+        pop de
+        add hl, de
+    dirty_column$:
+        push hl
+        ld hl, (_s_ColBase)             ; the column's map column: invalid
+        ld a, c
+        add a, a
+        add a, l
+        ld l, a
+        jr nc, dirty_col$
+        inc h
+    dirty_col$:
+        ld (hl), #0xff
+        inc hl
+        ld (hl), #0xff
+        pop hl
+        push hl
+        ld a, (_s_Count)
+        ld e, a
+    dirty_row$:
+        ld (hl), #0xff
+        inc hl
+        ld (hl), #0xff
+        inc hl
+        dec e
+        jr nz, dirty_row$
+        pop hl
+        ld de, #38
+        add hl, de
+        inc c
+        ld a, c
+        cp #32
+        jr nz, dirty_next$
+        ld c, #0
+        ld hl, (_s_CacheBase)
+    dirty_next$:
+        djnz dirty_column$
+        ret
+    __endasm;
+}

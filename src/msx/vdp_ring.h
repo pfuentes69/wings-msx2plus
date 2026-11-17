@@ -11,5 +11,5 @@ void Vdp_RingCopy(u8 ring, u16 width);
 /* Fill the fixed fields of a copy for Vdp_RingCopy. */
 #define VDP_RING_SET(sx, sy, dy, ny, cmd) do { \
     g_VDP_Command.SX = (sx); g_VDP_Command.SY = (sy); g_VDP_Command.DY = (dy); \
-    g_VDP_Command.NY = (ny); g_VDP_Command.ARG = 0; g_VDP_Command.CMD = (cmd); } while (0)
+    g_VDP_Command.NY = (ny); g_VDP_Command.ARG = 0; g_VDP_Command.CMD = (u8)(cmd); } while (0)
 #endif

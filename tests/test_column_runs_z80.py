@@ -9,6 +9,7 @@ from pathlib import Path
 import random
 import re
 import shutil
+import struct
 import subprocess
 import tempfile
 import unittest
@@ -24,10 +25,14 @@ TILES = 400
 COLORS, LIMITS, TILE_X, TILE_Y, COMMAND = 0xD400, 0xD600, 0xD800, 0xDA00, 0xC800
 LOG_POINTER, LOG = 0xC900, 0xE000
 CACHE, DECODED, STACK, SENTINEL = 0xD000, 0xD100, 0xF000, 0x3000
+COLUMNS, CACHED = 0xA000, 0xA100   # g_TerrainColumns[2][32], g_TerrainCached[2][32][ROWS]
 STUB = f"""
     .module stub
     .globl _g_MissionTileColors, _g_MissionTileLimit, _g_MissionTileX, _g_MissionTileY
     .globl _g_VDP_Command, _VDP_CommandSetupR32, _VDP_CommandSetupR36
+    .globl _g_TerrainColumns, _g_TerrainCached
+    _g_TerrainColumns = {COLUMNS:#06x}
+    _g_TerrainCached = {CACHED:#06x}
     _g_MissionTileColors = {COLORS:#06x}
     _g_MissionTileLimit = {LIMITS:#06x}
     _g_MissionTileX = {TILE_X:#06x}
@@ -108,6 +113,7 @@ class ColumnRunsZ80Tests(unittest.TestCase):
         symbols = dict((n, int(a, 16)) for a, n in
                        re.findall(r'^\s+([0-9A-F]{8})\s+(_\w+)', (work / 'column_ops.map').read_text(), re.M))
         cls.entry, cls.column_x, cls.column_y = symbols['_Column_Runs'], symbols['_g_ColumnX'], symbols['_g_ColumnY']
+        cls.dirty, cls.dirty_range = symbols['_Terrain_DirtyOverlay'], symbols['_g_DirtyRange']
         cls.machine = z80.Z80Machine()
         for line in (work / 'column_ops.ihx').read_text().split():
             count, address, kind = int(line[1:3], 16), int(line[3:7], 16), int(line[7:9], 16)
@@ -119,6 +125,37 @@ class ColumnRunsZ80Tests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.temp.cleanup()
+
+    def test_dirty_overlay_marks_the_columns_it_covers(self):
+        # The C it replaced: for each column from left & ~7 while < right,
+        # mark the ring column's map column and rows first..last invalid.
+        rng, m = random.Random(5), self.machine
+        size = 2 * 32 * 2 + 2 * 32 * ROWS * 2
+        for _ in range(3000):
+            left = rng.randrange(0, 9000)
+            right = left + rng.choice([rng.randrange(-4, 80), 2, 8, 64, 256])
+            page, first = rng.randrange(2), rng.randrange(ROWS)
+            last = rng.randrange(first, ROWS)
+            before = bytes(rng.randrange(256) for _ in range(size))
+            m.set_memory_block(COLUMNS, before[:128])
+            m.set_memory_block(CACHED, before[128:])
+            m.set_memory_block(self.dirty_range, struct.pack('<2H3B', left, right & 0xFFFF, page, first, last))
+            m.set_memory_block(STACK - 2, SENTINEL.to_bytes(2, 'little'))
+            m.sp, m.pc = STACK - 2, self.dirty
+            m.ticks_to_stop = 100000
+            while m.pc != SENTINEL:
+                assert not m.run() & m._TICKS_LIMIT_HIT
+            want = bytearray(before)
+            column = left & ~7
+            while column < right:
+                slot = (column & 255) >> 3
+                want[(page * 32 + slot) * 2:(page * 32 + slot) * 2 + 2] = b'\xff\xff'
+                for row in range(first, last + 1):
+                    o = 128 + ((page * 32 + slot) * ROWS + row) * 2
+                    want[o:o + 2] = b'\xff\xff'
+                column += 8
+            got = bytes(m.memory[COLUMNS:COLUMNS + 128]) + bytes(m.memory[CACHED:CACHED + size - 128])
+            self.assertEqual(got, bytes(want), (left, right, page, first, last))
 
     def words(self, values):
         return b''.join(v.to_bytes(2, 'little') for v in values)

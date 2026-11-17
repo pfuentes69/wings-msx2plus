@@ -93,7 +93,7 @@ static u16 s_CrewCamera[2] = {65535u, 65535u};
 void Ship_DrawCrew(u8 page, u16 camera, u8 cleared) WINGS_BANKED
 {
     u8 piece, index, mark, y, height;
-    u16 origin, left, right, column;
+    u16 origin, left, right;
     /* Terrain columns are only redrawn when the camera moves or the page is
      * rebuilt, so the overlay rows need re-marking only then (per page). */
     mark = cleared || s_CrewCamera[page] != camera;
@@ -105,8 +105,11 @@ void Ship_DrawCrew(u8 page, u16 camera, u8 cleared) WINGS_BANKED
         right = (camera+257)&65534u; if (right > origin+22) right=origin+22;
         if (left>=right) continue;
         if (mark)
-            for (column=left&65528u; column<right; column+=8)
-                Terrain_DirtyOverlayColumn(page,column,11,13);
+        {
+            g_DirtyRange.left=left; g_DirtyRange.right=right; g_DirtyRange.page=page;
+            g_DirtyRange.first=11; g_DirtyRange.last=13;
+            Terrain_DirtyOverlay();
+        }
         index = (piece < 2 ? 0 : 16) + g_CrewFrame*2 + (piece&1);
         if (piece<2 && g_Carrier.stage!=CARRIER_DECK) index=CREW_IDLE_PIECE+(piece&1);
         /* Panned down, the lower figure rows leave the view at row 172.

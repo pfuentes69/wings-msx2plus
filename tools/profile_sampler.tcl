@@ -53,7 +53,13 @@ proc prof_rendering {} {
         # View changes (altitude scale switch, full page rebuild) are exempt from deadlines.
         set kind [expr {[debug read memory $::prof_addr(g_ViewChange)] ? "rebuild" : "frame"}]
         set cwx [expr {[debug read memory $::prof_addr(g_DisplayWorld)]+256*[debug read memory [expr {$::prof_addr(g_DisplayWorld)+1}]]}]
-        if {$kind eq "frame" && $cwx >= 6500 && $cwx <= 7450} {incr ::prof_calls([list carrier_frames 0])}
+        if {$kind eq "frame" && $cwx >= 6500 && $cwx <= 7450} {
+            incr ::prof_calls([list carrier_frames 0])
+            # Low over the carrier (below the close-view pan, y >= 1069): the
+            # frames the NTSC heavy-scene allowance is for.
+            set cwy [expr {[debug read memory $::prof_addr(g_DisplayY)]+256*[debug read memory [expr {$::prof_addr(g_DisplayY)+1}]]}]
+            if {$cwy >= 1069} {incr ::prof_calls([list carrierlow_cost_${sim}_${draw} 0])}
+        }
         incr ::prof_calls([list ${kind}_cost_${sim}_${draw} [prof_guns]])
         # Where the heaviest gameplay frames happen (world x, y of the last publication).
         # Renders over 85 ms: file their samples as a separate group (carrier

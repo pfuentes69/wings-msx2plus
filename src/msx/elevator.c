@@ -46,7 +46,7 @@ static void Copy(u8 page,u16 camera,u8 index,u16 origin,u8 y,u8 height,u8 width)
 }
 void Elevator_Draw(u8 page,u16 camera,u8 depth,u8 cleared) WINGS_BANKED
 {
-    u16 left=(camera+8)&65534u,right=(camera+257)&65534u,column;
+    u16 left=(camera+8)&65534u,right=(camera+257)&65534u;
     u8 i;
     if (left<7004) left=7004;
     if (right>7068) right=7068;
@@ -55,8 +55,9 @@ void Elevator_Draw(u8 page,u16 camera,u8 depth,u8 cleared) WINGS_BANKED
         (s_Camera[page]==camera || (s_Camera[page]>=6812 && s_Camera[page]<=6996 && camera>=6812 && camera<=6996)))
     {s_Camera[page]=camera;return;}
     s_Depth[page]=depth;s_Camera[page]=camera;
-    for (column=left&65528u;column<right;column+=8)
-        Terrain_DirtyOverlayColumn(page,column,13,14);
+    g_DirtyRange.left=left;g_DirtyRange.right=right;g_DirtyRange.page=page;
+    g_DirtyRange.first=13;g_DirtyRange.last=14;
+    Terrain_DirtyOverlay();
     Copy(page,camera,0,7004,112,40,64);   /* OVERLAY_TOPS in tools/convert_mission.py */
     for (i=0;i<4;++i)
         Copy(page,camera,i+1,7004+(i&1)*32,129+depth+(i>=2 ? 7 : 0),i<2 ? 7 : 6,32);

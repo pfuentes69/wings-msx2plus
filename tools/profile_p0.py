@@ -151,6 +151,13 @@ def main():
     costs = [(int(n.split('_')[2]), int(n.split('_')[3]), c) for (n, g), c in counted.items()
              if n.startswith('frame_cost_')]
     rebuilds = sum(c for (n, g), c in counted.items() if n.startswith('rebuild_cost_'))
+    low = sorted((int(n.split('_')[2]) + int(n.split('_')[3]), int(n.split('_')[2]), int(n.split('_')[3]))
+                 for (n, g), c in counted.items() if n.startswith('carrierlow_cost_') for _ in range(c))
+    if low:
+        pick = lambda q: low[min(len(low) - 1, int(len(low) * q))]
+        print(f'\n== low over the carrier (y >= 1069, no pan): {len(low)} frames, sim+render ms')
+        print(f'   median {pick(0.5)[0]}, p90 {pick(0.9)[0]}, p99 {pick(0.99)[0]}, '
+              f'max {low[-1][0]} (sim {low[-1][1]} + render {low[-1][2]})')
     if busy_in:
         print('\n== render functions sampled while the VDP command engine is busy (CPU overlaps VDP)')
         for name, count in busy_in.most_common(8):
@@ -171,7 +178,7 @@ def main():
         if heavy:
             print('\n== heaviest gameplay frames (sim+render ms, location):')
             for total, n in heavy[:12]: print(f'{total:5d}  {n}')
-        for name in sorted({n for n, _ in counted if not n.startswith(('frame_cost_', 'rebuild_cost_', 'publish_tstates_', 'heavy_', 'heavyrender_', 'carrier_frames'))}):
+        for name in sorted({n for n, _ in counted if not n.startswith(('frame_cost_', 'rebuild_cost_', 'carrierlow_cost_', 'publish_tstates_', 'heavy_', 'heavyrender_', 'carrier_frames'))}):
             print(f'{name:28} {counted[(name, 0)]:8d} {counted[(name, 1)]:8d}')
 
 

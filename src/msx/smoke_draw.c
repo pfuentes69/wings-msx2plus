@@ -1,6 +1,7 @@
 #include "smoke_draw.h"
 #include "vdp.h"
 #include "vdp_inl.h"
+#include "vdp_ring.h"
 #include "terrain_renderer.h"
 #include "../core/smoke.h"
 #include "../core/island.h"
@@ -83,16 +84,10 @@ static void RepaintTiles(u8 page, i16 left, i16 right, i16 top, i16 bottom)
 
 static void SkyFill(u8 page, i16 left, i16 right, i16 top, i16 bottom)
 {
-    u8 ring, width, part;
     left &= ~1; right = (right + 1) & ~1;
-    ring = left & 255; width = right - left;
-    while (width)
-    {
-        part = width;
-        if ((u16)ring + part > 256) part = 256 - ring;
-        VDP_CommandHMMV(ring, (u16)page * 256 + top, part, bottom - top, 0);
-        ring += part; width -= part;
-    }
+    VDP_RING_SET(0, 0, (u16)page * 256 + top, bottom - top, VDP_CMD_HMMV);
+    g_VDP_Command.CLR = 0;
+    Vdp_RingCopy((u8)left, right - left);
 }
 
 /* world_flight.c (resident): one atlas shape from the aircraft banks. */
@@ -174,23 +169,15 @@ static u8 s_Page;
 static void Piece(const AircraftShape* piece)
 {
     i16 l = s_X + piece->dx, t = s_Row + piece->dy, r = l + piece->width, b = t + piece->height;
-    u8 sx = piece->atlas_x, ring, width, part;
+    u8 sx = piece->atlas_x;
     u16 sy = piece->atlas_y;
     if (l < s_Left) { sx += s_Left - l; l = s_Left; }
     if (r > s_Right) r = s_Right;
     if (t < s_Top) { sy += s_Top - t; t = s_Top; }
     if (b > s_Limit) b = s_Limit;
     if (r <= l || b <= t) return;
-    ring = l & 255; width = r - l;
-    for (;;)
-    {
-        part = width;
-        if ((u16)ring + part > 256) part = 256 - ring;
-        VDP_CommandLMMM(sx, sy, ring, (u16)s_Page * 256 + t, part, b - t, VDP_OP_TIMP);
-        width -= part;
-        if (!width) return;
-        sx += part; ring = 0;
-    }
+    VDP_RING_SET(sx, sy, (u16)s_Page * 256 + t, b - t, VDP_CMD_LMMM + VDP_OP_TIMP);
+    Vdp_RingCopy((u8)l, r - l);
 }
 
 /* Place a shape at world (x, y) in this view (s_Far, s_Shift). */

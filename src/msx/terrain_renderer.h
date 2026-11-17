@@ -1,6 +1,7 @@
 #pragma once
 #include "core.h"
 #include "../generated/mission_tiles.h"
+#include "column_ops.h"
 void Terrain_Load(void);
 void Terrain_LoadEnd(void);
 void Terrain_InitPage(u8 page);
@@ -19,9 +20,7 @@ extern u8 g_TopClip;
  * TERRAIN_MAP_BANK (the runs stay in ROM). */
 extern u8 g_TerrainMap[TERRAIN_MAP_TABLE_BYTES];
 
-/* Dynamic overlays mark their affected tile rows for repaint on ring reuse.
- * Requires first <= last. */
-void Terrain_DirtyOverlayColumn(u8 page, u16 world, u8 first, u8 last);
+/* Overlay repaint marks: Terrain_DirtyOverlay (column_ops.h). */
 /* Per page and ring column: the tile ids shown and the map column drawn
  * (65535 when invalid). */
 extern u16 g_TerrainCached[2][32][TERRAIN_MAP_ROWS];

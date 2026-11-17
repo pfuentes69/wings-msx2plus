@@ -31,6 +31,9 @@ class ColumnOpsZ80Tests(unittest.TestCase):
     .module stub
     .globl _g_MissionTileColors, _g_MissionTileLimit, _g_MissionTileX, _g_MissionTileY
     .globl _g_VDP_Command, _VDP_CommandSetupR32, _VDP_CommandSetupR36
+    .globl _g_TerrainColumns, _g_TerrainCached
+    _g_TerrainColumns = 0xA000
+    _g_TerrainCached = 0xA100
     _g_MissionTileColors = 0xD400
     _g_MissionTileLimit = 0xD600
     _g_MissionTileX = 0xD800

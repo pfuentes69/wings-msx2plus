@@ -163,14 +163,3 @@ void Terrain_DrawColumn(u16 world, u8 page)
 typedef char ColumnRunsCommands[(VDP_CMD_HMMM == 0xD0 && VDP_CMD_HMMV == 0xC0) ? 1 : -1];
 typedef char ColumnRunsLayout[(sizeof(VDP_Command) == 15 && sizeof(g_VDP_Command.SX) == 2) ? 1 : -1];
 
-void Terrain_DirtyOverlayColumn(u8 page, u16 world, u8 first, u8 last)
-{
-    u8 slot=(world&255)>>3, count=last-first+1;   // map rows: they move with the pan
-    /* &g_TerrainCached[page][slot][first] by shifts: SDCC multiplies
-     * through a library call otherwise. 19 rows: slot * 19 = 16s + 2s + s. */
-    u16* cached=(u16*)g_TerrainCached + (page ? 32 * TERRAIN_MAP_ROWS : 0) +
-                ((u16)slot << 4) + ((u16)slot << 1) + slot + first;
-    typedef char Rows19[TERRAIN_MAP_ROWS == 19 ? 1 : -1];
-    g_TerrainColumns[page][slot]=65535u;
-    do *cached++=65535u; while (--count);
-}
