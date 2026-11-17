@@ -48,19 +48,32 @@ on the original tick, as the dugout guns do.
 
 ## Cost
 
-A low pass over the destroyer's bow guns (map j, NTSC), not firing:
-`Ships_Guns` 7.8 ms an update (about 2.5 a frame), the smoke path 23 ms
-drawing and 30 ms erasing (barrels over the hull and splashes over the
-waves are repainted from terrain tiles). Such a pass misses about 14
-frame deadlines in 4 seconds: the game slows while the guns are on screen.
-Done so far:
+Measured on map j (NTSC), a low pass over the destroyer's bow guns. Frame
+deadlines missed in about 4 seconds:
 
-- muzzle flashes (gnf) were split into up to 8 one-row atlas pieces; they
-  now go in the late atlas pass (one or two pieces), and every rocket
-  frame is one piece (111 smoke-path pieces, from 167);
-- `Terrain_TileY` in Z80; the modules' xorshift in Z80 (`xorshift.h`, 145
-  T-states, the C sequence: `tests/test_xorshift_z80.py`);
-- off-screen barrels skipped before clipping; the gun loop on statics.
+| | Not firing | Firing rockets |
+| --- | --- | --- |
+| Step 3 as first built | 18 | 14 |
+| After the performance pass | 7 | 8 |
 
-Next: the smoke path's draw and erase in Z80, and one repaint for shapes
-that overlap.
+The pass (2026-11-17):
+
+- the guns run once a presented frame, as in the original's render loop
+  (0x38d2), not on every original tick: 7.4 ms a frame, from about 19;
+- muzzle flashes (gnf) and rockets drawn whole: they were split into up
+  to 8 one-row atlas pieces (smoke-path pieces 167 -> 111; the tile cache
+  gave up 4 of its 56 slots for the room);
+- `Terrain_TileY`, the xorshift generators (`xorshift.h`) and the shapes'
+  `Box` (`smoke_box.h`) in Z80, each tested against its C on an emulated
+  Z80; the barrel frame by table; the gun loop, `Piece` and `RepaintTiles`
+  on statics;
+- off-screen barrels skipped before clipping; at most 4 splashes at once;
+- with a ship's guns in view and 8+ smoke-path shapes, 2 more VBlanks a
+  frame (an even 5 frames a second instead of late ones).
+
+What a not-firing frame there still costs: erasing the shapes 27 ms
+(terrain repaints under barrels and splashes), drawing them 20 ms, the wave
+strip 11.5 ms, the guns 7.4 ms, tile strips loaded mid-frame about 5 ms
+(4.5 ms a strip). Firing adds the rockets and their bursts. Next
+candidates: the repaint loop in Z80, fewer strip uploads in heavy frames
+(prefetch further ahead), cheaper bursts, the wave strip.

@@ -61,6 +61,7 @@ volatile u32 g_DisplayScore;
  * local held across Render's column loops makes SDCC spill throughout. */
 static u8 s_Smoked;
 static u8 s_GunsDrawn;           /* dugout guns shown this original tick */
+static u8 s_ShipGuns;            /* ship barrels and splashes shown this frame */
 static u8 s_SoldiersMoving;      /* island soldiers walking or dying */
 static u16 s_Impacts;            /* g_Combat.impacts already seen */
 static u8 s_RenderRope = 255;
@@ -1167,6 +1168,10 @@ void main(void)
          * 116 ms of the 133). */
         if (g_Game.phase==GAME_PLAY && g_Carrier.stage==CARRIER_DECK &&
             (g_SmokeDrawnCount[g_DisplayPage] >= 4 || s_Tight)) present_ticks+=2;
+        /* A ship's guns in view with 8+ shapes (barrels, splashes, the
+         * plane's smoke): 2 more, an even 5 frames a second rather than
+         * late ones (docs/ships.md). */
+        if (s_ShipGuns && g_SmokeDrawnCount[g_DisplayPage] >= 8) present_ticks+=2;
 #endif
         steps=(g_VDP_REGSAV[9]&2) ? present_ticks*3 : present_ticks*5/2;
         weapons=reset_weapons=0; input=0; turn=0;
@@ -1295,11 +1300,6 @@ advance_clocks:
                             s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps &&
                             g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
                             &g_Engine, &g_Game.sortie);
-                        /* The ships' guns (0x4c3e): barrels, fire, shell splashes. */
-                        if (g_Ships.present) s_GunsDrawn |= Ships_Guns(&s_World.flight, s_World.x >> 8,
-                            s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps &&
-                            g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
-                            &g_Engine, &g_Game.sortie);
                         s_SoldiersMoving = Island_Soldiers(&g_Game.progress.score);
 #endif
                     }
@@ -1361,6 +1361,14 @@ advance_clocks:
 #endif
         frame = s_Aircraft.shape;
         page = g_DisplayPage ^ 1;
+#ifdef WINGS_P1_FLIGHT
+        /* The ships' guns (0x4c3e) run in the original's render loop (from
+         * 0x38d2): once a presented frame, before it is drawn. */
+        s_ShipGuns = g_Ships.present ? Ships_Guns(&s_World.flight, s_World.x >> 8,
+            s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps &&
+            g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
+            &g_Engine, &g_Game.sortie) : 0;
+#endif
         if (g_Game.phase!=GAME_PLAY)
         {
 #ifdef WINGS_P1_FLIGHT
@@ -1387,7 +1395,7 @@ advance_clocks:
             g_DisplayGauges[0] != g_Engine.oil_needle || g_DisplayGauges[1] != g_Engine.fuel_needle ||
             g_DisplayGauges[2] != g_Engine.lamps || g_DisplayCrash != s_CrashFrame ||
             g_DisplayWheel != (g_TerrainFar || s_CrashFrame != 255 ? 255 : s_Wheel) || g_DisplayGear != s_GearPos ||
-            SmokeActive() || s_GunsDrawn || s_SoldiersMoving || g_MessageActive || g_SmokeDrawnCount[g_DisplayPage] || g_TerrainDirty ||
+            SmokeActive() || s_GunsDrawn || s_ShipGuns || s_SoldiersMoving || g_MessageActive || g_SmokeDrawnCount[g_DisplayPage] || g_TerrainDirty ||
 #endif
             g_DisplayWave != s_Wave || g_DisplayHeave != s_RenderHeave || camera != g_DisplayCamera || world != g_DisplayWorld || y != g_DisplayY || frame != g_SelectedFrame)
             Render(page, camera, world, y, frame);

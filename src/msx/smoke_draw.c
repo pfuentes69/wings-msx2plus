@@ -52,39 +52,57 @@ static u8 SkyRows(u8 page, u16 world, u8 first, u8 last)
  * column flagged invalid for that reason still has valid rows: skipping it
  * left 8-px blocks of smoke in the sky over the carrier. */
 static u16 s_Decoded[TERRAIN_MAP_ROWS + 1];
+/* The loop's state as statics (SDCC reaches them directly, where locals go
+ * through the IX frame); each tile fills g_VDP_Command and issues it, the
+ * column's DX, NX and ARG set once. */
+static u16 s_Column, s_PageBase;
+static i16 s_Y, s_Next, s_Bottom, s_Origin;
+static u8 s_RepaintRow, s_First;
+static const u16* s_Cached;
 static void RepaintTiles(u8 page, i16 left, i16 right, i16 top, i16 bottom)
 {
-    const u16* cached;
-    u16 column, tile, base = (u16)page * 256, source;
-    i16 y, next, origin = TERRAIN_TOP + g_PanRows;
-    u8 slot, row, first = (u8)((top - origin) >> 3), color, decoded;
-    for (column = (u16)(left & ~7); (i16)column < right; column += 8)
+    u16 tile;
+    u8 color, decoded;
+    s_Origin = TERRAIN_TOP + g_PanRows;
+    s_Bottom = bottom;
+    s_PageBase = (u16)page << 8;
+    s_First = (u8)((top - s_Origin) >> 3);
+    g_VDP_Command.NX = 8; g_VDP_Command.ARG = 0;
+    for (s_Column = (u16)(left & ~7); (i16)s_Column < right; s_Column += 8)
     {
-        slot = (column & 255) >> 3;
-        cached = &g_TerrainCached[page][slot][first];
-        row = first; y = top; decoded = 0;
+        s_Cached = &g_TerrainCached[page][(u8)s_Column >> 3][s_First];
+        s_RepaintRow = s_First; s_Y = top; decoded = 0;
+        g_VDP_Command.DX = (u8)s_Column;
         do
         {
-            next = origin + (i16)(row + 1) * 8;
-            if (next > bottom) next = bottom;
-            tile = *cached++;
+            s_Next = s_Origin + ((i16)(s_RepaintRow + 1) << 3);
+            if (s_Next > s_Bottom) s_Next = s_Bottom;
+            tile = *s_Cached++;
             if (tile >= TERRAIN_TILE_COUNT)
             {
-                if (!decoded) { Terrain_DecodeColumn(column, s_Decoded); decoded = 1; }
-                tile = s_Decoded[row];
+                if (!decoded) { Terrain_DecodeColumn(s_Column, s_Decoded); decoded = 1; }
+                tile = s_Decoded[s_RepaintRow];
             }
             if (tile < TERRAIN_TILE_COUNT)
             {
+                g_VDP_Command.DY = s_PageBase + s_Y;
+                g_VDP_Command.NY = s_Next - s_Y;
                 color = TERRAIN_TILE_COLOR(tile);
-                if (color != 255) VDP_CommandHMMV(column & 255, base + y, 8, next - y, color * 17);
+                if (color != 255)
+                {
+                    g_VDP_Command.CLR = color * 17;
+                    g_VDP_Command.CMD = VDP_CMD_HMMV;
+                }
                 else
                 {
-                    source = Terrain_TileY(tile) + (u8)(y - origin) - row * 8;
-                    VDP_CommandHMMM(g_TileSourceX, source, column & 255, base + y, 8, next - y);
+                    g_VDP_Command.SY = Terrain_TileY(tile) + (u8)(s_Y - s_Origin) - ((u16)s_RepaintRow << 3);
+                    g_VDP_Command.SX = g_TileSourceX;
+                    g_VDP_Command.CMD = VDP_CMD_HMMM;
                 }
+                VDP_CommandSetupR32();
             }
-            y = next; ++row;
-        } while (y < bottom);
+            s_Y = s_Next; ++s_RepaintRow;
+        } while (s_Y < s_Bottom);
     }
 }
 
@@ -119,19 +137,10 @@ static void UseClip(const Clip* clip)
     s_Limit = clip->limit; s_Heave = clip->heave;
 }
 
-/* A drawn shape's box on the page, clipped as it was drawn. */
-static i16 s_BoxLeft, s_BoxRight, s_BoxTop, s_BoxBottom;
-static u8 Box(i16 x, i16 row, u8 frame)
-{
-    const signed char* box = g_SmokeBox + (frame << 2);
-    s_BoxLeft = x + box[0]; s_BoxRight = s_BoxLeft + (u8)box[2];
-    s_BoxTop = row - s_Heave + box[1]; s_BoxBottom = s_BoxTop + (u8)box[3];
-    if (s_BoxLeft < s_Left) s_BoxLeft = s_Left;
-    if (s_BoxRight > s_Right) s_BoxRight = s_Right;
-    if (s_BoxTop < s_Top) s_BoxTop = s_Top;
-    if (s_BoxBottom > s_Limit) s_BoxBottom = s_Limit;
-    return s_BoxRight > s_BoxLeft && s_BoxBottom > s_BoxTop;
-}
+/* A drawn shape's box on the page, clipped as it was drawn: Box(frame)
+ * for the shape at (s_BX, s_BY), in Z80. */
+static i16 s_BoxLeft, s_BoxRight, s_BoxTop, s_BoxBottom, s_BX, s_BY;
+#include "smoke_box.h"
 
 u8 Smoke_Restore(u8 page, u8 rebuilt, u16 camera) WINGS_BANKED
 {
@@ -147,7 +156,8 @@ u8 Smoke_Restore(u8 page, u8 rebuilt, u16 camera) WINGS_BANKED
     {
         /* The whole box, even if the camera has since moved: the page's
          * ring still holds the pixels there. */
-        Box((i16)d->x, d->row, d->frame);
+        s_BX = (i16)d->x; s_BY = d->row;
+        Box(d->frame);
         left = s_BoxLeft; right = s_BoxRight;
         if (s_BoxBottom <= top) { SkyFill(page, left, right, s_BoxTop, s_BoxBottom); continue; }
         first = (u8)(((s_BoxTop < top ? top : s_BoxTop) - top) >> 3);
@@ -172,18 +182,25 @@ u8 Smoke_Restore(u8 page, u8 rebuilt, u16 camera) WINGS_BANKED
 static i16 s_X, s_Row;
 static u8 s_Page;
 
+/* Statics, not locals: SDCC reaches them directly (the locals' IX frame
+ * made this ~2,700 T-states a piece). */
+static i16 s_PL, s_PT, s_PR, s_PB;
 static void Piece(const AircraftShape* piece)
 {
-    i16 l = s_X + piece->dx, t = s_Row + piece->dy, r = l + piece->width, b = t + piece->height;
-    u8 sx = piece->atlas_x;
-    u16 sy = piece->atlas_y;
-    if (l < s_Left) { sx += s_Left - l; l = s_Left; }
-    if (r > s_Right) r = s_Right;
-    if (t < s_Top) { sy += s_Top - t; t = s_Top; }
-    if (b > s_Limit) b = s_Limit;
-    if (r <= l || b <= t) return;
-    VDP_RING_SET(sx, sy, (u16)s_Page * 256 + t, b - t, VDP_CMD_LMMM + VDP_OP_TIMP);
-    Vdp_RingCopy((u8)l, r - l);
+    s_PL = s_X + piece->dx; s_PR = s_PL + piece->width;
+    s_PT = s_Row + piece->dy; s_PB = s_PT + piece->height;
+    g_VDP_Command.SX = piece->atlas_x;
+    g_VDP_Command.SY = piece->atlas_y;
+    if (s_PL < s_Left) { g_VDP_Command.SX += s_Left - s_PL; s_PL = s_Left; }
+    if (s_PR > s_Right) s_PR = s_Right;
+    if (s_PT < s_Top) { g_VDP_Command.SY += s_Top - s_PT; s_PT = s_Top; }
+    if (s_PB > s_Limit) s_PB = s_Limit;
+    if (s_PR <= s_PL || s_PB <= s_PT) return;
+    g_VDP_Command.DY = ((u16)s_Page << 8) + s_PT;
+    g_VDP_Command.NY = s_PB - s_PT;
+    g_VDP_Command.ARG = 0;
+    g_VDP_Command.CMD = VDP_CMD_LMMM + VDP_OP_TIMP;
+    Vdp_RingCopy((u8)s_PL, s_PR - s_PL);
 }
 
 /* Place a shape at world (x, y) in this view (s_Far, s_Shift). */
@@ -211,7 +228,9 @@ static void Shape(u8 frame)
     const AircraftShape* piece;
     SmokeDrawn* out;
     u8 k, end;
-    if (s_Drawn == SMOKE_DRAWN_MAX || !Box(s_X, s_Row, frame)) return;
+    if (s_Drawn == SMOKE_DRAWN_MAX) return;
+    s_BX = s_X; s_BY = s_Row;
+    if (!Box(frame)) return;
     out = s_Out;
     out->x = (u16)s_X; out->row = s_Row; out->frame = frame;
     s_Row -= s_Heave;

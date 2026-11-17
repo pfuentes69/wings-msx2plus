@@ -159,6 +159,12 @@ static void Splash(int16_t x)
     }
 }
 
+/* d / 40 by d / 8 (d <= 512): floor(floor(d / 8) / 5) is floor(d / 40). */
+static const uint8_t s_Div40[65] = {
+    0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4,
+    5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9,
+    10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12};
+
 /* One live gun this update (the body of 0x4c3e's loop). Its state and the
  * loop's are statics: SDCC reaches them directly, where locals go through
  * the IX frame (the loop cost ~10 ms an update with 8 guns in range). */
@@ -181,9 +187,8 @@ static void Gun(uint8_t i)
     }
     else
     {
-        uint16_t d = s_Distance;
-        if (d > ISLAND_GUN_RANGE) return;
-        for (frame = 0; d >= 40; d -= 40) ++frame;   /* dx / 40, toward 0 */
+        if (s_Distance > ISLAND_GUN_RANGE) return;
+        frame = s_Div40[(uint8_t)(s_Distance >> 3)];   /* dx / 40, toward 0 */
         frame = s_Barrel[dx < 0 ? s_Row - frame : s_Row + frame];
         if (Random() & 0x8000) frame += ISLAND_GUN_FLASH;   /* 0x4cbe: 1 in 2 */
     }

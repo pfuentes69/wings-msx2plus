@@ -64,7 +64,8 @@ uint8_t Ships_Rocket(uint16_t x, uint32_t* score) WINGS_BANKED;
 uint16_t Ships_Aim(int16_t a, int16_t b) WINGS_BANKED;
 /* Each original tick: destroyed guns smoke (0x4c3e), while the plane flies. */
 void Ships_Tick(uint8_t flying) WINGS_BANKED;
-/* Each original tick, the live guns (0x4c3e) while the plane flies: shell
+/* Once a presented frame (the original's render loop, 0x38d2), the live
+ * guns (0x4c3e) while the plane flies: shell
  * splashes near it, the barrels that follow it, hit-scan fire that damages
  * the engine (0x4f5c). Returns the barrels and splashes to draw. */
 uint8_t Ships_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
