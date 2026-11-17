@@ -1112,12 +1112,12 @@ void main(void)
 #ifdef WINGS_P1_FLIGHT
         /* Heavy scenes: with 4+ smoke, gun or soldier shapes on screen, or
          * after a frame that came within a VBlank of the base deadline
-         * (large puffs cost several pieces each), and on NTSC also over the
-         * carrier (~95 ms of render CPU), 2 more VBlanks until the render
-         * paths are rewritten (docs/frame-budget.md). PAL's longer frame
-         * covers the carrier, but no longer the island with its soldiers. */
+         * (large puffs cost several pieces each), 2 more VBlanks
+         * (docs/frame-budget.md). The carrier no longer needs its own
+         * allowance on NTSC (2026-11-17: low over it, 99% of frames take
+         * 116 ms of the 133). */
         if (g_Game.phase==GAME_PLAY && g_Carrier.stage==CARRIER_DECK &&
-            ((s_CarrierView && !(g_VDP_REGSAV[9]&2)) || g_SmokeDrawnCount[g_DisplayPage] >= 4 || s_Tight)) present_ticks+=2;
+            (g_SmokeDrawnCount[g_DisplayPage] >= 4 || s_Tight)) present_ticks+=2;
 #endif
         steps=(g_VDP_REGSAV[9]&2) ? present_ticks*3 : present_ticks*5/2;
         weapons=reset_weapons=0; input=0; turn=0;

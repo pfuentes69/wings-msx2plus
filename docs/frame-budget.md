@@ -146,6 +146,39 @@ Found and fixed along the way: the wave strip moved to segment 21
 only the pixel rows the guard leaves. `Mission_Query` keeps its last run.
 The island's per-update work is skipped when nothing is due.
 
+## The render pass (2026-11-17)
+
+Measured with `tools/profile_p0.py` (NTSC, the P0 run). The profiler now
+charges time spent waiting for the VDP to the function that issued the
+command. It also reports frames low over the carrier (y >= 1069, below the
+pan), the ones the NTSC carrier allowance was for.
+
+| Step | Render over the carrier, ms a frame |
+| --- | --- |
+| Before | 54.8 |
+| Wave band loop in Z80 (`src/msx/wave_band.c`): 6.8 → 2.2 ms of CPU | 53.3 |
+| `Vdp_RingCopy` (resident Z80) for the ship, signalmen, elevator, aircraft and background restore | 50.8 |
+| `Terrain_DirtyOverlay` in Z80 (one call per overlay); smoke through `Vdp_RingCopy` | 47.6 |
+
+The wave strip's copies are VDP-bound. Most of the CPU time saved there
+turned into waiting for the VDP: 6.3 ms a frame over the carrier is spent
+waiting inside the band loop itself.
+
+Low over the carrier, sim + render now has a median of 68 ms, p90 96 and
+p99 116, against 133 on NTSC. The only frames above 122 ms are the deck
+transitions after the lift, which are exempt. **The NTSC carrier allowance
+is removed.** The adaptive one stays: 4+ shapes on screen, or a frame within
+a VBlank of the deadline. Both NTSC runs and the PAL run pass. The weapons
+regression (`verify_world_flight --debug-profile --weapons`) still has its
+known miss away from the carrier, now at world 1481.
+
+Next candidates:
+- `Ship_Draw` (1.8 ms) and the signalmen (1.4) in Z80;
+- `DrawAircraft` (1.9);
+- `Smoke_Draw` (1.8);
+- the simulation: ~31 ms a frame over the carrier, `main`'s step loop
+  ~6.8 ms of it.
+
 ## PAL heavy scenes (2026-11-16)
 
 The PAL smoke run measured island frames with soldiers, 6 puffs and 10
