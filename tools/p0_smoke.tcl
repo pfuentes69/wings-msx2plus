@@ -810,11 +810,15 @@ proc engine_wait_splash {} {
         snap engine_splash engine_wait_respawn
     }
 }
+# The next plane waits in the hold: the service arms it (the weapon is
+# chosen again), then the lift brings it up.
 proc engine_wait_respawn {} {
     require [expr {[machine_info time]<$::crash_deadline}] "Dead plane never crashed"
-    if {[view 2]!=2 || [word g_DisplayWorld]!=7032 || [word g_DisplayY]!=1160} {after time 0.05 engine_wait_respawn;return}
+    if {[view 2]!=2 || [view 0]!=7} {after time 0.05 engine_wait_respawn;return}
+    require [expr {[word g_DisplayWorld]==7032 && [value g_Carrier]==3}] "Next plane not in the hold: world=[word g_DisplayWorld] stage=[value g_Carrier]"
+    require [expr {[view 6]==[view 3] && [view 4]==30}] "Service not offering the weapons: cursor=[view 6] weapon=[view 3] stock=[view 4]"
     require [expr {[debug read memory [expr {$::addr(g_Game)+15}]]==192 && [debug read memory [expr {$::addr(g_Game)+14}]]==128 && [engine_byte 3]==0}] "Next plane not refuelled and repaired"
-    snap engine_next_plane {wait_lift_up {engine_takeoff land_circuit}}
+    snap engine_next_plane {pulse 7 128 {phase 3 {wait_lift_up {engine_takeoff land_circuit}}}}
 }
 # Closed-loop flying from the real flight state (s_World, SDCC layout):
 # y (Q8 u32) +2, vx +6, facing_left +11, mode +12 (0 deck, 1 air, 2 arrest),
@@ -957,10 +961,12 @@ proc sea_dive {} {
     wait_for {[world_x]<6560} {fly 80;wait_for {[value g_LastContact]==3} {after time 0.2 {snap sea_splash sea_wait}} "sea crash" 10} "clear the bow" 6
 }
 proc sea_wait {} {
-    if {[view 2]==$::lives_before || [word g_DisplayWorld]!=7032 || [word g_DisplayY]!=1160} {after time 0.05 sea_wait;return}
+    if {[view 2]==$::lives_before || [view 0]!=7} {after time 0.05 sea_wait;return}
     require [expr {[value g_LastContact]==3 && [view 2]==$::lives_before-1}] "Powered sea dive must crash and cost a plane"
+    require [expr {[word g_DisplayWorld]==7032 && [value g_Carrier]==3}] "Next plane not in the hold"
     fly 0
-    snap sea_crash_next {wait_lift_up {engine_takeoff engine_last_plane}}
+    # The service arms the next plane; the lift brings it up.
+    snap sea_crash_next {pulse 7 128 {phase 3 {wait_lift_up {engine_takeoff engine_last_plane}}}}
 }
 proc engine_last_plane {} {
     game_byte 7 1

@@ -70,7 +70,8 @@ in frames over the carrier.
      deck and launch again.
   5. A powered touchdown must bounce.
   6. A powered dive must crash; the scene is pixel-checked during the
-     crash hold, and the next plane appears on deck with one plane fewer.
+     crash hold, and the next plane waits in the hold with one plane fewer
+     (the service arms it; the lift brings it up).
   7. The engine-failure crash over open sea must show the splash art,
      pixel-checked.
 - The oracle draws the plane in its on-deck pose from the dumped flight

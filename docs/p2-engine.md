@@ -15,7 +15,7 @@ Implemented 2026-11-14. The evidence is in
 | FUEL needle | `fuel / 8`, at most frame 22; twitches at empty | Executable (0xef2a) |
 | Lamps | oil < 116 and fuel ≤ 64; the original blink counters (10 and 8) | Executable |
 | Needle motion | one frame per tick toward the target | Executable |
-| Lives | crash → one plane lost → next plane on deck, or GAME OVER at zero | Manual |
+| Lives | crash → one plane lost → next plane in the hold, or GAME OVER at zero | Manual |
 
 One original tick is 12 steps of the 150 Hz simulation clock (12.5 Hz, from
 the PAL VBlank server running logic every 4th interrupt). `src/core/engine.c`
@@ -31,7 +31,9 @@ warnings are active in flight and on deck. The hold refills through
   the surface, so the splash or explosion plays on it, not where the
   plane's lowest point first touched. Splash/explosion art, deck collisions and crashing into the
   sea under power are P2 part 2 (landing and collisions).
-- The next plane keeps the current weapon with a full load.
+- The next plane waits in the hold (2026-11-17, user report): the service
+  screen arms it, the weapon chosen again, and the lift brings it up. The
+  island and the ships keep their damage.
 - GAME OVER returns to rank selection (the high-score table is P6).
 - Damage (`Engine_Damage`) is injected by tests until enemy fire exists
   (P3–P5). The executable's two hit types are documented.
@@ -81,7 +83,8 @@ oracles stay exact.
 - The `tools/verify_p0.py` P0 smoke run adds:
   - low fuel, where the lamp must blink and the needle sweep down;
   - a dry tank, where the engine fails, the plane crashes, a life is lost,
-    and the next plane is refuelled and repaired on deck;
+    and the next plane is refuelled and repaired in the hold, the service
+    offering the weapons;
   - a last-plane crash leading to GAME OVER, with a button returning to rank
     selection.
 - Every snapshot, menus included, compares the whole dashboard with

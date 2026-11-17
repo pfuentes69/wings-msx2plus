@@ -915,11 +915,13 @@ static void StartCrash(void)
     s_World.flight.y = (FlightVertical)(WINGS_FLIGHT_MAX_Y - s_ContactSurface) << 8;
 }
 
-/* The crashed plane is lost: launch the next one with the same weapon, or end
- * the game when none remain (manual: lives > 0 ? next plane : game over). */
+/* The crashed plane is lost: the next one waits in the hold, where the
+ * service arms it (the weapon is the player's choice again) and the lift
+ * brings it up, as after a landing (0xd2); the island and the ships keep
+ * their damage. No plane left: the game ends. */
 static void LosePlane(void)
 {
-    if (Game_LosePlane(&g_Game)) { Game_SetLoadout(&g_Game,g_Game.sortie.weapon); NewPlane(); }
+    if (Game_LosePlane(&g_Game)) { NewPlane(); g_Carrier.stage=CARRIER_HOLD; }
     s_CrashSteps=0; s_UiDirty=1;
 }
 #endif
