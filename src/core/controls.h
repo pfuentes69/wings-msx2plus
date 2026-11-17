@@ -15,6 +15,8 @@
 #define ACTION_SAVE 2048u
 #define ACTION_DEBUG_RESET 4096u
 #define ACTION_DEBUG_TURN 8192u
+/* Cheats (F1 refills the weapon): not in the original. */
+#define ACTION_CHEAT_REFILL 16384u
 #define ACTION_BUTTONS (ACTION_PRIMARY|ACTION_SECONDARY|ACTION_ENTER)
 #define INPUT_QUEUE_SIZE 8
 

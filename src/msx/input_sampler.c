@@ -160,6 +160,7 @@ void Input_Sample(void)
     if (!(joy&32) || !(row4&8) || !(row6&4)) state|=ACTION_SECONDARY;
     if (!(row7&128)) state|=ACTION_ENTER;
     if (!(row7&4)) state|=ACTION_ESCAPE;
+    if (!(row6&32)) state|=ACTION_CHEAT_REFILL;   /* F1 */
     if (!(row6&2))
     {
         if (!(row4&128)) state|=ACTION_RESTART;

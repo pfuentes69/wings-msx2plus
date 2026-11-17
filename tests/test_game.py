@@ -111,6 +111,15 @@ class GameTests(unittest.TestCase):
             self.assertEqual(g.sortie.stock,count)
             self.action(g,64);self.assertEqual((g.phase,g.sortie.weapon,g.sortie.stock,g.notice),(3,weapon,count,0))
         before=bytes(g);self.core.Game_SetLoadout(C.byref(g),255);self.assertEqual(bytes(g),before)
+    def test_f1_cheat_refills_the_weapon_in_flight_only(self):
+        for weapon,full in [(0,30),(1,15),(2,1)]:
+            g=self.game();self.core.Game_SetLoadout(C.byref(g),weapon);g.phase=3;g.sortie.stock=0
+            g.sortie.oil=50;g.progress.score=77
+            self.assertEqual(self.action(g,16384),0)
+            self.assertEqual((g.phase,g.sortie.weapon,g.sortie.stock,g.sortie.oil,g.progress.score),(3,weapon,full,50,77))
+        for phase in (2,4,7,8):   # loadout, pause, service, game over: nothing
+            g=self.game();g.phase=phase;g.sortie.stock=3
+            self.assertEqual(self.action(g,16384),0);self.assertEqual((g.phase,g.sortie.stock),(phase,3))
     def test_pause_only_esc_resumes_and_restart_preserves_setting(self):
         g=self.game();g.phase=3;g.sortie.stock=23;g.progress.score=123
         self.action(g,512);self.assertEqual(g.invert,1)

@@ -91,6 +91,13 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
         return GAME_CONTEXT_CHANGED;
     }
     if (pressed & ACTION_INVERT) { game->invert^=1; return 0; }
+    /* Cheat, not in the original: F1 in flight refills the weapon carried
+     * (the full load of a service). */
+    if (pressed & ACTION_CHEAT_REFILL)
+    {
+        if (old==GAME_PLAY) Game_SetLoadout(game,game->sortie.weapon);
+        return 0;
+    }
     if (pressed & ACTION_ESCAPE)
     {
         if (old==GAME_PLAY) game->phase=GAME_PAUSE;
