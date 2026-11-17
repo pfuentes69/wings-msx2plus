@@ -1,5 +1,5 @@
 #include "mission.h"
-#include "../generated/mission_surfaces.h"
+#include "mission_surfaces.h"
 
 /* The last run found: the plane (or camera) stays in one most frames. */
 static uint16_t s_Start = 0, s_End = 0, s_Word = 0;   /* RAM is not cleared at boot */

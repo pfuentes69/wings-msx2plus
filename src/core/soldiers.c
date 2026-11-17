@@ -1,7 +1,7 @@
 #include "island.h"
 #include "mission.h"
 #include "sound.h"
-#include "../generated/mission_island.h"
+#include "mission_island.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_MISSION)
 
 /* The island soldiers' update (0x3eee) and deaths (0x1a8c), banked apart
@@ -20,13 +20,15 @@ typedef char SoldierOffset[offsetof(IslandState, soldier) == ISLAND_SOLDIER_OFFS
 /* Each island's land: the surface around its beach anchors (Island_Reset).
  * A soldier stays on it; the next step's water check can only fail at its
  * ends. */
-static int16_t s_LandLeft[ISLAND_COUNT], s_LandRight[ISLAND_COUNT];
+static int16_t s_LandLeft[ISLAND_COUNT ? ISLAND_COUNT : 1], s_LandRight[ISLAND_COUNT ? ISLAND_COUNT : 1];   /* a map may have none (j) */
 int16_t g_SoldierLandLow, g_SoldierLandHigh;   /* all islands' land */
 
 void Soldiers_Reset(void) WINGS_BANKED
 {
     uint8_t i;
     int16_t x;
+    g_SoldierLandLow = g_SoldierLandHigh = 0;
+    if (!ISLAND_COUNT) return;
     for (i = 0; i < ISLAND_COUNT; ++i)
     {
         /* The land around the beach anchors, to the first water. */

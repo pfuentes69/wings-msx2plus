@@ -1,6 +1,6 @@
 #pragma once
 #include "core.h"
-#include "../generated/mission_tiles.h"
+#include "mission_tiles.h"
 #include "column_ops.h"
 void Terrain_Load(void);
 void Terrain_LoadEnd(void);

@@ -31,9 +31,9 @@ class CombatTests(unittest.TestCase):
         library = Path(cls.directory.name)/'combat.so'
         wrapper=Path(cls.directory.name)/'optimized.c'
         wrapper.write_text('#include "combat.h"\nvoid Combat_OptimizedStep(CombatState* s, SortieState* stock, uint16_t x,uint16_t y,int16_t vx,int16_t vy,uint8_t left,uint8_t controls) { if(Combat_Clock(s,controls) && Combat_Required(s,controls)) Combat_Advance(s,stock,x,y,vx,vy,left,controls); }\n')
-        subprocess.run([shutil.which('cc') or 'cc','-std=c99','-Wall','-Wextra','-Werror',
+        subprocess.run([shutil.which('cc') or 'cc','-std=c99', '-I'+str(ROOT/'src/generated/map_a'),'-Wall','-Wextra','-Werror',
             '-shared','-fPIC','-DWINGS_WORLD_WIDTH=7608u','-I'+str(ROOT/'src/core'),str(wrapper),str(ROOT/'src/core/combat.c'),
-            str(ROOT/'src/core/mission.c'),str(ROOT/'src/generated/mission_surfaces.c'),
+            str(ROOT/'src/core/mission.c'),str(ROOT/'src/generated/map_a/mission_surfaces.c'),
             '-o',str(library)],check=True,capture_output=True)
         cls.core = ctypes.CDLL(str(library))
         cls.core.Combat_Reset.argtypes = [ctypes.POINTER(Combat)]

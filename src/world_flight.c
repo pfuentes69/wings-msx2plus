@@ -21,7 +21,7 @@ volatile u8 g_DisplayElevator;
 #define WINGS_PRESENT_TICKS 2
 #endif
 #include "msx/terrain_renderer.h"
-#include "generated/mission_tiles.h"
+#include "mission_tiles.h"
 #include "core/mission.h"
 #include "msx/dashboard.h"
 #include "msx/ship.h"

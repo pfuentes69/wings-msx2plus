@@ -5,7 +5,7 @@
 #include "terrain_renderer.h"
 #include "../core/smoke.h"
 #include "../core/island.h"
-#include "../generated/mission_island.h"
+#include "mission_island.h"
 #include "../generated/hellcat_frames.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_EFFECTS)
 

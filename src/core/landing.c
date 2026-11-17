@@ -2,7 +2,7 @@
 #include "aircraft.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCENE)
 #ifdef WINGS_P1_FLIGHT
-#include "../generated/mission_heights.h"
+#include "mission_heights.h"
 #endif
 
 #ifdef WINGS_P1_FLIGHT

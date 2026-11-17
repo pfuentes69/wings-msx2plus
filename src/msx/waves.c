@@ -3,7 +3,7 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_FLIGHT)
 #include "vdp.h"
 #include "vdp_inl.h"
 #include "../generated/dashboard_tables.h"
-#include "../generated/mission_surfaces.h"
+#include "mission_surfaces.h"
 #include "wave_band.h"
 extern u8 g_PanRows;   /* terrain_renderer.h */
 

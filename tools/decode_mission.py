@@ -195,11 +195,11 @@ def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False):
         scope='static normal-scale world shapes; special markers, dynamic ship parts and mission behavior are not emulated')
 
 
-def artifacts():
+def artifacts(map_name='a.map'):
     executable = (SOURCE / 'wings').read_bytes()
     evidence = executable_evidence(executable)
     maps = {p.name: parse_map(p.read_bytes()) for p in sorted((SOURCE / 'maps').glob('*.map'))}
-    mission = maps['a.map']
+    mission = maps[map_name]
     pixels, scene = reconstruct(mission, evidence)
     summary = {name: dict(bytes=m['bytes'], sha256=m['sha256'], width=m['width'], columns=m['columns'],
                            reset_x=m['reset_x'], draw_entries=sum(c['draw'] for c in m['cells']),

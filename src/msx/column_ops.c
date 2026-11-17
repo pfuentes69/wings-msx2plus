@@ -6,7 +6,7 @@
 #include "column_ops.h"
 
 #ifndef TERRAIN_MAP_ROWS
-#include "../generated/mission_tiles.h"
+#include "mission_tiles.h"
 #endif
 typedef char ColumnOpsRows[(TERRAIN_MAP_ROWS > 0 && TERRAIN_MAP_ROWS < 128) ? 1 : -1];
 

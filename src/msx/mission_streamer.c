@@ -3,7 +3,7 @@
 #include "vdp_inl.h"
 #include "system.h"
 #include "scenery_load.h"
-#include "../generated/mission_tiles.h"
+#include "mission_tiles.h"
 #include "column_ops.h"
 
 u8 g_TerrainFar;

@@ -1,8 +1,8 @@
 #include "island.h"
 #include "smoke.h"
 #include "../msx/terrain_patch.h"
-#include "../generated/mission_tiles.h"
-#include "../generated/mission_island.h"
+#include "mission_tiles.h"
+#include "mission_island.h"
 #include "mission.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
 

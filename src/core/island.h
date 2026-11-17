@@ -8,7 +8,7 @@
 
 /* Island ground targets (Amiga 0x2de8, 0x310c, 0x46dc, 0x4e18): see
  * docs/research/amiga-island-combat.md and docs/island-combat.md. The map
- * layout comes from src/generated/mission_island.h. */
+ * layout comes from src/generated/map_<map>/mission_island.h. */
 #define ISLAND_MAX 4
 #define ISLAND_MAX_HUTS 8
 #define ISLAND_MAX_DUGOUTS 8

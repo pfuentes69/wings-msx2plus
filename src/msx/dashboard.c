@@ -4,7 +4,7 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_HUD)
 #include "vdp_inl.h"
 #include "scenery_load.h"
 #include "../generated/dashboard.h"
-#include "../generated/mission_surfaces.h"
+#include "mission_surfaces.h"
 extern u8 g_PanRows;   /* terrain_renderer.h */
 
 static u8 s_Row[128], s_Count, s_Value, s_Pilot[2];

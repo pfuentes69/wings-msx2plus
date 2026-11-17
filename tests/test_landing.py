@@ -27,7 +27,7 @@ class LandingTests(unittest.TestCase):
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()
         lib = Path(cls.temp.name) / 'landing.so'
-        subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
+        subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-I'+str(ROOT/'src/generated/map_a'), '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
                         '-DWINGS_P1_FLIGHT', '-DMISSION_TERRAIN', '-DWINGS_FLIGHT_MAX_Y=1200u',
                         '-DWINGS_WORLD_WIDTH=7608u', '-DWINGS_WORLD_START=7032u',
                         *[str(ROOT / 'src' / p) for p in ('core/landing.c', 'core/flight.c', 'core/flight_model.c',

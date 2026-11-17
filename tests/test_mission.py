@@ -140,9 +140,9 @@ class MissionTests(unittest.TestCase):
     def test_runtime_query_matches_every_source_pixel_and_bounds(self):
         with tempfile.TemporaryDirectory() as directory:
             lib = Path(directory) / 'mission.so'
-            subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-Wall', '-Wextra', '-Werror',
+            subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-I'+str(ROOT/'src/generated/map_a'), '-Wall', '-Wextra', '-Werror',
                 '-shared', '-fPIC', str(ROOT / 'src/core/mission.c'),
-                str(ROOT / 'src/generated/mission_surfaces.c'), '-o', str(lib)], check=True, capture_output=True)
+                str(ROOT / 'src/generated/map_a/mission_surfaces.c'), '-o', str(lib)], check=True, capture_output=True)
             core = ctypes.CDLL(str(lib))
             core.Mission_Query.argtypes = [ctypes.c_int16]
             core.Mission_Query.restype = ctypes.c_uint16
@@ -321,7 +321,7 @@ class MissionTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             lib = Path(directory) / 'world.so'
-            subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-Wall', '-Wextra', '-Werror',
+            subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-I'+str(ROOT/'src/generated/map_a'), '-Wall', '-Wextra', '-Werror',
                 '-shared', '-fPIC', '-DWINGS_WORLD_WIDTH=7608u', '-DWINGS_WORLD_START=7032u', '-DWINGS_FLIGHT_MAX_Y=1200u', '-DWINGS_FLIGHT_START_Y=1108u',
                 str(ROOT / 'src/core/world.c'), str(ROOT / 'src/core/flight.c'), '-o', str(lib)],
                 check=True, capture_output=True)

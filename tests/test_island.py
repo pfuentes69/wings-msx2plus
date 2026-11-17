@@ -93,11 +93,11 @@ class IslandTests(unittest.TestCase):
         work = Path(cls.temp.name)
         (work / 'stub.c').write_text(STUB)
         lib = work / 'island.so'
-        subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
+        subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-I'+str(ROOT/'src/generated/map_a'), '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
                         '-DMISSION_TERRAIN', '-DWINGS_FLIGHT_MAX_Y=1200u',
                         '-DWINGS_WORLD_WIDTH=7608u', '-DWINGS_WORLD_START=7032u',
                         *[str(ROOT / 'src' / p) for p in ('core/island.c', 'core/soldiers.c', 'core/smoke.c', 'core/engine.c', 'core/mission.c',
-                                                          'generated/mission_surfaces.c', 'core/flight.c',
+                                                          'generated/map_a/mission_surfaces.c', 'core/flight.c',
                                                           'core/flight_model.c')],
                         str(work / 'stub.c'), '-o', str(lib)], check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))

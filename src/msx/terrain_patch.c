@@ -1,7 +1,7 @@
 #include "terrain_patch.h"
 #include "terrain_renderer.h"
 #include "scenery_load.h"
-#include "../generated/mission_tiles.h"
+#include "mission_tiles.h"
 #include "vdp.h"
 #include "vdp_inl.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
