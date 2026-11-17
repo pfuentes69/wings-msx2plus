@@ -47,6 +47,11 @@ class Rocket(C.Structure):
                 ('angle', C.c_int8), ('speed', C.c_uint8), ('live', C.c_uint8)]
 
 
+class Torpedo(C.Structure):
+    _fields_ = [('x', C.c_int32), ('vx', C.c_int32), ('vy', C.c_int32), ('y', C.c_int16),
+                ('live', C.c_uint8), ('life', C.c_uint8), ('left', C.c_uint8), ('sound', C.c_uint8)]
+
+
 class Combat(C.Structure):
     _fields_ = [('projectile', Projectile * 18), ('phase', C.c_uint8), ('cooldown', C.c_uint8),
                 ('secondary_cooldown', C.c_uint8), ('secondary_pending', C.c_uint8),
@@ -56,7 +61,8 @@ class Combat(C.Structure):
                 ('flash', C.c_uint8), ('flash_ticks', C.c_uint8),
                 ('rocket', Rocket * 15), ('rockets', C.c_uint8), ('rocket_tick', C.c_uint8),
                 ('path', C.c_int16), ('speed', C.c_int16), ('far', C.c_uint8), ('bob', C.c_uint8),
-                ('sky_flash', C.c_uint8), ('sky_color', C.c_uint8), ('plane_x', C.c_int16)]
+                ('sky_flash', C.c_uint8), ('sky_color', C.c_uint8), ('plane_x', C.c_int16),
+                ('torpedo', Torpedo)]
 
 
 class Shown(C.Structure):
@@ -70,8 +76,9 @@ class Splash(C.Structure):
 class Ships(C.Structure):
     _fields_ = [('down', C.c_uint8 * 40), ('puffs', C.c_uint8 * 40), ('timer', C.c_uint8 * 40),
                 ('smoking', C.c_uint8), ('guns_down', C.c_uint16), ('shown', Shown * 16),
-                ('shown_count', C.c_uint8), ('splash', Splash * 4), ('splashes', C.c_uint8),
-                ('nearest', C.c_uint16), ('hits', C.c_uint16), ('present', C.c_uint8)]
+                ('shown_count', C.c_uint8), ('splash', Splash * 6), ('splashes', C.c_uint8),
+                ('nearest', C.c_uint16), ('hits', C.c_uint16), ('present', C.c_uint8),
+                ('hull', C.c_uint8 * 5), ('hull_hits', C.c_uint16)]
 
 
 class Flight(C.Structure):   # FlightState's head: ships.c reads y only
@@ -225,7 +232,8 @@ class RocketTests(unittest.TestCase):
         cls.core.Ships_Aim.argtypes = [C.c_int16, C.c_int16]
         cls.core.Ships_Aim.restype = C.c_uint16
         cls.core.Ships_Tick.argtypes = [C.c_uint8]
-        cls.core.Ships_Guns.argtypes = [C.POINTER(Flight), C.c_uint16, C.c_uint8, C.c_void_p, C.c_void_p]
+        cls.core.Ships_Guns.argtypes = [C.POINTER(Flight), C.c_uint16, C.c_uint8, C.c_void_p, C.c_void_p,
+                                        C.POINTER(Combat)]
         cls.core.Ships_Guns.restype = C.c_uint8
         cls.core.Mission_Surface.argtypes = [C.c_uint16]
         cls.core.Mission_Surface.restype = C.c_uint8
@@ -354,8 +362,9 @@ class RocketTests(unittest.TestCase):
         flight = Flight(y=(1200 - altitude) << 8)
         frames, splashes = [], []
         buf = C.create_string_buffer(64)
+        combat = Combat()   # no torpedo
         for _ in range(n):
-            self.core.Ships_Guns(C.byref(flight), world, flying, buf, buf)
+            self.core.Ships_Guns(C.byref(flight), world, flying, buf, buf, C.byref(combat))
             frames.append({s.x: s.frame for s in self.ships.shown[:self.ships.shown_count]})
             splashes += [(s.x, s.life) for s in self.ships.splash if s.life == 6]
         return frames, splashes

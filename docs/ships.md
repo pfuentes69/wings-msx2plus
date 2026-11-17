@@ -7,7 +7,7 @@ The ships work in steps (from [research/amiga-ships.md](research/amiga-ships.md)
 | 1 | Hulls drawn into the scenery, close and distant views | Done |
 | 2 | Rockets; a rocket destroys a gun ([rockets.md](rockets.md)) | Done |
 | 3 | Gun barrels, fire at the plane, shell splashes, the "under fire" sound | Done |
-| 4 | The torpedo | |
+| 4 | The torpedo: fall, run, wake, hull hits, destroyed by shell splashes ([torpedo.md](torpedo.md)) | Done |
 | 5 | Hull hits, sinking, the bonus and "sunk" message, ships in mission complete | |
 | 6 | Scripted verification on map j | |
 
@@ -26,7 +26,8 @@ ship afloat it follows 0x4c3e:
   from the plane and the plane is at altitude 200 or below, with chance
   6/16 a splash at the plane's x ± 32 (0x52b0): `spl6` down to `spl1`
   over 6 frames, or `ric0` for 4 on land. In the distant view only
-  8thscale `spl1..spl3` exist. Splashes only threaten torpedoes (step 4).
+  8thscale `spl1..spl3` exist. Each destroys a torpedo within 10 px
+  ([torpedo.md](torpedo.md)).
 - **Barrel**: close up, within 512 px, the island's barrel table (0x4db8,
   `src/core/barrel.h`) by altitude and dx / 40, with the muzzle flash
   (gnf) on half the updates. In the distant view every gun shows `expl`
@@ -41,7 +42,7 @@ ship afloat it follows 0x4c3e:
 Destroyed guns stop and smoke (step 2). Drawing goes through the smoke
 path (`src/msx/smoke_draw.c`): barrels before the puffs, splashes after.
 
-Differences from the original: at most 4 splashes at once (the original
+Differences from the original: at most 4 shell splashes at once (the original
 keeps 21), since the MSX cannot draw and erase more in a frame; the
 render-loop rate is the open question of the research notes, so guns run
 on the original tick, as the dugout guns do.

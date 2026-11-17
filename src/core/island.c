@@ -5,6 +5,7 @@
 #include "mission_island.h"
 #include "mission.h"
 #include "ships.h"
+#include "rockets.h"
 #include "xorshift.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
 
@@ -212,25 +213,40 @@ void Island_Impacts(CombatState* combat, uint32_t* score) WINGS_BANKED
 {
     const CombatProjectile* p = combat->projectile;
     uint16_t points = 0, x;
-    uint8_t i;
+    uint8_t i, source;
     /* World x is signed: past the map's ends it matches no target. A
      * detonation sets life 6; Combat_Advance counts it down every tick.
-     * Bombs and rockets damage buildings; their bursts (0x0cc0) and cannon
-     * strikes (0x19f6, slots 0..1) kill walking soldiers within 16 px. */
+     * Bombs, rockets and torpedoes damage buildings; their bursts (0x0cc0)
+     * and cannon strikes (0x19f6, slots 0..1) kill walking soldiers within
+     * 16 px and torpedoes in [x - 48, x + 16] (0x1a8c). */
     for (i = 0; i < combat->count; ++i, ++p)
     {
         if (p->life != 6 || p->kind < COMBAT_IMPACT) continue;
+        source = (uint8_t)p->vx;
+        if (source == COMBAT_TORPEDO_DUD) continue;   /* destroyed: no effect */
         x = (uint16_t)Combat_WorldX(combat, p->x);
         s_Struck = 0;
         if (i >= COMBAT_GUN_COUNT && p->kind == COMBAT_IMPACT) points += Island_Bombed(x);
-        if (p->vx == COMBAT_ROCKET_BURST)
+        if (source == COMBAT_ROCKET_BURST || source == COMBAT_TORPEDO_BURST)
         {
-            /* On land any impact flashes; over the sea or a deck only near
-             * a hull, where a rocket may destroy a ship's gun (0x4986). */
-            if (Mission_Surface(x) == MISSION_ISLAND) Flash(combat, s_Struck ? COMBAT_SKY_RED : COMBAT_SKY_WHITE);
+            /* On land a rocket's impact flashes (a torpedo's does not);
+             * over the sea or a deck only near a hull, where either may
+             * destroy a ship's gun (0x4986, 0x49dc). */
+            if (Mission_Surface(x) == MISSION_ISLAND)
+            {
+                if (source == COMBAT_ROCKET_BURST) Flash(combat, s_Struck ? COMBAT_SKY_RED : COMBAT_SKY_WHITE);
+            }
             else Flash(combat, Ships_Rocket(x, score));
         }
+        else if (source == COMBAT_TORPEDO_HIT)
+        {
+            /* A running torpedo: a hull hit (0x49a6), or land as a bomb.
+             * It calls no 0x1a8c (0x0d7c). */
+            if (p->kind == COMBAT_SPLASH) Flash(combat, Ships_Torpedo(x));
+            continue;
+        }
         Island_Kill((int16_t)x, 16);
+        if (combat->torpedo.live) Torpedo_Kill(combat, (int16_t)x - 16, 32);
     }
     *score += points;
 }

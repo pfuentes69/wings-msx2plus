@@ -32,6 +32,20 @@ static void Burst(CombatState* state, CombatProjectile* p, uint16_t x, uint8_t a
     if (state->impacts != 65535u) ++state->impacts;
 }
 
+/* A free burst slot (bombs' slots, which bursts share), or 0. */
+static CombatProjectile* Slot(CombatState* state)
+{
+    CombatProjectile* p = &state->projectile[COMBAT_GUN_COUNT];
+    uint8_t i;
+    for (i = COMBAT_GUN_COUNT; i < COMBAT_COUNT; ++i, ++p)
+        if (!p->kind)
+        {
+            if (i >= state->count) state->count = i + 1;
+            return p;
+        }
+    return 0;
+}
+
 /* Rockets (docs/rockets.md), after the original's 0x08fe (launch), 0x0aa6
  * (each tick) and 0x099a (aim), with its tables: sine Q15, tangent Q8 and
  * arctangent, 1024 steps a turn. */
@@ -143,7 +157,7 @@ static void Fly(CombatState* state, CombatRocket* r)
 {
     CombatProjectile* p;
     int16_t d;
-    uint8_t altitude, i;
+    uint8_t altitude;
     if (Rocket_Move(r)) { r->live = 2; Aim(r); Rocket_Move(r); }   /* ignition: aimed, then lit */
     /* Gone 1280 px from the plane (5760 in the distant view): the whole
      * pixels of |plane x - x| in 16.16 (the plane's x has no fraction). */
@@ -161,17 +175,103 @@ static void Fly(CombatState* state, CombatRocket* r)
     /* The burst: the sounds, the impact handler and the soldiers within
      * 16 px follow from its impact slot (Island_Impacts, Sound_Bursts). */
     r->live = 0; --state->rockets;
-    for (i = COMBAT_GUN_COUNT, p = &state->projectile[COMBAT_GUN_COUNT]; i < COMBAT_COUNT; ++i, ++p)
-        if (!p->kind) break;
-    if (i == COMBAT_COUNT) return;
-    if (i >= state->count) state->count = i + 1;
-    Burst(state, p, (uint16_t)r->x.w.whole, altitude, COMBAT_ROCKET_BURST);
+    if ((p = Slot(state))) Burst(state, p, (uint16_t)r->x.w.whole, altitude, COMBAT_ROCKET_BURST);
+}
+
+/* The torpedo (docs/torpedo.md), after the original's 0x088e (release),
+ * 0x0b58 (fall), 0x0bf0..0x0d32 (meeting the surface) and 0x0d50 (run). */
+uint8_t Torpedo_Launch(CombatState* state, uint16_t x, uint16_t y, int16_t vx, int16_t vy, uint8_t left) WINGS_BANKED
+{
+    CombatTorpedo* t = &state->torpedo;
+    int16_t step;
+    if (t->live) return 0;
+    /* As a rocket: the plane's whole-pixel steps per original tick, its x,
+     * its altitude + 11 (0x08ba). */
+    step = (int16_t)(((int32_t)(vx < 0 ? -vx : vx) * 12 + 128) >> 8);
+    t->vx.w.whole = left ? -step : step; t->vx.w.fraction = 0;
+    step = (int16_t)(((int32_t)(vy < 0 ? -vy : vy) * 12 + 128) >> 8);
+    t->vy.w.whole = vy > 0 ? -step : step;   /* the port's y grows downward */
+    t->vy.w.fraction = 0;
+    t->x.w.whole = (int16_t)x; t->x.w.fraction = 0;
+    t->y = (int16_t)(WINGS_FLIGHT_MAX_Y - y + 11);
+    t->left = left;
+    t->sound = 0;
+    t->live = TORPEDO_FALLING;
+    return 1;
+}
+
+/* The torpedo ends in a burst at x, altitude, made by source (combat.h). */
+static void TorpedoBurst(CombatState* state, uint8_t altitude, int8_t source)
+{
+    CombatProjectile* p = Slot(state);
+    state->torpedo.live = 0;
+    if (p) Burst(state, p, (uint16_t)state->torpedo.x.w.whole, altitude, source);
+}
+
+static void Torpedo(CombatState* state)
+{
+    CombatTorpedo* t = &state->torpedo;
+    int16_t altitude;
+    uint8_t burst;
+    if (t->live == TORPEDO_FALLING)
+    {
+        /* 0x0b58, the bomb's fall: vx -= trunc(whole vx / 10) whole pixels
+         * (divs), x += vx; vy -= 0.375; the altitude keeps no fraction, so
+         * it moves by floor(vy). */
+        t->vx.w.whole -= t->vx.w.whole / 10;
+        t->x.v += t->vx.v;
+        t->vy.v -= 0x6000;
+        altitude = t->y + t->vy.w.whole;
+        burst = BurstAltitude(state, (uint16_t)t->x.w.whole);
+        if (altitude > (int16_t)burst) { t->y = altitude; return; }
+        t->y = burst;
+        /* 0x0c7a..0x0d32: on a deck or land it explodes as a bomb does; on
+         * the sea too, faster than 5 px a tick down; otherwise it runs. */
+        if (s_Surface != MISSION_SEA || t->vy.w.whole < -5)
+        {
+            TorpedoBurst(state, burst, COMBAT_TORPEDO_BURST);
+            return;
+        }
+        t->sound = 1;
+        t->vx.v = t->vx.w.whole < 0 ? -TORPEDO_SPEED : TORPEDO_SPEED;
+        t->life = TORPEDO_LIFE;
+        t->live = TORPEDO_RUNNING;
+    }
+    /* 0x0d50, the same tick it meets the sea and each tick after: gone
+     * without a trace when its life runs out; else it moves, and the
+     * first column that is not sea stops it. Its wake is drawn by the
+     * ships' splashes (Ships_Guns). */
+    if (!--t->life) { t->live = 0; return; }
+    t->x.v += t->vx.v;
+    s_Surface = Mission_Surface((uint16_t)t->x.w.whole);
+    if (s_Surface != MISSION_SEA)
+    {
+        /* On a hull, drawn as the sea explosion (+1f is the sea's 0). */
+        if (s_Surface == MISSION_CARRIER) s_Surface = MISSION_SEA;
+        TorpedoBurst(state, 12, COMBAT_TORPEDO_HIT);
+    }
+}
+
+/* 0x1ae2: a torpedo within r px of x explodes, harmlessly (state 8, no
+ * impact). Its burst is only drawn. */
+void Torpedo_Kill(CombatState* state, int16_t x, uint8_t r) WINGS_BANKED
+{
+    CombatTorpedo* t = &state->torpedo;
+    int16_t d;
+    if (!t->live) return;
+    d = t->x.w.whole - x;
+    if (d < 0) d = -d;
+    if (d > r) return;
+    s_Surface = t->live == TORPEDO_RUNNING ? MISSION_SEA : MISSION_ISLAND;
+    TorpedoBurst(state, t->y < 12 ? 12 : (uint8_t)(t->y > 255 ? 255 : t->y), COMBAT_TORPEDO_DUD);
 }
 
 void Rockets_Step(CombatState* state, uint16_t x, uint16_t y, uint8_t left) WINGS_BANKED
 {
     CombatRocket* r = state->rocket;
     uint8_t i;
+    if (state->torpedo.live) Torpedo(state);
+    if (!state->rockets) return;
     s_PlaneX = (int16_t)x; s_PlaneAltitude = (int16_t)(WINGS_FLIGHT_MAX_Y - y); s_PlaneLeft = g_RocketLeft = left;
     for (i = COMBAT_ROCKETS; i; --i, ++r)
         if (r->live) Fly(state, r);

@@ -350,6 +350,17 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
             Shape(far ? SMOKE_FRAME_FAR_ROCKET : r->frame + (r->live == 1 ? SMOKE_FRAME_ROCKET_UNLIT : SMOKE_FRAME_ROCKET));
         }
     }
+    /* The falling torpedo (0x0726), as ordnance 11 px below its altitude:
+     * tor2, tor7 facing left, bumb far off. Running, only its wake shows. */
+    if (g_Combat.torpedo.live == TORPEDO_FALLING)
+    {
+        i16 x = g_Combat.torpedo.x.w.whole;
+        if ((u16)((far ? x >> 3 : x) - camera + 24) <= 304u)
+        {
+            Place((u16)x, WINGS_FLIGHT_MAX_Y - g_Combat.torpedo.y);
+            Shape(far ? SMOKE_FRAME_FAR_ROCKET : SMOKE_FRAME_TORPEDO + g_Combat.torpedo.left);
+        }
+    }
     g_SmokeDrawnCount[page] = s_Drawn;
 }
 #endif

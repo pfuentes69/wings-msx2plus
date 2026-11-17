@@ -7,10 +7,11 @@
 #include "barrel.h"
 #include "mission_ships.h"
 #include "xorshift.h"
+#include "rockets.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_SHIPS)
 
-#if SHIP_GUNS > SHIP_MAX_GUNS
-#error The map has more ship guns than ShipsState holds
+#if SHIP_GUNS > SHIP_MAX_GUNS || SHIP_COUNT > SHIP_MAX
+#error The map has more ships or ship guns than ShipsState holds
 #endif
 
 ShipsState g_Ships;
@@ -32,6 +33,10 @@ void Ships_Reset(void) WINGS_BANKED
     g_Ships.guns_down = g_Ships.hits = 0;
     g_Ships.nearest = 65535u;
     g_Ships.present = SHIP_COUNT != 0;
+    for (i = 0; i < SHIP_MAX; ++i) g_Ships.hull[i] = 0;   /* RAM is not cleared at boot */
+    for (i = 0; i < SHIP_COUNT; ++i) g_Ships.hull[i] = s_ShipHits[i];
+    g_Ships.hull[SHIP_MAX] = SHIP_CARRIER_HITS;
+    g_Ships.hull_hits = 0;
 }
 
 uint8_t Ships_Find(uint16_t x) WINGS_BANKED
@@ -80,6 +85,17 @@ uint8_t Ships_Rocket(uint16_t x, uint32_t* score) WINGS_BANKED
     return COMBAT_SKY_WHITE;
 }
 
+uint8_t Ships_Torpedo(uint16_t x) WINGS_BANKED
+{
+    uint8_t ship = Ships_Find(x);
+    if (ship == SHIP_NONE) return 0;
+    if (ship == SHIP_CARRIER) ship = SHIP_MAX;
+    /* 0x49a6..0x49d8: white, then red; a hit while +c > 0. */
+    if (g_Ships.hull[ship]) --g_Ships.hull[ship];
+    ++g_Ships.hull_hits;
+    return COMBAT_SKY_RED;
+}
+
 uint16_t Ships_Aim(int16_t a, int16_t b) WINGS_BANKED
 {
 #if SHIP_GUNS
@@ -120,11 +136,28 @@ void Ships_Tick(uint8_t flying) WINGS_BANKED
 #endif
 }
 
+/* 0x52b0: a splash at x lasting life frames, a ricochet on land. */
+static void Splash(int16_t x, uint8_t life)
+{
+    ShipSplash* s = g_Ships.splash;
+    uint8_t i;
+    for (i = 0; i < SHIP_SPLASHES; ++i, ++s)
+    {
+        if (s->life) continue;
+        s->x = x;
+        s->land = Mission_Surface((uint16_t)x) == MISSION_ISLAND;
+        s->life = s->land ? 4 : life;
+        ++g_Ships.splashes;
+        return;
+    }
+}
+
 #if SHIP_GUNS
 /* The update's inputs as statics: SDCC reaches them directly. */
 static const FlightState* s_Flight;
 static EngineState* s_Engine;
 static SortieState* s_Sortie;
+static CombatState* s_Combat;
 static uint16_t s_World;
 static int16_t s_Altitude;
 
@@ -143,21 +176,6 @@ static void Fire(uint16_t distance)
     Engine_Hit(s_Engine, s_Sortie, (uint8_t)Random());
 }
 
-/* 0x52b0: a splash at x, a ricochet on land. */
-static void Splash(int16_t x)
-{
-    ShipSplash* s = g_Ships.splash;
-    uint8_t i;
-    for (i = 0; i < SHIP_SPLASHES; ++i, ++s)
-    {
-        if (s->life) continue;
-        s->x = x;
-        s->land = Mission_Surface((uint16_t)x) == MISSION_ISLAND;
-        s->life = s->land ? 4 : SHIP_SPLASH_LIFE;
-        ++g_Ships.splashes;
-        return;
-    }
-}
 
 /* d / 40 by d / 8 (d <= 512): floor(floor(d / 8) / 5) is floor(d / 40). */
 static const uint8_t s_Div40[65] = {
@@ -179,7 +197,12 @@ static void Gun(uint8_t i)
     /* 0x4efc: a shell splash near a low plane, likelier nearer:
      * (1 - d / 512) x 6 / 16 an update. */
     if (s_Altitude <= 200 && (Random() & 511) > s_Distance && (Random() & 15) < 6)
-        Splash((int16_t)s_World + (int16_t)(Random() & 63) - 32);
+    {
+        int16_t at = (int16_t)s_World + (int16_t)(Random() & 63) - 32;
+        if (g_Ships.splashes < SHIP_GUN_SPLASHES) Splash(at, SHIP_SPLASH_LIFE);
+        /* 0x1ae2: it destroys a torpedo within 10 px, shown or not. */
+        if (s_Combat->torpedo.live) Torpedo_Kill(s_Combat, at, 10);
+    }
     if (s_Far)
     {
         /* expl on half the updates; the gun fires on all of them. */
@@ -206,21 +229,27 @@ static void Gun(uint8_t i)
 #endif
 
 uint8_t Ships_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
-                   EngineState* engine, SortieState* sortie) WINGS_BANKED
+                   EngineState* engine, SortieState* sortie, CombatState* combat) WINGS_BANKED
 {
-#if SHIP_GUNS
     ShipSplash* splash = g_Ships.splash;
-    uint8_t ship, i, end;
+    uint8_t i;
+#if SHIP_GUNS
+    uint8_t ship, end;
     int16_t reach;
+#endif
     /* Last update's splashes age a frame (0x52f8 counts down as it draws). */
     if (g_Ships.splashes)
         for (i = 0; i < SHIP_SPLASHES; ++i, ++splash)
             if (splash->life && !--splash->life) --g_Ships.splashes;
+    /* A running torpedo's wake (0x0d9e). The original adds a splash every
+     * tick; one a presented frame, shorter lived, fits the MSX. */
+    if (combat->torpedo.live == TORPEDO_RUNNING) Splash(combat->torpedo.x.w.whole, SHIP_WAKE_LIFE);
     g_Ships.shown_count = 0;
     g_Ships.nearest = 65535u;
+#if SHIP_GUNS
     if (!flying) return g_Ships.splashes;   /* 0x4c3e: only while the plane flies */
     s_Altitude = (int16_t)WINGS_FLIGHT_MAX_Y - (int16_t)(flight->y >> 8);
-    s_Flight = flight; s_World = world; s_Engine = engine; s_Sortie = sortie;
+    s_Flight = flight; s_World = world; s_Engine = engine; s_Sortie = sortie; s_Combat = combat;
     s_Far = s_Altitude > 186;
     /* In the distant view a gun flashes wherever it is (0x4db8 gives frame 0
      * at any distance): look as far as the screen. Close up, 512 px. */
@@ -240,6 +269,6 @@ uint8_t Ships_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
     return g_Ships.shown_count + g_Ships.splashes;
 #else
     (void)flight; (void)world; (void)flying; (void)engine; (void)sortie;
-    return 0;
+    return g_Ships.splashes;
 #endif
 }

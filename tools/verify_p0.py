@@ -244,7 +244,7 @@ def main():
     # Dugout guns (0x4f5c): the run passes the right dugout at low altitude.
     assert struct.unpack_from('<H',island,160)[0]>=1,('ground-fire hits',island[136:162].hex())
     # The close-view pan, with the carrier in view and a bomb falling.
-    for name,low,high in (('pan_high',45,55),('pan_mid',17,29)):
+    for name,low,high in (('pan_high',45,55),('pan_mid',14,32)):
         snapshot=snapshots[name]
         assert snapshot['scale']==1 and low<=1200-snapshot['y']-131<=high,(name,snapshot['y'])
         assert snapshot['camera']+256>6592 and snapshot['camera']<7368,(name,'carrier not in view',snapshot['camera'])

@@ -22,6 +22,10 @@ class Rocket(ctypes.Structure):
                ('ay',ctypes.c_int16),('y',ctypes.c_int16),('delay',ctypes.c_uint8),('frame',ctypes.c_uint8),
                ('angle',ctypes.c_int8),('speed',ctypes.c_uint8),('live',ctypes.c_uint8)]
 
+class Torpedo(ctypes.Structure):
+    _fields_ = [('x',ctypes.c_int32),('vx',ctypes.c_int32),('vy',ctypes.c_int32),('y',ctypes.c_int16),
+               ('live',ctypes.c_uint8),('life',ctypes.c_uint8),('left',ctypes.c_uint8),('sound',ctypes.c_uint8)]
+
 class Combat(ctypes.Structure):
     _fields_ = [('projectile',Projectile*18),('phase',ctypes.c_uint8),('cooldown',ctypes.c_uint8),
                ('secondary_cooldown',ctypes.c_uint8),('secondary_pending',ctypes.c_uint8),
@@ -30,7 +34,8 @@ class Combat(ctypes.Structure):
                ('impacts',ctypes.c_uint16),('flash',ctypes.c_uint8),('flash_ticks',ctypes.c_uint8),
                ('rocket',Rocket*15),('rockets',ctypes.c_uint8),('rocket_tick',ctypes.c_uint8),
                ('path',ctypes.c_int16),('speed',ctypes.c_int16),('far',ctypes.c_uint8),('bob',ctypes.c_uint8),
-               ('sky_flash',ctypes.c_uint8),('sky_color',ctypes.c_uint8),('plane_x',ctypes.c_int16)]
+               ('sky_flash',ctypes.c_uint8),('sky_color',ctypes.c_uint8),('plane_x',ctypes.c_int16),
+               ('torpedo',Torpedo)]
 
 class CombatTests(unittest.TestCase):
     @classmethod
@@ -109,8 +114,8 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(s.shots_fired,count)
         self.assertTrue(all(p.kind==0 for p in s.projectile))
 
-    def test_empty_or_unimplemented_secondary_never_consumes_or_queues(self):
-        for weapon,stock in [(0,0),(1,0),(2,1)]:   # the torpedo is not implemented yet
+    def test_empty_secondary_never_consumes_or_queues(self):
+        for weapon,stock in [(0,0),(1,0),(2,0)]:
             s=self.state();s.sortie.weapon=weapon;s.sortie.stock=stock
             self.advance(s,100,2)
             self.assertEqual((s.sortie.stock,s.secondary_fired),(stock,0))

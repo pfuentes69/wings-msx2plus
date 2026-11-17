@@ -62,7 +62,7 @@ extern const unsigned char g_WheelFirst[21];
  * gnf0..gnf6, the far flash expl, the soldiers guy0..gy11 and the far
  * soldiers; pieces
  * g_SmokePieces[g_SmokeFirst[frame] .. g_SmokeFirst[frame + 1]). */
-#define SMOKE_PIECE_COUNT 111
+#define SMOKE_PIECE_COUNT 113
 #define SMOKE_FRAME_FIRE 7
 #define SMOKE_FRAME_GUN 8
 #define SMOKE_FRAME_FAR_FLASH 22
@@ -75,10 +75,11 @@ extern const unsigned char g_WheelFirst[21];
 #define SMOKE_FRAME_SPLASH 87       /* + life - 1: spl1..spl6 */
 #define SMOKE_FRAME_RICOCHET 93     /* ric0 */
 #define SMOKE_FRAME_FAR_SPLASH 94   /* + life - 1, lives 1..3: 8thscale spl1..spl3 */
-#define SMOKE_FRAME_COUNT 97
+#define SMOKE_FRAME_TORPEDO 97      /* falling: tor2, + 1 facing left (tor7) */
+#define SMOKE_FRAME_COUNT 99
 /* In smoke_frames.c, banked (segment 22): use from that segment only. */
 #ifdef MISSION_TERRAIN
 extern const AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT];
-extern const unsigned char g_SmokeFirst[98];
-extern const signed char g_SmokeBox[388];   /* per frame: dx, dy, width, height */
+extern const unsigned char g_SmokeFirst[100];
+extern const signed char g_SmokeBox[396];   /* per frame: dx, dy, width, height */
 #endif

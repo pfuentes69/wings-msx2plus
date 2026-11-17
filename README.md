@@ -108,8 +108,9 @@ hidden pages. The [weapons foundation](docs/combat-prototype.md) adds gunfire,
 bombs and terrain impacts. [P0](docs/p0-foundation.md) supplies rank/briefing/loadout
 shells, three lives and a 30-bomb load: Space/trigger 1 fires guns, while
 N/GRAPH/trigger 2 releases the selected secondary. Esc pauses, Ctrl-R restarts
-at rank selection, and Ctrl-F inverts joystick vertical input. Rockets/torpedo
-are inventory previews; their launch behavior and actual save/load are deferred.
+at rank selection, and Ctrl-F inverts joystick vertical input. Rockets
+([docs/rockets.md](docs/rockets.md)) and the torpedo ([docs/torpedo.md](docs/torpedo.md))
+fly as in the original; actual save/load is deferred.
 Use `./launch.sh mission-flight-debug` for instant-flight renderer inspection
 with R reset and stationary T turn. Targets, damage, scoring, carrier landing
 remain pending; P1 flight constants still need Amiga timing comparison.

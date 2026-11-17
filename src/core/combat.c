@@ -29,6 +29,7 @@ void Combat_Reset(CombatState* state) WINGS_BANKED
     state->rockets = state->rocket_tick = 0;
     state->sky_flash = state->sky_color = 0;
     state->plane_x = 0;
+    state->torpedo.live = state->torpedo.sound = 0;
 }
 
 /* height <= COMBAT_GUN_RANGE and tracer runs <= 11 keep this in 16 bits. */
@@ -148,8 +149,19 @@ void Combat_Advance(CombatState* state, SortieState* sortie, uint16_t x, uint16_
     // reading the loop bound from unrelated RAM (see docs/sdcc-pitfalls.md).
     for (i = state->count, p = state->projectile; i; --i, ++p) Advance(state, p);
     while (state->count>COMBAT_GUN_COUNT && !state->projectile[state->count-1].kind) --state->count;
-    /* Rockets move on the original's 12.5 Hz tick: every second call. */
-    if (state->rockets && (state->rocket_tick ^= 1)) Rockets_Step(state, x, y, left);
+    /* Rockets and the torpedo move on the original's 12.5 Hz tick: every
+     * second call. */
+    if ((state->rockets || state->torpedo.live) && (state->rocket_tick ^= 1))
+    {
+        Rockets_Step(state, x, y, left);
+        /* A torpedo meeting the sea makes a splash (Sound_Bursts): count it
+         * as an event the caller passes on. */
+        if (state->torpedo.sound == 1)
+        {
+            state->torpedo.sound = 2;   /* Sound_Bursts clears it */
+            if (state->impacts != 65535u) ++state->impacts;
+        }
+    }
     if (fire && !state->cooldown)
     {
         state->cooldown = 3;
@@ -172,6 +184,16 @@ void Combat_Advance(CombatState* state, SortieState* sortie, uint16_t x, uint16_
             {
                 state->secondary_cooldown = 6;
                 if (++state->secondary_phase==4) {state->secondary_phase=0;++state->secondary_cooldown;}
+                --sortie->stock;
+                if (state->secondary_fired != 65535u) ++state->secondary_fired;
+            }
+        }
+        else if (sortie->weapon==WEAPON_TORPEDO && sortie->stock && !state->secondary_cooldown)
+        {
+            /* 0x088e: no altitude, speed or heading check at release. */
+            if (Torpedo_Launch(state, x, y, vx, vy, left))
+            {
+                state->secondary_cooldown = 6;
                 --sortie->stock;
                 if (state->secondary_fired != 65535u) ++state->secondary_fired;
             }

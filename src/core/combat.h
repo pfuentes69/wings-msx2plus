@@ -53,6 +53,22 @@ typedef struct CombatRocket {
     uint8_t live;    /* 0 free, 1 not lit yet, 2 lit (aimed) */
 } CombatRocket;
 
+/* The torpedo (Amiga ordnance type 2, docs/torpedo.md), on the 12.5 Hz
+ * tick in the original's units, as rockets. One at a time: the stock is 1. */
+#define TORPEDO_FALLING 1
+#define TORPEDO_RUNNING 2
+#define TORPEDO_LIFE 200      /* +12 at the surface: 199 moves */
+#define TORPEDO_SPEED 0x45000L /* 4.3125 px a tick */
+typedef struct CombatTorpedo {
+    CombatFixed x, vx, vy;
+    int16_t y;       /* altitude, whole pixels (+6 is never written) */
+    uint8_t live;    /* 0, TORPEDO_FALLING or TORPEDO_RUNNING */
+    uint8_t life;    /* moves left while running */
+    uint8_t left;    /* +1f: facing left (tor7) */
+    uint8_t sound;   /* it met the sea and runs: the splash (0x0c90) is due;
+                      * 2 once counted in impacts, until Sound_Bursts plays it */
+} CombatTorpedo;
+
 typedef struct CombatState {
     CombatProjectile projectile[COMBAT_COUNT];
     uint8_t phase, cooldown, secondary_cooldown, secondary_pending, primary_pending, secondary_phase;
@@ -76,6 +92,8 @@ typedef struct CombatState {
      * (it shows on odd counts) and its colour, 1 white or 2 red. */
     uint8_t sky_flash, sky_color;
     int16_t plane_x;          /* the plane's world x at the last Combat_Advance */
+    /* Last: the verification scripts read the fields above by offset. */
+    CombatTorpedo torpedo;
 } CombatState;
 
 /* A projectile's world x from its ring x, read relative to the plane. */
@@ -84,8 +102,15 @@ static inline int16_t Combat_WorldX(const CombatState* state, uint16_t qx)
     return state->plane_x + ((int16_t)(qx - ((uint16_t)state->plane_x << 2)) >> 2);
 }
 
-/* A burst from a rocket: impact slots mark it in vx (bombs leave 0). */
+/* What made a burst: impact slots mark it in vx (bombs leave 0). */
 #define COMBAT_ROCKET_BURST 1
+/* A torpedo exploding where it fell (a deck, land, or the sea too steeply):
+ * a bomb on land, a rocket over a hull (it destroys a gun). */
+#define COMBAT_TORPEDO_BURST 2
+/* A running torpedo striking a hull (one hit) or land (as a bomb). */
+#define COMBAT_TORPEDO_HIT 3
+/* A torpedo destroyed by a shell splash or a burst: drawn, no effect. */
+#define COMBAT_TORPEDO_DUD 4
 #define COMBAT_SKY_WHITE 1
 #define COMBAT_SKY_RED 2
 
@@ -121,7 +146,7 @@ static inline uint8_t Combat_Required(const CombatState* state,uint8_t controls)
 {
     return controls || state->primary_pending || state->secondary_pending || state->cooldown ||
         state->secondary_cooldown || state->count>COMBAT_GUN_COUNT || state->flash_ticks ||
-        state->projectile[0].kind || state->projectile[1].kind || state->rockets;
+        state->projectile[0].kind || state->projectile[1].kind || state->rockets || state->torpedo.live;
 }
 static inline uint8_t Combat_Clock(CombatState* state, uint8_t controls)
 {

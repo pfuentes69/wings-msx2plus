@@ -1255,11 +1255,13 @@ void main(void)
                         if (((weapons & COMBAT_FIRE) || g_Combat.primary_pending) && g_Combat.cooldown<2)
                             g_Combat.aim_pitch=Aircraft_FlightPitch(&s_World.flight);
 #ifdef WINGS_P1_FLIGHT
-                        /* The rockets' inputs: launch angle and speed, the view, the ships' bob. */
+                        /* The rockets' inputs: launch angle and speed, the view;
+                         * the ships' bob, for every weapon's burst on a deck. */
+                        g_Combat.bob=g_ShipHeave+2;
                         if (g_Game.sortie.weapon==WEAPON_ROCKETS)
                         {
                             g_Combat.path=s_World.flight.path; g_Combat.speed=s_World.flight.speed;
-                            g_Combat.far=g_TerrainFar; g_Combat.bob=g_ShipHeave+2;
+                            g_Combat.far=g_TerrainFar;
                         }
 #endif
                         Combat_Advance(&g_Combat,&g_Game.sortie,s_World.x>>8,s_World.flight.y>>8,
@@ -1364,10 +1366,10 @@ advance_clocks:
 #ifdef WINGS_P1_FLIGHT
         /* The ships' guns (0x4c3e) run in the original's render loop (from
          * 0x38d2): once a presented frame, before it is drawn. */
-        s_ShipGuns = g_Ships.present ? Ships_Guns(&s_World.flight, s_World.x >> 8,
+        s_ShipGuns = g_Ships.present || g_Ships.splashes || g_Combat.torpedo.live ? Ships_Guns(&s_World.flight, s_World.x >> 8,
             s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps &&
             g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
-            &g_Engine, &g_Game.sortie) : 0;
+            &g_Engine, &g_Game.sortie, &g_Combat) : 0;
 #endif
         if (g_Game.phase!=GAME_PLAY)
         {

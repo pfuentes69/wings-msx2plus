@@ -265,7 +265,9 @@ proc rockets {} {
 }
 proc torpedo {} {
     require [expr {[view 3]==2 && [view 4]==1}] "Torpedo inventory"
-    snap torpedo {pulse 7 128 {require [expr {[view 0]==2 && [view 4]==1}] "Unavailable torpedo consumed"; pulse 8 32 {pulse 8 32 {cursor 0 loadout}}}}
+    # The torpedo is playable: no confirmation here (the wait keeps the old
+    # confirmation's 0.8 s, so the flights after it keep their timing).
+    snap torpedo {after time 0.8 {pulse 8 32 {pulse 8 32 {cursor 0 loadout}}}}
 }
 proc loadout {} {snap loadout {keymatrixdown 6 4; phase 3 held_start}}
 proc held_start {} {
@@ -698,7 +700,9 @@ proc pan_descend {} {
     keymatrixdown 4 8;after time 0.05 {keymatrixup 4 8}
     # y 1014..1024: pan 45..55 (5..6 tile rows plus a fine scroll).
     set ::wanted_y {1014 1024}
-    snap pan_high {set ::wanted_y {1040 1052};snap pan_mid approach}
+    # The mid band (pan 14..32) is wider than a frame's descent here (up to
+    # 17 px): a narrower one can fall between two published frames.
+    snap pan_high {set ::wanted_y {1037 1055};snap pan_mid approach}
 }
 proc approach {} {
     # Gear comes down within 1280 px of the carrier, in either direction.

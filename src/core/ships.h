@@ -4,22 +4,27 @@
 #include "../msx/banking.h"
 #include "flight.h"
 #include "engine.h"
+#include "combat.h"
 
 /* Enemy ships (docs/research/amiga-ships.md, docs/rockets.md). Ships never
  * move; the map's ships and their guns come from the converter
  * (src/generated/map_<x>/mission_ships.h): the hull hit test, the guns
  * (barrels, fire at the plane, shell splashes), rocket hits on them and
- * their smoke. Not yet: torpedo hits, sinking, launched planes. */
+ * their smoke, torpedo hits on the hull. Not yet: sinking, launched planes. */
 
 #define SHIP_NONE 255
 #define SHIP_CARRIER 254     /* the player's carrier: 0x4a4e tries it last */
 #define SHIP_MAX_GUNS 40     /* the most on a map: o has 37 */
+#define SHIP_MAX 4           /* one of each kind; the carrier's hull after them */
+#define SHIP_CARRIER_HITS 4  /* the player's carrier (+c) */
 #define SHIP_GUN_POINTS 200
 #define SHIP_GUN_SMOKE 50    /* puffs from a destroyed gun (+a) */
 
 #define SHIP_SHOWN 16        /* barrels drawn at once */
-#define SHIP_SPLASHES 4      /* shell splashes at once: the original keeps 21; the
+#define SHIP_SPLASHES 6      /* splashes at once: the original keeps 21; the
                               * MSX cannot draw and erase more in a frame */
+#define SHIP_GUN_SPLASHES 4  /* of them, shell splashes (the rest: the wake) */
+#define SHIP_WAKE_LIFE 4     /* a wake splash: spl4 down to spl1 */
 #define SHIP_GUN_RISE 13     /* a barrel's origin above the deck (0x4caa) */
 #define SHIP_SPLASH_LIFE 6   /* splash frames over the sea, 4 on land (0x52b0) */
 
@@ -45,6 +50,8 @@ typedef struct ShipsState {
     uint16_t nearest;       /* |dx| of the nearest gun firing (the sound), 65535 none */
     uint16_t hits;          /* hits on the plane (diagnostic) */
     uint8_t present;        /* the map has enemy ships */
+    uint8_t hull[SHIP_MAX + 1];  /* +c: torpedo hits left; the carrier's last */
+    uint16_t hull_hits;     /* torpedo hits on hulls (diagnostic) */
 } ShipsState;
 extern ShipsState g_Ships;
 
@@ -59,15 +66,21 @@ uint8_t Ships_Deck(uint8_t ship) WINGS_BANKED;
  * is there, COMBAT_SKY_WHITE over a hull, COMBAT_SKY_RED when it destroyed
  * a gun (the first live one within 16 px: +200). */
 uint8_t Ships_Rocket(uint16_t x, uint32_t* score) WINGS_BANKED;
+/* 0x4986 for a running torpedo striking at x: 0 when no hull is there,
+ * else one hit off the hull (the sinking at 0 is the next step) and
+ * COMBAT_SKY_RED. */
+uint8_t Ships_Torpedo(uint16_t x) WINGS_BANKED;
 /* 0x11a6: the first gun, live or not, of an enemy ship with x between a and
  * b (either order, inclusive); 0 if none. */
 uint16_t Ships_Aim(int16_t a, int16_t b) WINGS_BANKED;
 /* Each original tick: destroyed guns smoke (0x4c3e), while the plane flies. */
 void Ships_Tick(uint8_t flying) WINGS_BANKED;
-/* Once a presented frame (the original's render loop, 0x38d2), the live
- * guns (0x4c3e) while the plane flies: shell
- * splashes near it, the barrels that follow it, hit-scan fire that damages
- * the engine (0x4f5c). Returns the barrels and splashes to draw. */
+/* Once a presented frame (the original's render loop, 0x38d2): the
+ * splashes age, a running torpedo leaves its wake, and while the plane
+ * flies the live guns (0x4c3e) throw shell splashes near it (each
+ * destroys a torpedo within 10 px), turn their barrels to it and fire
+ * hit-scan rounds that damage the engine (0x4f5c). Returns the barrels
+ * and splashes to draw. */
 uint8_t Ships_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
-                   EngineState* engine, SortieState* sortie) WINGS_BANKED;
+                   EngineState* engine, SortieState* sortie, CombatState* combat) WINGS_BANKED;
 #endif

@@ -1755,7 +1755,7 @@
         "streamed": true
       }
     ],
-    "pixel_bytes": 32454,
+    "pixel_bytes": 32498,
     "reference_pivot": [
       25,
       16
@@ -3981,6 +3981,32 @@
         "data_offset": 32452,
         "bytes": 2,
         "packed_sha256": "ba9757a37eb9a4f0c430832ee4005b451aba2a6d7025c630ebfab834b715679a"
+      },
+      {
+        "name": "tor2",
+        "source_sha256": "c3e35fd39f5b17cfb6ae43772944a8864ac5bdd987b6eb38e7b83028e6a65c3e",
+        "dx": -7,
+        "dy": 4,
+        "width": 22,
+        "height": 2,
+        "atlas_x": 16,
+        "atlas_y": 575,
+        "data_offset": 32454,
+        "bytes": 22,
+        "packed_sha256": "f35ed4665b5a5a79318097439248b54bc62dd96fe541e5ae8ef65ffddcade670"
+      },
+      {
+        "name": "tor7",
+        "source_sha256": "e42126420960be63a0366e84717dc4f8c83dfca20857a19ca7aba0f21f485404",
+        "dx": -14,
+        "dy": 4,
+        "width": 22,
+        "height": 2,
+        "atlas_x": 38,
+        "atlas_y": 575,
+        "data_offset": 32476,
+        "bytes": 22,
+        "packed_sha256": "bf4954ad56ed0ea1c5483c1e69b8dc249ac1062c883e498d6d792160d270deee"
       }
     ],
     "smoke_first": [
@@ -4081,7 +4107,9 @@
       108,
       109,
       110,
-      111
+      111,
+      112,
+      113
     ],
     "gun_flash": [
       {

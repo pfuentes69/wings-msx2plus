@@ -10,7 +10,7 @@ CODE-hunk offsets and A4-relative variables, as in the research notes.
 - Rockets can be chosen at the loadout and in service: 15 of them. Held, the
   secondary button fires them at the bombs' rate (4 a second, the user's
   observed rate, [combat-prototype.md](combat-prototype.md)). The torpedo is
-  still refused.
+  in [torpedo.md](torpedo.md).
 - A rocket leaves level with the plane (its altitude + 11, drawn 11 px
   lower) and falls back from it, unlit,
   for 4, 8 or 12 ticks (8 twice as likely). Then it lights and accelerates

@@ -139,15 +139,24 @@ void Sound_Update(const FlightState* f, u16 world, u8 flags, u8 steps) WINGS_BAN
 #endif
 
 #ifdef WINGS_P1_FLIGHT
-/* Bombs that burst this weapon tick (0x0c90, 0x0c9a): a splash over the
- * sea, a boom on land or deck. Cannon strikes have no sound of their own:
- * the guns' rattle covers them. */
+/* Bombs, rockets and torpedoes that burst this weapon tick (0x0c90,
+ * 0x0c9a): a splash over the sea, a boom on land or deck. A running
+ * torpedo's hit booms (the original adds a splash: one effect plays at a
+ * time); a torpedo destroyed by a splash is silent. Cannon strikes have no
+ * sound of their own: the guns' rattle covers them. A torpedo that meets
+ * the sea and runs splashes. */
 void Sound_Bursts(void) WINGS_BANKED
 {
     const CombatProjectile* p = g_Combat.projectile + COMBAT_GUN_COUNT;
     u8 i;
     for (i = COMBAT_GUN_COUNT; i < g_Combat.count; ++i, ++p)
-        if (p->kind >= COMBAT_IMPACT && p->life == 6)
-            Sound_Effect(p->kind == COMBAT_SPLASH ? SOUND_SPLASH : SOUND_BOOM, (u16)Combat_WorldX(&g_Combat, p->x));
+        if (p->kind >= COMBAT_IMPACT && p->life == 6 && p->vx != COMBAT_TORPEDO_DUD)
+            Sound_Effect(p->kind == COMBAT_SPLASH && p->vx != COMBAT_TORPEDO_HIT ? SOUND_SPLASH : SOUND_BOOM,
+                         (u16)Combat_WorldX(&g_Combat, p->x));
+    if (g_Combat.torpedo.sound)
+    {
+        g_Combat.torpedo.sound = 0;
+        Sound_Effect(SOUND_SPLASH, (u16)g_Combat.torpedo.x.w.whole);
+    }
 }
 #endif
