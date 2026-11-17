@@ -2,6 +2,10 @@
 /* Terrain column helpers (hand-written Z80, see column_ops.c). */
 void Column_Decode(const unsigned char* run, unsigned short* out);
 unsigned char Column_Equal(const unsigned short* a, const unsigned short* b);
+/* A sinking hull column one stage lower: the first row whose tile differs
+ * from row 0's (TERRAIN_MAP_ROWS if none), the rows shifted down one; 255
+ * and nothing shifted when a row holds no tile. */
+unsigned char Column_Lower(unsigned short* cache);
 /* Redraw the changed runs of one terrain column (see column_ops.c). */
 extern unsigned char g_ColumnX;
 extern unsigned short g_ColumnY;

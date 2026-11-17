@@ -18,3 +18,16 @@ static const uint16_t s_ShipBonus[2] = {2500, 4500};
 static const uint8_t s_ShipFirstGun[3] = {0, 8, 22};
 static const uint16_t s_ShipGunX[22] = {86, 96, 116, 126, 566, 576, 596, 606, 7203, 7213, 7234, 7244, 7266, 7276, 7763, 7773, 7795, 7805, 7826, 7836, 7858, 7868};
 static const uint8_t s_ShipGunRise[22] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+/* The sinking clock's first interval (+16): the battleship's is never
+ * set (0x2de8), so its first step comes a tick after the fatal hit. */
+static const uint8_t s_ShipSinkFirst[2] = {20, 0};
+/* Sinking (docs/ship-sinking.md): the close view's hull columns (world x,
+ * inclusive), lowered a tile row per stage at run time; the distant
+ * view's (from TERRAIN_FAR_COLUMN), remapped per stage to the columns
+ * at TERRAIN_SINK_TABLE + 2 * (entry + (stage - 1) * count + i). */
+#define SHIP_SINKING 1
+static const uint16_t s_ShipNearLeft[2] = {16, 7160};
+static const uint16_t s_ShipNearRight[2] = {647, 7935};
+static const uint8_t s_ShipFarFirst[2] = {0, 112};
+static const uint8_t s_ShipFarCount[2] = {11, 12};
+static const uint16_t s_ShipSinkEntry[2] = {0, 165};

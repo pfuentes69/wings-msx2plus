@@ -10,13 +10,16 @@
  * move; the map's ships and their guns come from the converter
  * (src/generated/map_<x>/mission_ships.h): the hull hit test, the guns
  * (barrels, fire at the plane, shell splashes), rocket hits on them and
- * their smoke, torpedo hits on the hull. Not yet: sinking, launched planes. */
+ * their smoke, torpedo hits on the hull, sinking (docs/ship-sinking.md).
+ * Not yet: launched planes. */
 
 #define SHIP_NONE 255
 #define SHIP_CARRIER 254     /* the player's carrier: 0x4a4e tries it last */
 #define SHIP_MAX_GUNS 40     /* the most on a map: o has 37 */
 #define SHIP_MAX 4           /* one of each kind; the carrier's hull after them */
 #define SHIP_CARRIER_HITS 4  /* the player's carrier (+c) */
+#define SHIP_SINK_BONUS 10   /* the sinking step that scores the bonus (0x1d04) */
+#define SHIP_SINK_STEPS 120  /* the step at which the sea takes the ship (0x1d98) */
 #define SHIP_GUN_POINTS 200
 #define SHIP_GUN_SMOKE 50    /* puffs from a destroyed gun (+a) */
 
@@ -52,13 +55,22 @@ typedef struct ShipsState {
     uint8_t present;        /* the map has enemy ships */
     uint8_t hull[SHIP_MAX + 1];  /* +c: torpedo hits left; the carrier's last */
     uint16_t hull_hits;     /* torpedo hits on hulls (diagnostic) */
+    /* The sinking clock (0x1cd8), per ship: +14 steps taken (1 px each),
+     * +16 ticks to the next, +18 the interval after it. */
+    uint8_t step[SHIP_MAX], wait[SHIP_MAX], interval[SHIP_MAX];
+    uint8_t sinking;        /* ships whose clock runs */
+    uint8_t left;           /* enemy ships still to sink for the mission (-$5c8d) */
 } ShipsState;
 extern ShipsState g_Ships;
+/* Bit i: ship i has gone under (step 120); its columns are sea for
+ * Mission_Surface (generated, resident). */
+extern uint8_t g_ShipsGone;
 
 /* Banked. */
 void Ships_Reset(void) WINGS_BANKED;
 /* 0x4a4e: the ship whose hull covers x (its columns from H to the end,
- * inclusive), the player's carrier last; SHIP_NONE if none. */
+ * inclusive), the player's carrier last; SHIP_NONE if none. A ship gone
+ * under still counts: the original keeps its record. */
 uint8_t Ships_Find(uint16_t x) WINGS_BANKED;
 /* The deck's altitude (+e) of an enemy ship (not the carrier). */
 uint8_t Ships_Deck(uint8_t ship) WINGS_BANKED;
@@ -73,8 +85,9 @@ uint8_t Ships_Torpedo(uint16_t x) WINGS_BANKED;
 /* 0x11a6: the first gun, live or not, of an enemy ship with x between a and
  * b (either order, inclusive); 0 if none. */
 uint16_t Ships_Aim(int16_t a, int16_t b) WINGS_BANKED;
-/* Each original tick: destroyed guns smoke (0x4c3e), while the plane flies. */
-void Ships_Tick(uint8_t flying) WINGS_BANKED;
+/* Each original tick: the sinking clocks (0x1cae; a bonus goes to score),
+ * and destroyed guns smoke (0x4c3e) while the plane flies. */
+void Ships_Tick(uint8_t flying, uint32_t* score) WINGS_BANKED;
 /* Once a presented frame (the original's render loop, 0x38d2): the
  * splashes age, a running torpedo leaves its wake, and while the plane
  * flies the live guns (0x4c3e) throw shell splashes near it (each

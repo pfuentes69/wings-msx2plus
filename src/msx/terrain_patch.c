@@ -27,6 +27,13 @@ void Terrain_Remap(uint16_t column, uint16_t source) WINGS_BANKED
     g_TerrainDirty = 3;
 }
 
+void Terrain_RemapEntry(uint16_t column, uint16_t entry) WINGS_BANKED
+{
+    /* Even offsets: an entry never crosses a bank. */
+    Scenery_Read(TERRAIN_MAP_BANK + (entry >> 13), entry & 8191, g_TerrainMap + column * 2, 2);
+    g_TerrainDirty = 3;
+}
+
 /* Repaint map rows first..last of the 33 columns a page shows, from its
  * tile cache (no map decode), at the page's pan: solid tiles merge into one
  * fill per run, a row of one tile is painted once and doubled, atlas tiles

@@ -1295,7 +1295,9 @@ advance_clocks:
                          * a running sortie puts out new puffs. */
                         Smoke_Tick(&s_World.flight, s_World.x >> 8, g_Game.sortie.oil, !s_CrashSteps);
                         Island_Tick();
-                        if (g_Ships.smoking) Ships_Tick(s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps);
+                        /* The ships' sinking clocks, and destroyed guns' smoke. */
+                        if (g_Ships.smoking || g_Ships.sinking)
+                            Ships_Tick(s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps, &g_Game.progress.score);
                         /* The dugout guns (the original updates them once per
                          * drawn frame, probably at this rate). */
                         s_GunsDrawn = Island_Guns(&s_World.flight, s_World.x >> 8,

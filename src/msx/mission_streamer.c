@@ -1,4 +1,5 @@
 #include "terrain_renderer.h"
+#include "terrain_patch.h"
 #include "vdp.h"
 #include "vdp_inl.h"
 #include "system.h"
@@ -206,6 +207,7 @@ void Terrain_Load(void)
     u16 i;
     u8 count;
     s_Decoded[TERRAIN_MAP_ROWS] = TERRAIN_SENTINEL;
+    g_SinkActive = 0;   /* RAM is not cleared at boot */
     ResetTiles();
     for (i = 0; i < TERRAIN_MAP_TABLE_BYTES; i += count)
     {
@@ -284,9 +286,67 @@ u8 Terrain_Prefetch(u16 camera, i8 direction)
     return 0;
 }
 
+/* Sinking ships (docs/ship-sinking.md): in the close view a hull column's
+ * tiles come down g_SinkHull[i].rows tile rows, the rows above repeating
+ * its top tile (sky). The rows pushed down pass under the wave strip. */
+SinkHull g_SinkHull[SINK_HULLS];
+u8 g_SinkActive;
+/* Per page and ring slot: the hull rows its column was drawn lowered by
+ * (0 for any other column). Terrain_DrawColumn redraws a column whose
+ * rows changed, though its runs (the offset) are the same. */
+static u8 s_SinkDrawn[2][32];
+static const SinkHull* Hull(u16 world)
+{
+    const SinkHull* hull = g_SinkHull;
+    u8 i;
+    for (i = 0; i < SINK_HULLS; ++i, ++hull)
+        if (hull->rows && world >= hull->left && world <= hull->right) return hull;
+    return 0;
+}
+static void Sink(const SinkHull* hull, u16* out)
+{
+    u16* to;
+    u16 top;
+    u8 n, rows = hull->rows < TERRAIN_MAP_ROWS ? hull->rows : TERRAIN_MAP_ROWS;
+    top = out[0];
+    to = out + TERRAIN_MAP_ROWS;
+    for (n = TERRAIN_MAP_ROWS - rows; n; --n) { --to; *to = to[-(i16)rows]; }
+    for (n = rows; n; --n) *--to = top;
+}
+
+/* A hull column one stage behind: on the page it is the column drawn a
+ * tile row higher, and the overlays are already erased (Render). Move it
+ * down 8 px (bottom up, above the dashboard), paint the top row with the
+ * top tile's colour and shift the cache: 2 VDP commands instead of a
+ * dozen tile copies. 0 when the column does not allow it. */
+static u8 Lower(u16 world, u8 page, u8 slot)
+{
+    u16* cached = g_TerrainCached[page][slot];
+    u16 base = (u16)page * 256, y;
+    u8 first, color = TERRAIN_TILE_COLOR(cached[0]);
+    if (color == 255) return 0;
+    first = Column_Lower(cached);   /* Z80: also shifts the cache */
+    if (first == 255) return 0;
+    /* Only the rows from the hull's top move: the sky above stays. */
+    y = 24 + g_PanRows + ((u16)first << 3);
+    if (y + 8 < 172)
+    {
+        g_VDP_Command.SX = g_VDP_Command.DX = world & 255;
+        g_VDP_Command.SY = base + 163; g_VDP_Command.DY = base + 171;
+        g_VDP_Command.NX = 8; g_VDP_Command.NY = 164 - y;
+        g_VDP_Command.ARG = 0x08;   /* bottom up: the copy overlaps */
+        g_VDP_Command.CMD = VDP_CMD_HMMM;
+        VDP_CommandSetupR32();
+    }
+    if (y < 172) VDP_CommandHMMV(world & 255, base + y, 8, y + 8 > 172 ? 172 - y : 8, color * 17);
+    return 1;
+}
+
 void Terrain_DecodeColumn(u16 world, u16* out)
 {
+    const SinkHull* hull;
     Decode(ColumnOffset(world), out);
+    if (g_SinkActive && !g_TerrainFar && (hull = Hull(world))) Sink(hull, out);
 }
 
 void Terrain_DrawColumn(u16 world, u8 page)
@@ -298,11 +358,24 @@ void Terrain_DrawColumn(u16 world, u8 page)
     /* The cache holds map rows; a close-view pan draws them g_PanRows
      * lower, and rows pushed below the playfield are cached, not drawn. */
     u16 tile, source_y, dest_y = (u16)page * 256 + 24 + g_PanRows;
-    u8 row, count, height, color, i;
-    if (g_TerrainColumns[page][slot] == offset) return;
+    u8 row, count, height, color, i, rows;
+    const SinkHull* hull = g_SinkActive && !g_TerrainFar ? Hull(world) : 0;
+    rows = hull ? hull->rows : 0;
+    if (g_TerrainColumns[page][slot] == offset)
+    {
+        if (s_SinkDrawn[page][slot] == rows) return;
+        /* A sinking stage (docs/ship-sinking.md). */
+        if (rows && s_SinkDrawn[page][slot] + 1 == rows && Lower(world, page, slot))
+        {
+            s_SinkDrawn[page][slot] = rows;
+            return;
+        }
+    }
     g_TerrainColumns[page][slot] = offset;
+    s_SinkDrawn[page][slot] = rows;
     // All runs/offsets are bounded and round-trip checked during generation.
     Decode(offset, s_Decoded);
+    if (hull) Sink(hull, s_Decoded);
     cached = g_TerrainCached[page][slot];
     decoded = s_Decoded;
 #ifndef WINGS_TERRAIN_C

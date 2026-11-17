@@ -1,4 +1,5 @@
 #include "island.h"
+#include "ships.h"
 #include "mission.h"
 #include "sound.h"
 #include "mission_island.h"
@@ -178,17 +179,18 @@ static uint8_t Step(IslandSoldier* s)
     return 0;
 }
 
-/* 0x3f5e, 0x5694: no soldier and no AA gun left. The island's bonus
- * (-$7b82 by map and island) is scored; the last island with targets
- * completes the mission (there are no mission ships yet). The ticker says
- * so: Message_Update takes g_Island.message. */
+/* 0x3f5e, 0x3f82, 0x5694: no soldier and no AA gun left. The island's
+ * bonus (-$7b82 by map and island) is scored; the last island with
+ * targets, with no ship left to sink, completes the mission. The ticker
+ * says so: Message_Update takes g_Island.message. */
 static void Cleared(uint8_t island, uint32_t* score)
 {
     g_Island.bonus = s_IslandBonus[island];
+    g_Island.sunk = 0;
     *score += g_Island.bonus;
     g_Island.cleared |= 1 << island;
     if (g_Island.left) --g_Island.left;
-    if (g_Island.left) g_Island.message = ISLAND_MESSAGE_CLEARED;
+    if (g_Island.left || g_Ships.left) g_Island.message = ISLAND_MESSAGE_CLEARED;
     else { g_Island.message = ISLAND_MESSAGE_MISSION; g_Island.complete = 1; }
 }
 

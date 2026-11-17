@@ -1668,7 +1668,8 @@
     "unique_columns": 237,
     "dense_map_bytes": 41192,
     "compressed_map_bytes": 6506,
-    "total_bytes": 22826
+    "total_bytes": 22826,
+    "sink_columns": 0
   },
   "bundle_bytes": 22826,
   "tile_map_offset": 16320,
@@ -1835,5 +1836,6 @@
       "near_variant": 1077,
       "far_variant": 1083
     }
-  ]
+  ],
+  "sinking": []
 }

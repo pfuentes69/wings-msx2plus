@@ -89,6 +89,7 @@ typedef struct IslandState {
     uint8_t message;               /* ISLAND_MESSAGE_* waiting for the ticker */
     uint16_t bonus;                /* the last island's bonus */
     uint8_t complete;              /* the mission is complete: return to the carrier */
+    uint8_t sunk;                  /* the message is a ship's ". . . %s sunk": its kind + 1 */
 } IslandState;
 extern IslandState g_Island;
 

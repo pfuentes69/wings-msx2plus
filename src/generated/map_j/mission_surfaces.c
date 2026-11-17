@@ -50,11 +50,11 @@ const MissionWaterBand g_MissionWaterBands[MISSION_WATER_REGIONS] = {
 };
 uint8_t Mission_Surface(uint16_t x) {
     if (x < 8) return 0;
-    if (x < 648) return 1;
+    if (x < 648) return g_ShipsGone & 1 ? 0 : 1;
     if (x < 3528) return 0;
     if (x < 4288) return 1;
     if (x < 7168) return 0;
-    if (x < 7936) return 1;
+    if (x < 7936) return g_ShipsGone & 2 ? 0 : 1;
     if (x < 7944) return 0;
     return 0;
 }

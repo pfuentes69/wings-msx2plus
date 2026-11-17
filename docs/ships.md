@@ -8,7 +8,7 @@ The ships work in steps (from [research/amiga-ships.md](research/amiga-ships.md)
 | 2 | Rockets; a rocket destroys a gun ([rockets.md](rockets.md)) | Done |
 | 3 | Gun barrels, fire at the plane, shell splashes, the "under fire" sound | Done |
 | 4 | The torpedo: fall, run, wake, hull hits, destroyed by shell splashes ([torpedo.md](torpedo.md)) | Done |
-| 5 | Hull hits, sinking, the bonus and "sunk" message, ships in mission complete | |
+| 5 | Sinking, the bonus and "sunk" message, ships in mission complete ([ship-sinking.md](ship-sinking.md)) | Done |
 | 6 | Scripted verification on map j | |
 
 Map j has a destroyer at its left end (x 8..655) and a battleship at its

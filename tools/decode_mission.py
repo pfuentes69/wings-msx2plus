@@ -110,12 +110,15 @@ def parse_map(blob):
                 reset_x=spawn, width=width, columns=len(cells), cells=cells, surface_runs=runs)
 
 
-def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False, ships=False):
+def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False, ships=False, sink=None):
     """Return a static side-view adaptation; report every unresolved flagged entry.
 
     Object X/depth/shape/origins follow the source. Baseline translation, ground
     fill and static carrier treatment are explicit MSX rendering choices.
+    sink: {ship archive: pixels} draws that ship's pieces lower, as the
+    sinking clock does (0x1cd8: 1 px a step; an eighth in the distant view).
     """
+    sink = sink or {}
     records = {name: (offset, record) for name, offset, record in read_ppkc(
         unpack_rpck((SOURCE / ('shapes/8thscale.shp' if reduced else 'shapes/world.shp')).read_bytes()))}
     source_width = (map_data['width'] + 7) // 8 if reduced else map_data['width']
@@ -141,11 +144,15 @@ def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False, shi
         ident = cell['shape_id']
         name = evidence['shape_names'][ident] if ident < len(evidence['shape_names']) else None
         ship = ships and SHIP_FIRST_ID <= ident < SHIP_FIRST_ID + len(evidence['ship_names'])
+        lower = 0
+        if ships and SHIP_FIRST_ID <= ident < SHIP_FIRST_ID + len(evidence['ship_names']):
+            lower = sink.get(evidence['ship_names'][ident - SHIP_FIRST_ID][0], 0)
         if ship and reduced:
             # The distant view: 8thscale.shp holds the hull pieces reduced,
             # under the same names (dstb, batf, crus, jcrf...).
             name = evidence['ship_names'][ident - SHIP_FIRST_ID][1]
             ship = False
+            lower //= 8
         if ship:
             # A ship's hull piece, from its own archive. Ships never move;
             # sinking (0x1cd8) draws the same pieces lower, at run time.
@@ -161,7 +168,7 @@ def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False, shi
             # reduced shapes do; the plane-mask rules are the same.
             data, meta = decode_record(raw, allow_reduced_flag=True, plane_constants=True)
             ox, oy = meta['origin_candidate']
-            x, y = cell['x'] - ox, baseline + cell['y_offset'] - oy
+            x, y = cell['x'] - ox, baseline + cell['y_offset'] - oy + lower
             visible = 0
             for sy in range(meta['height']):
                 for sx in range(meta['width']):
@@ -185,7 +192,7 @@ def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False, shi
         offset, raw = records[name]
         data, meta = decode_record(raw, allow_reduced_flag=reduced, plane_constants=True)
         ox, oy = meta['origin_candidate']
-        x, y = (cell['x'] // 8 if reduced else cell['x']) - ox, baseline + (0 if reduced else cell['y_offset']) - oy
+        x, y = (cell['x'] // 8 if reduced else cell['x']) - ox, baseline + (0 if reduced else cell['y_offset']) - oy + lower
         if name in ('bchl', 'bchr'):
             # Replace the flat fill at each shore with its original silhouette.
             # Keep the source shape's actual height; water continues below it.

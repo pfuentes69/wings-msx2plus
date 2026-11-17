@@ -126,6 +126,11 @@ SHIP_TYPES = (
     dict(name='Japanese carrier', anchor=0xf2, start=-128, length=624, deck=21, hits=3, bonus=6000,
          guns=(63, 79, 102, 119, 144, 154, 181, 199, 424, 455, 486, 517, 548, 577, 601)))
 CARRIER_ANCHOR, CARRIER_START, CARRIER_LENGTH = 0x21, -640, 768   # the player's carrier
+SHIP_ARCHIVE = ('destroyer', 'battleship', 'cruiseship', 'japcarrier')   # by SHIP_TYPES kind
+# Sinking (0x1cd8): 1 px a step; at step 120 the ship's columns become sea.
+# Stage k (steps 8k..8k+7) shows the hull 8k px lower; stage 15 is the sea.
+SINK_STAGES = 15
+SINK_GONE = 1000   # a depth that leaves nothing of the hull
 
 
 def ship_layout(mission):
@@ -147,7 +152,7 @@ def ship_layout(mission):
                 (carrier + CARRIER_START, carrier + CARRIER_START + CARRIER_LENGTH + 7))
 
 
-def ships_header(layout):
+def ships_header(layout, sinking=()):
     ships = layout['ships']
     def table(kind, name, values):
         return f'static const {kind} {name}[{max(1, len(values))}] = {{{", ".join(str(v) for v in values) or "0"}}};\n'
@@ -174,7 +179,20 @@ def ships_header(layout):
             + table('uint16_t', 's_ShipBonus', [s['bonus'] for s in ships])
             + table('uint8_t', 's_ShipFirstGun', first)
             + table('uint16_t', 's_ShipGunX', [x for s in ships for x in s['gun_x']])
-            + table('uint8_t', 's_ShipGunRise', rise))
+            + table('uint8_t', 's_ShipGunRise', rise)
+            + '/* The sinking clock\'s first interval (+16): the battleship\'s is never\n'
+            ' * set (0x2de8), so its first step comes a tick after the fatal hit. */\n'
+            + table('uint8_t', 's_ShipSinkFirst', [0 if s['kind'] == 1 else 20 for s in ships])
+            + f'/* Sinking (docs/ship-sinking.md): the close view\'s hull columns (world x,\n'
+            ' * inclusive), lowered a tile row per stage at run time; the distant\n'
+            ' * view\'s (from TERRAIN_FAR_COLUMN), remapped per stage to the columns\n'
+            ' * at TERRAIN_SINK_TABLE + 2 * (entry + (stage - 1) * count + i). */\n'
+            f'#define SHIP_SINKING {1 if sinking else 0}\n'
+            + table('uint16_t', 's_ShipNearLeft', [v['near_left'] for v in sinking])
+            + table('uint16_t', 's_ShipNearRight', [v['near_right'] for v in sinking])
+            + table('uint8_t', 's_ShipFarFirst', [v['far_first'] for v in sinking])
+            + table('uint8_t', 's_ShipFarCount', [v['far_count'] for v in sinking])
+            + table('uint16_t', 's_ShipSinkEntry', [v['entry'] for v in sinking]))
 
 
 def compile_scene(pixels, width, size, top=64, height=212):
@@ -253,12 +271,16 @@ def is_uniform(tile):
     return tile == bytes([tile[0]]) * 32 and tile[0] >> 4 == tile[0] & 15
 
 
-def strip_layout(tiles, tile_map, stats):
+def strip_layout(tiles, tile_map, stats, table_columns=None):
     """Uniform tiles first (their colour is drawn with HMMV and needs no VRAM),
     then the others in first-seen order, which keeps a column's new tiles
     consecutive. Rebuild the map with those ids, padded so no column record
-    crosses an 8 KiB bank (the renderer reads a record from one window)."""
+    crosses an 8 KiB bank (the renderer reads a record from one window).
+    Only the first table_columns get a slot in the column table (RAM); the
+    records of the rest (sinking ships' columns) are reached by the offsets
+    returned last."""
     count, rows, ncol = stats['tile_count'], stats['rows'], stats['columns']
+    table_columns = ncol if table_columns is None else table_columns
     data = [tiles[i * 32:(i + 1) * 32] for i in range(count)]
     uniform = [i for i in range(count) if is_uniform(data[i])]
     if uniform[:1] != [0]:
@@ -266,7 +288,7 @@ def strip_layout(tiles, tile_map, stats):
     order = uniform + [i for i in range(count) if i not in set(uniform)]
     new_id = {old: new for new, old in enumerate(order)}
     columns = [[new_id[t] for t in decode_column(tile_map, c, ncol, rows, count)] for c in range(ncol)]
-    table_bytes = ncol * 2
+    table_bytes = table_columns * 2
     unique, payload, offsets = {}, bytearray(), []
     for column in columns:
         key = tuple(column)
@@ -280,10 +302,10 @@ def strip_layout(tiles, tile_map, stats):
         offsets.append(unique[key])
     if table_bytes + len(payload) > 65535:
         raise ValueError('terrain map exceeds 16-bit offsets')
-    new_map = b''.join(struct.pack('<H', o) for o in offsets) + payload
+    new_map = b''.join(struct.pack('<H', o) for o in offsets[:table_columns]) + payload
     new_tiles = b''.join(data[i] for i in order)
     colors = [data[i][0] >> 4 for i in uniform]
-    return new_tiles, new_map, columns, colors
+    return new_tiles, new_map, columns, colors, offsets[table_columns:]
 
 
 def artifacts(map_name='a.map', generated=None, ships=False):
@@ -341,11 +363,52 @@ def artifacts(map_name='a.map', generated=None, ships=False):
         variants.append(dict(x=hut['x'], near_first=nf, near_count=nc, far_first=ff, far_count=fc))
         stripes_near.append(stripe(near, scene['width'], nf, nc))
         stripes_far.append(stripe(far, far_scene['width'], ff, fc))
+    # Sinking ships (0x1cd8, docs/ship-sinking.md): a hull goes down 1 px a
+    # step for 120 steps, then the sea takes its columns. The close view
+    # lowers a hull column's tiles a whole row (8 steps) at a time at run
+    # time (mission_streamer.c), checked here against the true render. The
+    # distant view goes down 1 px per 8 steps: its hull columns at each
+    # stage (the last is the sea) are columns of their own, in ROM only.
+    sinking, stripes_sink = [], []
+    if ships:
+        for ship in ship_layout(mission)['ships']:
+            archive = SHIP_ARCHIVE[ship['kind']]
+            def near_at(depth):
+                return bytes(mapping[v] for v in reconstruct(mission, evidence, ships=ships, sink={archive: depth})[0])
+            def far_at(depth):
+                return far_finish(*reconstruct(mission, evidence, reduced=True, ships=ships, sink={archive: depth}))
+            width = scene['width']
+            nf, nc = columns_differ(pixels, near_at(SINK_GONE), width)
+            for stage in range(1, SINK_STAGES + 1):
+                near = near_at(stage * 8 if stage < SINK_STAGES else SINK_GONE)
+                for y in range(64, 212):
+                    # Rows above the hull repeat the column's top tile row (sky).
+                    source = y - stage * 8 if y - stage * 8 >= 64 else 64 + (y - 64) % 8
+                    if near[y * width + nf * 8:y * width + (nf + nc) * 8] != pixels[source * width + nf * 8:source * width + (nf + nc) * 8]:
+                        raise ValueError(f"{ship['name']}: stage {stage} is not the hull lowered {stage} tile rows (scene row {y})")
+                if any(near[y * width:y * width + nf * 8] != pixels[y * width:y * width + nf * 8] or
+                       near[y * width + (nf + nc) * 8:(y + 1) * width] != pixels[y * width + (nf + nc) * 8:(y + 1) * width]
+                       for y in range(212)):
+                    raise ValueError(f"{ship['name']}: sinking changes columns outside its hull")
+            fars = [far_at(stage * 8 if stage < SINK_STAGES else SINK_GONE) for stage in range(1, SINK_STAGES + 1)]
+            fwidth = far_scene['width']
+            ff, fc = columns_differ(far_pixels, fars[-1], fwidth)
+            for far in fars:
+                if any(far[y * fwidth:y * fwidth + ff * 8] != far_pixels[y * fwidth:y * fwidth + ff * 8] or
+                       far[y * fwidth + (ff + fc) * 8:(y + 1) * fwidth] != far_pixels[y * fwidth + (ff + fc) * 8:(y + 1) * fwidth]
+                       for y in range(212)):
+                    raise ValueError(f"{ship['name']}: distant sinking changes columns outside its hull")
+            sinking.append(dict(name=ship['name'], near_left=nf * 8, near_right=(nf + nc) * 8 - 1,
+                                far_first=ff, far_count=fc))
+            stripes_sink += [stripe(far, fwidth, ff, fc) for far in fars]
     variant_columns = sum(v['near_count'] + v['far_count'] for v in variants)
-    combined_width = scene['width'] + far_scene['width'] + variant_columns * 8
+    sink_columns = len(stripes_sink) and sum(s['far_count'] for s in sinking) * SINK_STAGES
+    table_columns = (scene['width'] + far_scene['width']) // 8 + variant_columns
+    combined_width = (table_columns + sink_columns) * 8
     combined = b''.join(pixels[y * scene['width']:(y + 1) * scene['width']] +
                         far_pixels[y * far_scene['width']:(y + 1) * far_scene['width']] +
-                        b''.join(st[y] for st in stripes_near) + b''.join(st[y] for st in stripes_far)
+                        b''.join(st[y] for st in stripes_near) + b''.join(st[y] for st in stripes_far) +
+                        b''.join(st[y] for st in stripes_sink)
                         for y in range(212))
     column = (scene['width'] + far_scene['width']) // 8
     for v in variants:
@@ -359,16 +422,41 @@ def artifacts(map_name='a.map', generated=None, ships=False):
     tiles, tile_map, selected = compile_scene(combined, combined_width, 8)
     if tiles[:32] != bytes(32):
         raise ValueError('renderer requires tile zero to be uniform sky')
-    tiles, tile_map, columns, uniform_colors = strip_layout(tiles, tile_map, selected)
+    tiles, tile_map, columns, uniform_colors, sink_offsets = strip_layout(tiles, tile_map, selected, table_columns)
+    selected = dict(selected, columns=table_columns, sink_columns=sink_columns)   # the RAM table's
     strips = (selected['tile_count'] + STRIP - 1) // STRIP
     if strips > 255 or len(uniform_colors) > STRIP:
         raise ValueError('terrain strips exceed the cache tables')
     # The views draw from the strips of about 40 columns at once (both pages'
-    # 33 plus scrolling): those must fit the slots, with room to spare.
-    worst = max(len({t // STRIP for c in columns[s:s + 40] for t in c if t >= len(uniform_colors)})
-                for s in range(0, max(1, len(columns) - 40)))
+    # 33 plus scrolling): those must fit the slots, with room to spare. A
+    # sinking ship's distant columns replace its hull's at each stage.
+    def window_strips(view):
+        return max(len({t // STRIP for c in view[s:s + 40] for t in c if t >= len(uniform_colors)})
+                   for s in range(0, max(1, len(view) - 40)))
+    worst = window_strips(columns[:table_columns])
+    far_column = scene['width'] // 8
+    at = table_columns
+    for ship in sinking:
+        for stage in range(SINK_STAGES):
+            view = columns[far_column:far_column + far_scene['width'] // 8]
+            first = ship['far_first']
+            view = view[:first] + columns[at:at + ship['far_count']] + view[first + ship['far_count']:]
+            worst = max(worst, window_strips(view))
+            at += ship['far_count']
     if worst > TERRAIN_SLOTS - 12:
         raise ValueError(f'a view needs {worst} tile strips; the cache has {TERRAIN_SLOTS}')
+    # The sinking stages' column offsets, after the runs: per ship, stage 1..
+    # 15, its distant hull columns (u16, even offsets: no entry crosses a bank).
+    sink_table = 0
+    if sink_offsets:
+        if len(tile_map) % 2:
+            tile_map += b'\0'
+        sink_table = len(tile_map)
+        tile_map += b''.join(struct.pack('<H', o) for o in sink_offsets)
+        entry = 0
+        for ship in sinking:
+            ship['entry'] = entry
+            entry += ship['far_count'] * SINK_STAGES
     if len(tiles) > 8 * 8192 or len(tile_map) > 4 * 8192:
         raise ValueError('terrain exceeds its ROM banks')
     bundle = tiles + tile_map
@@ -399,7 +487,7 @@ def artifacts(map_name='a.map', generated=None, ships=False):
                         worst_view_strips=worst, first_page=2, first_row=180,
                         ordering='uniform tiles first, then first-seen; strips of 8 ids, 8 x 64 px'),
         map_format='u16le column offsets, deduplicated count:u8/tile:u16le runs, no run crossing an 8 KiB bank; exactly 19 tile rows',
-        map_and_cache_ram_bytes=ram_budget, island=island, hut_variants=variants)
+        map_and_cache_ram_bytes=ram_budget, island=island, hut_variants=variants, sinking=sinking)
     files = {output / 'tiles.sc5': tiles, output / 'map.bin': tile_map,
              output / 'hut-variants.indices': b''.join(row for st in stripes_near + stripes_far for row in st),
              output / 'scene.indices': pixels, output / 'far.indices': far_pixels, output / 'palette.bin': palette,
@@ -446,6 +534,10 @@ def artifacts(map_name='a.map', generated=None, ships=False):
 #define TERRAIN_BUNDLE_BYTES {len(bundle)}
 #define TERRAIN_FAR_COLUMN {scene['width'] // 8}
 #define TERRAIN_FAR_COLUMNS {far_scene['width'] // 8}
+/* Sinking ships' distant columns (docs/ship-sinking.md): u16 offsets at
+ * this map byte, per ship (mission_ships.h), stage 1..TERRAIN_SINK_STAGES. */
+#define TERRAIN_SINK_TABLE {sink_table}
+#define TERRAIN_SINK_STAGES {SINK_STAGES}
 extern const unsigned char g_TerrainPalette[32];
 extern const unsigned char g_TerrainUniformColor[TERRAIN_UNIFORM_COUNT];
 /* Per 256 px of the close view: the first VRAM row (tile-aligned) with any
@@ -503,10 +595,20 @@ extern const MissionSurfaceRun g_MissionSurfaceRuns[MISSION_SURFACE_RUNS];
         'static const uint8_t s_MissionHeight[MISSION_HEIGHT_RUNS] = {' + ', '.join(str(h) for _, h in heights) + '};\n').encode()
     surface_data += 'const MissionWaterBand g_MissionWaterBands[MISSION_WATER_REGIONS] = {\n' + ''.join(
         f"    {{{band['start']}, {band['end']}, {band['row']}, {band['height']}}},\n" for band in water) + '};\n'
-    surface_data += 'uint8_t Mission_Surface(uint16_t x) {\n' + ''.join(f"    if (x < {run['end']}) return {run['surface']};\n" for run in mission['surface_runs']) + '    return 0;\n}\n'
+    # A ship gone under (0x1db8 clears its map words) leaves sea: its deck
+    # runs test g_ShipsGone (core/ships.c).
+    enemy = ship_layout(mission)['ships']
+    def surface_value(run):
+        for i, ship in enumerate(enemy):
+            if run['surface'] == 1 and run['start'] <= ship['right'] and run['end'] > ship['left']:
+                return f"g_ShipsGone & {1 << i} ? 0 : 1"
+        return str(run['surface'])
+    if enemy:
+        surface_header += '/* Bit i: enemy ship i has gone under (core/ships.c). */\nextern uint8_t g_ShipsGone;\n'
+    surface_data += 'uint8_t Mission_Surface(uint16_t x) {\n' + ''.join(f"    if (x < {run['end']}) return {surface_value(run)};\n" for run in mission['surface_runs']) + '    return 0;\n}\n'
     files[generated / 'mission_surfaces.h'] = surface_header.encode()
     files[generated / 'mission_island.h'] = island_header(island, variants).encode()
-    files[generated / 'mission_ships.h'] = ships_header(ship_layout(mission)).encode()
+    files[generated / 'mission_ships.h'] = ships_header(ship_layout(mission), sinking).encode()
     files[generated / 'mission_surfaces.c'] = surface_data.encode()
     im = Image.frombytes('P', (scene['width'], 212), pixels)
     colors = bytes(v * 255 // 7 for c in metadata['palette_rgb3'] for v in c)

@@ -14,6 +14,7 @@ except ImportError:  # optional dev dependency (requirements.txt)
 
 ROOT = Path(__file__).resolve().parents[1]
 ROWS = 19
+TILES = 1013
 RUN, OUT, CACHE, STACK, SENTINEL = 0xD000, 0xD100, 0xD200, 0xF000, 0x3000
 
 
@@ -24,7 +25,7 @@ class ColumnOpsZ80Tests(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory()
         work = Path(cls.temp.name)
         sdcc = shutil.which('sdcc')
-        subprocess.run([sdcc, '-mz80', f'-DTERRAIN_MAP_ROWS={ROWS}', '-DTERRAIN_UNIFORM_COUNT=3', '-c', str(ROOT / 'src/msx/column_ops.c'),
+        subprocess.run([sdcc, '-mz80', f'-DTERRAIN_MAP_ROWS={ROWS}', '-DTERRAIN_UNIFORM_COUNT=3', f'-DTERRAIN_TILE_COUNT={TILES}', '-c', str(ROOT / 'src/msx/column_ops.c'),
                         '-o', str(work) + '/'], check=True, capture_output=True)
         # Column_Runs (tested in test_column_runs_z80.py) needs these symbols.
         (work / 'stub.s').write_text('''
@@ -115,6 +116,27 @@ _VDP_CommandSetupR36:
             ticks += used
         self.assertLess(ticks / 3000, 900)  # plain Z80 T-states per call
 
+
+    def test_lower_finds_the_hull_and_shifts_the_rows(self):
+        rng = random.Random(5)
+        worst = 0
+        for case in range(2000):
+            top = rng.choice((0, 1, 7))
+            first = rng.randint(1, ROWS)   # row 0 is the reference (the sky)
+            rows = [top] * first + [rng.randint(0, TILES - 1) for _ in range(ROWS - first)]
+            if first < ROWS and rows[first] == top:
+                rows[first] = (top + 1) % TILES
+            bad = case % 7 == 0
+            if bad:
+                rows[rng.randrange(ROWS)] = rng.choice((65535, TILES, TILES + 40))
+            self.machine.set_memory_block(CACHE, b''.join(r.to_bytes(2, 'little') for r in rows))
+            a, ticks = self.call('_Column_Lower', CACHE, 0)
+            worst = max(worst, ticks)
+            if bad:
+                self.assertEqual((a, self.words(CACHE, ROWS)), (255, rows))
+            else:
+                self.assertEqual((a, self.words(CACHE, ROWS)), (first, [rows[0]] + rows[:-1]))
+        print(f'\nColumn_Lower: at most {worst} T-states')
 
 if __name__ == '__main__':
     unittest.main()

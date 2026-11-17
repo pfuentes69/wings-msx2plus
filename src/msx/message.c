@@ -17,32 +17,44 @@ static u8 s_Stale;          /* a new text started over a running one: blank the 
 static u16 s_Drawn[2], s_CharStart[2];
 static u8 s_Next[2];
 
-/* Both texts and the bonus fit (no bounds checks in the copies). */
+/* Both texts and the bonus fit (no bounds checks in the copies); a ship's
+ * name is at most 10 characters. */
 typedef char TextFits[sizeof(g_MessageCleared) + sizeof(g_MessageMission) + 5 <= MESSAGE_TEXT_MAX ? 1 : -1];
 typedef char PromotionFits[sizeof(g_MessageCleared) + sizeof(g_MessagePromotion) + 5 <= MESSAGE_TEXT_MAX ? 1 : -1];
+typedef char SunkFits[sizeof(g_MessageSunk) + 10 + sizeof(g_MessagePromotion) + 5 <= MESSAGE_TEXT_MAX ? 1 : -1];
 
-/* The island's message (0x3f6e) with the executable's sprintf for its one
- * %ld, the bonus; the mission's last island (0x5694) appends "Good work
- * ..." over the final full stop, or "Congratulations! ..." when the rank's
- * last mission brings a promotion. Digits by subtraction: SDCC divides
- * through a slow call. */
-static void Compose(u16 value, u8 mission)
+/* The island's message (0x3f6e), or a ship's (0x5640: sunk = its kind +
+ * 1, its name for %s), with the executable's sprintf for the one %ld, the
+ * bonus; the mission's last target (0x5694) appends "Good work ..." over
+ * the final full stop, or "Congratulations! ..." when the rank's last
+ * mission brings a promotion. Digits by subtraction: SDCC divides through
+ * a slow call. */
+static void Compose(u16 value, u8 mission, u8 sunk)
 {
     static const u16 power[5] = {10000, 1000, 100, 10, 1};
-    const char* text = g_MessageCleared;
+    const char* text = sunk ? g_MessageSunk : g_MessageCleared;
+    const char* name = g_ShipNames;
     char* out = s_Text;
     char c;
     u8 n, digit, started = 0;
-    while ((c = *text++) != '%') *out++ = c;
-    text += 2;   /* "ld" */
-    for (n = 0; n < 5; ++n)
+    while ((c = *text++))
     {
-        digit = '0';
-        while (value >= power[n]) { value -= power[n]; ++digit; }
-        if (digit != '0' || started || n == 4) { *out++ = digit; started = 1; }
+        if (c != '%') { *out++ = c; continue; }
+        if (*text++ == 's')
+        {
+            while (--sunk) while (*name++) {}
+            while ((c = *name++)) *out++ = c;
+            continue;
+        }
+        ++text;   /* "ld" */
+        for (n = 0; n < 5; ++n)
+        {
+            digit = '0';
+            while (value >= power[n]) { value -= power[n]; ++digit; }
+            if (digit != '0' || started || n == 4) { *out++ = digit; started = 1; }
+        }
     }
-    while ((*out++ = *text++)) {}
-    --out;
+    *out = 0;
     if (mission)
     {
         text = mission == ISLAND_MESSAGE_PROMOTION ? g_MessagePromotion : g_MessageMission;
@@ -64,7 +76,7 @@ void Message_Update(u8 vblanks) WINGS_BANKED
          * island is cleared and the next): the ticker starts after them. */
         if (!g_MessageWait) g_MessageWait = 3;
         if (--g_MessageWait) return;
-        Compose(g_Island.bonus, g_Island.message == ISLAND_MESSAGE_CLEARED ? 0 : g_Island.message);
+        Compose(g_Island.bonus, g_Island.message == ISLAND_MESSAGE_CLEARED ? 0 : g_Island.message, g_Island.sunk);
         g_Island.message = ISLAND_MESSAGE_NONE;
         s_TextEnd = 0xFFFF;   /* Message_Draw finds it */
         /* A ticker still running restarts: blank both bands first. */

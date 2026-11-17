@@ -8,6 +8,8 @@
 #include "mission_ships.h"
 #include "xorshift.h"
 #include "rockets.h"
+#include "../msx/terrain_patch.h"
+#include "mission_tiles.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_SHIPS)
 
 #if SHIP_GUNS > SHIP_MAX_GUNS || SHIP_COUNT > SHIP_MAX
@@ -15,6 +17,30 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_SHIPS)
 #endif
 
 ShipsState g_Ships;
+uint8_t g_ShipsGone;
+
+/* Show ship i at sinking stage (0 afloat .. TERRAIN_SINK_STAGES, the sea):
+ * its close-view hull comes down a tile row a stage as columns decode, its
+ * distant columns switch to the stage's own (docs/ship-sinking.md). */
+static void Show(uint8_t i, uint8_t stage)
+{
+#if SHIP_SINKING
+    uint16_t column = TERRAIN_FAR_COLUMN + s_ShipFarFirst[i];
+    uint16_t entry = TERRAIN_SINK_TABLE + 2 * (s_ShipSinkEntry[i] + (uint16_t)(stage - 1) * s_ShipFarCount[i]);
+    uint8_t n;
+    g_SinkHull[i].left = s_ShipNearLeft[i]; g_SinkHull[i].right = s_ShipNearRight[i];
+    g_SinkHull[i].rows = stage;
+    g_SinkActive = 0;
+    for (n = 0; n < SINK_HULLS; ++n) g_SinkActive |= g_SinkHull[n].rows;
+    for (n = 0; n < s_ShipFarCount[i]; ++n, ++column, entry += 2)
+        if (stage) Terrain_RemapEntry(column, entry);
+        else Terrain_Remap(column, column);
+    /* The remaps mark the pages dirty: their close-view hull columns redraw
+     * too (Terrain_DrawColumn compares the rows they were drawn with). */
+#else
+    (void)i; (void)stage;
+#endif
+}
 
 #if SHIP_GUNS
 static uint16_t s_Random = 0x5a3cu;
@@ -37,6 +63,13 @@ void Ships_Reset(void) WINGS_BANKED
     for (i = 0; i < SHIP_COUNT; ++i) g_Ships.hull[i] = s_ShipHits[i];
     g_Ships.hull[SHIP_MAX] = SHIP_CARRIER_HITS;
     g_Ships.hull_hits = 0;
+    /* A ship sunk or sinking in the last mission comes back. */
+    for (i = 0; i < SHIP_COUNT; ++i)
+        if (g_Ships.step[i] && g_Ships.step[i] <= SHIP_SINK_STEPS) Show(i, 0);
+    for (i = 0; i < SHIP_MAX; ++i) g_Ships.step[i] = g_Ships.wait[i] = g_Ships.interval[i] = 0;
+    g_Ships.sinking = 0;
+    g_Ships.left = SHIP_COUNT;
+    g_ShipsGone = 0;
 }
 
 uint8_t Ships_Find(uint16_t x) WINGS_BANKED
@@ -52,7 +85,9 @@ uint8_t Ships_Find(uint16_t x) WINGS_BANKED
 
 uint8_t Ships_Deck(uint8_t ship) WINGS_BANKED
 {
-    return ship == SHIP_CARRIER || ship == SHIP_NONE ? 0 : s_ShipDeck[ship];
+    if (ship == SHIP_CARRIER || ship == SHIP_NONE) return 0;
+    /* 0x5714: a sinking deck is a pixel lower each step (not below the sea). */
+    return s_ShipDeck[ship] > g_Ships.step[ship] ? s_ShipDeck[ship] - g_Ships.step[ship] : 0;
 }
 
 uint8_t Ships_Rocket(uint16_t x, uint32_t* score) WINGS_BANKED
@@ -90,8 +125,15 @@ uint8_t Ships_Torpedo(uint16_t x) WINGS_BANKED
     uint8_t ship = Ships_Find(x);
     if (ship == SHIP_NONE) return 0;
     if (ship == SHIP_CARRIER) ship = SHIP_MAX;
-    /* 0x49a6..0x49d8: white, then red; a hit while +c > 0. */
-    if (g_Ships.hull[ship]) --g_Ships.hull[ship];
+    /* 0x49a6..0x49d8: white, then red; a hit while +c > 0. The last one
+     * starts the sinking clock: +18 = 20, +16 as the level builder left it.
+     * (The player's carrier sinking, 4 hits, is not modelled.) */
+    if (g_Ships.hull[ship] && !--g_Ships.hull[ship] && ship < SHIP_COUNT)
+    {
+        g_Ships.interval[ship] = 20;
+        g_Ships.wait[ship] = s_ShipSinkFirst[ship];
+        ++g_Ships.sinking;
+    }
     ++g_Ships.hull_hits;
     return COMBAT_SKY_RED;
 }
@@ -115,9 +157,60 @@ uint16_t Ships_Aim(int16_t a, int16_t b) WINGS_BANKED
     return 0;
 }
 
-void Ships_Tick(uint8_t flying) WINGS_BANKED
+#if SHIP_COUNT
+/* One step of ship i's sinking clock (0x1cd8): a pixel lower; the bonus
+ * and the "sunk" message at step 10; the sea takes its columns at 120. */
+static void Step(uint8_t i, uint32_t* score)
 {
+    uint8_t step = ++g_Ships.step[i];
+    g_Ships.wait[i] = g_Ships.interval[i];
+    if (g_Ships.interval[i]) --g_Ships.interval[i];
+    if (!(step & 7)) Show(i, step >> 3);
+    if (step == SHIP_SINK_BONUS)
+    {
+        /* 0x1d0e: the bonus; the last ship and island complete the mission
+         * (0x5694); otherwise the message waits for none pending (0x555a). */
+        *score += s_ShipBonus[i];
+        if (g_Ships.left) --g_Ships.left;
+        if (g_Ships.left || g_Island.left)
+        {
+            if (g_Island.message) return;
+            g_Island.message = ISLAND_MESSAGE_CLEARED;
+        }
+        else
+        {
+            g_Island.message = ISLAND_MESSAGE_MISSION;
+            g_Island.complete = 1;
+        }
+        g_Island.bonus = s_ShipBonus[i];
+        g_Island.sunk = s_ShipKind[i] + 1;
+    }
+    else if (step == SHIP_SINK_STEPS)
+    {
+        /* 0x1db8: gone; its columns are sea (Mission_Surface). */
+        g_ShipsGone |= 1 << i;
+        --g_Ships.sinking;
+    }
+}
+#endif
+
+void Ships_Tick(uint8_t flying, uint32_t* score) WINGS_BANKED
+{
+#if SHIP_COUNT
+    uint8_t i;
+    /* 0x1cae, every tick: each sinking ship's clock. */
+    if (g_Ships.sinking)
+        for (i = 0; i < SHIP_COUNT; ++i)
+        {
+            if (g_Ships.hull[i] || g_Ships.step[i] >= SHIP_SINK_STEPS) continue;
+            if (g_Ships.wait[i] > 1) { --g_Ships.wait[i]; continue; }
+            Step(i, score);
+        }
+#else
+    (void)score;
+#endif
 #if SHIP_GUNS
+    {
     uint8_t i, ship = 0;
     if (!g_Ships.smoking || !flying) return;
     /* Like an AA gun (0x4c3e): when the timer runs out a puff goes, and
@@ -126,10 +219,12 @@ void Ships_Tick(uint8_t flying) WINGS_BANKED
     for (i = 0; i < SHIP_GUNS; ++i)
     {
         while (i >= s_ShipFirstGun[ship + 1]) ++ship;
-        if (g_Ships.puffs[i] <= 1 || --g_Ships.timer[i]) continue;
+        /* A sinking ship's guns stop smoking (0x4c3e: +c > 0). */
+        if (!g_Ships.hull[ship] || g_Ships.puffs[i] <= 1 || --g_Ships.timer[i]) continue;
         if (--g_Ships.puffs[i] == 1) --g_Ships.smoking;
         g_Ships.timer[i] = SHIP_GUN_SMOKE - g_Ships.puffs[i];
         Smoke_Emit(s_ShipGunX[i], WINGS_FLIGHT_MAX_Y - s_ShipDeck[ship] - s_ShipGunRise[i]);
+    }
     }
 #else
     (void)flying;
@@ -260,7 +355,9 @@ uint8_t Ships_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
     {
         i = s_ShipFirstGun[ship]; end = s_ShipFirstGun[ship + 1];
         /* A ship's guns lie in x order: test its span first. */
-        if ((int16_t)(world - s_ShipGunX[i]) < -reach || (int16_t)(world - s_ShipGunX[end - 1]) > reach)
+        /* Sinking or sunk: its guns are silent (0x4c3e: +c > 0). */
+        if (!g_Ships.hull[ship] ||
+            (int16_t)(world - s_ShipGunX[i]) < -reach || (int16_t)(world - s_ShipGunX[end - 1]) > reach)
             continue;
         s_Deck = s_ShipDeck[ship];
         for (; i < end; ++i)

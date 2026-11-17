@@ -153,3 +153,5 @@ const unsigned char g_FontBits[2076] = {
 const char g_MessageCleared[76] = "All enemy forces on island have been destroyed . . . Bonus %ld points . . .";
 const char g_MessageMission[86] = "Good work ! You are ordered to return to carrier to receive your next mission ! . . .";
 const char g_MessagePromotion[120] = "Congratulations! You have completed your mission!! You are instructed to return to carrier for victory ceremony!! . . .";
+const char g_MessageSunk[43] = ". . . %s sunk . . . BONUS %ld points . . .";
+const char g_ShipNames[37] = "Destroyer\0Battleship\0Cruiser\0Carrier";

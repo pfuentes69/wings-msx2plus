@@ -8,3 +8,5 @@ typedef struct MissionWaterBand { uint16_t start, end; uint8_t row, height; } Mi
 extern const MissionWaterBand g_MissionWaterBands[MISSION_WATER_REGIONS];
 typedef struct MissionSurfaceRun { uint16_t end, word; } MissionSurfaceRun;
 extern const MissionSurfaceRun g_MissionSurfaceRuns[MISSION_SURFACE_RUNS];
+/* Bit i: enemy ship i has gone under (core/ships.c). */
+extern uint8_t g_ShipsGone;

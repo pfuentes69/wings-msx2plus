@@ -82,3 +82,11 @@ Strip uploads happen mostly in idle time through `Terrain_Prefetch`.
   `Terrain_TileY`.
 
 Possible next step: move `Terrain_TileY` to Z80.
+
+## Sinking ships
+
+The distant view's sinking stages are columns of their own in ROM only:
+their records follow the map's runs and `TERRAIN_SINK_TABLE` holds their
+offsets; they take no slot in the column table (RAM). The converter checks
+the strips of every stage's view against the cache like the map's
+([ship-sinking.md](ship-sinking.md)).

@@ -279,7 +279,9 @@ mission. So the mission ends when the last island or the last ship (at step
 
 It sinks on the same clock after 4 torpedo hits: enemy torpedo planes
 (`-$5a6a`), or the player's own torpedoes, since 0x4a4e always includes it.
-- At step 1 with `-$5c6a` = 1 it sets player mode 0xb.
+- With `-$5c6a` = 1 it sets player mode 0xb. (Corrected 2026-11-17: the
+  `move.w +12` after the step compare at 0x1cf6 sets the flags again, so the
+  branch tests the bonus being 0, at any step, not step 1.)
 - At step 33 a plane on deck (mode 1) goes to mode 6.
 - At step 120 it clears +4 and sets `-$5a3d` (probably game over).
 Enemy ships never attack the carrier. **Confirmed** control flow; meanings

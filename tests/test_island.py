@@ -64,7 +64,7 @@ class Island(C.Structure):
                 ('hits', C.c_uint16), ('soldier', Soldier * MAX_SOLDIERS), ('kills', C.c_uint16),
                 ('out', C.c_uint8), ('alive', C.c_uint8), ('tick', C.c_uint8), ('wait', C.c_uint8),
                 ('gunwork', C.c_uint8), ('cleared', C.c_uint8), ('left', C.c_uint8), ('message', C.c_uint8),
-                ('bonus', C.c_uint16), ('complete', C.c_uint8)]
+                ('bonus', C.c_uint16), ('complete', C.c_uint8), ('sunk', C.c_uint8)]
 
 
 class Projectile(C.Structure):

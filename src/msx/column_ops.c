@@ -433,3 +433,65 @@ void Terrain_DirtyOverlay(void) __naked
         ret
     __endasm;
 }
+
+/* A sinking hull column one stage lower (mission_streamer.c, Lower): the
+ * first row whose tile differs from row 0's (TERRAIN_MAP_ROWS if none),
+ * and the cache's rows shifted down one, row 0 kept. 255, and the cache
+ * untouched, when a row holds no tile (65535: under an overlay). SDCC's C
+ * for the two loops cost ~5 ms a column. */
+unsigned char Column_Lower(unsigned short* cache) __naked
+{
+    __asm
+        push    hl                      ; the cache
+        ld      e, (hl)
+        inc     hl
+        ld      d, (hl)                 ; DE: row 0 (the sky above the hull)
+        dec     hl
+        ld      b, #TERRAIN_MAP_ROWS
+        ld      c, #TERRAIN_MAP_ROWS    ; the first other row: none yet
+    column_lower_scan$:
+        ld      a, (hl)
+        inc     hl
+        push    hl
+        ld      h, (hl)
+        ld      l, a                    ; HL: the row's tile
+        ld      a, l
+        sub     a, #<TERRAIN_TILE_COUNT
+        ld      a, h
+        sbc     a, #>TERRAIN_TILE_COUNT
+        jr      nc, column_lower_none$
+        ld      a, c
+        cp      a, #TERRAIN_MAP_ROWS
+        jr      nz, column_lower_next$
+        ld      a, l
+        cp      a, e
+        jr      nz, column_lower_found$
+        ld      a, h
+        cp      a, d
+        jr      z, column_lower_next$
+    column_lower_found$:
+        ld      a, #TERRAIN_MAP_ROWS
+        sub     a, b
+        ld      c, a
+    column_lower_next$:
+        pop     hl
+        inc     hl
+        djnz    column_lower_scan$
+        pop     hl
+        ld      de, #2 * TERRAIN_MAP_ROWS - 1
+        add     hl, de                  ; the last row's high byte
+        ld      d, h
+        ld      e, l
+        dec     hl
+        dec     hl                      ; the row above it
+        ld      a, c
+        ld      bc, #2 * (TERRAIN_MAP_ROWS - 1)
+        lddr
+        ret
+    column_lower_none$:
+        pop     hl
+        pop     hl
+        ld      a, #0xff
+        ret
+    __endasm;
+}

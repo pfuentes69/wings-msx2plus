@@ -16,6 +16,10 @@
 #define TERRAIN_BUNDLE_BYTES 22826
 #define TERRAIN_FAR_COLUMN 952
 #define TERRAIN_FAR_COLUMNS 120
+/* Sinking ships' distant columns (docs/ship-sinking.md): u16 offsets at
+ * this map byte, per ship (mission_ships.h), stage 1..TERRAIN_SINK_STAGES. */
+#define TERRAIN_SINK_TABLE 0
+#define TERRAIN_SINK_STAGES 15
 extern const unsigned char g_TerrainPalette[32];
 extern const unsigned char g_TerrainUniformColor[TERRAIN_UNIFORM_COUNT];
 /* Per 256 px of the close view: the first VRAM row (tile-aligned) with any

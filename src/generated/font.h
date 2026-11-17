@@ -16,3 +16,7 @@ extern const unsigned char g_FontBits[2076];
 extern const char g_MessageCleared[76];
 extern const char g_MessageMission[86];
 extern const char g_MessagePromotion[120];
+/* ". . . %s sunk . . . BONUS %ld points . . ." (a ship's name for %s, its bonus for
+ * %ld); the names by ship kind, separated by NULs. */
+extern const char g_MessageSunk[43];
+extern const char g_ShipNames[37];

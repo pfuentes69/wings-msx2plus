@@ -33,6 +33,26 @@ void Smoke_Emit(uint16_t x, uint16_t y)
 uint16_t g_EngineHits;
 void Smoke_Hit(const FlightState* flight, uint16_t world) { (void)flight; (void)world; }
 void Engine_Hit(EngineState* engine, SortieState* sortie, uint8_t random) { (void)engine; (void)sortie; (void)random; ++g_EngineHits; }
+/* The terrain side of sinking (msx/terrain_patch.c, mission_streamer.c):
+ * the remaps asked for, as (column, map byte or 65535 to restore). */
+#include "../msx/terrain_patch.h"
+SinkHull g_SinkHull[SINK_HULLS];
+uint8_t g_SinkActive;
+uint16_t g_Remaps[512][2];
+uint16_t g_RemapCount;
+void Terrain_RemapEntry(uint16_t column, uint16_t entry)
+{
+    if (g_RemapCount < 512) { g_Remaps[g_RemapCount][0] = column; g_Remaps[g_RemapCount][1] = entry; }
+    ++g_RemapCount;
+}
+void Terrain_Remap(uint16_t column, uint16_t source)
+{
+    if (g_RemapCount < 512) { g_Remaps[g_RemapCount][0] = column; g_Remaps[g_RemapCount][1] = source == column ? 65535u : source; }
+    ++g_RemapCount;
+}
+/* The ticker's state (core/island.c): a ship's "sunk" message goes there. */
+#include "island.h"
+IslandState g_Island;
 """
 
 
@@ -78,7 +98,9 @@ class Ships(C.Structure):
                 ('smoking', C.c_uint8), ('guns_down', C.c_uint16), ('shown', Shown * 16),
                 ('shown_count', C.c_uint8), ('splash', Splash * 6), ('splashes', C.c_uint8),
                 ('nearest', C.c_uint16), ('hits', C.c_uint16), ('present', C.c_uint8),
-                ('hull', C.c_uint8 * 5), ('hull_hits', C.c_uint16)]
+                ('hull', C.c_uint8 * 5), ('hull_hits', C.c_uint16),
+                ('step', C.c_uint8 * 4), ('wait', C.c_uint8 * 4), ('interval', C.c_uint8 * 4),
+                ('sinking', C.c_uint8), ('left', C.c_uint8)]
 
 
 class Flight(C.Structure):   # FlightState's head: ships.c reads y only
@@ -231,7 +253,7 @@ class RocketTests(unittest.TestCase):
         cls.core.Ships_Rocket.restype = C.c_uint8
         cls.core.Ships_Aim.argtypes = [C.c_int16, C.c_int16]
         cls.core.Ships_Aim.restype = C.c_uint16
-        cls.core.Ships_Tick.argtypes = [C.c_uint8]
+        cls.core.Ships_Tick.argtypes = [C.c_uint8, C.POINTER(C.c_uint32)]
         cls.core.Ships_Guns.argtypes = [C.POINTER(Flight), C.c_uint16, C.c_uint8, C.c_void_p, C.c_void_p,
                                         C.POINTER(Combat)]
         cls.core.Ships_Guns.restype = C.c_uint8
@@ -339,13 +361,13 @@ class RocketTests(unittest.TestCase):
         gaps, last, t = [], 0, 0
         while self.ships.smoking and t < 5000:
             count = C.c_uint8.in_dll(self.core, 'g_PuffCount').value
-            self.core.Ships_Tick(1); t += 1
+            self.core.Ships_Tick(1, C.byref(C.c_uint32(0))); t += 1
             if C.c_uint8.in_dll(self.core, 'g_PuffCount').value != count:
                 gaps.append(t - last); last = t
         self.assertEqual(C.c_uint8.in_dll(self.core, 'g_PuffCount').value, 2 * 49)
         self.assertEqual(gaps[:3], [1, 1, 2])   # two guns: puffs at ticks 1, 1; then 50 - 48
         self.assertEqual(self.ships.guns_down, 2)
-        self.core.Ships_Tick(0)
+        self.core.Ships_Tick(0, C.byref(C.c_uint32(0)))
 
     def test_aim_finds_guns_between_points_live_or_not(self):
         self.assertEqual(self.core.Ships_Aim(90, 80), 86)

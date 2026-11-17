@@ -137,7 +137,7 @@ class ColumnRunsZ80Tests(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory()
         work = Path(cls.temp.name)
         sdcc = shutil.which('sdcc')
-        subprocess.run([sdcc, '-mz80', f'-DTERRAIN_MAP_ROWS={ROWS}', f'-DTERRAIN_UNIFORM_COUNT={UNIFORM}', '-c', str(ROOT / 'src/msx/column_ops.c'),
+        subprocess.run([sdcc, '-mz80', f'-DTERRAIN_MAP_ROWS={ROWS}', f'-DTERRAIN_UNIFORM_COUNT={UNIFORM}', '-DTERRAIN_TILE_COUNT=1000', '-c', str(ROOT / 'src/msx/column_ops.c'),
                         '-o', str(work) + '/'], check=True, capture_output=True)
         (work / 'stub.s').write_text(STUB)
         subprocess.run([shutil.which('sdasz80'), '-o', 'stub.rel', 'stub.s'], cwd=work, check=True, capture_output=True)

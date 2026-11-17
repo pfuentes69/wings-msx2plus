@@ -81,7 +81,7 @@ void Island_Reset(void) WINGS_BANKED
         if (s_DugoutX[i] > s_GunsHigh) s_GunsHigh = s_DugoutX[i];
     }
     g_Island.out = g_Island.alive = g_Island.tick = g_Island.wait = 0;
-    g_Island.cleared = g_Island.message = g_Island.complete = 0;
+    g_Island.cleared = g_Island.message = g_Island.complete = g_Island.sunk = 0;
     g_Island.bonus = 0;
     /* 0x2de8: islands with at least one hut, dugout or AA gun. */
 
