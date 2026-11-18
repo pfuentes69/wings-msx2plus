@@ -117,6 +117,36 @@ class TorpedoTests(unittest.TestCase):
             return outcome, s
         self.fail('the torpedo never ended')
 
+    def test_the_enemy_torpedo_runs_into_the_carrier(self):
+        # 0xe08c: dropped by a torpedo plane at altitude 20, speed 900,
+        # flying left, 870 px short of the carrier's near end (R = 4280).
+        self.core.Torpedo_Drop.argtypes = [C.POINTER(Combat), C.c_int16, C.c_int16, C.c_int16, C.c_int8]
+        s = Combat()
+        s.bob = 3
+        self.core.Torpedo_Drop(C.byref(s), 4280 + 870, 20, 900, -1)
+        e = s.enemy
+        self.assertEqual((e.live, e.x >> 16, e.y, e.vx, e.left), (FALLING, 5150, 35, -900 * 0x28f, 1))
+        self.assertEqual(s.torpedo.live, 0)
+        o = Original(0, 0, 1, 5150, 20)
+        o.x, o.y, o.vx = s32(5150 << 16), 35, -900 * 0x28f
+        surface = self.core.Mission_Surface
+        for tick in range(300):
+            outcome = o.tick(lambda bx: surface(bx & 0xffff), lambda bx: self.burst_altitude(bx & 0xffff, 3))
+            self.core.Rockets_Step(C.byref(s), 0, 1100, 0)
+            if outcome in ('falling', 'running'):
+                self.assertEqual((e.live, e.x, e.y, e.vx), (o.state, o.x, o.y, o.vx), tick)
+                continue
+            break
+        self.assertEqual(outcome[0], 'hit')
+        self.assertTrue(4100 < outcome[1] <= 4296, outcome)   # the carrier's hull (3520..4295)
+        hull = self.ships.hull[4]
+        self.assertEqual(self.core.Ships_Torpedo(outcome[1]), 2)   # COMBAT_SKY_RED
+        self.assertEqual(self.ships.hull[4], hull - 1)
+        # The kill window destroys the enemy's torpedo as it does the player's.
+        self.core.Torpedo_Drop(C.byref(s), 5000, 20, 900, -1)
+        self.core.Torpedo_Kill(C.byref(s), 5005, 10)
+        self.assertEqual(s.enemy.live, 0)
+
     def test_fall_and_run_match_the_original_tick_for_tick(self):
         rng = random.Random(11)
         kinds = set()

@@ -8,7 +8,7 @@ DEF-01/02/03, OBJ-03, HUD-07). The original's behaviour comes from
 | Step | Contents | State |
 | --- | --- | --- |
 | 1 | The plane core: 4 slots, spawning, speed, motion, turns, the shape index, drawing in both views; the torpedo-plane timer and the torpedo plane's flight (cruise, descent, the drop's state change, turns) | Done |
-| 2 | The torpedo attack: the enemy torpedo (the player's torpedo code in a second slot), hits on the US carrier (4), its sinking and the game over, the pilot-window arrow, the player's weapons destroying the torpedo | |
+| 2 | The torpedo attack: the enemy torpedo (the player's torpedo code in a second slot), hits on the US carrier (4), the game over when it is sunk, the pilot-window arrow, the player's weapons destroying the torpedo | Done |
 | 3 | Shooting planes: the gun's hit test, 19 hits, +350, fall, crash, wreck, the kill counter and icons on the dashboard. Then map a is the original's first mission, with a scripted check | |
 | 4 | Fighters: the AI (0xd9c6), the attack and its hit-scan fire (0xdccc, 0xde52), the muzzle flash, launches from ships (map j) and airstrips, the sounds | |
 | 5 | Scripted verification of the fighters on map j | |
@@ -72,6 +72,56 @@ by the original's tables (0xd1ea).
   `fc10/fd10/fc1a/fd1a` (step 4), sit in the atlas like the rockets.
 - The original draws enemy planes over the player. Here they are drawn
   with the smoke path, behind it.
+
+## The torpedo attack (step 2)
+
+- **The drop** (0xe08c): `Planes_Tick` records it (`g_Planes.drop`). The
+  world loop launches the torpedo into `CombatState.enemy` with
+  `Torpedo_Drop` (`src/core/rockets.c`):
+  - x is the plane's;
+  - the altitude is the plane's + 15 (35);
+  - vx = speed × 0x28f (speed / 100 px a tick), toward the plane's
+    facing; vy = 0.
+
+  As in the original, the slot is not tested for a torpedo still running.
+- **The run:** the player's torpedo code, now per torpedo (`Torpedo`,
+  `TorpedoBurst`):
+  - the fall, the splash on meeting the sea;
+  - 4.3125 px a tick for 199 moves, the wake (`Ships_Guns`);
+  - the first column that is not sea stops it. On the US carrier,
+    `Ships_Torpedo` takes one of its 4 hull points (`g_Ships.hull[SHIP_MAX]`).
+- **Destroying it** (DEF-02): the kill window 0x1ae2 (`Torpedo_Kill`) now
+  takes both torpedoes. Any bomb or rocket burst or gun strike in
+  [x − 48, x + 16], and any ship-gun shell splash within 10 px, destroy it.
+- **The carrier sunk:** at hull 0, torpedo planes stop coming (the timer
+  needs the carrier afloat). The game ends at the next new plane, whether
+  after a crash or in the hold (`CarrierLost`, 0x35fe). The carrier's
+  sinking itself is not drawn yet.
+- **A new plane** clears both torpedoes (`Combat_Reset`, as 0x3756 does).
+- **The arrow** (DEF-03, 0xf21a): while an armed torpedo plane flies, the
+  pilot window shows dash.shp `ltar` (the plane left of the player, or
+  level) or `rtar`, at its top centre. Each is scaled to the 46-px window
+  as the pilot views are: 12 × 5, in 16 × 5 cells at VRAM (64, 1000) /
+  (80, 1000). `Dashboard_Draw` keys its per-page cache on the view and the
+  arrow, and draws the arrow with a transparent copy over the view.
+- **The P0 smoke and the ships gate** keep the torpedo-plane timer at 0
+  (`no_torpedo_planes` in `tools/smoke_lib.tcl`). The P0's pixel model does
+  not know planes, and a torpedo hit on the carrier would upset the ships
+  gate's counts. The planes get their own scripted check (step 3). The
+  ships gate's release that runs out now aims at 2600 and may release up
+  to 400 px late. The destroyer run finishes its turn at 1000 before it
+  goes down to wave height.
+
+Verification:
+- `tests/test_torpedo.py`: a drop 870 px short of the carrier's near end
+  matches the original's torpedo model tick for tick into the carrier's
+  hull. One hull point goes, and the kill window destroys a dropped torpedo.
+- `tests/test_dashboard_bank.py` decodes the arrows' stream in bank 12.
+- The unit suite (258), the P0 smoke and the ships gate pass on NTSC and PAL.
+- In the emulator (map a, scratch): a torpedo plane set 1300 px short of
+  the carrier dropped 818 px short of it. Its torpedo fell, ran and hit
+  the carrier (hull 4 → 3). The arrow showed `rtar` with the plane to the
+  player's right, and went when the torpedo was dropped.
 
 ## What it cost
 

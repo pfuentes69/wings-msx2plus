@@ -35,7 +35,7 @@ class Combat(ctypes.Structure):
                ('rocket',Rocket*15),('rockets',ctypes.c_uint8),('rocket_tick',ctypes.c_uint8),
                ('path',ctypes.c_int16),('speed',ctypes.c_int16),('far',ctypes.c_uint8),('bob',ctypes.c_uint8),
                ('sky_flash',ctypes.c_uint8),('sky_color',ctypes.c_uint8),('plane_x',ctypes.c_int16),
-               ('torpedo',Torpedo)]
+               ('torpedo',Torpedo),('enemy',Torpedo)]
 
 class CombatTests(unittest.TestCase):
     @classmethod

@@ -417,3 +417,14 @@ debug watchpoint create -type write_mem -address $addr(g_MissedFrames) -command 
 # WINGS_EXTRA_TCL: a debugging script sourced after the scenario's procs
 # are set up (probes, overrides); not used by the verifiers themselves.
 if {[info exists env(WINGS_EXTRA_TCL)] && $env(WINGS_EXTRA_TCL) ne ""} {after time 0.5 [list source $env(WINGS_EXTRA_TCL)]}
+# A scenario that is not about enemy planes keeps the torpedo-plane timer
+# (g_Planes +152) at 0, so none comes (needs g_Planes in extra_symbols).
+proc no_torpedo_planes {} {
+    foreach offset {152 153} {
+        debug watchpoint create -type write_mem -address [expr {$::addr(g_Planes)+$offset}] -command {
+            debug write memory [expr {$::addr(g_Planes)+152}] 0
+            debug write memory [expr {$::addr(g_Planes)+153}] 0
+        }
+    }
+}
+

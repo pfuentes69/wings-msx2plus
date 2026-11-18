@@ -12,6 +12,7 @@
 #include "core/island.h"
 #include "core/ships.h"
 #include "core/planes.h"
+#include "core/rockets.h"
 #include "core/flight_model.h"
 #include "msx/elevator.h"
 CarrierState g_Carrier;
@@ -848,7 +849,8 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     {
         u16 ahead = s_Aircraft.facing_left ? world - 128 : world + 128;
         u16 altitude = WINGS_FLIGHT_MAX_Y - y;
-        s_RenderPilot = Dashboard_Draw(page, Mission_Surface(ahead), altitude > 255 ? 255 : altitude);
+        s_RenderPilot = Dashboard_Draw(page, Mission_Surface(ahead), altitude > 255 ? 255 : altitude,
+                                       Planes_Arrow((int16_t)world));
     }
     // Query the strip while the final miniature command is still executing.
     s_RenderSurface = Mission_Query(world);
@@ -919,6 +921,7 @@ static void PlanesTick(u8 weapons)
     player.turn = s_World.flight.turn;
     player.speed = s_World.flight.speed;
     Planes_Tick(&player, weapons != 0, g_Ships.hull[SHIP_MAX] != 0);
+    if (g_Planes.drop) Torpedo_Drop(&g_Combat, g_Planes.drop_x, g_Planes.drop_alt, g_Planes.drop_speed, g_Planes.drop_facing);
 }
 
 /* Contact crash: hold the scene for one second while the original crash art
@@ -939,9 +942,17 @@ static void StartCrash(void)
  * service arms it (the weapon is the player's choice again) and the lift
  * brings it up, as after a landing (0xd2); the island and the ships keep
  * their damage. No plane left: the game ends. */
+/* The US carrier took its 4th torpedo (docs/enemy-planes.md): the game
+ * ends at the next new plane (0x35fe). Its sinking is not drawn. */
+static u8 CarrierLost(void)
+{
+    if (g_Ships.hull[SHIP_MAX]) return 0;
+    g_Game.phase=GAME_OVER; g_Game.cursor=g_Game.notice=0;
+    return 1;
+}
 static void LosePlane(void)
 {
-    if (Game_LosePlane(&g_Game)) { NewPlane(); g_Carrier.stage=CARRIER_HOLD; }
+    if (Game_LosePlane(&g_Game) && !CarrierLost()) { NewPlane(); g_Carrier.stage=CARRIER_HOLD; }
     s_CrashSteps=0; s_UiDirty=1;
 }
 #endif
@@ -976,7 +987,7 @@ static u8 ReadActions(void)
         /* Back in the hold with the mission done: the next mission's
          * briefing instead of the service (0x0122). */
         if (g_Island.complete) Game_NextMission(&g_Game,s_Promotion);
-        else Game_OpenService(&g_Game);
+        else if (!CarrierLost()) Game_OpenService(&g_Game);
         Engine_Reset(&g_Engine,&g_Game.sortie);
         s_UiDirty=1;ConsumeActions();return 0;
     }
@@ -1396,7 +1407,7 @@ advance_clocks:
 #ifdef WINGS_P1_FLIGHT
         /* The ships' guns (0x4c3e) run in the original's render loop (from
          * 0x38d2): once a presented frame, before it is drawn. */
-        s_ShipGuns = g_Ships.present || g_Ships.splashes || g_Combat.torpedo.live ? Ships_Guns(&s_World.flight, s_World.x >> 8,
+        s_ShipGuns = g_Ships.present || g_Ships.splashes || g_Combat.torpedo.live || g_Combat.enemy.live ? Ships_Guns(&s_World.flight, s_World.x >> 8,
             s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps &&
             g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
             &g_Engine, &g_Game.sortie, &g_Combat) : 0;

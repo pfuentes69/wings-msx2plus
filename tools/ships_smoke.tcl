@@ -2,7 +2,7 @@
 # Run by tools/verify_ships.py. Map j: a destroyer at its left end (x
 # 8..655, 1 hit), the carrier at 3960, a battleship at its right end (x
 # 7160..7935, 2 hits).
-set extra_symbols {g_Ships g_ShipsGone}
+set extra_symbols {g_Ships g_ShipsGone g_Planes}
 set cx 3960
 set taxi_margin 5
 # The run's settings. Screen y = 1200 - altitude.
@@ -16,8 +16,11 @@ set fuel_home 110
 set wave_y 1161       ;# altitude 39: the torpedo's release envelope is 41
 set bs_release 6450   ;# battleship hull from 7160; the run is about 990 px
 set ds_release 1300   ;# destroyer hull to 655
+set late 60
 set sink_watch 30     ;# sinking step of the snapshot (bonus at 10, gone at 120)
 source [file join $env(WINGS_ROOT) tools smoke_lib.tcl]
+# Enemy planes have their own checks (docs/enemy-planes.md).
+no_torpedo_planes
 
 # g_Ships (src/core/ships.h, SDCC packs): down[40] +0, guns_down +121,
 # splashes +212, hits +215, hull[5] +218, hull_hits +223, step[4] +225,
@@ -206,7 +209,7 @@ proc landed_rearm_destroyer {} {
 }
 proc sortie_destroyer {} {
     require [expr {[view 3]==2 && [view 4]==1}] "Torpedo sortie: weapon=[view 3] stock=[view 4]"
-    engine_takeoff {set ::release_x 2400;set ::release_then torpedo_expired_check;pilot 16 1100;wait_for {abs([world_y]-1100)<10} {pilot 16 $::wave_y} "down to 1100" 20;wait_for {[world_x]<=$::release_x+40 && abs([world_y]-$::wave_y)<=2 && [climb]==0} torpedo_release_left "level at wave height" 30}
+    engine_takeoff {set ::release_x 2600;set ::late 400;set ::release_then torpedo_expired_check;pilot 16 1100;wait_for {abs([world_y]-1100)<10} {pilot 16 $::wave_y} "down to 1100" 20;wait_for {[world_x]<=$::release_x+40 && abs([world_y]-$::wave_y)<=2 && [climb]==0} torpedo_release_left "level at wave height" 30}
 }
 # Then on to the destroyer at cruise height.
 proc destroyer_turn {} {
@@ -334,12 +337,21 @@ proc flight_trace {} {
 proc destroyer_run {} {
     trace_on
     set ::release_x $::ds_release;set ::release_then destroyer_hit
+    # Round onto the run at 1000 first: a turn loses height, and with the
+    # descent on top of it the plane meets the sea.
+    pilot 16 1000
+    wait_for {[world_byte 11] && ![world_byte 13] && abs([world_y]-1000)<15} destroyer_descent "turn onto the run" 30
+}
+proc destroyer_descent {} {
     pilot 16 1100
     wait_for {abs([world_y]-1100)<10} {pilot 16 $::wave_y} "down to 1100" 20
     wait_for {[world_x]<=$::ds_release+40 && abs([world_y]-$::wave_y)<=2 && [climb]==0} torpedo_release_left "level at wave height" 30
 }
 proc torpedo_release_left {} {
-    require [expr {[world_x]>$::release_x-60}] "Torpedo run too late: x=[world_x] wanted $::release_x"
+    # Late by up to ::late px (60, or 400 for the run that must only end in
+    # open sea: from 2200 on it runs out short of the destroyer).
+    require [expr {[world_x]>$::release_x-$::late}] "Torpedo run too late: x=[world_x] wanted $::release_x"
+    set ::late 60
     log "torpedo release x=[world_x] y=[world_y] altitude=[altitude] speed=[speed]"
     keymatrixdown 4 8
     after time 0.1 {keymatrixup 4 8}

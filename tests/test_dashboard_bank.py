@@ -8,7 +8,7 @@ import unittest
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'))
-from convert_dashboard import panel, bomb_pixels, compose, hud_variants, HUD_ELEMENTS
+from convert_dashboard import panel, bomb_pixels, compose, hud_variants, HUD_ELEMENTS, arrow_frames
 from convert_hellcat import pack_pixels
 
 
@@ -28,7 +28,8 @@ class DashboardBankTests(unittest.TestCase):
         streams=[('DashboardPanel',pack_pixels(panel())),
                  ('PilotRLE',pack_pixels((ROOT/'assets_msx/dashboard/pilot.indices').read_bytes())),
                  ('FarPlaneRLE',pack_pixels((ROOT/'assets_msx/dashboard/far-plane.indices').read_bytes())),
-                 ('BombRLE',pack_pixels(bomb_pixels()))]
+                 ('BombRLE',pack_pixels(bomb_pixels())),
+                 ('ArrowRLE',b''.join(pack_pixels(p) for p,_ in arrow_frames()))]
         for index,(name,expected) in enumerate(streams):
             start=metadata['offsets'][name]
             end=metadata['offsets'][streams[index+1][0]] if index+1<len(streams) else len(bank)

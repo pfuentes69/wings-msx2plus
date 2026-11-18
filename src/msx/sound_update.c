@@ -158,5 +158,10 @@ void Sound_Bursts(void) WINGS_BANKED
         g_Combat.torpedo.sound = 0;
         Sound_Effect(SOUND_SPLASH, (u16)g_Combat.torpedo.x.w.whole);
     }
+    if (g_Combat.enemy.sound)
+    {
+        g_Combat.enemy.sound = 0;
+        Sound_Effect(SOUND_SPLASH, (u16)g_Combat.enemy.x.w.whole);
+    }
 }
 #endif

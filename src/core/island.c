@@ -246,7 +246,7 @@ void Island_Impacts(CombatState* combat, uint32_t* score) WINGS_BANKED
             continue;
         }
         Island_Kill((int16_t)x, 16);
-        if (combat->torpedo.live) Torpedo_Kill(combat, (int16_t)x - 16, 32);
+        if (combat->torpedo.live || combat->enemy.live) Torpedo_Kill(combat, (int16_t)x - 16, 32);
     }
     *score += points;
 }

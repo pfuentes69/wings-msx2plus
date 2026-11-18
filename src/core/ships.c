@@ -296,7 +296,7 @@ static void Gun(uint8_t i)
         int16_t at = (int16_t)s_World + (int16_t)(Random() & 63) - 32;
         if (g_Ships.splashes < SHIP_GUN_SPLASHES) Splash(at, SHIP_SPLASH_LIFE);
         /* 0x1ae2: it destroys a torpedo within 10 px, shown or not. */
-        if (s_Combat->torpedo.live) Torpedo_Kill(s_Combat, at, 10);
+        if (s_Combat->torpedo.live || s_Combat->enemy.live) Torpedo_Kill(s_Combat, at, 10);
     }
     if (s_Far)
     {
@@ -339,6 +339,7 @@ uint8_t Ships_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
     /* A running torpedo's wake (0x0d9e). The original adds a splash every
      * tick; one a presented frame, shorter lived, fits the MSX. */
     if (combat->torpedo.live == TORPEDO_RUNNING) Splash(combat->torpedo.x.w.whole, SHIP_WAKE_LIFE);
+    if (combat->enemy.live == TORPEDO_RUNNING) Splash(combat->enemy.x.w.whole, SHIP_WAKE_LIFE);
     g_Ships.shown_count = 0;
     g_Ships.nearest = 65535u;
 #if SHIP_GUNS

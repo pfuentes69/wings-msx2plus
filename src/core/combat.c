@@ -30,6 +30,7 @@ void Combat_Reset(CombatState* state) WINGS_BANKED
     state->sky_flash = state->sky_color = 0;
     state->plane_x = 0;
     state->torpedo.live = state->torpedo.sound = 0;
+    state->enemy.live = state->enemy.sound = 0;   /* a new plane clears the enemy's too (0x3756) */
 }
 
 /* height <= COMBAT_GUN_RANGE and tracer runs <= 11 keep this in 16 bits. */
@@ -151,14 +152,15 @@ void Combat_Advance(CombatState* state, SortieState* sortie, uint16_t x, uint16_
     while (state->count>COMBAT_GUN_COUNT && !state->projectile[state->count-1].kind) --state->count;
     /* Rockets and the torpedo move on the original's 12.5 Hz tick: every
      * second call. */
-    if ((state->rockets || state->torpedo.live) && (state->rocket_tick ^= 1))
+    if ((state->rockets || state->torpedo.live || state->enemy.live) && (state->rocket_tick ^= 1))
     {
         Rockets_Step(state, x, y, left);
         /* A torpedo meeting the sea makes a splash (Sound_Bursts): count it
          * as an event the caller passes on. */
-        if (state->torpedo.sound == 1)
+        if (state->torpedo.sound == 1 || state->enemy.sound == 1)
         {
-            state->torpedo.sound = 2;   /* Sound_Bursts clears it */
+            if (state->torpedo.sound == 1) state->torpedo.sound = 2;   /* Sound_Bursts clears it */
+            if (state->enemy.sound == 1) state->enemy.sound = 2;
             if (state->impacts != 65535u) ++state->impacts;
         }
     }

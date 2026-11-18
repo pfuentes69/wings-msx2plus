@@ -94,6 +94,9 @@ typedef struct CombatState {
     int16_t plane_x;          /* the plane's world x at the last Combat_Advance */
     /* Last: the verification scripts read the fields above by offset. */
     CombatTorpedo torpedo;
+    /* The enemy torpedo plane's (-$5a6a, docs/enemy-planes.md): the same
+     * code, dropped by 0xe08c. */
+    CombatTorpedo enemy;
 } CombatState;
 
 /* A projectile's world x from its ring x, read relative to the plane. */
@@ -146,7 +149,8 @@ static inline uint8_t Combat_Required(const CombatState* state,uint8_t controls)
 {
     return controls || state->primary_pending || state->secondary_pending || state->cooldown ||
         state->secondary_cooldown || state->count>COMBAT_GUN_COUNT || state->flash_ticks ||
-        state->projectile[0].kind || state->projectile[1].kind || state->rockets || state->torpedo.live;
+        state->projectile[0].kind || state->projectile[1].kind || state->rockets || state->torpedo.live ||
+        state->enemy.live;
 }
 static inline uint8_t Combat_Clock(CombatState* state, uint8_t controls)
 {

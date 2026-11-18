@@ -84,8 +84,24 @@ typedef struct PlanesState {
     uint8_t fighters;  /* -$5e28: fighters airborne */
     uint8_t kills;     /* -$5c7f */
     uint8_t live;      /* slots in use (any state) */
+    /* A drop this tick (0xe08c), for the caller to launch the torpedo:
+     * the plane's x, altitude, speed and facing. */
+    uint8_t drop;
+    int16_t drop_x, drop_alt, drop_speed;
+    int8_t drop_facing;
 } PlanesState;
 extern PlanesState g_Planes;
+
+/* The pilot window's arrow (0xf21a): for the first armed torpedo plane,
+ * 1 (ltar) when the player is right of it or level, 2 (rtar) left; 0 none. */
+static inline uint8_t Planes_Arrow(int16_t player_x)
+{
+    const Plane* e = g_Planes.plane;
+    uint8_t i;
+    for (i = 0; i < PLANES_MAX; ++i, ++e)
+        if (e->state && (e->beh & 7) == PLANE_ARMED) return (int16_t)(player_x - e->x) >= 0 ? 1 : 2;
+    return 0;
+}
 
 /* Banked. A new game: all clear, kills too. A new mission: the slots. */
 void Planes_NewGame(void) WINGS_BANKED;

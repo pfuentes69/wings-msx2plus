@@ -1,4 +1,9 @@
+set extra_symbols {g_Planes}
 source [file join $env(WINGS_ROOT) tools smoke_lib.tcl]
+# Enemy planes have their own verifier (docs/enemy-planes.md); the P0's
+# pixel model does not know them: keep the torpedo-plane timer (g_Planes
+# +152) at 0, so none comes.
+no_torpedo_planes
 proc ready {} {
     if {[value g_Ready]!=1 || [view 2]!=3 || [view 4]!=30} {after time 0.05 ready;return}
     require [expr {[view 0]==0 && [view 2]==3 && [view 4]==30}] "New game state"

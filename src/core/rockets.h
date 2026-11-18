@@ -11,6 +11,10 @@ uint8_t Torpedo_Launch(CombatState* state, uint16_t x, uint16_t y, int16_t vx, i
 /* 0x1ae2: the torpedo, falling or running, within r px of x explodes
  * without effect. */
 void Torpedo_Kill(CombatState* state, int16_t x, uint8_t r) WINGS_BANKED;
+/* 0xe08c: the enemy torpedo plane's drop at x, altitude (+15), at its speed
+ * (speed / 100 px a tick) and facing; the slot is not tested for a running
+ * torpedo, as in the original. */
+void Torpedo_Drop(CombatState* state, int16_t x, int16_t altitude, int16_t speed, int8_t facing) WINGS_BANKED;
 /* One original 12.5 Hz tick of every rocket and the torpedo, the plane at (x, y). */
 void Rockets_Step(CombatState* state, uint16_t x, uint16_t y, uint8_t left) WINGS_BANKED;
 #endif

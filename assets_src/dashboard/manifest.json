@@ -5066,14 +5066,15 @@
   },
   "asset_bank": {
     "bank": 12,
-    "bytes": 7366,
+    "bytes": 7420,
     "offsets": {
       "DashboardPanel": 0,
       "PilotRLE": 3404,
       "FarPlaneRLE": 6468,
-      "BombRLE": 7062
+      "BombRLE": 7062,
+      "ArrowRLE": 7366
     },
-    "sha256": "07c1e8005a51c8e0f09d16e6a79c7baee81c62b311f95a382b5fc2c00cec1dee"
+    "sha256": "1d398420f3ef96a84e1c8b32732d23d91c00702311445d611f20e26fd3c56140"
   },
   "bomb_slots": [
     [

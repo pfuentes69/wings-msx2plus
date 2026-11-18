@@ -89,6 +89,9 @@ void Dashboard_Load(void) WINGS_BANKED
     Input(BOMBRLE_OFFSET);
     for (frame = 0; frame < BOMB_FRAMES; ++frame)
         Expand(g_BombX[frame], g_BombY[frame], 8, BOMB_HEIGHT);
+    Input(ARROWRLE_OFFSET);
+    Expand(HUD_ARROW0_ATLAS_X, HUD_ARROW0_ATLAS_Y, 16, HUD_ARROW_HEIGHT);
+    Expand(HUD_ARROW1_ATLAS_X, HUD_ARROW1_ATLAS_Y, 16, HUD_ARROW_HEIGHT);
     for (frame = 0; frame < 12; ++frame)
     {
         x = frame >= 4 && frame < 8 ? 144 : 48;
@@ -108,14 +111,22 @@ void Dashboard_Load(void) WINGS_BANKED
     }
 }
 
-u8 Dashboard_Draw(u8 page, u8 area, u8 altitude) WINGS_BANKED
+u8 Dashboard_Draw(u8 page, u8 area, u8 altitude, u8 arrow) WINGS_BANKED
 {
     u8 profile = area * 8 + (altitude >> 5);
-    if (s_Pilot[page] != profile)
+    u8 key = profile | (arrow << 5);
+    if (s_Pilot[page] != key)
     {
         VDP_CommandHMMM(g_PilotX[profile], g_PilotY[profile], HUD_PILOT_X,
                         (u16)page * 256 + 172 + HUD_PILOT_Y, HUD_PILOT_WIDTH, 24);
-        s_Pilot[page] = profile;
+        /* The torpedo plane's arrow (0xf21a) at the window's top centre. */
+        if (arrow == 1)
+            VDP_CommandLMMM(HUD_ARROW0_ATLAS_X, HUD_ARROW0_ATLAS_Y, HUD_PILOT_X + HUD_ARROW_LEFT_X,
+                            (u16)page * 256 + 172 + HUD_PILOT_Y, 16, HUD_ARROW_HEIGHT, VDP_OP_TIMP);
+        else if (arrow == 2)
+            VDP_CommandLMMM(HUD_ARROW1_ATLAS_X, HUD_ARROW1_ATLAS_Y, HUD_PILOT_X + HUD_ARROW_RIGHT_X,
+                            (u16)page * 256 + 172 + HUD_PILOT_Y, 16, HUD_ARROW_HEIGHT, VDP_OP_TIMP);
+        s_Pilot[page] = key;
     }
     return profile;
 }

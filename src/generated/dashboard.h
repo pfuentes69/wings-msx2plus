@@ -8,6 +8,7 @@ const unsigned char g_DashboardPalette[32] = {
 #define PILOTRLE_OFFSET 3404
 #define FARPLANERLE_OFFSET 6468
 #define BOMBRLE_OFFSET 7062
+#define ARROWRLE_OFFSET 7366
 #define DASHBOARD_BANK 12
 #define HUD_AMMO_TENS 0
 #define HUD_AMMO_UNITS 1
@@ -34,6 +35,13 @@ static const unsigned char g_HudDigitRows[] = {30, 51, 51, 51, 51, 51, 30, 6, 14
 #define HUD_KILLS_Y 24
 #define HUD_PILOT_WIDTH 46
 #define HUD_SCORE_DIGITS 6
+#define HUD_ARROW_HEIGHT 5
+#define HUD_ARROW_LEFT_X 3
+#define HUD_ARROW_RIGHT_X 32
+#define HUD_ARROW0_ATLAS_X 64
+#define HUD_ARROW0_ATLAS_Y 1000
+#define HUD_ARROW1_ATLAS_X 80
+#define HUD_ARROW1_ATLAS_Y 1000
 #define HUD_NEEDLE_FULL 22
 #define HUD_NEEDLE_NEW_OIL 16
 #define HUD_BLACK 11

@@ -200,17 +200,29 @@ uint8_t Torpedo_Launch(CombatState* state, uint16_t x, uint16_t y, int16_t vx, i
     return 1;
 }
 
-/* The torpedo ends in a burst at x, altitude, made by source (combat.h). */
-static void TorpedoBurst(CombatState* state, uint8_t altitude, int8_t source)
+void Torpedo_Drop(CombatState* state, int16_t x, int16_t altitude, int16_t speed, int8_t facing) WINGS_BANKED
 {
-    CombatProjectile* p = Slot(state);
-    state->torpedo.live = 0;
-    if (p) Burst(state, p, (uint16_t)state->torpedo.x.w.whole, altitude, source);
+    CombatTorpedo* t = &state->enemy;
+    t->vx.v = (int32_t)speed * 0x28f;
+    if (facing < 0) t->vx.v = -t->vx.v;
+    t->vy.v = 0;
+    t->x.w.whole = x; t->x.w.fraction = 0;
+    t->y = altitude + 15;
+    t->left = facing < 0;
+    t->sound = 0;
+    t->live = TORPEDO_FALLING;
 }
 
-static void Torpedo(CombatState* state)
+/* A torpedo ends in a burst at x, altitude, made by source (combat.h). */
+static void TorpedoBurst(CombatState* state, CombatTorpedo* t, uint8_t altitude, int8_t source)
 {
-    CombatTorpedo* t = &state->torpedo;
+    CombatProjectile* p = Slot(state);
+    t->live = 0;
+    if (p) Burst(state, p, (uint16_t)t->x.w.whole, altitude, source);
+}
+
+static void Torpedo(CombatState* state, CombatTorpedo* t)
+{
     int16_t altitude;
     uint8_t burst;
     if (t->live == TORPEDO_FALLING)
@@ -229,7 +241,7 @@ static void Torpedo(CombatState* state)
          * the sea too, faster than 5 px a tick down; otherwise it runs. */
         if (s_Surface != MISSION_SEA || t->vy.w.whole < -5)
         {
-            TorpedoBurst(state, burst, COMBAT_TORPEDO_BURST);
+            TorpedoBurst(state, t, burst, COMBAT_TORPEDO_BURST);
             return;
         }
         t->sound = 1;
@@ -248,29 +260,35 @@ static void Torpedo(CombatState* state)
     {
         /* On a hull, drawn as the sea explosion (+1f is the sea's 0). */
         if (s_Surface == MISSION_CARRIER) s_Surface = MISSION_SEA;
-        TorpedoBurst(state, 12, COMBAT_TORPEDO_HIT);
+        TorpedoBurst(state, t, 12, COMBAT_TORPEDO_HIT);
     }
 }
 
-/* 0x1ae2: a torpedo within r px of x explodes, harmlessly (state 8, no
- * impact). Its burst is only drawn. */
-void Torpedo_Kill(CombatState* state, int16_t x, uint8_t r) WINGS_BANKED
+/* 0x1ae2: every torpedo within r px of x explodes, harmlessly (state 8,
+ * no impact): the player's and the enemy's (0x1b24). Its burst is only
+ * drawn. */
+static void Kill(CombatState* state, CombatTorpedo* t, int16_t x, uint8_t r)
 {
-    CombatTorpedo* t = &state->torpedo;
     int16_t d;
     if (!t->live) return;
     d = t->x.w.whole - x;
     if (d < 0) d = -d;
     if (d > r) return;
     s_Surface = t->live == TORPEDO_RUNNING ? MISSION_SEA : MISSION_ISLAND;
-    TorpedoBurst(state, t->y < 12 ? 12 : (uint8_t)(t->y > 255 ? 255 : t->y), COMBAT_TORPEDO_DUD);
+    TorpedoBurst(state, t, t->y < 12 ? 12 : (uint8_t)(t->y > 255 ? 255 : t->y), COMBAT_TORPEDO_DUD);
+}
+void Torpedo_Kill(CombatState* state, int16_t x, uint8_t r) WINGS_BANKED
+{
+    Kill(state, &state->torpedo, x, r);
+    Kill(state, &state->enemy, x, r);
 }
 
 void Rockets_Step(CombatState* state, uint16_t x, uint16_t y, uint8_t left) WINGS_BANKED
 {
     CombatRocket* r = state->rocket;
     uint8_t i;
-    if (state->torpedo.live) Torpedo(state);
+    if (state->torpedo.live) Torpedo(state, &state->torpedo);
+    if (state->enemy.live) Torpedo(state, &state->enemy);
     if (!state->rockets) return;
     s_PlaneX = (int16_t)x; s_PlaneAltitude = (int16_t)(WINGS_FLIGHT_MAX_Y - y); s_PlaneLeft = g_RocketLeft = left;
     for (i = COMBAT_ROCKETS; i; --i, ++r)

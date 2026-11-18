@@ -62,7 +62,7 @@ extern const unsigned char g_WheelFirst[21];
  * gnf0..gnf6, the far flash expl, the soldiers guy0..gy11 and the far
  * soldiers; pieces
  * g_SmokePieces[g_SmokeFirst[frame] .. g_SmokeFirst[frame + 1]). */
-#define SMOKE_PIECE_COUNT 130
+#define SMOKE_PIECE_COUNT 131
 #define SMOKE_FRAME_FIRE 7
 #define SMOKE_FRAME_GUN 8
 #define SMOKE_FRAME_FAR_FLASH 22

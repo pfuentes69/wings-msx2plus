@@ -256,7 +256,10 @@ static void TorpedoPlane(Plane* e, const PlanesPlayer* p)
     {
         if (e->alt == 20 && e->frame == 0)
         {
-            /* The drop (0xe08c): the torpedo comes in step 2. */
+            /* The drop (0xe08c): the caller launches the torpedo. */
+            g_Planes.drop = 1;
+            g_Planes.drop_x = e->x; g_Planes.drop_alt = e->alt;
+            g_Planes.drop_speed = e->speed; g_Planes.drop_facing = e->facing;
             e->tspeed = PLANE_SPEED_MAX / 2;
             e->talt = 60;
             e->beh = PLANE_DROPPED;
@@ -308,6 +311,7 @@ void Planes_Tick(const PlanesPlayer* player, uint8_t fire, uint8_t carrier) WING
 {
     uint8_t i;
     Plane* e;
+    g_Planes.drop = 0;
     Timer(player, fire, carrier);
     if (!g_Planes.live) return;
     for (i = 0, e = g_Planes.plane; i < PLANES_MAX; ++i, ++e)
