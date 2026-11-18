@@ -81,7 +81,7 @@ proc snapshot {name} {
         dump $name.combat [debug read_block memory $::addr(g_Combat) 160]
         dump $name.game [debug read_block memory $::addr(g_GameView) 8]
         # The tile cache: each VRAM slot's strip (src/msx/mission_streamer.c).
-        dump $name.slots [debug read_block memory $::addr(g_TerrainSlotStrip) 52]
+        dump $name.slots [debug read_block memory $::addr(g_TerrainSlotStrip) 40]
     }
     dump $name.palette [debug read_block {VDP palette} 0 32]
     if {$::project eq "mission-flight"} {

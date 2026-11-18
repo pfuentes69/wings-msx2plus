@@ -11,6 +11,7 @@
 #include "core/smoke.h"
 #include "core/island.h"
 #include "core/ships.h"
+#include "core/planes.h"
 #include "core/flight_model.h"
 #include "msx/elevator.h"
 CarrierState g_Carrier;
@@ -520,6 +521,8 @@ static void Background(u8 page, u8 save)
     }
 }
 
+/* The aircraft pixel data's ROM banks (tools/convert_hellcat.py AIRCRAFT_BANKS). */
+static const u8 s_AircraftBank[7] = {8, 9, 10, 14, 4, 5, 6};
 void Atlas_LoadShape(const AircraftShape* shape)
 {
     const u8* source;
@@ -531,7 +534,7 @@ void Atlas_LoadShape(const AircraftShape* shape)
     u8 row;
     for (row = 0; row < shape->height; ++row)
     {
-        Scenery_Read((offset >> 13) < 3 ? 8 + (offset >> 13) : 11 + (offset >> 13), offset & 8191, scratch, shape->width / 2);
+        Scenery_Read(s_AircraftBank[offset >> 13], offset & 8191, scratch, shape->width / 2);
         offset += shape->width / 2;
         source = scratch;
         VDP_WriteVRAM(source, address, high, shape->width / 2);
@@ -894,6 +897,7 @@ static void NewPlane(void)
     s_CrashSteps=s_EngineSteps=0;
     s_GearPos=5; s_Wheel=255;
     Smoke_Reset(); Smoke_ClearPages();
+    Planes_NewPlane();
 #endif
     s_CrashFrame=255;
     if (s_CrashLoaded!=255) { Atlas_LoadShape(&g_AircraftShapes[CRASH_HOST_SHAPE]); s_CrashLoaded=255; }
@@ -901,6 +905,22 @@ static void NewPlane(void)
 }
 
 #ifdef WINGS_P1_FLIGHT
+/* One original tick of the enemy planes, with the player as they see it. */
+static void PlanesTick(u8 weapons)
+{
+    static PlanesPlayer player;
+    player.x = (int16_t)(s_World.x >> 8);
+    player.alt = (int16_t)(WINGS_FLIGHT_MAX_Y - (s_World.flight.y >> 8));
+    player.facing = s_World.flight.facing_left ? -1 : 1;
+    player.mode = s_CrashSteps ? PLANES_PLAYER_CRASHED :
+                  s_World.flight.mode == FLIGHT_DEAD ? PLANES_PLAYER_ENGINE_OUT :
+                  FLIGHT_ON_DECK(&s_World.flight) || g_Carrier.stage != CARRIER_DECK ? PLANES_PLAYER_DECK :
+                  PLANES_PLAYER_FLYING;
+    player.turn = s_World.flight.turn;
+    player.speed = s_World.flight.speed;
+    Planes_Tick(&player, weapons != 0, g_Ships.hull[SHIP_MAX] != 0);
+}
+
 /* Contact crash: hold the scene for one second while the original crash art
  * plays at the plane - the sea splash over water, the explosion elsewhere
  * (the original picks its crash outcome by surface, 0xafba). */
@@ -940,6 +960,7 @@ static void StartMission(void)
 {
     Island_Reset();
     Ships_Reset();
+    Planes_Reset();
     g_MessageActive = g_MessageWait = 0;
     s_MissionAdvanced = s_Promotion = 0;
 }
@@ -990,6 +1011,7 @@ static u8 ReadActions(void)
 #ifdef WINGS_P1_FLIGHT
             Island_Reset();
             Ships_Reset();
+            Planes_NewGame();
 #endif
         }
         if (action & GAME_START_SORTIE)
@@ -1107,6 +1129,7 @@ void main(void)
 #endif
     Terrain_Load();
 #ifdef WINGS_P1_FLIGHT
+    Planes_NewGame();
     StartMission(); g_TerrainDirty = 0;
     Rope_Reset();
 #endif
@@ -1307,6 +1330,9 @@ advance_clocks:
                             g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
                             &g_Engine, &g_Game.sortie);
                         s_SoldiersMoving = Island_Soldiers(&g_Game.progress.score);
+                        /* Enemy planes (0xe7d6) and the torpedo-plane timer
+                         * (0xbc02), after the player's move. */
+                        if (g_Planes.live || g_Planes.timer) PlanesTick(weapons);
 #endif
                     }
 #ifdef WINGS_P1_FLIGHT

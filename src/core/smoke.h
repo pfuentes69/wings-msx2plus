@@ -20,7 +20,7 @@ typedef struct SmokePuff {
 } SmokePuff;
 extern SmokePuff g_Smoke[SMOKE_COUNT];
 
-/* Banked (segment 22). */
+/* Banked (segment 31, with the enemy planes). */
 void Smoke_Reset(void) WINGS_BANKED;
 /* One original 12.5 Hz tick: advance the puffs, then (when emit) let an
  * engine with oil below 128 put out a puff at the nose. */

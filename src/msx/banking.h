@@ -18,7 +18,7 @@
 #define WINGS_SEGMENT_HUD 3     /* dashboard, weapons, arresting rope */
 #define WINGS_SEGMENT_SCENE 16  /* menu, ship, carrier elevator, engine, landing */
 #define WINGS_SEGMENT_FLIGHT 21 /* flight model, wave strip */
-#define WINGS_SEGMENT_EFFECTS 22 /* engine smoke */
+#define WINGS_SEGMENT_EFFECTS 22 /* the smoke path: drawing and its frame tables */
 #define WINGS_SEGMENT_COMBAT 23 /* weapons, island targets */
 #define WINGS_SEGMENT_MISSION 25 /* island soldiers, island cleared, messages (24 is the map data) */
 #define WINGS_SEGMENT_SOUND 26  /* MSX-MUSIC: detection, its driver and effects (copied into RAM) */
@@ -26,6 +26,7 @@
 #define WINGS_SEGMENT_SHIPS 28  /* enemy ships (core/ships.c) */
 #define WINGS_SEGMENT_ROCKETS 29 /* rockets (core/rockets.c) and their tables */
 #define WINGS_SEGMENT_PATCH 30  /* terrain column remap and band repaint (msx/terrain_patch.c) */
+#define WINGS_SEGMENT_PLANES 31 /* enemy planes (core/planes.c), engine smoke (core/smoke.c) */
 
 #if defined(WINGS_BANKED_CODE) && defined(__SDCC)
 #define WINGS_BANKED __banked

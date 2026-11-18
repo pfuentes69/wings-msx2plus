@@ -449,7 +449,7 @@ class FlightModelTests(unittest.TestCase):
             drawn = set()
             for r in meta['wheels'][meta['wheel_first'][sprite]:meta['wheel_first'][sprite + 1]]:
                 bank = r['data_offset'] // 8192
-                data = (folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
+                data = (folder / f'mission_bank_{(8, 9, 10, 14, 4, 5, 6)[bank]}.bin').read_bytes()
                 packed = data[r['data_offset'] % 8192:r['data_offset'] % 8192 + r['bytes']]
                 for y in range(r['height']):
                     for x in range(r['width']):

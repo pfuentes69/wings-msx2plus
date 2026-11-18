@@ -18,6 +18,16 @@ AIR_TURN_RIGHT = ('hc22 hc23 hc24 hc25 hc26 hc27 hc37 hc38 hc39 hc3a hc3b hc3b h
 WIDTH, HEIGHT = 48, 32
 
 
+# The aircraft pixel data, 8 KiB segments in ROM banks: 8..10, 14, then the
+# free banks 4..6 (15 is the elevator). Also in mission-flight.js and
+# world_flight.c (s_AircraftBank).
+AIRCRAFT_BANKS = (8, 9, 10, 14, 4, 5, 6)
+
+
+def aircraft_bank(segment):
+    return AIRCRAFT_BANKS[segment]
+
+
 def rgb3(value):
     return (value * 7 + 127) // 255
 
@@ -252,7 +262,18 @@ SPLASH_FAR = ('spl1', 'spl2', 'spl3')
 # (0x89) facing left; the distant view draws bumb, as for rockets. A running
 # torpedo is not drawn (only its wake).
 TORPEDO_FALL = ('tor2', 'tor7')
-LATE_FRAMES = ROCKET_LIT + ROCKET_UNLIT + ROCKET_FAR + SPLASH_NEAR + SPLASH_FAR + TORPEDO_FALL
+# Enemy planes (docs/research/amiga-enemy-planes.md, 0xd35a/0x0e1a):
+# japplane.shp jp10..jp1f (the turn sequence's 16 views), jt10/jt1a (the
+# armed torpedo plane), jc10/jc1a (the wreck), the muzzle flashes fc10,
+# fd10 (facing right) and fc1a, fd1a (left); 8thscale zpn* far off. The
+# near list's order is the frame number from SMOKE_FRAME_PLANE; the far
+# list's from SMOKE_FRAME_FAR_PLANE (PLANE_FAR_FOR maps the near views).
+PLANE_NEAR = tuple(f'jp1{c}' for c in '0123456789abcdef') + ('jt10', 'jt1a', 'jc10', 'jc1a', 'fc10', 'fd10', 'fc1a', 'fd1a')
+# The first 20 near frames stream from ROM into a frame slot as a plane
+# shows them (convert_dashboard.PLANE_SLOTS); they take no atlas cell.
+PLANE_STREAMED = 20
+PLANE_FAR = ('zpnn', 'zpn8', 'zpn9', 'zpng', 'zpnh', 'zpni', 'zpne', 'zpnf', 'zpn0', 'zpn6', 'zpn7', 'zpnb', 'zpnc', 'zpnd', 'zpnj', 'zpnk')
+LATE_FRAMES = ROCKET_LIT + ROCKET_UNLIT + ROCKET_FAR + SPLASH_NEAR + SPLASH_FAR + TORPEDO_FALL + PLANE_NEAR + PLANE_FAR
 SMOKE_FRAME_COUNT = (len(SMOKE_NEAR) + len(SMOKE_FAR) + len(SMOKE_EXTRA_NEAR) + len(SMOKE_EXTRA_FAR)
                      + len(SOLDIER_NEAR) + len(SOLDIER_FAR) + len(FLAG_NEAR) + len(LATE_FRAMES))
 
@@ -272,6 +293,7 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
     world = {n: r for n, _, r in read_ppkc(unpack_rpck((shapes / 'world.shp').read_bytes()))}
     reduced = {n: r for n, _, r in read_ppkc(unpack_rpck((shapes / '8thscale.shp').read_bytes()))}
     torpedo = {n: r for n, _, r in read_ppkc(unpack_rpck((shapes / 'torpedo.shp').read_bytes()))}
+    japplane = {n: r for n, _, r in read_ppkc(unpack_rpck((shapes / 'japplane.shp').read_bytes()))}
     # The sprite colours (16..31) map as the aircraft's; the playfield colours
     # some new frames use (fire, flash, barrel outline) as the terrain's.
     terrain = json.loads((root / 'assets_msx/terrain/manifest.json').read_text())['source_to_msx_index']
@@ -284,7 +306,8 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
                                     (world, FLAG_NEAR, near), (torpedo, ROCKET_LIT, near),
                                     (torpedo, ROCKET_UNLIT, near), (reduced, ROCKET_FAR, far),
                                     (world, SPLASH_NEAR, near), (reduced, SPLASH_FAR, far),
-                                    (torpedo, TORPEDO_FALL, near)):
+                                    (torpedo, TORPEDO_FALL, near), (japplane, PLANE_NEAR, near),
+                                    (reduced, PLANE_FAR, far)):
         for name in names:
             indices, meta = decode_record(records[name], **options)
             width = meta['width']
@@ -309,8 +332,10 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
     # The muzzle flashes (gnf0..gnf6, frames 15..21) go late too: squeezed
     # into the first pass's gaps they split into up to 8 one-row pieces, a
     # VDP command each, on every flashing barrel.
-    late = set(range(15, 22)) | set(range(rocket_first, len(images)))
-    pieces = [(f, 0, img[5]) for f, img in enumerate(images) if f not in late]
+    plane_first = SMOKE_FRAME_COUNT - len(PLANE_FAR) - len(PLANE_NEAR)
+    streamed = set(range(plane_first, plane_first + PLANE_STREAMED))
+    late = (set(range(15, 22)) | set(range(rocket_first, len(images)))) - streamed
+    pieces = [(f, 0, img[5]) for f, img in enumerate(images) if f not in late and f not in streamed]
     while True:
         sizes = [(images[f][4], h) for f, _, h in pieces]
         try:
@@ -343,14 +368,30 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
                                 packed_sha256=hashlib.sha256(packed).hexdigest()))
             pixels.extend(packed)
     first.append(len(records))
+    # The streamed plane frames: whole, in ROM only.
+    from convert_dashboard import PLANE_SLOT_SIZE
+    planes = []
+    for f in sorted(streamed):
+        name, colors, x0, y0, w, h, ox, oy, sha = images[f]
+        if w > PLANE_SLOT_SIZE[0] or h > PLANE_SLOT_SIZE[1]:
+            raise ValueError(f'{name} ({w} x {h}) exceeds a plane frame slot')
+        packed = pack_pixels([colors.get((x0 + c, y0 + r), 0) for r in range(h) for c in range(w)])
+        planes.append(dict(name=name, source_sha256=sha, dx=x0 - ox, dy=y0 - oy, width=w, height=h,
+                           atlas_x=0, atlas_y=0, data_offset=len(pixels), bytes=len(packed),
+                           packed_sha256=hashlib.sha256(packed).hexdigest()))
+        pixels.extend(packed)
     # Whole-frame box (dx, dy, width, height) for erasing a puff.
     boxes = []
     for f in range(len(images)):
+        if f in streamed:
+            r = planes[f - plane_first]
+            boxes += [r['dx'], r['dy'], r['width'], r['height']]
+            continue
         part = records[first[f]:first[f + 1]]
         x0 = min(r['dx'] for r in part); y0 = min(r['dy'] for r in part)
         boxes += [x0, y0, max(r['dx'] + r['width'] for r in part) - x0, max(r['dy'] + r['height'] for r in part) - y0]
-    if len(images) != 99: raise ValueError('smoke frame numbering changed')
-    return records, first, boxes
+    if len(images) != 139: raise ValueError('smoke frame numbering changed')
+    return records, first, boxes, planes
 
 
 CRASH_SOURCE = Path('reference_assets/unpacked_shapes/world')
@@ -500,7 +541,7 @@ def animation_assets(source, destination, base_manifest):
     flashes = gun_flash_assets(pixels)
     crashes, crash_host = crash_assets(pixels, records)
     wheels, wheel_first, wheel_cells, rope_backups, wheel_sizes = wheel_assets(pixels, color_map, records[:53])
-    smoke, smoke_first, smoke_boxes = smoke_assets(pixels, color_map, records[:53], wheel_sizes)
+    smoke, smoke_first, smoke_boxes, planes = smoke_assets(pixels, color_map, records[:53], wheel_sizes)
     pitch_left = [index['hc28' if n == 5 else f'hc{n:02x}-left'] for n in range(1, 11)]
     taxi = [index[name] for name in ('hcoc','hc1f-left','hc1e-left','hc1d-left','hc1c-left','hc1b','hc1c','hc1d','hc1e','hc1f','hc21')]
     # The original's air-turn shapes by turn frame 1..25 (DATA -$52ee facing
@@ -589,12 +630,16 @@ extern const unsigned char g_WheelFirst[21];
 #define SMOKE_FRAME_RICOCHET 93     /* ric0 */
 #define SMOKE_FRAME_FAR_SPLASH 94   /* + life - 1, lives 1..3: 8thscale spl1..spl3 */
 #define SMOKE_FRAME_TORPEDO 97      /* falling: tor2, + 1 facing left (tor7) */
+#define SMOKE_FRAME_PLANE 99        /* enemy planes: jp10..jp1f, jt10, jt1a, jc10, jc1a, fc10, fd10, fc1a, fd1a */
+#define SMOKE_FRAME_FAR_PLANE 123   /* 8thscale zpn*, in convert_hellcat.py PLANE_FAR's order */
+#define PLANE_STREAMED_FRAMES 20    /* SMOKE_FRAME_PLANE.. (jp, jt, jc): from ROM into a frame slot */
 #define SMOKE_FRAME_COUNT {SMOKE_FRAME_COUNT}
 /* In smoke_frames.c, banked (segment 22): use from that segment only. */
 #ifdef MISSION_TERRAIN
 extern const AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT];
 extern const unsigned char g_SmokeFirst[{SMOKE_FRAME_COUNT + 1}];
 extern const signed char g_SmokeBox[{SMOKE_FRAME_COUNT * 4}];   /* per frame: dx, dy, width, height */
+extern const AircraftShape g_PlaneFrames[PLANE_STREAMED_FRAMES];   /* in ROM; drawn through a frame slot */
 #endif
 """
     code = '/* Generated by tools/convert_hellcat.py; do not edit. */\n#include "hellcat_frames.h"\n\n'
@@ -602,10 +647,10 @@ extern const signed char g_SmokeBox[{SMOKE_FRAME_COUNT * 4}];   /* per frame: dx
     palette_rgb3 = base_manifest['palette_rgb3']
     palette = bytes(v for r, g, b in palette_rgb3 for v in ((r << 4) | b, g))
     code += c_array('g_HellcatPalette', palette, '[32]') + '\n'
-    if len(pixels) > 32768:
-        raise ValueError('aircraft pixels would overflow bank 14 into the elevator bank')
-    for bank, offset in enumerate(range(0, len(pixels), 8192), 8):
-        files[destination / f'mission_bank_{bank if bank < 11 else bank + 3}.bin'] = bytes(pixels[offset:offset + 8192])
+    if len(pixels) > 8192 * len(AIRCRAFT_BANKS):
+        raise ValueError('aircraft pixels overflow the aircraft banks')
+    for segment, offset in enumerate(range(0, len(pixels), 8192)):
+        files[destination / f'mission_bank_{aircraft_bank(segment)}.bin'] = bytes(pixels[offset:offset + 8192])
     code += '#ifdef MISSION_TERRAIN\n' + '\n#define AIRCRAFT_DATA(offset) ((const unsigned char*)(offset))\n#else\n' + c_array('g_AircraftPixels', pixels, f'[{len(pixels)}]') + '\n#define AIRCRAFT_DATA(offset) (g_AircraftPixels + (offset))\n#endif\n'
     code += '#ifdef MISSION_TERRAIN\nAircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT];\n#else\nconst AircraftShape g_AircraftShapes[AIRCRAFT_SHAPE_COUNT] = {\n'
     for r in records:
@@ -626,7 +671,9 @@ extern const signed char g_SmokeBox[{SMOKE_FRAME_COUNT * 4}];   /* per frame: dx
                   'const AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT] = {\n')
     smoke_code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, {r['atlas_x']}, {r['atlas_y']}}} /* {r['name']} */" for r in smoke) + '\n};\n'
     smoke_code += f'const signed char g_SmokeBox[{SMOKE_FRAME_COUNT * 4}] = {{' + ', '.join(str(v) for v in smoke_boxes) + '};\n'
-    smoke_code += c_array('g_SmokeFirst', smoke_first, f'[{len(smoke_first)}]') + '\n#endif\n'
+    smoke_code += c_array('g_SmokeFirst', smoke_first, f'[{len(smoke_first)}]') + '\n'
+    smoke_code += 'const AircraftShape g_PlaneFrames[PLANE_STREAMED_FRAMES] = {\n'
+    smoke_code += ',\n'.join(f"    {{AIRCRAFT_DATA({r['data_offset']}), {r['dx']}, {r['dy']}, {r['width']}, {r['height']}, 0, 0}} /* {r['name']} */" for r in planes) + '\n};\n#endif\n'
     for symbol, table in [('g_WheelFirst', wheel_first), ('g_PitchRight', pitch_right), ('g_PitchLeft', pitch_left),
                           ('g_TurnLeftToRight', ltr), ('g_TurnRightToLeft', rtl),
                           ('g_GearFrame', [index['hc40'], index['hc41']]),
@@ -640,7 +687,7 @@ extern const signed char g_SmokeBox[{SMOKE_FRAME_COUNT * 4}];   /* per frame: dx
         placement='logical position + dx/dy; signed source drawing origins preserved; X packed on even byte boundary',
         gear_frames=[index['hc40'], index['hc41']], tail_down_frames=[index['hc21'], index['hcoc']], evidence=facts, pitch_right=pitch_right, pitch_left=pitch_left, left_to_right=ltr, right_to_left=rtl,
         wheels=wheels, wheel_first=wheel_first, wheel_cell=WHEEL_CELL, rope_backups=rope_backups,
-        smoke=smoke, smoke_first=smoke_first,
+        smoke=smoke, smoke_first=smoke_first, plane_frames=planes,
         gun_flash=flashes, gun_flash_slots=FLASH_SLOTS, gun_flash_slot_size=FLASH_SLOT_SIZE,
         crash=crashes, crash_host_shape=crash_host, crash_evidence='world.shp exp0..exp5 / spl0..spl6; crash outcome by surface at 0xafba (docs/research/amiga-fuel-oil.md)',
         gun_flash_order='variant (fa, fb) * 20 + (left ? 10 : 0) + pitch pose 0..9',

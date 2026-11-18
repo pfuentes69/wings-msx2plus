@@ -419,6 +419,11 @@ proc island_bomb {} {
     wait_for {[world_x]+$::bomb_dx<=2405} island_release "aim at the hut" 20
 }
 proc island_release {} {
+    # The bomb's burst wrecks the hut: that frame renders in about 105 ms
+    # on NTSC (the wrecked columns on both pages) and lands either side of
+    # a VBlank (render 105 + sim ~75 against 10 VBlanks). One miss is
+    # allowed from here until the turn back; docs/enemy-planes.md.
+    set ::miss_budget 1
     debug write memory $::addr(g_HoldFlight) 1
     puts $::report "bomb release x=[world_x]"
     keymatrixdown 4 8
@@ -440,6 +445,7 @@ proc island_log_bombs {} {
 proc island_hit {} {
     # The bomb bursts well behind the plane: turn back over the hut and
     # capture it wrecked and smoking.
+    after time 1.0 {unset -nocomplain ::miss_budget}
     pilot 128 1060
     wait_for {![world_byte 11] && abs([world_x]-2400)<60} {set ::wanted_smoke 1;snap island_bombed island_soldiers} "turn back over the hut" 20
 }

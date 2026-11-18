@@ -70,7 +70,8 @@ def main():
     snapshots={}
     scene=AircraftScene()
     terrain=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())
-    for bank in (8,9,10,14):
+    from convert_hellcat import aircraft_bank
+    for bank in (aircraft_bank(s) for s in range((json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['pixel_bytes']+8191)//8192)):
         payload=(ROOT/f'assets_msx/hellcat/mission_bank_{bank}.bin').read_bytes()
         assert data[bank*8192:bank*8192+len(payload)]==payload,('aircraft bank',bank)
     for_bank=(ROOT/'assets_msx/ship/bank_13.bin').read_bytes()
@@ -211,6 +212,8 @@ def main():
     assert struct.unpack('<I',(out/'engine_smoke.score').read_bytes())[0]==20160
     # Close-view pan steps over the carrier can run 1-3 VBlanks long (the
     # block move covers the tower); they are counted apart from missed frames.
+    tolerated=[l for l in report.splitlines() if l.startswith('tolerated_miss ')]
+    print(f'tolerated misses (island bomb burst): {len(tolerated)}', *tolerated)
     overruns=int(next(l.split()[1] for l in report.splitlines() if l.startswith('pan_overruns ')))
     assert overruns<=16,('pan step overruns',overruns)
     print(f'pan step overruns: {overruns}')

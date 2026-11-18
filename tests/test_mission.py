@@ -188,7 +188,7 @@ class MissionTests(unittest.TestCase):
         frames = json.loads((ROOT / 'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
         self.assertLessEqual(max(f['width'] for f in frames), 64)
         self.assertLessEqual(max(f['height'] for f in frames), 36)
-        bundle=b''.join((ROOT/f'assets_msx/hellcat/mission_bank_{bank}.bin').read_bytes() for bank in (8,9,10,14))
+        bundle=b''.join((ROOT/f'assets_msx/hellcat/mission_bank_{bank}.bin').read_bytes() for bank in (8,9,10,14,4,5,6) if (ROOT/f'assets_msx/hellcat/mission_bank_{bank}.bin').exists())
         for frame in frames:
             packed=(ROOT/'assets_msx/hellcat'/frame['file']).read_bytes()
             start=frame['data_offset']

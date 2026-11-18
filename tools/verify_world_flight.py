@@ -11,6 +11,7 @@ import subprocess
 from PIL import Image
 from aircraft_scene import AircraftScene
 
+from convert_hellcat import aircraft_bank
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -46,7 +47,7 @@ def gun_flash_shape(scene, frame, flash):
         if frame in table:
             record = meta['gun_flash'][(flash - 1) * 20 + side + table.index(frame)]
             bank = record['data_offset'] // 8192
-            data = (scene.folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
+            data = (scene.folder / f'mission_bank_{aircraft_bank(bank)}.bin').read_bytes()
             offset = record['data_offset'] % 8192
             return record, data[offset:offset + record['bytes']]
     return None
@@ -60,7 +61,7 @@ def wheel_pieces(scene, sprite):
     out = []
     for record in meta['wheels'][meta['wheel_first'][sprite]:meta['wheel_first'][sprite + 1]]:
         bank = record['data_offset'] // 8192
-        data = (scene.folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
+        data = (scene.folder / f'mission_bank_{aircraft_bank(bank)}.bin').read_bytes()
         offset = record['data_offset'] % 8192
         out.append((record, data[offset:offset + record['bytes']]))
     return out
@@ -70,7 +71,7 @@ def crash_shape(scene, index):
     """Original crash art record and packed pixels (streamed into the host slot)."""
     record = scene.metadata['crash'][index]
     bank = record['data_offset'] // 8192
-    data = (scene.folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
+    data = (scene.folder / f'mission_bank_{aircraft_bank(bank)}.bin').read_bytes()
     offset = record['data_offset'] % 8192
     return record, data[offset:offset + record['bytes']]
 
@@ -202,7 +203,7 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
         sx_ = signed(sx_)
         for record in meta['smoke'][meta['smoke_first'][frame]:meta['smoke_first'][frame + 1]]:
             bank = record['data_offset'] // 8192
-            data = (scene.folder / f'mission_bank_{8 + bank if bank < 3 else 11 + bank}.bin').read_bytes()
+            data = (scene.folder / f'mission_bank_{aircraft_bank(bank)}.bin').read_bytes()
             packed = data[record['data_offset'] % 8192:record['data_offset'] % 8192 + record['bytes']]
             vram_limit = min(142 if elevator_active else 172, 161 if scale == 8 else 172 if panned else 159)
             for yy in range(record['height']):
@@ -356,10 +357,10 @@ def main():
     assert rom_bytes[terrain['map_banks'][0] * 8192:][:len(tile_map)] == tile_map, 'incorrect map bank placement'
     tables=(ROOT/'assets_msx/dashboard/bank_7.bin').read_bytes()
     assert rom_bytes[7*8192:7*8192+len(tables)]==tables
-    # Aircraft pixels: banks 8-10, then 14 (same rule as mission-flight.js).
+    # Aircraft pixels (convert_hellcat.AIRCRAFT_BANKS, as mission-flight.js).
     aircraft_bytes = json.loads((ROOT / 'assets_msx/hellcat/manifest.json').read_text())['animation']['pixel_bytes']
     for segment in range((aircraft_bytes + 8191) // 8192):
-        bank = 8 + segment if segment < 3 else 11 + segment
+        bank = aircraft_bank(segment)
         data = (ROOT / f'assets_msx/hellcat/mission_bank_{bank}.bin').read_bytes()
         assert rom_bytes[bank*8192:bank*8192+len(data)] == data, ('aircraft bank', bank)
     assert rom_bytes[11*8192:11*8192+6336] == (ROOT / 'assets_msx/dashboard/waves.sc5').read_bytes()

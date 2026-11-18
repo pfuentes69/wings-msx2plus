@@ -6,7 +6,7 @@
 const map = process.env.WINGS_MAP || "a";
 const mission = JSON.parse(require("fs").readFileSync(`${ProjDir}assets_msx/mission_${map}/manifest.json`, "utf8"));
 ProjModules = ["src/msx/scenery_load", "src/msx/banking", "src/msx/vdp_ring", "src/msx/input_sampler", "src/core/controls", "src/core/carrier", "src/world_flight", "src/msx/mission_streamer", "src/msx/column_ops", "src/core/world", "src/core/flight", "src/core/aircraft",
-    "src/msx/elevator", "src/msx/dashboard", "src/msx/waves", "src/msx/wave_band", "src/core/combat", "src/core/engine", "src/core/landing", "src/core/flight_model", "src/msx/rope", "src/core/smoke", "src/msx/smoke_draw", "src/core/island", "src/core/soldiers", "src/core/ships", "src/core/rockets", "src/core/rocket_move", "src/msx/message", "src/msx/sound", "src/msx/sound_update", "src/msx/sound_fm", "src/msx/terrain_patch", "src/core/game", "src/msx/menu", "src/msx/weapons", "src/msx/ship", "src/core/mission", `src/generated/map_${map}/mission_surfaces`, "src/generated/hellcat_frames", "src/generated/smoke_frames", "src/generated/font", `src/generated/map_${map}/mission_tiles`];
+    "src/msx/elevator", "src/msx/dashboard", "src/msx/waves", "src/msx/wave_band", "src/core/combat", "src/core/engine", "src/core/landing", "src/core/flight_model", "src/msx/rope", "src/core/smoke", "src/msx/smoke_draw", "src/core/island", "src/core/soldiers", "src/core/ships", "src/core/planes", "src/core/rockets", "src/core/rocket_move", "src/msx/message", "src/msx/sound", "src/msx/sound_update", "src/msx/sound_fm", "src/msx/terrain_patch", "src/core/game", "src/msx/menu", "src/msx/weapons", "src/msx/ship", "src/core/mission", `src/generated/map_${map}/mission_surfaces`, "src/generated/hellcat_frames", "src/generated/smoke_frames", "src/generated/font", `src/generated/map_${map}/mission_tiles`];
 Target = "ROM_ASCII8";
 CustomISR = "VHBLANK";
 ROMSize = 512;
@@ -22,7 +22,7 @@ RawFiles = mission.tile_banks.concat(mission.map_banks).map(bank => ({ offset: b
 
 const aircraftBytes = JSON.parse(require("fs").readFileSync(`${ProjDir}assets_msx/hellcat/manifest.json`, "utf8")).animation.pixel_bytes;
 for (let segment = 0; segment < Math.ceil(aircraftBytes / 8192); ++segment) {
-    const bank = segment < 3 ? 8 + segment : 11 + segment;
+    const bank = [8, 9, 10, 14, 4, 5, 6][segment];   // tools/convert_hellcat.py AIRCRAFT_BANKS
     RawFiles.push({ offset: bank * 8192, file: `assets_msx/hellcat/mission_bank_${bank}.bin` });
 }
 

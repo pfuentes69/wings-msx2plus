@@ -398,6 +398,13 @@ def bomb_frames():
 def bomb_pixels():
     return bomb_frames()[0]
 
+# The enemy planes' frame slots (src/msx/smoke_draw.c): 4 cells of 48 x 26
+# in the tile cells the tile cache gave up (slots 40..51: page 3, x 64..159,
+# rows 180..231). A plane's near frame streams into one from ROM.
+PLANE_SLOT_SIZE = (48, 26)
+PLANE_SLOTS = tuple((64 + 48 * (k % 2), 768 + 180 + 26 * (k // 2)) for k in range(4))
+
+
 def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=False, reserve_crew=False, frames=None, reserve_wheels=(), reserve_rope=False, reserve_smoke=(), reserve_rockets=()):
     if frames is None: frames=json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
     tiles=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']
@@ -466,6 +473,8 @@ def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=F
                                                     x=tile%288//9*8;y=tile//288*256+180+tile%9*8
                                                     for row in range(y,y+8):
                                                         if (row,x) not in cache:occupied[row][x:x+8]=bytes(8)
+                                                for px,py in PLANE_SLOTS:
+                                                    for row in range(py-512,py-512+PLANE_SLOT_SIZE[1]):occupied[row][px:px+PLANE_SLOT_SIZE[0]]=bytes([1])*PLANE_SLOT_SIZE[0]
                                                 order=sorted(range(len(reserve_rockets)),key=lambda i:-reserve_rockets[i][0]*reserve_rockets[i][1])
                                                 rockets=[None]*len(reserve_rockets)
                                                 for i in order:rockets[i]=allocate(1,*reserve_rockets[i])[0]

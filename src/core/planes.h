@@ -1,0 +1,100 @@
+#ifndef WINGS_PLANES_H
+#define WINGS_PLANES_H
+#include <stdint.h>
+#include "../msx/banking.h"
+
+/* Enemy planes (docs/research/amiga-enemy-planes.md, docs/enemy-planes.md):
+ * 4 slots shared by fighters and torpedo planes, updated once per original
+ * tick (0xe7d6) in the original's units. Step 1: the slots, spawning, the
+ * speed step, motion, turns, the shape index, the torpedo-plane timer and
+ * the torpedo plane's cruise and turns. Not yet: the drop, the player's gun,
+ * the fighters' AI and fire. */
+
+#define PLANES_MAX 4
+/* +0 state */
+#define PLANE_FREE 0
+#define PLANE_FLYING 2
+#define PLANE_DOWN 4      /* shot down: falling, sliding */
+#define PLANE_WRECK 16    /* burning on an island */
+/* +2 behaviour */
+#define PLANE_FIGHTER 1
+#define PLANE_ATTACK 2
+#define PLANE_ARMED 4     /* a torpedo plane still carrying its torpedo */
+#define PLANE_TURNING 8
+#define PLANE_DROPPED 16  /* a torpedo plane after the drop */
+/* 0xe4d0 kinds */
+#define PLANE_KIND_FIGHTER 0
+#define PLANE_KIND_TORPEDO 1
+/* The player's modes as the original's P.mode */
+#define PLANES_PLAYER_FLYING 0
+#define PLANES_PLAYER_DECK 1
+#define PLANES_PLAYER_ENGINE_OUT 4
+#define PLANES_PLAYER_CRASHED 8
+
+#define PLANE_SPEED_MIN 900    /* -$50ac */
+#define PLANE_SPEED_MAX 2600   /* -$50aa */
+#define PLANE_HEALTH 240
+#define PLANE_TURN_FRAMES 26
+#define PLANE_SHAPE_TORPEDO 26 /* armed torpedo plane, level */
+#define PLANE_SHAPE_RIGHT 28   /* + facing right */
+#define PLANES_TIMER_NEW_PLANE 1350
+#define PLANES_TIMER_DROP 500
+#define PLANES_TIMER_FIRE 750
+#define PLANES_SPAWN_DISTANCE 0x1800   /* 6144 px */
+
+/* The enemy plane record (52 bytes at -$5dd4 in the original), by field. */
+typedef struct Plane {
+    uint8_t state;     /* +0 */
+    uint8_t beh;       /* +2 */
+    uint8_t rel;       /* +4: 1 behind the player, 3 ahead (same heading); 2 right, 4 left (opposite) */
+    uint8_t hit;       /* +6 */
+    int16_t health;    /* +8 */
+    int16_t hits;      /* +a: gun hits to the next health loss */
+    int16_t rank;      /* +c */
+    int16_t t10;       /* +10: flee / overshoot timer */
+    uint8_t firing;    /* +12 */
+    int8_t facing;     /* +14: -1 left, +1 right */
+    int16_t frame;     /* +16: turn frame 0..25 */
+    int16_t t18;       /* +18: ticks to the next turn */
+    int16_t rev;       /* +1a: turn reversals in a row */
+    int16_t speed;     /* +1c */
+    int16_t tspeed;    /* +1e */
+    int16_t x;         /* +20 */
+    int16_t vy;        /* +22: falling, 1/100 px */
+    int16_t talt;      /* +24 */
+    int16_t alt;       /* +26 */
+    int16_t dist;      /* +28: |dx| to the player */
+    uint8_t draws;     /* +2c: draw counter (the muzzle flash's phase) */
+    uint8_t shape;     /* +30: 0..55, 0xd35a */
+    int16_t sub;       /* +32: turn sub-step */
+} Plane;
+
+/* What the planes read of the player, after its move this tick. */
+typedef struct PlanesPlayer {
+    int16_t x, alt;
+    int8_t facing;     /* -1 left, +1 right */
+    uint8_t mode;      /* PLANES_PLAYER_* */
+    uint8_t turn;      /* the player's turn frame 0..25 */
+    int16_t speed;     /* airspeed */
+} PlanesPlayer;
+
+typedef struct PlanesState {
+    Plane plane[PLANES_MAX];
+    int16_t timer;     /* -$5f6a: ticks to the next torpedo plane (0: none due) */
+    uint8_t fighters;  /* -$5e28: fighters airborne */
+    uint8_t kills;     /* -$5c7f */
+    uint8_t live;      /* slots in use (any state) */
+} PlanesState;
+extern PlanesState g_Planes;
+
+/* Banked. A new game: all clear, kills too. A new mission: the slots. */
+void Planes_NewGame(void) WINGS_BANKED;
+void Planes_Reset(void) WINGS_BANKED;
+/* A new plane on deck (0xb89a): the torpedo-plane timer restarts. */
+void Planes_NewPlane(void) WINGS_BANKED;
+/* 0xe4d0: a new plane in the last free slot; 0 if refused. */
+uint8_t Planes_Spawn(uint8_t kind, int16_t x, int16_t alt, int8_t facing) WINGS_BANKED;
+/* One original tick: the torpedo-plane timer (0xbc02) and the update
+ * (0xe7d6). fire: a fire input this tick; carrier: the US carrier afloat. */
+void Planes_Tick(const PlanesPlayer* player, uint8_t fire, uint8_t carrier) WINGS_BANKED;
+#endif

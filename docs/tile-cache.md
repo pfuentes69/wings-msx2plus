@@ -28,7 +28,7 @@ ROM from bank 32 (`TERRAIN_TILE_BANK`), 32 strips per 8 KiB bank. The
 column map follows from bank 40 (`TERRAIN_MAP_BANK`), padded so that no
 column record crosses a bank.
 
-VRAM has **52 slots** (`TERRAIN_SLOTS`). Slot s is at
+VRAM has **40 slots** (`TERRAIN_SLOTS`; 52 until 2026-11-18, when 12 went to the enemy planes' frame slots, [enemy-planes.md](enemy-planes.md)). Slot s is at
 x = (s % 32) × 8, y = 180 on page 2 + s / 32, so rows 180..243 of pages 2
 and 3. They lie within the 56 whole 8 × 72 columns the static tiles used
 to fill; the shape atlas is laid out around those. The 57th column was only
@@ -37,8 +37,8 @@ partly free and holds pilot-window frames. The rest of the old tile cells
 rocket, muzzle-flash and splash frames (`atlas_slots(reserve_rockets=)`).
 
 The converter checks that no 40-column stretch of the map needs more than
-`TERRAIN_SLOTS - 12` strips (40), leaving 12 slots for churn. Map a needs
-25 at most, map j with ships 32.
+`TERRAIN_SLOTS - TERRAIN_CHURN` strips (32), leaving 8 slots for churn
+(12 before 2026-11-18). Map a needs 25 at most, map j with ships 32.
 
 ## Runtime (`src/msx/mission_streamer.c`)
 

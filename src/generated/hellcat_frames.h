@@ -62,7 +62,7 @@ extern const unsigned char g_WheelFirst[21];
  * gnf0..gnf6, the far flash expl, the soldiers guy0..gy11 and the far
  * soldiers; pieces
  * g_SmokePieces[g_SmokeFirst[frame] .. g_SmokeFirst[frame + 1]). */
-#define SMOKE_PIECE_COUNT 113
+#define SMOKE_PIECE_COUNT 130
 #define SMOKE_FRAME_FIRE 7
 #define SMOKE_FRAME_GUN 8
 #define SMOKE_FRAME_FAR_FLASH 22
@@ -76,10 +76,14 @@ extern const unsigned char g_WheelFirst[21];
 #define SMOKE_FRAME_RICOCHET 93     /* ric0 */
 #define SMOKE_FRAME_FAR_SPLASH 94   /* + life - 1, lives 1..3: 8thscale spl1..spl3 */
 #define SMOKE_FRAME_TORPEDO 97      /* falling: tor2, + 1 facing left (tor7) */
-#define SMOKE_FRAME_COUNT 99
+#define SMOKE_FRAME_PLANE 99        /* enemy planes: jp10..jp1f, jt10, jt1a, jc10, jc1a, fc10, fd10, fc1a, fd1a */
+#define SMOKE_FRAME_FAR_PLANE 123   /* 8thscale zpn*, in convert_hellcat.py PLANE_FAR's order */
+#define PLANE_STREAMED_FRAMES 20    /* SMOKE_FRAME_PLANE.. (jp, jt, jc): from ROM into a frame slot */
+#define SMOKE_FRAME_COUNT 139
 /* In smoke_frames.c, banked (segment 22): use from that segment only. */
 #ifdef MISSION_TERRAIN
 extern const AircraftShape g_SmokePieces[SMOKE_PIECE_COUNT];
-extern const unsigned char g_SmokeFirst[100];
-extern const signed char g_SmokeBox[396];   /* per frame: dx, dy, width, height */
+extern const unsigned char g_SmokeFirst[140];
+extern const signed char g_SmokeBox[556];   /* per frame: dx, dy, width, height */
+extern const AircraftShape g_PlaneFrames[PLANE_STREAMED_FRAMES];   /* in ROM; drawn through a frame slot */
 #endif

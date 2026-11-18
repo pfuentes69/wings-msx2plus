@@ -31,7 +31,7 @@ SPLASH_FRAMES = set(range(87, 97))   # spl1..spl6, ric0, 8thscale spl1..spl3
 MISSED_LIMIT = 50
 
 
-def run(args, out, rom):
+def run(args, out, rom, script='tools/ships_smoke.tcl'):
     env = dict(os.environ, WINGS_ROOT=str(ROOT), WINGS_TEST_OUT=str(out), WINGS_ROM=str(rom),
                WINGS_HEADLESS='1' if args.headless else '0', WINGS_NO_FM='0', WINGS_RECORD='',
                WINGS_ALLOW_MISSED='1', OPENMSX_HOME=str(out / 'openmsx-home'), SDL_AUDIODRIVER='dummy')
@@ -45,7 +45,7 @@ def run(args, out, rom):
         settings = ['-setting', str(config)]
     with (out / 'openmsx.log').open('w') as log:
         with subprocess.Popen([shutil.which('openmsx'), '-control', 'stdio', *settings, '-machine', args.machine,
-                               '-cart', str(rom), '-romtype', 'ASCII8', '-script', str(ROOT / 'tools/ships_smoke.tcl')],
+                               '-cart', str(rom), '-romtype', 'ASCII8', '-script', str(ROOT / script)],
                               cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.PIPE) as emulator:
             # A Tcl error outside a guarded callback leaves openMSX running:
             # stop at the first one the log reports.

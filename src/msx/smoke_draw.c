@@ -7,6 +7,7 @@
 #include "../core/island.h"
 #include "../core/combat.h"
 #include "../core/ships.h"
+#include "../core/planes.h"
 extern CombatState g_Combat;   /* world_flight.c */
 #include "mission_island.h"
 #include "../generated/hellcat_frames.h"
@@ -114,12 +115,17 @@ static void SkyFill(u8 page, i16 left, i16 right, i16 top, i16 bottom)
     Vdp_RingCopy((u8)left, right - left);
 }
 
+/* The frame each enemy-plane frame slot holds (255: none), and the slots
+ * this page used (PlaneFrame). */
+static u8 s_SlotFrame[4], s_SlotUsed;
 /* world_flight.c (resident): one atlas shape from the aircraft banks. */
 void Atlas_LoadShape(const AircraftShape* shape);
 void Smoke_LoadPieces(void) WINGS_BANKED
 {
     u8 i;
     for (i = 0; i < SMOKE_PIECE_COUNT; ++i) Atlas_LoadShape(&g_SmokePieces[i]);
+    /* RAM is not cleared at boot: no frame slot holds anything yet. */
+    for (i = 0; i < 4; ++i) s_SlotFrame[i] = 255;
 }
 
 void Smoke_ClearPages(void) WINGS_BANKED
@@ -221,6 +227,50 @@ static void Place(u16 x, u16 y)
     }
 }
 
+/* Shape index (0..27 facing left, 28..55 right) to the plane frames
+ * (convert_hellcat.py PLANE_NEAR: jp10..jp1f 0..15, jt10 16, jt1a 17,
+ * jc10 18, jc1a 19; PLANE_FAR: zpnn, zpn8, zpn9, zpng, zpnh, zpni, zpne,
+ * zpnf, zpn0, zpn6, zpn7, zpnb, zpnc, zpnd, zpnj, zpnk), from the tables
+ * 0xd1ea builds. */
+static const u8 s_PlaneNear[56] = {
+    10, 9, 9, 9, 8, 8, 8, 11, 11, 12, 12, 12, 13, 13, 5, 6, 6, 6, 7, 7, 8, 8, 8, 9, 9, 9, 17, 19,
+    0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 13, 14, 14, 14, 15, 15, 2, 2, 2, 1, 1, 1, 16, 18};
+static const u8 s_PlaneFar[56] = {
+    8, 9, 9, 9, 10, 10, 10, 11, 11, 12, 12, 12, 13, 13, 5, 14, 14, 14, 15, 15, 10, 10, 10, 9, 9, 9, 8, 8,
+    0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 13, 6, 6, 6, 7, 7, 2, 2, 2, 1, 1, 1, 0, 0};
+
+/* The enemy planes' near frames stream from ROM into 4 frame slots
+ * (tools/convert_dashboard.py PLANE_SLOTS: page 3, x 64.., rows 180..):
+ * planes showing the same frame share one. A slot not used yet this page
+ * takes a missing frame; with none left the plane is not drawn this frame. */
+static AircraftShape s_SlotShape;
+static void PlaneFrame(u8 i)
+{
+    u8 k, free = 255;
+    const AircraftShape* frame = &g_PlaneFrames[i];
+    for (k = 0; k < 4; ++k)
+    {
+        if (s_SlotFrame[k] == i) break;
+        if (free == 255 && !(s_SlotUsed & (1 << k))) free = k;
+    }
+    if (k == 4)
+    {
+        if (free == 255) return;
+        k = free;
+        s_SlotFrame[k] = i;
+        s_SlotShape = *frame;
+        s_SlotShape.atlas_x = 64 + 48 * (k & 1);
+        s_SlotShape.atlas_y = 768 + 180 + 26 * (k >> 1);
+        VDP_CommandWait();   /* a running copy may still read the slot */
+        Atlas_LoadShape(&s_SlotShape);
+    }
+    s_SlotUsed |= 1 << k;
+    s_SlotShape = *frame;
+    s_SlotShape.atlas_x = 64 + 48 * (k & 1);
+    s_SlotShape.atlas_y = 768 + 180 + 26 * (k >> 1);
+    Piece(&s_SlotShape);
+}
+
 /* Draw frame at the placed position, clipped, and list it for
  * Smoke_Restore and the verification. */
 static void Shape(u8 frame)
@@ -234,8 +284,12 @@ static void Shape(u8 frame)
     out = s_Out;
     out->x = (u16)s_X; out->row = s_Row; out->frame = frame;
     s_Row -= s_Heave;
-    k = g_SmokeFirst[frame]; end = g_SmokeFirst[frame + 1];
-    for (piece = &g_SmokePieces[k]; k < end; ++k, ++piece) Piece(piece);
+    if ((u8)(frame - SMOKE_FRAME_PLANE) < PLANE_STREAMED_FRAMES) PlaneFrame(frame - SMOKE_FRAME_PLANE);
+    else
+    {
+        k = g_SmokeFirst[frame]; end = g_SmokeFirst[frame + 1];
+        for (piece = &g_SmokePieces[k]; k < end; ++k, ++piece) Piece(piece);
+    }
     ++s_Out; ++s_Drawn;
 }
 
@@ -359,6 +413,23 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
         {
             Place((u16)x, WINGS_FLIGHT_MAX_Y - g_Combat.torpedo.y);
             Shape(far ? SMOKE_FRAME_FAR_ROCKET : SMOKE_FRAME_TORPEDO + g_Combat.torpedo.left);
+        }
+    }
+    /* Enemy planes (0x0e1a), 7 px above their altitude; the turn
+     * sequence's views by shape index (0xd35a), 8thscale far off. The
+     * original draws them over the player; here they go behind. */
+    if (g_Planes.live)
+    {
+        const Plane* e = g_Planes.plane;
+        s_SlotUsed = 0;
+        for (i = 0; i < PLANES_MAX; ++i, ++e)
+        {
+            i16 x;
+            if (e->state == PLANE_FREE) continue;
+            x = e->x;
+            if ((u16)((far ? x >> 3 : x) - camera + 48) > 352u) continue;
+            Place((u16)x, WINGS_FLIGHT_MAX_Y - e->alt - 7);
+            Shape(far ? SMOKE_FRAME_FAR_PLANE + s_PlaneFar[e->shape] : SMOKE_FRAME_PLANE + s_PlaneNear[e->shape]);
         }
     }
     g_SmokeDrawnCount[page] = s_Drawn;

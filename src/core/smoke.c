@@ -1,6 +1,6 @@
 #include "smoke.h"
 #include "xorshift.h"
-WINGS_CODE_SEGMENT(WINGS_SEGMENT_EFFECTS)
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_PLANES)   /* moved from 22 (effects) for room, 2026-11-18 */
 
 #ifdef WINGS_P1_FLIGHT
 SmokePuff g_Smoke[SMOKE_COUNT];

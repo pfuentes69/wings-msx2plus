@@ -262,7 +262,8 @@ def decode_column(data, column, columns, rows, tile_count):
 # was partly free and holds pilot-window frames; the rest of the old cells
 # hold rocket and splash frames).
 STRIP = 8
-TERRAIN_SLOTS = 52   # 4 of the 56 cells left to the shape atlas (rockets, splashes)
+TERRAIN_SLOTS = 40   # of the 56 cells: 4 to the shape atlas (rockets, splashes), 12 to the enemy planes' frame slots
+TERRAIN_CHURN = 8    # slots beyond a view's strips, for prefetch and churn
 TILE_BANK = 32   # tile pixels: 32 strips (8 KiB) per bank, from bank 32
 MAP_BANK = 40    # the column map, from bank 40; no record crosses a bank
 
@@ -443,7 +444,7 @@ def artifacts(map_name='a.map', generated=None, ships=False):
             view = view[:first] + columns[at:at + ship['far_count']] + view[first + ship['far_count']:]
             worst = max(worst, window_strips(view))
             at += ship['far_count']
-    if worst > TERRAIN_SLOTS - 12:
+    if worst > TERRAIN_SLOTS - TERRAIN_CHURN:
         raise ValueError(f'a view needs {worst} tile strips; the cache has {TERRAIN_SLOTS}')
     # The sinking stages' column offsets, after the runs: per ship, stage 1..
     # 15, its distant hull columns (u16, even offsets: no entry crosses a bank).
