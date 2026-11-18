@@ -1,6 +1,12 @@
 #include "planes.h"
 #include "flight.h"
 #include "xorshift.h"
+#include "smoke.h"
+#include "island.h"
+#include "ships.h"
+#include "mission.h"
+#include "rockets.h"
+extern CombatState g_Combat;   /* world_flight.c */
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_PLANES)
 
 /* Enemy planes, from the pseudo-code in docs/research/amiga-enemy-planes.md
@@ -8,6 +14,9 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_PLANES)
  * word; comparisons are signed. */
 
 PlanesState g_Planes;
+/* tools/smoke_lib.tcl (PLANES_TIMER) and tools/planes_smoke.tcl read the
+ * records by offset: a change of size must be carried there. */
+typedef char PlaneLayout[sizeof(Plane) == 40 ? 1 : -1];
 
 /* The US carrier's landing range, L and R (-$5c02 / -$5c00, 0xb7bc): its
  * hull x 4, 16 px in at each end. The hull is CARRIER_X - 440 ..
@@ -23,6 +32,19 @@ static const uint8_t s_TurnFactor[PLANE_TURN_FRAMES] = {
 static const uint8_t s_AltStep[6] = {1, 2, 2, 3, 4, 5};
 
 static uint16_t s_Random;   /* seeded by Planes_NewGame: no initialisers in a banked module */
+static uint8_t s_SeaSlide;  /* -$4368: one counter for all planes sinking */
+/* Shape index (0..27 facing left, 28..55 right) to the plane frames
+ * (convert_hellcat.py PLANE_NEAR: jp10..jp1f 0..15, jt10 16, jt1a 17,
+ * jc10 18, jc1a 19; PLANE_FAR: zpnn, zpn8, zpn9, zpng, zpnh, zpni, zpne,
+ * zpnf, zpn0, zpn6, zpn7, zpnb, zpnc, zpnd, zpnj, zpnk), from the tables
+ * 0xd1ea builds. */
+static const uint8_t s_PlaneNear[56] = {
+    10, 9, 9, 9, 8, 8, 8, 11, 11, 12, 12, 12, 13, 13, 5, 6, 6, 6, 7, 7, 8, 8, 8, 9, 9, 9, 17, 19,
+    0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 13, 14, 14, 14, 15, 15, 2, 2, 2, 1, 1, 1, 16, 18};
+static const uint8_t s_PlaneFar[56] = {
+    8, 9, 9, 9, 10, 10, 10, 11, 11, 12, 12, 12, 13, 13, 5, 14, 14, 14, 15, 15, 10, 10, 10, 9, 9, 9, 8, 8,
+    0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 13, 6, 6, 6, 7, 7, 2, 2, 2, 1, 1, 1, 0, 0};
+
 /* rand(n) (0xcac8): 0..n-1. The original's source is the beam position. */
 static uint8_t Rand(uint8_t n)
 {
@@ -36,6 +58,19 @@ void Planes_Reset(void) WINGS_BANKED
     g_Planes.fighters = 0;
     g_Planes.live = 0;
     g_Planes.timer = 0;
+    g_Planes.wrecks = 0;   /* 0x35c0: per mission */
+}
+
+/* 0xcae0: a puff of the given type at (x + 0..7, altitude + 6), at least 16
+ * px up, in the engine smoke's pool (a full pool drops it). The port's
+ * stages are the original's types; 6 (fire) is the largest it has. */
+static void Effect(uint8_t type, int16_t x, int16_t altitude)
+{
+    x += Xorshift(&s_Random) & 7;
+    altitude += 6;
+    if (altitude < 16) altitude = 16;
+    if (type > SMOKE_STAGE_FIRE) type = SMOKE_STAGE_FIRE;
+    Smoke_Puff((uint16_t)x, (uint16_t)((int16_t)WINGS_FLIGHT_MAX_Y - altitude), type);
 }
 
 void Planes_NewGame(void) WINGS_BANKED
@@ -46,6 +81,7 @@ void Planes_NewGame(void) WINGS_BANKED
     uint16_t n;
     for (n = 0; n < sizeof g_Planes; ++n) p[n] = 0;
     s_Random = 0x3c5au;
+    s_SeaSlide = 0;
 }
 
 void Planes_NewPlane(void) WINGS_BANKED
@@ -288,6 +324,113 @@ static void Dropped(Plane* e)
     }
 }
 
+/* 0xe728: a damaged plane smokes, more as it weakens. */
+static void Damage(Plane* e)
+{
+    int16_t p = 128 - e->health;
+    if (p > (int16_t)(Xorshift(&s_Random) & 63)) Effect((uint8_t)((p >> 3) + 1), e->x, e->alt + 11);
+}
+
+/* 0x46c6 / 0x46dc for a plane sliding fast: a rocket-type impact on the
+ * column below. On land a white flash, a hut wrecked or a dugout emptied
+ * (red); on a ship the first live gun within 16 px (Ships_Rocket). */
+static void Impact(int16_t x, uint8_t surface, uint32_t* score)
+{
+    uint8_t color;
+    if (surface == MISSION_ISLAND)
+    {
+        uint16_t points = Island_Bombed((uint16_t)x);
+        *score += points;
+        color = points ? COMBAT_SKY_RED : COMBAT_SKY_WHITE;
+    }
+    else color = Ships_Rocket((uint16_t)x, score);
+    if (color) { g_Combat.sky_flash = 5; g_Combat.sky_color = color; }
+}
+
+/* 0xe244: shot down. It falls (0xd796) to altitude -3, then slides: the
+ * speed falls 35 a tick (11 on the sea below 300, sinking a pixel every
+ * other tick); it kills soldiers and destroys torpedoes about it, strikes
+ * the column below while above 500 and splashes. At rest it counts as a
+ * kill and burns on an island, or is gone. */
+static void ShotDown(Plane* e, uint32_t* score, uint16_t* kills)
+{
+    int16_t p = 128 - e->health;
+    uint8_t surface;
+    if (p > (int16_t)(Xorshift(&s_Random) & 63)) Effect((uint8_t)((p >> 3) + 1), e->x - 16, e->alt + 10);
+    if (e->alt != e->talt) return;
+    surface = e->x <= 0 || e->x >= (int16_t)(WINGS_WORLD_WIDTH - 8) ? MISSION_SEA : Mission_Surface((uint16_t)e->x);
+    if (surface == MISSION_SEA && e->speed < 300)
+    {
+        if (++s_SeaSlide >= 2) { s_SeaSlide = 0; --e->talt; }
+        e->speed += 24;
+    }
+    e->speed -= 35;
+    Island_Kill(e->x, 20);
+    Torpedo_Kill(&g_Combat, e->x - 20, 40);
+    if (e->speed > 500) Impact(e->x, surface, score);
+    Ships_AddSplash(e->x + e->facing * 4);
+    if (e->speed >= 100) return;
+    ++*kills;
+    if (surface == MISSION_ISLAND)
+    {
+        /* +1e the smoke size, +1c its countdown (the speed fields). */
+        e->state = PLANE_WRECK; e->tspeed = 6; e->speed = 30; e->beh = 0;
+        return;
+    }
+    if (e->beh != PLANE_ARMED && e->beh != PLANE_DROPPED && g_Planes.fighters) --g_Planes.fighters;
+    e->state = PLANE_FREE; e->beh = 0;
+    --g_Planes.live;
+}
+
+/* 0xe3e8: a wreck burning on an island, 100 ticks (smoke 6 down to 2),
+ * then into the wreck list. The fighter count drops even for a torpedo
+ * plane, as in the original. */
+static void Wreck(Plane* e)
+{
+    if (!--e->speed) { --e->tspeed; e->speed = e->tspeed * 5; }
+    if (e->tspeed > 1)
+    {
+        if (!(e->speed & 3)) Effect((uint8_t)e->tspeed, e->x - 4, 6);
+        return;
+    }
+    if (g_Planes.wrecks < PLANES_WRECKS) g_Planes.wreck[g_Planes.wrecks++] = e->facing < 0 ? -e->x : e->x;
+    if (g_Planes.fighters) --g_Planes.fighters;
+    e->state = PLANE_FREE; e->beh = 0;
+    --g_Planes.live;
+}
+
+/* 0xb682: the player's gun. A plane ahead on the same heading, within
+ * 160 px and 20 px of altitude, with the player's commanded climb exactly
+ * 0, is in the box: each tick there a hit counter runs down; at 0 a spark
+ * and 8 off its health; below 96 it is shot down (+350). The original
+ * also tests free slots (a stale relation); the port skips them. */
+static void Gun(const PlanesPlayer* p, uint32_t* score)
+{
+    Plane* e = g_Planes.plane;
+    uint8_t i;
+    int16_t d;
+    for (i = 0; i < PLANES_MAX; ++i, ++e)
+    {
+        if (e->state == PLANE_FREE || e->rel != 3 || p->climb) continue;
+        d = p->x - e->x; if (d < 0) d = -d;
+        if (d >= 160) continue;
+        d = p->alt - e->alt; if (d < 0) d = -d;
+        if (d >= 20) continue;
+        e->hit = 1;
+        if (--e->hits > 0) continue;
+        Effect(SMOKE_STAGE_FIRE, e->x - 16, e->alt + 10);
+        e->health -= 8;
+        if (e->health < 96)
+        {
+            *score += PLANE_KILL_POINTS;
+            e->state = PLANE_DOWN; e->talt = -3; e->frame = 0; e->beh &= ~PLANE_TURNING;
+            e->shape = e->facing == -1 ? 0 : PLANE_SHAPE_RIGHT;
+            e->near = s_PlaneNear[e->shape]; e->far = s_PlaneFar[e->shape];
+        }
+        e->hits = Rand(4) + 6;
+    }
+}
+
 /* 0xbc02: the torpedo-plane timer. */
 static void Timer(const PlanesPlayer* p, uint8_t fire, uint8_t carrier)
 {
@@ -307,7 +450,8 @@ static void Timer(const PlanesPlayer* p, uint8_t fire, uint8_t carrier)
         Planes_Spawn(PLANE_KIND_TORPEDO, p->x + PLANES_SPAWN_DISTANCE, 0, -1);
 }
 
-void Planes_Tick(const PlanesPlayer* player, uint8_t fire, uint8_t carrier) WINGS_BANKED
+void Planes_Tick(const PlanesPlayer* player, uint8_t fire, uint8_t carrier,
+                 uint32_t* score, uint16_t* kills) WINGS_BANKED
 {
     uint8_t i;
     Plane* e;
@@ -321,17 +465,23 @@ void Planes_Tick(const PlanesPlayer* player, uint8_t fire, uint8_t carrier) WING
         Rank();
         if (e->state == PLANE_FLYING)
         {
+            Damage(e);
             if (e->beh & PLANE_ARMED) TorpedoPlane(e, player);
             else if (e->beh & PLANE_DROPPED) Dropped(e);
             if (e->state == PLANE_FREE) continue;
             Speed(e);
         }
+        else if (e->state == PLANE_DOWN) ShotDown(e, score, kills);
+        else Wreck(e);
+        if (e->state == PLANE_FREE) continue;
         if (e->state != PLANE_WRECK) Motion(e, player);
         /* 0xd35a: the shape index. */
         {
             uint8_t idx = (uint8_t)e->frame;
             if ((e->beh & PLANE_ARMED) && !e->frame) idx = PLANE_SHAPE_TORPEDO;
             e->shape = e->facing == -1 ? idx : idx + PLANE_SHAPE_RIGHT;
+            e->near = s_PlaneNear[e->shape]; e->far = s_PlaneFar[e->shape];
         }
     }
+    if (player->gun && g_Planes.live) Gun(player, score);
 }

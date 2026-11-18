@@ -43,7 +43,11 @@ LABEL_FONT = {
 }
 BLACK, WHITE, LAMP_ON, LAMP_RIM = 11, 15, 10, 8
 DEFAULT_STATE = dict(oil=NEEDLE_NEW_OIL, fuel=NEEDLE_FULL, oil_lamp=False, fuel_lamp=False,
-                     ammo=30, lives=3, weapon=0, score=0, kills=0)
+                     ammo=30, lives=3, weapon=0, score=0, kills=0, kill_icons=0)
+# The kill icons (0xf178: dash.shp `zero`, one per kill): the original's 14
+# (7 a row, 13 px apart on its 640-wide dashboard) do not fit the MSX
+# panel's green field (26 x 9 px): KILL_ICONS_MAX, 4 a row, 6 px apart.
+KILL_ICONS_MAX = 8
 
 
 def digit_glyphs():
@@ -209,8 +213,28 @@ def _compose(state):
     if state['score'] is not None:
         _text(pixels, spots['score_x'], spots['score_y'], str(state['score']).rjust(SCORE_DIGITS), WHITE, digits)
     _box(pixels, sx(249), sx(266), sy(20), sy(28), BLACK)
-    _text(pixels, spots['kills_x'], spots['kills_y'], f"{state['kills']:02d}", WHITE, digits)
+    _text(pixels, spots['kills_x'], spots['kills_y'], f"{min(state['kills'], 99):02d}", WHITE, digits)
+    if state['kill_icons']:
+        icon = kill_icon()
+        x0, y0 = KILL_ICON_ORIGIN
+        for k in range(min(state['kill_icons'], KILL_ICONS_MAX)):
+            for yy in range(5):
+                for xx in range(5):
+                    if icon[yy * 5 + xx]: pixels[(y0 + 4 * (k // 4) + yy) * 256 + x0 + 6 * (k % 4) + xx] = WHITE
     return pixels
+
+
+# The green field right of the kills box: icons from here (dashboard rows).
+KILL_ICON_ORIGIN = (226, 23)
+
+
+def kill_icon():
+    """dash.shp `zero` (10 x 5 on the 640-wide dashboard) halved: 5 x 5."""
+    image, meta = dashboard_shape('zero')
+    w, h = meta['width'], meta['height']
+    px = image.tobytes()
+    return [1 if any(px[y * w + x] != meta['base_color_candidate'] for x in (2 * c, 2 * c + 1)) else 0
+            for y in range(h) for c in range(5)]
 
 
 def original():
@@ -256,6 +280,10 @@ HUD_ELEMENTS = (
     ('FUEL_DIAL', 18, [dict(fuel=f) for f in range(len(NEEDLES))], 'fuel'),
     ('OIL_DIAL_LIT', 19, [dict(oil=f, oil_lamp=True) for f in range(len(NEEDLES))], 'oil'),
     ('FUEL_DIAL_LIT', 20, [dict(fuel=f, fuel_lamp=True) for f in range(len(NEEDLES))], 'fuel'),
+    # Kills (HUD-07, 0xf178): two digits and the icons.
+    ('KILLS_TENS', 19, [dict(kills=d * 10) for d in range(10)], None),
+    ('KILLS_UNITS', 19, [dict(kills=d) for d in range(10)], None),
+    ('KILL_ICONS', 19, [dict(kill_icons=n) for n in range(KILL_ICONS_MAX + 1)], None),
 )
 
 
@@ -606,6 +634,7 @@ def artifacts():
     for key in ('pilot_x','pilot_y','score_x','score_y','kills_x','kills_y'):
         code+=f"#define HUD_{key.upper()} {spots[key]}\n"
     code+=f"#define HUD_PILOT_WIDTH {PILOT_WIDTH}\n#define HUD_SCORE_DIGITS {SCORE_DIGITS}\n"
+    code+=f"#define HUD_KILL_ICONS_MAX {KILL_ICONS_MAX}\n"
     code+=f"#define HUD_ARROW_HEIGHT {ARROW_HEIGHT}\n#define HUD_ARROW_LEFT_X {arrows[0][1]}\n#define HUD_ARROW_RIGHT_X {arrows[1][1]}\n"
     code+="".join(f"#define HUD_ARROW{i}_ATLAS_X {x}\n#define HUD_ARROW{i}_ATLAS_Y {y}\n" for i,(x,y) in enumerate(ARROW_SLOTS))
     code+=f"#define HUD_NEEDLE_FULL {NEEDLE_FULL}\n#define HUD_NEEDLE_NEW_OIL {NEEDLE_NEW_OIL}\n"

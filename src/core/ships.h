@@ -82,6 +82,9 @@ uint8_t Ships_Rocket(uint16_t x, uint32_t* score) WINGS_BANKED;
  * else one hit off the hull (the sinking at 0 is the next step) and
  * COMBAT_SKY_RED. */
 uint8_t Ships_Torpedo(uint16_t x) WINGS_BANKED;
+/* 0x52ac: a splash at x (a ricochet on land), if the list has room: a shot-
+ * down plane sliding (docs/enemy-planes.md). */
+void Ships_AddSplash(int16_t x) WINGS_BANKED;
 /* 0x11a6: the first gun, live or not, of an enemy ship with x between a and
  * b (either order, inclusive); 0 if none. */
 uint16_t Ships_Aim(int16_t a, int16_t b) WINGS_BANKED;

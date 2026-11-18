@@ -25,8 +25,8 @@
 #define WINGS_SEGMENT_GAME 27   /* the game state: phases, rank, missions, lives (core/game.c) */
 #define WINGS_SEGMENT_SHIPS 28  /* enemy ships (core/ships.c) */
 #define WINGS_SEGMENT_ROCKETS 29 /* rockets (core/rockets.c) and their tables */
-#define WINGS_SEGMENT_PATCH 30  /* terrain column remap and band repaint (msx/terrain_patch.c) */
-#define WINGS_SEGMENT_PLANES 31 /* enemy planes (core/planes.c), engine smoke (core/smoke.c) */
+#define WINGS_SEGMENT_PATCH 30  /* terrain column remap and band repaint (msx/terrain_patch.c), engine smoke (core/smoke.c) */
+#define WINGS_SEGMENT_PLANES 31 /* enemy planes (core/planes.c) */
 
 #if defined(WINGS_BANKED_CODE) && defined(__SDCC)
 #define WINGS_BANKED __banked

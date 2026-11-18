@@ -17,6 +17,7 @@ void Waves_Init(void) WINGS_BANKED;
 void Dashboard_CopyPalette(u8* destination) WINGS_BANKED;
 
 void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives) WINGS_BANKED;
+void Dashboard_Kills(u8 page, u8 kills) WINGS_BANKED;
 /* The six-digit score field; redrawn only when the value changes. */
 void Dashboard_Score(u8 page, u32 score) WINGS_BANKED;
 extern u32 g_HudScore[2];  /* what each page shows */

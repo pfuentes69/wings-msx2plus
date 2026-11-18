@@ -227,18 +227,6 @@ static void Place(u16 x, u16 y)
     }
 }
 
-/* Shape index (0..27 facing left, 28..55 right) to the plane frames
- * (convert_hellcat.py PLANE_NEAR: jp10..jp1f 0..15, jt10 16, jt1a 17,
- * jc10 18, jc1a 19; PLANE_FAR: zpnn, zpn8, zpn9, zpng, zpnh, zpni, zpne,
- * zpnf, zpn0, zpn6, zpn7, zpnb, zpnc, zpnd, zpnj, zpnk), from the tables
- * 0xd1ea builds. */
-static const u8 s_PlaneNear[56] = {
-    10, 9, 9, 9, 8, 8, 8, 11, 11, 12, 12, 12, 13, 13, 5, 6, 6, 6, 7, 7, 8, 8, 8, 9, 9, 9, 17, 19,
-    0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 13, 14, 14, 14, 15, 15, 2, 2, 2, 1, 1, 1, 16, 18};
-static const u8 s_PlaneFar[56] = {
-    8, 9, 9, 9, 10, 10, 10, 11, 11, 12, 12, 12, 13, 13, 5, 14, 14, 14, 15, 15, 10, 10, 10, 9, 9, 9, 8, 8,
-    0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 13, 6, 6, 6, 7, 7, 2, 2, 2, 1, 1, 1, 0, 0};
-
 /* The enemy planes' near frames stream from ROM into 4 frame slots
  * (tools/convert_dashboard.py PLANE_SLOTS: page 3, x 64.., rows 180..):
  * planes showing the same frame share one. A slot not used yet this page
@@ -417,10 +405,19 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
     /* Enemy planes (0x0e1a), 7 px above their altitude; the turn
      * sequence's views by shape index (0xd35a), 8thscale far off. The
      * original draws them over the player; here they go behind. */
+    s_SlotUsed = 0;
+    /* Planes at rest on an island (0x0da6): jc10 / jc1a at altitude 4,
+     * the level Zero far off (no far wreck shape). */
+    for (i = 0; i < g_Planes.wrecks; ++i)
+    {
+        i16 v = g_Planes.wreck[i], x = v < 0 ? -v : v;
+        if ((u16)((far ? x >> 3 : x) - camera + 48) > 352u) continue;
+        Place((u16)x, WINGS_FLIGHT_MAX_Y - 4);
+        Shape(far ? SMOKE_FRAME_FAR_PLANE + (v < 0 ? 8 : 0) : SMOKE_FRAME_PLANE + (v < 0 ? 19 : 18));
+    }
     if (g_Planes.live)
     {
         const Plane* e = g_Planes.plane;
-        s_SlotUsed = 0;
         for (i = 0; i < PLANES_MAX; ++i, ++e)
         {
             i16 x;
@@ -428,7 +425,7 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
             x = e->x;
             if ((u16)((far ? x >> 3 : x) - camera + 48) > 352u) continue;
             Place((u16)x, WINGS_FLIGHT_MAX_Y - e->alt - 7);
-            Shape(far ? SMOKE_FRAME_FAR_PLANE + s_PlaneFar[e->shape] : SMOKE_FRAME_PLANE + s_PlaneNear[e->shape]);
+            Shape(far ? SMOKE_FRAME_FAR_PLANE + e->far : SMOKE_FRAME_PLANE + e->near);
         }
     }
     g_SmokeDrawnCount[page] = s_Drawn;

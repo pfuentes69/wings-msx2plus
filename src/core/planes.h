@@ -11,6 +11,8 @@
  * the fighters' AI and fire. */
 
 #define PLANES_MAX 4
+#define PLANES_WRECKS 8
+#define PLANE_KILL_POINTS 350
 /* +0 state */
 #define PLANE_FREE 0
 #define PLANE_FLYING 2
@@ -67,6 +69,7 @@ typedef struct Plane {
     uint8_t draws;     /* +2c: draw counter (the muzzle flash's phase) */
     uint8_t shape;     /* +30: 0..55, 0xd35a */
     int16_t sub;       /* +32: turn sub-step */
+    uint8_t near, far; /* the shape's frames (smoke_draw.c: SMOKE_FRAME_PLANE.., SMOKE_FRAME_FAR_PLANE..) */
 } Plane;
 
 /* What the planes read of the player, after its move this tick. */
@@ -76,6 +79,8 @@ typedef struct PlanesPlayer {
     uint8_t mode;      /* PLANES_PLAYER_* */
     uint8_t turn;      /* the player's turn frame 0..25 */
     int16_t speed;     /* airspeed */
+    int16_t climb;     /* the commanded climb (-$5bfc): the gun hits only at 0 */
+    uint8_t gun;       /* the fire flag (-$5c94): gun held, flying, not turning */
 } PlanesPlayer;
 
 typedef struct PlanesState {
@@ -89,6 +94,11 @@ typedef struct PlanesState {
     uint8_t drop;
     int16_t drop_x, drop_alt, drop_speed;
     int8_t drop_facing;
+    /* Planes that came to rest on an island (0x0da6, -$5e24): x x facing,
+     * drawn at altitude 4 for the rest of the mission. The original keeps
+     * 40, unbounded; the port PLANES_WRECKS. */
+    int16_t wreck[PLANES_WRECKS];
+    uint8_t wrecks;
 } PlanesState;
 extern PlanesState g_Planes;
 
@@ -110,7 +120,10 @@ void Planes_Reset(void) WINGS_BANKED;
 void Planes_NewPlane(void) WINGS_BANKED;
 /* 0xe4d0: a new plane in the last free slot; 0 if refused. */
 uint8_t Planes_Spawn(uint8_t kind, int16_t x, int16_t alt, int8_t facing) WINGS_BANKED;
-/* One original tick: the torpedo-plane timer (0xbc02) and the update
- * (0xe7d6). fire: a fire input this tick; carrier: the US carrier afloat. */
-void Planes_Tick(const PlanesPlayer* player, uint8_t fire, uint8_t carrier) WINGS_BANKED;
+/* One original tick: the torpedo-plane timer (0xbc02), the update
+ * (0xe7d6) and the player's gun (0xb682). fire: a fire input this tick;
+ * carrier: the US carrier afloat. Points go to *score, planes at rest to
+ * *kills. */
+void Planes_Tick(const PlanesPlayer* player, uint8_t fire, uint8_t carrier,
+                 uint32_t* score, uint16_t* kills) WINGS_BANKED;
 #endif

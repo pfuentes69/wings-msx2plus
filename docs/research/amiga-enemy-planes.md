@@ -864,6 +864,294 @@ So an enemy at exactly the player's altitude (the only altitude at which it
 can damage the player) is drawn about 6 px above the Hellcat. The original
 does this. **Confirmed** arithmetic; whether it is intended is **open**.
 
+### The fire flag `-$5c94` (0xb5b0, first thing in the flight handler 0xc660)
+
+The input word `-$42bc` comes from the VBlank sampler (0xc9ca/0xca32). Bit 4
+is "button held for 10 or more VBlanks" (0.2 s, the gun). Bit 5 is "pressed
+and released within 10 VBlanks" (a tap, the selected weapon).
+
+```
+in = input & 0x30
+if (in == 0) { fireFlag = 0; return }
+if (P.mode == 0) {
+    if (input & 0x20) {                        // tap
+        if (ptf < 6 || ptf > 16) fireWeapon()  // 0x107c; fireFlag unchanged
+    } else {                                   // held
+        if (ptf == 0 && ammo(-$50ea) > 0) fireFlag = 1
+        else fireFlag = 0
+    }
+} else if (P.mode == 1) { ...carrier/elevator branch, fireFlag untouched... }
+// other modes: fireFlag untouched
+```
+
+- `-$50ea` is set to 1536 (0x600) for each new plane (0x36b0) and never
+  decremented, so the gun has no ammunition limit. **Confirmed** (the only
+  write).
+- The gun fires only with the turn frame at 0. There is no cooldown or
+  bullet object: the flag is on for every tick the button is held.
+- The deck controls (0xc4f2, mode 1) and the engine failure (0xc75e,
+  mode 4) clear the flag every tick. In modes 6, 7, 8 and others it keeps
+  its value until the button is released. So holding fire through a crash
+  keeps the gun "on" for 0xb682, which does not test the mode. **Confirmed**
+  control flow (quirk).
+- The player's gun sound copies the flag (0x21c0 → `-$3c96`).
+
+### The commanded climb `-$5bfc` (set by 0xbff4, read by 0xb682)
+
+The commanded climb is in hundredths of a degree. The step `-$50e8` is 600.
+The full rules are in [amiga-fuel-oil.md](amiga-fuel-oil.md). What matters
+for "= 0":
+
+```
+no input at all (input & 0xf == 0):
+    if turning (ptf != 0): climb -= 150, min -2250
+    else if (climb > 0):   climb -= 600, and if climb < 0: climb = 0
+    // climb <= 0 and not turning: unchanged (a dive is kept)
+horizontal only, no up/down: the same two rules (0xc21e..0xc284)
+up/down held: changes by ±600 / ±300 / +150 / +75 / -1200 (see the fuel note)
+new plane (0xb896), crash code (0xb034, 0xb092, 0xb17e): climb = 0
+```
+
+So `-$5bfc` = 0 exactly when a positive climb has decayed to the clamp at 0
+with no vertical input and no turn, or when nothing has changed it since
+the plane left the deck. A dive never returns to 0 by itself: the player
+must press up until the climb is positive, then let go. Any turn, or any
+vertical input that leaves it non-zero, stops the gun from hitting planes.
+**Confirmed.**
+
+### 0xb682: the player's gun against planes (logic tick, after 0xe7d6)
+
+```
+if (fireFlag == 0) return
+for (i = 0; i < 4; i++) {                       // NOTE: e.state not tested
+    e = &slot[i]
+    if (e.rel != 3) continue
+    dx = P.x - e.x;  if (dx < 0) dx = -dx
+    da = P.alt - e.alt;  if (da < 0) da = -da
+    if (dx >= 160) continue
+    if (da >= 20) continue
+    if (pclimb != 0) continue
+    e.hit = 1                                   // +6
+    e.hitsub -= 1                               // +a
+    if (e.hitsub > 0) continue
+    effect(0, 6, e.x - 16, e.alt + 10)          // 0xcae0, see below
+    e.health -= 8                               // +8
+    if (e.health < 96) {
+        score(-$5cb2, long) += 350
+        e.state = 4;  e.talt = -3;  e.frame = 0;  e.beh &= ~8
+        shapeIndex(e)                           // 0xd35a
+    }
+    e.hitsub = rand(4) + 6                      // 6..9, also after a kill
+}
+```
+
+`e.rel`, `e.x` and `e.alt` are this tick's values: 0xd3b4 and 0xd796 ran
+earlier in the tick. P is after the player's move. **Confirmed.**
+
+### Effects: 0xcae0 and the puff pool
+
+```
+effect(unused, type, x, alt):                    // 0xcae0
+    x   += rand16() & 7                          // 0..7
+    alt += 6
+    spawnPuff((int32)x << 16, (int32)alt << 16, type)   // 0x54cc -> 0x5460
+
+spawnPuff(x16, y16, type):                       // 0x5460
+    for (k = 0; k < 40; k++) if (pool[k].type == 0) break
+    if (k == 40) return                          // pool full: dropped
+    pool[k].x = x16
+    pool[k].y = max(y16, 16 << 16)               // altitude at least 16
+    pool[k].type = type;  pool[k].life = 6
+    pool[k].vx = 0x10000 + (rand16() & 0xffff)   // 1.0 .. 2.0 px per draw, rightward
+    pool[k].vy = 0x10000 + (rand16() & 0xffff)   // 1.0 .. 2.0 px per draw, upward
+```
+
+- It is the same pool as the engine smoke: `-$40a6`, 40 entries of 20
+  bytes. **Confirmed.**
+- The first argument of 0xcae0 (0 or 1) is never read. **Confirmed.**
+- The update and draw (0x0ee0, once per drawn frame) draws world shape
+  0x60 + type at (x, y). Then x += vx, y += vy, and life −1. When life goes
+  below 0 it is reset to 6 and the type drops by 1. Type 0 is free. So each
+  type shows for 7 draws. **Confirmed.**
+- World ids 0x61..0x66 are `smk0`..`smk5` (5 the largest smoke, 6 the
+  fire-coloured `smk5`). Types 7, 8, … would be 0x67 `spl0`, 0x68 `spl1`
+  (splash frames) and decay down through `smk5`. The far view draws
+  8thscale `smk0` (type ≤ 3) or `smk1`. **Confirmed.**
+- **Gun hit spark:** type 6 at (e.x − 16 + 0..7, e.alt + 16).
+
+### 0xe728: damage smoke while flying (state 2, before the AI)
+
+```
+p = 128 - e.health                               // word
+if (p > (rand16() & 63)) effect(1, (p >> 3) + 1, e.x, e.alt + 11)   // asr
+// then the behaviour dispatch (0xd9c6 / 0xdccc / 0xdea4 / 0xe17a by beh & ~8)
+```
+
+- The puff appears at (e.x + 0..7, e.alt + 17).
+- The probability per tick is p/64 for 0 < p < 64: no smoke at health ≥ 128,
+  1/64 at 127, and 32/64 at 96, the lowest health a flying plane can have.
+  The type is 1 at p = 1..7, rising to 5 at p = 32..39.
+- Health only falls in steps of 8 from 240, so a flying plane shows p = 8,
+  16, 24, 32 (types 2, 3, 4, 5) after 14, 15, 16 and 17 hits, and p = 40
+  (type 6) after 18 hits. The 19th hit kills it. **Confirmed** arithmetic.
+
+### 0xe244: shot down (state 4; runs before 0xd796 each tick)
+
+```
+p = 128 - e.health
+if (p > (rand16() & 63))                          // always true once p >= 64
+    effect(1, (p >> 3) + 1, e.x - 16, e.alt + 10) // at (x-16+0..7, alt+16)
+if (e.alt != e.talt) return                       // exact equality, last tick's altitude
+col = mapWordPtr(e.x)                             // 0xc982
+if (isSea(col) && e.speed < 300) {                // 0xcb74; strict <
+    seaSlideCounter(-$4368) += 1                  // one global for all planes
+    if (seaSlideCounter >= 2) { seaSlideCounter = 0;  e.talt -= 1 }
+    e.speed += 24
+}
+e.speed -= 35
+killSoldiersAndTorpedoes(e.x, 20)                 // 0x1a84
+if (e.speed > 500) rocketImpactAt(col)            // 0x46c6
+splashAt(e.x + e.facing * 4)                      // 0x52ac (an altitude is pushed, not read)
+if (e.speed < 100) {
+    kills(-$5c7f, byte) += 1
+    if (isLand(col) && col >= mapBase && col < mapEnd) {   // 0xcbb2 + range tests
+        e.state = 16;  e.size(+1e) = 6;  e.count(+1c) = 30;  e.beh = 0
+    } else {
+        if (e.beh != 4 && e.beh != 16) fightersAirborne(-$5e28) -= 1
+        e.state = 0;  e.beh = 0
+    }
+}
+```
+
+- At a health of 88 after the kill, p = 40: a type-6 fire puff on 40 ticks
+  in 64. Puffs every tick need p ≥ 64.
+- **Column lookup** `mapWordPtr(x)` (0xc982): x < 0 becomes 0; then
+  base + (x / 8) × 2 (`divs`), clamped to the last word (end − 2).
+- `isSea(col)` (0xcb74) is true when col ≤ base (column 0 counts as sea),
+  when col ≥ end − 2, or when (word & 3) = 0.
+- `isLand(col)` (0xcbb2) is false outside (base, end − 2) and otherwise
+  (word & 3) = 2. 0xcb34 (class 1, decks) is not used here.
+- **"Reaches the target":** e.alt == e.talt exactly. In state 4, 0xd796 snaps
+  the altitude up to the target when below it (before its gravity step),
+  so a fall that overshoots −3 settles on exactly −3 within a few ticks.
+  There is no surface height in the test: wrecks over a deck or island stop
+  at −3, behind the terrain drawing. **Confirmed** code; the drawing result
+  is **inferred**.
+- **Speed decay:** −35 per tick on land and deck; −11 per tick
+  (+24 − 35) on the sea below 300. On the sea it also sinks 1 px every other
+  tick (shared counter). +1c is the speed at the kill, unchanged during the
+  fall (0xe64e only runs in state 2). The x motion continues through 0xd796
+  at trunc(speed/100) px/tick. **Confirmed.**
+- **0x1a84(x, 20)** = 0x1a8c with r = 20. Every walking soldier with
+  (unsigned)(sx − (x − 20)) ≤ 40 dies (state 2, frame 5, delay 2), with the
+  scream sample (0x23ac); +25 each when the death finishes (0x3f40). Then
+  0x1ae2(x − 20, 40): every player torpedo, and the enemy torpedo, with
+  \|tx − (x − 20)\| ≤ 40 (that is [x − 60, x + 20]) explodes (state 8, no
+  sound). This happens every tick of the slide. **Confirmed.**
+- **0x46c6(col)** builds the fake ordnance `-$38fe`: x = (col − base) × 4
+  (px), type 0 (rocket). It calls the impact handler 0x46dc every tick
+  while speed > 500. **Confirmed.** Effects by column class:
+  - Sea (class 0): only a ship lookup by x (0x4a4e); none is found on open
+    sea, so nothing happens.
+  - Ship or carrier column: white flash (`-$5be8` = 5, colour 0xfff), and
+    the first live gun within 16 px is destroyed: +200, red flash.
+  - Land (class 2): white flash every tick. A hut is wrecked (+150), a
+    manned dugout empties (+200, once), an AA gun is destroyed (+200) and
+    then gains damage art.
+- **0x52ac(x)**: one Splashes entry (`-$40ce`, 21 × 4 bytes) at x. Over land
+  (class 2) it is a 4-frame `ric0` at altitude 9; otherwise a 6-frame
+  `spl6` → `spl1` at altitude 13 (0x52b0, 0x52f8). One entry per tick while
+  sliding, dropped if the list is full. **Confirmed.**
+- The kill counter and the freeing happen on the tick the speed goes below
+  100. That tick still did the soldier, impact and splash calls. **Confirmed.**
+
+### 0xe3e8: burning wreck on an island (state 16; 0xd796 is skipped)
+
+```
+e.shape = (e.facing == -1) ? 27 : 55              // overwritten by 0xd35a later this tick
+e.count -= 1
+if (e.count == 0) { e.size -= 1;  e.count = e.size * 5 }
+if (e.size > 1) {
+    if ((e.count & 3) == 0) effect(1, e.size, e.x - 4, 6)   // at (x-4+0..7, 12)
+    return
+}
+wreckList[wreckCount++] = (int16)(e.facing * e.x)          // -$5e24, no bound
+if (e.beh != 4 && e.beh != 16) fightersAirborne -= 1       // beh is 0 here: always
+e.state = 0;  e.beh = 0
+```
+
+- Timeline from entry: size 6 for 30 ticks, then 5 for 25, 4 for 20,
+  3 for 15 and 2 for 10. On tick 100 the size becomes 1 and the wreck ends
+  in the same tick.
+- Puffs come when the count after the update is a multiple of 4: 7 puffs at
+  size 6, 6 at size 5, 5 at size 4, 3 at size 3, and 2 at size 2. Each puff
+  type equals the size (6 is the fire `smk5`, then `smk4`..`smk1`).
+- The torpedo-plane quirk: `beh` was set to 0 on entry, so the fighter
+  count is always decremented here. **Confirmed.**
+
+### 0x0da6: the island wreck list (render loop, before the planes)
+
+```
+for (k = 0; k < wreckCount; k++) {
+    v = wreckList[k];  x = (v < 0) ? -v : v
+    sx = x - camX;  sy = base - 4                // anchor at altitude 4
+    if (far) { sx >>= 3;  sy >>= 3 }             // asr
+    if (sx < -128 || sx > 448) continue
+    s = (far ? farTable : nearTable)[(v < 0) ? 27 : 55]   // jc1a/zpn0 : jc10/zpnn
+    blit(s, sx - s.ox, sy - s.oy)
+}
+```
+
+- v = 0 counts as facing right. Both views draw it; the far view uses
+  8thscale `zpn0` / `zpnn`, the level Zero, because there is no far wreck
+  shape.
+- jc1a is 48 × 10 with origin (23, 6); jc10 is 48 × 10 with origin (25, 6).
+- The list is cleared per mission (`-$5e26` = 0 at 0x35c0) and drawn over
+  the island terrain whatever happens to the island later. **Confirmed.**
+
+### 0xf178: kill counter and icons (render loop, per display buffer)
+
+```
+c = min(kills(-$5c7f, unsigned byte), 99)
+if (c == cache.kills) return                      // cache = -$30ce + buffer offset, +e
+cache.kills = c
+clip rows 20..28 (-$46a2 = 20, -$46a0 = 28)
+digit(508, 21, c / 10);  digit(522, 21, c % 10)   // divu
+clip rows 19..31
+icons(534, 19, min(c, 7))
+icons(534, 25, clamp(c - 7, ..7))                 // c - 7 <= 0: none
+
+digit(x, y, d):                                   // 0xf2b0
+    s = dash[7]                                   // wnum
+    blit_clipped(s, x - s.ox, y + DIGITY[d] - s.oy)   // 0x10b0c, unmasked
+DIGITY (-$6402) = 88, 80, 72, 64, 56, 48, 40, 32, 24, 16   // 88 - 8d
+icons(x, y, n): repeat n: blit_masked(dash[116] zero, x - ox, y - oy); x += 13
+```
+
+- **Redraw:** only when the capped count differs from that buffer's cache.
+  At each mission start 0xedaa (called at 0x00b6) sets the high byte of
+  every cached word of both buffers to 0xff, which forces a redraw.
+  **Confirmed.**
+- **Kill count 0:** the digits are drawn as "0" and "0" (DIGITY[0] = 88),
+  and no icons. So the dashboard shows "00". **Confirmed** code; the look of
+  the `wnum` strip at offset 88 is **inferred**.
+- The icons are only ever added. Nothing clears the icon rows when the
+  count changes, and the count only grows during a game. **Confirmed**
+  (no clear in 0xf178); the dashboard background is redrawn at other times
+  (**inferred**).
+- The score uses the same digit routine: rows 11..18, y 11, x 512 + 14 per
+  digit, via the formatted string `-$30dc` (0x5078).
+
+### Sound and score effects found in these paths
+
+| Path | Effect | Confidence |
+| --- | --- | --- |
+| 0xb682 kill | +350 only; no sound | confirmed |
+| 0xe244 slide | soldiers within 20 px: scream (0x23ac) and +25 each; torpedoes in [x − 60, x + 20] destroyed | confirmed |
+| 0xe244 slide, speed > 500 | white screen flash on land or a ship column every tick; hut +150, manned dugout +200, AA gun +200, ship gun +200 (red flash) | confirmed |
+| 0xe244 / 0xe3e8 | no sound calls | confirmed |
+| Player gun | machinegun loop while the fire flag is set (0x21c0); no hit sound | confirmed |
+
 ## Open questions
 
 - The render-loop rate, as in the other notes: it sets how often the muzzle

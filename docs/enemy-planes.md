@@ -9,7 +9,7 @@ DEF-01/02/03, OBJ-03, HUD-07). The original's behaviour comes from
 | --- | --- | --- |
 | 1 | The plane core: 4 slots, spawning, speed, motion, turns, the shape index, drawing in both views; the torpedo-plane timer and the torpedo plane's flight (cruise, descent, the drop's state change, turns) | Done |
 | 2 | The torpedo attack: the enemy torpedo (the player's torpedo code in a second slot), hits on the US carrier (4), the game over when it is sunk, the pilot-window arrow, the player's weapons destroying the torpedo | Done |
-| 3 | Shooting planes: the gun's hit test, 19 hits, +350, fall, crash, wreck, the kill counter and icons on the dashboard. Then map a is the original's first mission, with a scripted check | |
+| 3 | Shooting planes: the gun's hit test, 19 hits, +350, fall, crash, wreck, the kill counter and icons on the dashboard. Then map a is the original's first mission, with a scripted check | Done |
 | 4 | Fighters: the AI (0xd9c6), the attack and its hit-scan fire (0xdccc, 0xde52), the muzzle flash, launches from ships (map j) and airstrips, the sounds | |
 | 5 | Scripted verification of the fighters on map j | |
 
@@ -122,6 +122,75 @@ Verification:
   the carrier dropped 818 px short of it. Its torpedo fell, ran and hit
   the carrier (hull 4 → 3). The arrow showed `rtar` with the plane to the
   player's right, and went when the torpedo was dropped.
+
+## Shooting planes (step 3)
+
+From the pseudo-code for 0xb682, 0xe728, 0xe244, 0xe3e8, 0x0da6 and 0xf178:
+
+- **The gun** (0xb682) runs after the plane update, while the fire flag is
+  set: the gun held, flying, turn frame 0. The original also waits 10
+  VBlanks of holding; the port does not. A plane is in the box when:
+  - it is ahead on the same heading (relation 3);
+  - it is within 160 px and 20 px of altitude;
+  - the player's commanded climb is exactly 0.
+
+  Each tick in the box runs a counter down. At 0 a fire spark appears at
+  (x − 16 + 0..7, altitude + 16), the plane loses 8 health and the counter
+  restarts at 6..9. The 19th loss (below 96) shoots it down: +350, then
+  state 4 with target altitude −3. The original also tests free slots; the
+  port skips them.
+- **Damage smoke** (0xe728): a flying plane puffs with probability
+  (128 − health) / 64 a tick, of type (128 − health) / 8 + 1. That is smoke
+  from the 14th hit and fire from the 18th, through the engine smoke's pool
+  (`Smoke_Puff`, 8 puffs here, 40 in the original).
+- **The fall and slide** (0xe244). The plane keeps its speed and heading and
+  falls to −3. Then each tick:
+  - the speed drops 35 (11 on the sea below 300, sinking a pixel every
+    other tick);
+  - soldiers within 20 px die, and torpedoes in [x − 60, x + 20] are
+    destroyed;
+  - while above 500 it strikes the column below like a rocket: a hut
+    +150, a manned dugout +200, a ship gun +200, with the flashes;
+  - a splash, or a ricochet on land, appears at x ± 4 (`Ships_AddSplash`).
+
+  Below 100 the kill counts. On island ground the plane burns 100 ticks (smoke
+  6 down to 2) and then joins the wreck list. At sea it is gone.
+- **Wrecks** (0x0da6): `jc10` / `jc1a` at altitude 4 for the rest of the
+  mission, the level Zero far off. The port keeps 8; the original keeps 40.
+- **The kill counter** (HUD-07, 0xf178) is `GameProgress.kills`, cleared with
+  the game. The dashboard shows two digits up to 99, and an icon (dash.shp
+  `zero` halved to 5 × 5) per kill. The panel's green field has room for 8
+  (4 a row, 6 px apart); the original shows 14. The digits and icons are
+  pre-rendered HUD elements (`KILLS_TENS`, `KILLS_UNITS`, `KILL_ICONS`,
+  bank 19) patched in like the ammunition.
+- **Room:** the planes' view tables moved into `planes.c` (each plane
+  carries its near and far frames), and the engine smoke moved on to
+  segment 30. Segment 22 has about 200 bytes left on map a.
+
+## Verification (steps 1..3)
+
+- `tests/test_planes.py` runs the C against the model of the pseudo-code,
+  hooks included (smoke, soldiers, torpedoes, impacts, splashes logged and
+  compared). It covers:
+  - random runs that fire, shoot down, slide and burn;
+  - 19 hits for a kill, and a fall at sea or on an island with the
+    100-tick wreck;
+  - the climbing or idle gun missing.
+- `tools/verify_planes.py` (map a) runs `tools/planes_smoke.tcl` in four
+  phases:
+  1. a torpedo plane chased west and shot down. It came to rest on the
+     island (+200 more, a dugout), and the dashboard shows "01" and an icon;
+  2. a drop whose torpedo hits the carrier (hull 3), with the arrow checked
+     pixel for pixel while the plane is armed;
+  3. a torpedo carpet-bombed before it reaches the carrier;
+  4. the carrier at one hit left, sunk by the next torpedo; the crash that
+     follows ends the game.
+
+  During the chase the script pins the target's altitude and its turn
+  countdown, since a chased torpedo plane weaves and breaks after each hit.
+  Placements are re-checked after writing, because a Tcl write can land
+  inside the game's own update of the record. Missed deadlines: 22 NTSC,
+  4 PAL (limit 30).
 
 ## What it cost
 

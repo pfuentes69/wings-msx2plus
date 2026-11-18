@@ -18,14 +18,17 @@ const unsigned char g_DashboardPalette[32] = {
 #define HUD_FUEL_DIAL 5
 #define HUD_OIL_DIAL_LIT 6
 #define HUD_FUEL_DIAL_LIT 7
-#define HUD_ELEMENT_COUNT 8
-static const unsigned char g_HudBank[] = {17, 17, 17, 17, 17, 18, 19, 20};
-static const unsigned char g_HudColumn[] = {8, 13, 25, 8, 38, 84, 38, 84};
-static const unsigned char g_HudRow[] = {23, 23, 23, 15, 10, 10, 10, 10};
-static const unsigned char g_HudBytes[] = {4, 3, 3, 9, 13, 14, 13, 14};
-static const unsigned char g_HudHeight[] = {7, 7, 7, 5, 20, 20, 20, 20};
-static const unsigned short g_HudOffset[] = {0, 280, 490, 700, 835, 0, 0, 0};
-static const unsigned short g_HudSize[] = {28, 21, 21, 45, 260, 280, 260, 280};
+#define HUD_KILLS_TENS 8
+#define HUD_KILLS_UNITS 9
+#define HUD_KILL_ICONS 10
+#define HUD_ELEMENT_COUNT 11
+static const unsigned char g_HudBank[] = {17, 17, 17, 17, 17, 18, 19, 20, 19, 19, 19};
+static const unsigned char g_HudColumn[] = {8, 13, 25, 8, 38, 84, 38, 84, 104, 108, 113};
+static const unsigned char g_HudRow[] = {23, 23, 23, 15, 10, 10, 10, 10, 24, 24, 23};
+static const unsigned char g_HudBytes[] = {4, 3, 3, 9, 13, 14, 13, 14, 4, 3, 12};
+static const unsigned char g_HudHeight[] = {7, 7, 7, 5, 20, 20, 20, 20, 7, 7, 9};
+static const unsigned short g_HudOffset[] = {0, 280, 490, 700, 835, 0, 0, 0, 5980, 6260, 6470};
+static const unsigned short g_HudSize[] = {28, 21, 21, 45, 260, 280, 260, 280, 28, 21, 108};
 static const unsigned char g_HudDigitRows[] = {30, 51, 51, 51, 51, 51, 30, 6, 14, 6, 6, 6, 6, 15, 31, 51, 3, 14, 24, 48, 63, 63, 6, 14, 3, 3, 51, 30, 14, 14, 30, 22, 54, 63, 6, 63, 48, 62, 3, 1, 51, 30, 12, 24, 24, 62, 51, 51, 30, 63, 3, 6, 6, 12, 12, 12, 30, 51, 51, 30, 51, 51, 30, 30, 51, 51, 31, 3, 6, 12};
 #define HUD_PILOT_X 112
 #define HUD_PILOT_Y 11
@@ -35,6 +38,7 @@ static const unsigned char g_HudDigitRows[] = {30, 51, 51, 51, 51, 51, 30, 6, 14
 #define HUD_KILLS_Y 24
 #define HUD_PILOT_WIDTH 46
 #define HUD_SCORE_DIGITS 6
+#define HUD_KILL_ICONS_MAX 8
 #define HUD_ARROW_HEIGHT 5
 #define HUD_ARROW_LEFT_X 3
 #define HUD_ARROW_RIGHT_X 32

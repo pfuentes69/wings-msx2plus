@@ -1,6 +1,6 @@
 #include "smoke.h"
 #include "xorshift.h"
-WINGS_CODE_SEGMENT(WINGS_SEGMENT_PLANES)   /* moved from 22 (effects) for room, 2026-11-18 */
+WINGS_CODE_SEGMENT(WINGS_SEGMENT_PATCH)   /* moved from 22 (effects) for room, 2026-11-18 */
 
 #ifdef WINGS_P1_FLIGHT
 SmokePuff g_Smoke[SMOKE_COUNT];
@@ -59,12 +59,17 @@ static void Spawn(const FlightState* f, uint16_t world, uint8_t stage)
     Puff(p, world + dx, (uint16_t)((int16_t)WINGS_FLIGHT_MAX_Y - altitude), stage);
 }
 
-void Smoke_Emit(uint16_t x, uint16_t y) WINGS_BANKED
+void Smoke_Puff(uint16_t x, uint16_t y, uint8_t stage) WINGS_BANKED
 {
     SmokePuff* p = g_Smoke;
     uint8_t i;
     for (i = 0; i < SMOKE_COUNT && p->stage; ++i, ++p) {}
-    if (i < SMOKE_COUNT) Puff(p, x, y, SMOKE_STAGES);
+    if (i < SMOKE_COUNT) Puff(p, x, y, stage);
+}
+
+void Smoke_Emit(uint16_t x, uint16_t y) WINGS_BANKED
+{
+    Smoke_Puff(x, y, SMOKE_STAGES);
 }
 
 void Smoke_Hit(const FlightState* flight, uint16_t world) WINGS_BANKED

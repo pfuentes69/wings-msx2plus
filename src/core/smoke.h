@@ -20,13 +20,16 @@ typedef struct SmokePuff {
 } SmokePuff;
 extern SmokePuff g_Smoke[SMOKE_COUNT];
 
-/* Banked (segment 31, with the enemy planes). */
+/* Banked (segment 30, with the terrain patches). */
 void Smoke_Reset(void) WINGS_BANKED;
 /* One original 12.5 Hz tick: advance the puffs, then (when emit) let an
  * engine with oil below 128 put out a puff at the nose. */
 void Smoke_Tick(const FlightState* flight, uint16_t world, uint8_t oil, uint8_t emit) WINGS_BANKED;
 /* A puff at world (x, y) if the pool has room (wrecked huts, 0x4e18). */
 void Smoke_Emit(uint16_t x, uint16_t y) WINGS_BANKED;
+/* A puff at world (x, y) starting at stage (1..SMOKE_STAGE_FIRE), if the
+ * pool has room: enemy planes' hits and damage smoke. */
+void Smoke_Puff(uint16_t x, uint16_t y, uint8_t stage) WINGS_BANKED;
 /* A ground-fire hit (0x54e0 with effect type 6): a spark at the nose that
  * burns out into smoke, if the pool has room. */
 void Smoke_Hit(const FlightState* flight, uint16_t world) WINGS_BANKED;

@@ -247,6 +247,11 @@ static void Splash(int16_t x, uint8_t life)
     }
 }
 
+void Ships_AddSplash(int16_t x) WINGS_BANKED
+{
+    Splash(x, SHIP_SPLASH_LIFE);
+}
+
 #if SHIP_GUNS
 /* The update's inputs as statics: SDCC reaches them directly. */
 static const FlightState* s_Flight;

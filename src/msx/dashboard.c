@@ -22,7 +22,7 @@ static u8 s_FieldValid;
 // gauges (oil frame 16, fuel frame 22, lamps dark). Dial entries hold the
 // frame plus HUD_LIT when the lit variant is shown; the _LIT slots are unused.
 #define HUD_LIT 32
-static const u8 s_HudDefault[HUD_ELEMENT_COUNT] = {3, 0, 3, 0, HUD_NEEDLE_NEW_OIL, HUD_NEEDLE_FULL, 255, 255};
+static const u8 s_HudDefault[HUD_ELEMENT_COUNT] = {3, 0, 3, 0, HUD_NEEDLE_NEW_OIL, HUD_NEEDLE_FULL, 255, 255, 0, 0, 0};
 
 static void Input(u16 offset)
 {
@@ -178,6 +178,18 @@ void Dashboard_Status(u8 page, u8 weapon, u8 stock, u8 lives) WINGS_BANKED
     Show(page, HUD_AMMO_UNITS, stock % 10);
     Show(page, HUD_LIVES, lives > 9 ? 9 : lives);
     Show(page, HUD_WEAPON, weapon);
+}
+
+/* Kills (HUD-07, 0xf178): two digits, capped at 99, and an icon a kill up
+ * to HUD_KILL_ICONS_MAX (the original shows 14: the MSX panel has room
+ * for 8). */
+void Dashboard_Kills(u8 page, u8 kills) WINGS_BANKED
+{
+    /* Show skips an element whose value the page already shows. */
+    if (kills > 99) kills = 99;
+    Show(page, HUD_KILLS_TENS, kills / 10);
+    Show(page, HUD_KILLS_UNITS, kills % 10);
+    Show(page, HUD_KILL_ICONS, kills > HUD_KILL_ICONS_MAX ? HUD_KILL_ICONS_MAX : kills);
 }
 
 

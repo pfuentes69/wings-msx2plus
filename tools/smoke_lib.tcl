@@ -185,7 +185,7 @@ proc publishing {} {
     # What the shown page drew (src/msx/smoke_draw.h): count, then x (2),
     # row (2), frame per shape; 27 entries per page.
     set page [value g_DisplayPage]
-    dump $name.smoke [binary format c [smoke_count]][debug read_block memory [expr {$::addr(g_SmokeDrawn)+$page*70*5}] [expr {70*5}]]
+    dump $name.smoke [binary format c [smoke_count]][debug read_block memory [expr {$::addr(g_SmokeDrawn)+$page*74*5}] [expr {74*5}]]
     dump $name.score [debug read_block memory $::addr(g_DisplayScore) 4]
     dump $name.island [debug read_block memory $::addr(g_Island) 315]
     dump $name.band [binary format cs [value g_DisplayBand] [word g_DisplayTicker]]
@@ -418,12 +418,14 @@ debug watchpoint create -type write_mem -address $addr(g_MissedFrames) -command 
 # are set up (probes, overrides); not used by the verifiers themselves.
 if {[info exists env(WINGS_EXTRA_TCL)] && $env(WINGS_EXTRA_TCL) ne ""} {after time 0.5 [list source $env(WINGS_EXTRA_TCL)]}
 # A scenario that is not about enemy planes keeps the torpedo-plane timer
-# (g_Planes +152) at 0, so none comes (needs g_Planes in extra_symbols).
+# at 0, so none comes (needs g_Planes in extra_symbols). The timer follows
+# the 4 Plane records (src/core/planes.h, 40 bytes each with SDCC).
+set PLANES_TIMER 160
 proc no_torpedo_planes {} {
-    foreach offset {152 153} {
+    foreach offset [list $::PLANES_TIMER [expr {$::PLANES_TIMER+1}]] {
         debug watchpoint create -type write_mem -address [expr {$::addr(g_Planes)+$offset}] -command {
-            debug write memory [expr {$::addr(g_Planes)+152}] 0
-            debug write memory [expr {$::addr(g_Planes)+153}] 0
+            debug write memory [expr {$::addr(g_Planes)+$::PLANES_TIMER}] 0
+            debug write memory [expr {$::addr(g_Planes)+$::PLANES_TIMER+1}] 0
         }
     }
 }

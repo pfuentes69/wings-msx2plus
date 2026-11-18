@@ -6307,6 +6307,42 @@
         "count": 23,
         "offset": 0,
         "sha256": "f738c8b3d38fb90d62c66ca4e313d80ffcf0b3391123c7f20ba08d39790b6f8d"
+      },
+      {
+        "name": "KILLS_TENS",
+        "bank": 19,
+        "group": null,
+        "x": 208,
+        "y": 24,
+        "width": 8,
+        "height": 7,
+        "count": 10,
+        "offset": 5980,
+        "sha256": "a6779918df77c4b3771c317d13ff54d143767dbce35f5a2b8ca49963790404c9"
+      },
+      {
+        "name": "KILLS_UNITS",
+        "bank": 19,
+        "group": null,
+        "x": 216,
+        "y": 24,
+        "width": 6,
+        "height": 7,
+        "count": 10,
+        "offset": 6260,
+        "sha256": "07d1c47ec25aeabfc3dbf75668c7baea6a5fde78fa1fca354d70249216480154"
+      },
+      {
+        "name": "KILL_ICONS",
+        "bank": 19,
+        "group": null,
+        "x": 226,
+        "y": 23,
+        "width": 24,
+        "height": 9,
+        "count": 9,
+        "offset": 6470,
+        "sha256": "84bef2dc4d3672f2971283d69f30641ca6a53cf6162ca5be8835ca4ef7fbc245"
       }
     ]
   },

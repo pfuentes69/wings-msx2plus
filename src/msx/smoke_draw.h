@@ -7,7 +7,7 @@
 /* Drawing the engine smoke and the dugout guns (banked, segment 22). Puffs are drawn behind the
  * plane and erased by repainting the terrain tiles under them (sky above
  * the terrain rows): no VRAM backup is needed. */
-#define SMOKE_DRAWN_MAX 70   /* 8 puffs, 3 dugout guns, 16 soldiers, 15 rockets, 16 ship guns, 8 splashes, 4 planes */
+#define SMOKE_DRAWN_MAX 74   /* 8 puffs, 3 dugout guns, 16 soldiers, 15 rockets, 16 ship guns, 8 splashes, 4 planes, 4 wrecks */
 typedef struct SmokeDrawn { u16 x; i16 row; u8 frame; } SmokeDrawn;
 /* What each page shows: Smoke_Restore erases it, and the verification
  * reads the displayed page's list (the pixel oracle). */

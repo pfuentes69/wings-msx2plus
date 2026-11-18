@@ -829,6 +829,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
     DrawAircraft(page, frame, world, y, camera);
     Weapons_Draw(page, camera, g_TerrainFar, s_RenderHeave, &g_Combat);
     Dashboard_Status(page, g_Game.sortie.weapon, g_Game.sortie.stock, g_Game.progress.lives);
+    Dashboard_Kills(page, g_Game.progress.kills > 99 ? 99 : (u8)g_Game.progress.kills);
     Dashboard_Score(page, g_Game.progress.score);
 #ifdef WINGS_P1_FLIGHT
     s_RenderGauges[0] = g_Engine.oil_needle; s_RenderGauges[1] = g_Engine.fuel_needle;
@@ -920,7 +921,10 @@ static void PlanesTick(u8 weapons)
                   PLANES_PLAYER_FLYING;
     player.turn = s_World.flight.turn;
     player.speed = s_World.flight.speed;
-    Planes_Tick(&player, weapons != 0, g_Ships.hull[SHIP_MAX] != 0);
+    player.climb = s_World.flight.climb;
+    /* The fire flag (0xb5b0): the gun held in flight, not turning. */
+    player.gun = (weapons & COMBAT_FIRE) && player.mode == PLANES_PLAYER_FLYING && !player.turn;
+    Planes_Tick(&player, weapons != 0, g_Ships.hull[SHIP_MAX] != 0, &g_Game.progress.score, &g_Game.progress.kills);
     if (g_Planes.drop) Torpedo_Drop(&g_Combat, g_Planes.drop_x, g_Planes.drop_alt, g_Planes.drop_speed, g_Planes.drop_facing);
 }
 
@@ -1422,6 +1426,7 @@ advance_clocks:
                 g_RenderPage=page; g_Rendering=1;
                 Menu_Draw(page,&g_Game);
                 Dashboard_Status(page,g_Game.sortie.weapon,g_Game.sortie.stock,g_Game.progress.lives);
+                Dashboard_Kills(page,g_Game.progress.kills > 99 ? 99 : (u8)g_Game.progress.kills);
                 Dashboard_Score(page,g_Game.progress.score);
                 Dashboard_Gauges(page,s_RenderGauges,0);
                 VDP_CommandWait(); g_Rendering=0;
