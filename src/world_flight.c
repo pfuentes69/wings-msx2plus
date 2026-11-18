@@ -922,6 +922,9 @@ static void PlanesTick(u8 weapons)
     player.turn = s_World.flight.turn;
     player.speed = s_World.flight.speed;
     player.climb = s_World.flight.climb;
+    { int16_t vx = s_World.flight.vx < 0 ? -s_World.flight.vx : s_World.flight.vx;
+      player.hstep = (int16_t)(((int32_t)vx * 12) >> 8); }   /* Q8 a step, 12 steps a tick */
+    player.engine = &g_Engine; player.sortie = &g_Game.sortie;
     /* The fire flag (0xb5b0): the gun held in flight, not turning. */
     player.gun = (weapons & COMBAT_FIRE) && player.mode == PLANES_PLAYER_FLYING && !player.turn;
     Planes_Tick(&player, weapons != 0, g_Ships.hull[SHIP_MAX] != 0, &g_Game.progress.score, &g_Game.progress.kills);
@@ -1347,7 +1350,9 @@ advance_clocks:
                         s_SoldiersMoving = Island_Soldiers(&g_Game.progress.score);
                         /* Enemy planes (0xe7d6) and the torpedo-plane timer
                          * (0xbc02), after the player's move. */
-                        if (g_Planes.live || g_Planes.timer) PlanesTick(weapons);
+                        /* Only with something to do: planes up, the timer
+                         * running, ship lists with planes left. */
+                        if (g_Planes.live || g_Planes.timer || g_Planes.lists) PlanesTick(weapons);
 #endif
                     }
 #ifdef WINGS_P1_FLIGHT

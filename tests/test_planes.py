@@ -40,12 +40,16 @@ class Planes(C.Structure):
     # The host compiler aligns the words (SDCC packs): natural layout here.
     _fields_ = [('plane', Plane * 4), ('timer', C.c_int16), ('fighters', C.c_uint8), ('kills', C.c_uint8),
                 ('live', C.c_uint8), ('drop', C.c_uint8), ('drop_x', C.c_int16), ('drop_alt', C.c_int16),
-                ('drop_speed', C.c_int16), ('drop_facing', C.c_int8), ('wreck', C.c_int16 * 8), ('wrecks', C.c_uint8)]
+                ('drop_speed', C.c_int16), ('drop_facing', C.c_int8), ('wreck', C.c_int16 * 8), ('wrecks', C.c_uint8),
+                ('cooldown', C.c_int16), ('left', C.c_uint8 * 4), ('parked', C.c_uint8),
+                ('parked_x', C.c_int16 * 16), ('parked_alt', C.c_int16 * 16), ('parked_left', C.c_uint8 * 16),
+                ('firing', C.c_uint8), ('nearest', C.c_uint16), ('lists', C.c_uint8)]
 
 
 class Player(C.Structure):
     _fields_ = [('x', C.c_int16), ('alt', C.c_int16), ('facing', C.c_int8), ('mode', C.c_uint8),
-                ('turn', C.c_uint8), ('speed', C.c_int16), ('climb', C.c_int16), ('gun', C.c_uint8)]
+                ('turn', C.c_uint8), ('speed', C.c_int16), ('climb', C.c_int16), ('gun', C.c_uint8),
+                ('hstep', C.c_int16), ('engine', C.c_void_p), ('sortie', C.c_void_p)]
 
 
 # The hooks planes.c calls, stubbed: they log their calls for the model to
@@ -64,6 +68,12 @@ void Ships_AddSplash(int16_t x) { Log(4, x, 0, 0); }
 uint16_t Island_Bombed(uint16_t x) { Log(5, x, 0, 0); return 0; }
 uint8_t Ships_Rocket(uint16_t x, uint32_t* score) { (void)score; Log(6, x, 0, 0); return 0; }
 uint8_t Mission_Surface(uint16_t x) { return x >= 2000 && x < 3000 ? 2 : 0; }
+#include "engine.h"
+#include "ships.h"
+ShipsState g_Ships;
+uint8_t g_PlanesHoldTurn;
+EngineState g_TestEngine; SortieState g_TestSortie;
+void Engine_Damage(EngineState* e, SortieState* s, uint8_t oil, uint8_t fuel) { (void)e; (void)s; Log(7, oil, fuel, 0); }
 '''
 WORLD = 7608
 
@@ -101,6 +111,8 @@ class Model:
         self.timer = self.fighters = self.live = 0
         self.rand = Random()
         self.log, self.score, self.kills, self.wrecks, self.slide = [], 0, 0, [], 0
+        self.parity = self.flee = self.firing = self.hold = self.cooldown = 0
+        self.nearest, self.hits = 65535, 6
 
     def effect(self, kind, x, alt):
         x = s16(x + (self.rand.raw() & 7)); alt = max(16, alt + 6)
@@ -304,17 +316,73 @@ class Model:
         else:
             self.spawn(1, P['x'] + 0x1800, 0, -1)
 
+    def fighter(self, e, P):
+        ptf = P['turn']
+        if e['rel'] == 1:
+            if e['dist'] < 160:
+                if 0 < ptf < 6 and P['mode'] != 1 and e['t18'] == 0:
+                    e['t18'] = s16(trunc_div(e['dist'] * 100, e['speed']) + e['rank'] * 2)
+                elif e['t18'] == 0 and e['rank'] == 1:
+                    e['beh'] = (e['beh'] & 8) | 2
+                else:
+                    e['firing'] = 0; e['talt'] = P['alt']; e['tspeed'] = s16(P['speed'] - e['rank'] * 70)
+            elif e['frame'] == 0:
+                e['tspeed'] = s16(e['dist'] + P['speed'] + (80 if e['rank'] == 1 else -80 * e['rank']))
+        elif e['rel'] == 2:
+            if P['mode'] == 0 and 0 < ptf < 11: e['tspeed'] = 900
+            else: e['beh'] |= 8
+        elif e['rel'] == 3:
+            if e['dist'] >= 1536: e['beh'] |= 8; return
+            e['t10'] -= 1
+            if e['t10'] <= 0 or 0 < ptf < 6 or P['mode'] == 1:
+                e['beh'] |= 8; e['t10'] = 0; return
+            if e['hit'] == 1:
+                e['hit'] = 0
+                if e['t18'] == 0: e['t18'] = self.rand(6) + 8
+                e['t10'] = 550; return
+            e['tspeed'] = s16(P['speed'] - trunc_div(e['dist'], 4) + self.flee * 70)
+            self.flee += 1
+            if e['alt'] == e['talt']: e['talt'] = self.rand(7) * 10 + 35
+        elif e['rel'] == 4:
+            if P['mode'] != 0: return
+            e['tspeed'] = 900
+            e['talt'] = P['alt'] + 32 if e['alt'] >= P['alt'] else P['alt'] - 32
+            e['t18'] = s16(trunc_div(s16(e['dist'] * 100), e['speed'] + P['hstep']))
+            e['beh'] |= 8
+
+    def attack(self, e, P):
+        if e['rel'] != 1: e['beh'] = 1; return
+        if P['turn'] or P['mode'] == 1:
+            e['beh'] = 9; e['t18'] = trunc_div(e['dist'], trunc_div(e['speed'], 100))
+        elif e['dist'] > 130: e['tspeed'] = P['speed'] + 50
+        elif e['dist'] < 130: e['tspeed'] = P['speed'] - 50
+        e['talt'] = P['alt']
+        da = abs(P['alt'] - e['alt'])
+        if (P['mode'] == 0 and e['beh'] == 2 and e['rank'] == 1 and da < 8 and e['frame'] == 0 and e['dist'] < 160
+                and P['facing'] == e['facing'] and s16(s16(e['x'] - P['x']) ^ P['facing']) < 0):
+            e['firing'] = 1
+            if e['alt'] == P['alt'] and self.parity:
+                self.hits = (self.hits - 1) & 255
+                if self.hits == 0:
+                    self.log.append((7, 8, self.rand(32), 0))
+                    self.hits = self.rand(5) + 6
+        else:
+            e['firing'] = 0
+
     def tick(self, P, fire, carrier):
+        self.parity ^= 1
         self.timer_tick(P, fire, carrier)
-        if not self.live: return
+        self.flee = 0
         for e in self.p:
             if e['state'] == 0: continue
             self.relation(e, P)
             self.rank()
             if e['state'] == 2:
                 self.damage(e)
-                if e['beh'] & 4: self.torpedo(e, P)
-                elif e['beh'] & 16: self.dropped(e)
+                kind = e['beh'] & ~8
+                if kind in (1, 2): (self.fighter if kind == 1 else self.attack)(e, P)
+                elif kind == 4: self.torpedo(e, P)
+                elif kind == 16: self.dropped(e)
                 if e['state'] == 0: continue
                 self.speed(e)
             elif e['state'] == 4: self.shot_down(e)
@@ -326,6 +394,14 @@ class Model:
             e['shape'] = idx if e['facing'] == -1 else idx + 28
             e['near'], e['far'] = NEAR[e['shape']], FAR[e['shape']]
         if P.get('gun') and self.live: self.gun(P)
+        self.firing, self.nearest, self.hold = 0, 65535, 0
+        for e in self.p:
+            if not e['state'] or e['state'] > 2: continue
+            d = (abs(e['x'] - P['x']) + abs(e['alt'] - P['alt'])) & 0xffff
+            self.nearest = min(self.nearest, d)
+            self.firing |= e['firing']
+            if e['beh'] == 1 and e['rel'] == 3 and e['frame'] == 13: self.hold = 1
+        if self.cooldown: self.cooldown -= 1
 
 
 class PlanesTests(unittest.TestCase):
@@ -339,7 +415,8 @@ class PlanesTests(unittest.TestCase):
                         '-I' + str(ROOT / 'src/generated/map_a'),
                         '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC', f'-DWINGS_CARRIER_X={CARRIER_X}u',
                         '-DWINGS_FLIGHT_MAX_Y=1200u', f'-DWINGS_WORLD_WIDTH={WORLD}u',
-                        str(ROOT / 'src/core/planes.c'), str(work / 'stub.c'), '-o', str(lib)], check=True, capture_output=True)
+                        str(ROOT / 'src/core/planes.c'), str(ROOT / 'src/core/fighters.c'), str(work / 'stub.c'),
+                        '-o', str(lib)], check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))
         cls.core.Planes_Spawn.argtypes = [C.c_uint8, C.c_int16, C.c_int16, C.c_int8]
         cls.core.Planes_Spawn.restype = C.c_uint8
@@ -355,6 +432,9 @@ class PlanesTests(unittest.TestCase):
         self.model = Model()
         self.score, self.kills = C.c_uint32(0), C.c_uint16(0)
         C.c_int.in_dll(self.core, 'g_Logged').value = 0
+        self.engine = C.addressof(C.c_uint8.in_dll(self.core, 'g_TestEngine'))
+        self.sortie = C.addressof(C.c_uint8.in_dll(self.core, 'g_TestSortie'))
+        C.c_uint8.from_address(self.engine + 10).value = 6   # EngineState.hits
 
     def calls(self):
         n = C.c_int.in_dll(self.core, 'g_Logged').value
@@ -372,6 +452,9 @@ class PlanesTests(unittest.TestCase):
         self.assertEqual((self.score.value, self.kills.value), (self.model.score, self.model.kills), what)
         self.assertEqual(list(self.state.wreck[:self.state.wrecks]), self.model.wrecks, what)
         self.assertEqual(self.calls(), self.model.log[:512], what)
+        self.assertEqual((self.state.firing, self.state.nearest, C.c_uint8.in_dll(self.core, 'g_PlanesHoldTurn').value,
+                          C.c_uint8.from_address(self.engine + 10).value, self.state.cooldown),
+                         (self.model.firing, self.model.nearest, self.model.hold, self.model.hits, self.model.cooldown), what)
 
     def put(self, i, **fields):
         for k, v in fields.items():
@@ -379,7 +462,8 @@ class PlanesTests(unittest.TestCase):
             self.model.p[i][k] = v
 
     def tick(self, P, fire=0, carrier=1):
-        self.core.Planes_Tick(C.byref(Player(**P)), fire, carrier, C.byref(self.score), C.byref(self.kills))
+        self.core.Planes_Tick(C.byref(Player(**P, engine=self.engine, sortie=self.sortie)), fire, carrier,
+                              C.byref(self.score), C.byref(self.kills))
         self.model.tick(P, fire, carrier)
 
     def test_against_the_model(self):
@@ -387,7 +471,7 @@ class PlanesTests(unittest.TestCase):
         for run in range(150):
             self.setUp()
             P = dict(x=rng.randrange(1500, 10000), alt=rng.randrange(20, 400), facing=rng.choice((-1, 1)),
-                     mode=0, turn=0, speed=rng.randrange(1000, 1401), climb=0, gun=0)
+                     mode=0, turn=0, speed=rng.randrange(1000, 1401), climb=0, gun=0, hstep=rng.randrange(10, 15))
             for _ in range(rng.randrange(1, 4)):
                 kind = rng.choice((0, 1))
                 args = (kind, s16(P['x'] + rng.randrange(-1500, 1500)), rng.randrange(33, 300), rng.choice((-1, 1)))
@@ -416,10 +500,11 @@ class PlanesTests(unittest.TestCase):
         # A fighter 100 px ahead of the player, both flying right, level.
         self.core.Planes_Spawn(0, x + 100, 150, 1)
         p = self.state.plane[3]
-        P = Player(x=x, alt=150, facing=1, mode=0, turn=0, speed=1000, climb=0, gun=1)
+        P = Player(engine=self.engine, sortie=self.sortie, x=x, alt=150, facing=1, mode=0, turn=0, speed=1000, climb=0, gun=1)
         ticks = 0
         while p.state == 2 and ticks < 1000:
             P.x, P.alt = p.x - 100, p.alt   # keep it in the box (it goes down to 50)
+            p.t18, p.beh, p.t10 = 0, p.beh & ~8, 100   # no break-away (the AI: test_against_the_model)
             self.core.Planes_Tick(C.byref(P), 0, 1, C.byref(self.score), C.byref(self.kills))
             ticks += 1
         return p, ticks
@@ -432,7 +517,7 @@ class PlanesTests(unittest.TestCase):
 
     def test_shot_down_at_sea_slides_and_is_gone(self):
         p, _ = self.shoot(5000)
-        P = Player(x=1500, alt=300, facing=1, mode=0, turn=0, speed=1000, climb=0, gun=0)
+        P = Player(engine=self.engine, sortie=self.sortie, x=1500, alt=300, facing=1, mode=0, turn=0, speed=1000, climb=0, gun=0)
         for _ in range(400):
             self.core.Planes_Tick(C.byref(P), 0, 1, C.byref(self.score), C.byref(self.kills))
             if not p.state: break
@@ -441,7 +526,7 @@ class PlanesTests(unittest.TestCase):
     def test_shot_down_over_an_island_burns_then_stays(self):
         p, _ = self.shoot(5000)
         p.x, p.alt = 2100, -3   # down on the island (x 2000..2999), sliding
-        P = Player(x=1500, alt=300, facing=1, mode=0, turn=0, speed=1000, climb=0, gun=0)
+        P = Player(engine=self.engine, sortie=self.sortie, x=1500, alt=300, facing=1, mode=0, turn=0, speed=1000, climb=0, gun=0)
         states = []
         for _ in range(500):
             self.core.Planes_Tick(C.byref(P), 0, 1, C.byref(self.score), C.byref(self.kills))
@@ -457,19 +542,70 @@ class PlanesTests(unittest.TestCase):
         p = self.state.plane[3]
         for climb, gun in ((600, 1), (0, 0)):
             for _ in range(200):
-                P = Player(x=p.x - 100, alt=p.alt, facing=1, mode=0, turn=0, speed=1000, climb=climb, gun=gun)
+                P = Player(engine=self.engine, sortie=self.sortie, x=p.x - 100, alt=p.alt, facing=1, mode=0, turn=0, speed=1000, climb=climb, gun=gun)
                 self.core.Planes_Tick(C.byref(P), 0, 1, C.byref(self.score), C.byref(self.kills))
             self.assertEqual((p.health, p.state), (240, 2), (climb, gun))
+
+    def test_a_fighter_on_the_tail_attacks_and_hits(self):
+        # 120 px behind the player, same heading and altitude: rank 1, the
+        # attack; it fires, and on odd ticks at equal altitude the hit
+        # counter runs down (oil -8 and fuel -0..31 each time it runs out).
+        self.core.Planes_Spawn(0, 4880, 150, 1)
+        p = self.state.plane[3]
+        fired = 0
+        for _ in range(300):
+            P = Player(engine=self.engine, sortie=self.sortie, x=p.x + 120, alt=p.alt, facing=1, mode=0, turn=0,
+                       speed=1000, climb=0, gun=0, hstep=10)
+            self.core.Planes_Tick(C.byref(P), 0, 1, C.byref(self.score), C.byref(self.kills))
+            fired += p.firing
+        damage = [c for c in self.calls() if c[0] == 7]
+        self.assertEqual(p.beh & 7, 2)
+        self.assertGreater(fired, 250)
+        self.assertTrue(damage and all(c[1] == 8 and 0 <= c[2] < 32 for c in damage), damage)
+        self.assertTrue(150 // 10 - 2 <= len(damage) <= 150 // 6 + 1, len(damage))   # every 6..10 odd ticks
+
+    def test_ships_launch_their_planes_on_map_j(self):
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp)
+            (work / 'stub.c').write_text(STUB)
+            subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-I' + str(ROOT / 'src/core'),
+                            '-I' + str(ROOT / 'src/generated/map_j'), '-shared', '-fPIC', '-DWINGS_CARRIER_X=3960u',
+                            '-DWINGS_FLIGHT_MAX_Y=1200u', '-DWINGS_WORLD_WIDTH=7944u',
+                            str(ROOT / 'src/core/planes.c'), str(ROOT / 'src/core/fighters.c'), str(work / 'stub.c'),
+                            '-o', str(work / 'j.so')], check=True, capture_output=True)
+            j = C.CDLL(str(work / 'j.so'))
+            j.Planes_Tick.argtypes = [C.POINTER(Player), C.c_uint8, C.c_uint8, C.POINTER(C.c_uint32), C.POINTER(C.c_uint16)]
+            j.Planes_NewGame(); j.Planes_Reset()
+            state = Planes.in_dll(j, 'g_Planes')
+            hull = (C.c_uint8 * 5).from_address(C.addressof(C.c_uint8.in_dll(j, 'g_Ships')) + 218)
+            hull[0], hull[1], hull[4] = 1, 2, 4
+            self.assertEqual((state.parked, list(state.left[:2])), (0, [4, 6]))
+            engine = C.addressof(C.c_uint8.in_dll(j, 'g_TestEngine'))
+            P = Player(x=7000, alt=300, facing=1, mode=1, turn=0, speed=0, climb=0, gun=0, hstep=0,
+                       engine=engine, sortie=engine)
+            launches = []
+            for t in range(400):
+                j.Planes_Tick(C.byref(P), 0, 0, C.byref(self.score), C.byref(self.kills))
+                if state.fighters > len(launches):
+                    new = [state.plane[i] for i in range(4) if state.plane[i].state]
+                    launches.append((t, sorted((q.x, q.alt) for q in new)))
+            # The ghost (7480, -32768: it climbs, still far below) first, then
+            # entry 4 (7706, 47) 100 ticks later; the battleship's max is 2.
+            self.assertEqual(len(launches), 2)
+            self.assertEqual(launches[1][0] - launches[0][0], 100)
+            self.assertIn(7480, [x for x, _ in launches[0][1]])
+            self.assertEqual((state.fighters, list(state.left[:2]), state.parked), (2, [4, 4], 8))
+            self.assertTrue(all(state.parked_alt[k] > 0 for k in range(state.parked)))
 
     def test_level_step_at_minimum_speed(self):
         # The note's inferred sequence: trunc(factor x 9).
         steps = []
         for frame in range(26):
             self.setUp()
-            self.core.Planes_Spawn(0, 1000, 100, 1)
+            self.core.Planes_Spawn(1, 1000, 100, 1)   # a torpedo plane: no fighter AI
             p = self.state.plane[3]
             p.frame, p.alt, p.talt = frame, 100, 100
-            self.core.Planes_Tick(C.byref(Player(x=5000, alt=300, facing=1, mode=0, turn=0, speed=1000)), 0, 1, C.byref(self.score), C.byref(self.kills))
+            self.core.Planes_Tick(C.byref(Player(engine=self.engine, sortie=self.sortie, x=5000, alt=300, facing=1, mode=0, turn=0, speed=1000)), 0, 1, C.byref(self.score), C.byref(self.kills))
             steps.append(p.x - 1000)
         self.assertEqual(steps, [9, 8, 8, 8, 7, 7, 6, 6, 5, 4, 3, 2, 2, 1, 0, 0, 2, 4, 5, 6, 6, 7, 7, 8, 8, 8])
 
@@ -478,7 +614,7 @@ class PlanesTests(unittest.TestCase):
         p = self.state.plane[3]
         p.beh |= 8
         p.sub = 2   # left over from a full turn
-        P = Player(x=100, alt=300, facing=1, mode=0, turn=0, speed=1000)
+        P = Player(engine=self.engine, sortie=self.sortie, x=100, alt=300, facing=1, mode=0, turn=0, speed=1000)
         frames, ticks = [], 0
         while p.beh & 8:
             self.core.Planes_Tick(C.byref(P), 0, 1, C.byref(self.score), C.byref(self.kills))
@@ -494,35 +630,35 @@ class PlanesTests(unittest.TestCase):
         p.beh = 16   # after the drop: target 1300 set below
         p.tspeed = 1300
         for _ in range(30):
-            self.core.Planes_Tick(C.byref(Player(x=2100, alt=300, facing=1, mode=0, turn=0, speed=1000)), 0, 1, C.byref(self.score), C.byref(self.kills))
+            self.core.Planes_Tick(C.byref(Player(engine=self.engine, sortie=self.sortie, x=2100, alt=300, facing=1, mode=0, turn=0, speed=1000)), 0, 1, C.byref(self.score), C.byref(self.kills))
             p.tspeed = 1300
         self.assertIn(p.speed, (1310, 1311))
 
     def test_timer_firing_holds_it_and_the_side_follows_the_carrier(self):
         self.state.timer = 100
-        self.core.Planes_Tick(C.byref(Player(x=3000, alt=300, facing=-1, mode=0, turn=0, speed=1000)), 1, 1, C.byref(self.score), C.byref(self.kills))
+        self.core.Planes_Tick(C.byref(Player(engine=self.engine, sortie=self.sortie, x=3000, alt=300, facing=-1, mode=0, turn=0, speed=1000)), 1, 1, C.byref(self.score), C.byref(self.kills))
         self.assertEqual(self.state.timer, 750)
-        self.core.Planes_Tick(C.byref(Player(x=3000, alt=300, facing=-1, mode=0, turn=0, speed=1000)), 1, 1, C.byref(self.score), C.byref(self.kills))
+        self.core.Planes_Tick(C.byref(Player(engine=self.engine, sortie=self.sortie, x=3000, alt=300, facing=-1, mode=0, turn=0, speed=1000)), 1, 1, C.byref(self.score), C.byref(self.kills))
         self.assertEqual(self.state.timer, 750)   # no count-down while firing
         self.state.timer = 1
-        self.core.Planes_Tick(C.byref(Player(x=3000, alt=300, facing=-1, mode=0, turn=0, speed=1000)), 0, 1, C.byref(self.score), C.byref(self.kills))
+        self.core.Planes_Tick(C.byref(Player(engine=self.engine, sortie=self.sortie, x=3000, alt=300, facing=-1, mode=0, turn=0, speed=1000)), 0, 1, C.byref(self.score), C.byref(self.kills))
         p = self.state.plane[3]
         self.assertEqual((p.state, p.beh, p.facing, p.alt), (2, 4, 1, 50))
         self.assertEqual(p.x, s16(3000 - 6144) + 9)   # it moved on its first tick
         self.assertEqual(self.core.Planes_Spawn(1, 0, 0, 1), 0)   # one armed torpedo plane at a time
         self.core.Planes_NewGame()
         self.state.timer = 1
-        self.core.Planes_Tick(C.byref(Player(x=9000, alt=300, facing=-1, mode=0, turn=0, speed=1000)), 0, 1, C.byref(self.score), C.byref(self.kills))
+        self.core.Planes_Tick(C.byref(Player(engine=self.engine, sortie=self.sortie, x=9000, alt=300, facing=-1, mode=0, turn=0, speed=1000)), 0, 1, C.byref(self.score), C.byref(self.kills))
         self.assertEqual((self.state.plane[3].facing, self.state.plane[3].x), (-1, s16(9000 + 6144) - 9))
         self.core.Planes_NewGame()
         self.state.timer = 1
-        self.core.Planes_Tick(C.byref(Player(x=9000, alt=300, facing=-1, mode=0, turn=0, speed=1000)), 0, 0, C.byref(self.score), C.byref(self.kills))
+        self.core.Planes_Tick(C.byref(Player(engine=self.engine, sortie=self.sortie, x=9000, alt=300, facing=-1, mode=0, turn=0, speed=1000)), 0, 0, C.byref(self.score), C.byref(self.kills))
         self.assertEqual((self.state.timer, self.state.live), (1, 0))   # no carrier: no count-down
 
     def test_torpedo_plane_descends_and_drops_short_of_the_carrier(self):
         self.core.Planes_Spawn(1, L - 1500, 0, 1)
         p = self.state.plane[3]
-        P = Player(x=0, alt=300, facing=-1, mode=0, turn=0, speed=1000)
+        P = Player(engine=self.engine, sortie=self.sortie, x=0, alt=300, facing=-1, mode=0, turn=0, speed=1000)
         drop = None
         for _ in range(300):
             self.core.Planes_Tick(C.byref(P), 0, 1, C.byref(self.score), C.byref(self.kills))

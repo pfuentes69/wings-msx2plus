@@ -1755,7 +1755,7 @@
         "streamed": true
       }
     ],
-    "pixel_bytes": 39109,
+    "pixel_bytes": 39697,
     "reference_pivot": [
       25,
       16
@@ -4364,6 +4364,8 @@
       111,
       111,
       111,
+      111,
+      111,
       112,
       113,
       114,
@@ -4645,6 +4647,32 @@
         "data_offset": 38899,
         "bytes": 210,
         "packed_sha256": "11cf5001bd4afc963323f13cffbf3ac9504c9fb3f47f78fc285a6fbcf5b4d12b"
+      },
+      {
+        "name": "jp21",
+        "source_sha256": "8c563d72eeac00d533898527e6ba8aebac4876c59744a61173a444a2dafbec6b",
+        "dx": -20,
+        "dy": -13,
+        "width": 42,
+        "height": 14,
+        "atlas_x": 0,
+        "atlas_y": 0,
+        "data_offset": 39109,
+        "bytes": 294,
+        "packed_sha256": "863b24dd9d699e9cc04438fc719a94d99ab22d88b1b7c506e21a75367a699d00"
+      },
+      {
+        "name": "jp22",
+        "source_sha256": "3eef8959e462d97614e4eaf30a74ab6723dbe73226c52300bf430b18937c453a",
+        "dx": -22,
+        "dy": -13,
+        "width": 42,
+        "height": 14,
+        "atlas_x": 0,
+        "atlas_y": 0,
+        "data_offset": 39403,
+        "bytes": 294,
+        "packed_sha256": "561162737f74e13641cf76ddbc2bc825ceafe9709a05f19646eead88645deae5"
       }
     ],
     "gun_flash": [

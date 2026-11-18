@@ -1152,6 +1152,405 @@ icons(x, y, n): repeat n: blit_masked(dash[116] zero, x - ox, y - oy); x += 13
 | 0xe244 / 0xe3e8 | no sound calls | confirmed |
 | Player gun | machinegun loop while the fire flag is set (0x21c0); no hit sound | confirmed |
 
+### Behaviour dispatch (0xe728, state 2)
+
+```
+smoke (above)
+switch (e.beh & ~8) {          // bclr #3: the turning flag is ignored here
+case 1:  fighter(e);  break    // 0xd9c6: so behaviour 9 runs the same code
+case 2:  attack(e);   break    // 0xdccc: behaviour 10 too
+case 4:  torpedo(e);  break    // 0xdea4
+case 16: afterDrop(e); break   // 0xe17a
+}
+// back in 0xe7d6: if (!(e.beh & 4) && e.talt < 33) e.talt = 33
+```
+
+The AI runs every tick, also during a turn. 0xd796 (and turn()) run after it
+in the same tick. **Confirmed.**
+
+### 0xd9c6: fighter, behaviour 1 (and 9)
+
+`fleeCount` is `-$3198`. It is cleared once per tick at the start of 0xe7d6
+(0xe7dc) and incremented only in case 3 below, in slot order.
+
+```
+switch (e.rel) {
+case 1:                                            // on the player's tail
+    if (e.dist < 160) {
+        if (ptf > 0 && ptf < 6 && P.mode != 1 && e.t18 == 0)
+            e.t18 = (int16)(e.dist * 100) / e.speed + e.rank * 2
+        else if (e.t18 == 0 && e.rank == 1)
+            e.beh = (e.beh & 8) | 2                // attack; keeps a running turn
+        else {
+            e.firing = 0                           // +12
+            e.talt = P.alt
+            e.tspeed = pspeed - e.rank * 70
+        }
+    } else if (e.frame == 0) {
+        e.tspeed = e.dist + pspeed
+        if (e.rank == 1) e.tspeed += 80
+        else             e.tspeed -= e.rank * 80
+    }
+    break
+case 2:                                            // opposite heading, plane right of player
+    if (P.mode == 0 && ptf > 0 && ptf < 11) e.tspeed = 900
+    else e.beh |= 8
+    break
+case 3:                                            // the player on its tail
+    if (e.dist >= 1536) { e.beh |= 8;  break }
+    e.t10 -= 1
+    if (e.t10 <= 0 || (ptf > 0 && ptf < 6) || P.mode == 1) {
+        e.beh |= 8;  e.t10 = 0;  break
+    }
+    if (e.hit == 1) {
+        e.hit = 0
+        if (e.t18 == 0) e.t18 = rand(6) + 8
+        e.t10 = 550
+        break
+    }
+    e.tspeed = pspeed - e.dist / 4                 // divs
+    e.tspeed += fleeCount++ * 70
+    if (e.alt == e.talt) e.talt = rand(7) * 10 + 35
+    break
+case 4:                                            // opposite heading, plane left of player
+    if (P.mode != 0) break
+    e.tspeed = 900
+    e.talt = (e.alt >= P.alt) ? P.alt + 32 : P.alt - 32
+    e.t18 = (int16)(e.dist * 100) / (e.speed + P.hstep)    // P.hstep = player +16
+    e.beh |= 8
+    break
+}                                                  // rel 0: nothing
+```
+
+- `(int16)(e.dist * 100)`: the code does `muls.w #100` then `ext.l`, so
+  only the low word of the product is kept. Above dist 327 it wraps, and
+  t18 becomes garbage, possibly negative. A negative t18 expires on the next
+  0xd796 (−1, ≤ 0: turn flag, t18 = 0). The same truncation is in turn()
+  (cases 1 and 4 at frame 20). Case 1 here only runs with dist < 160, so it
+  is exact. **Confirmed** (quirk).
+- P.hstep is the player's horizontal step in px/tick (10..14), added to a
+  speed in hundredths. The units are mixed; the code does exactly this.
+- **Rank** is used here for the speed offsets (−70 × rank, ±80), for the
+  +2 × rank delay in t18, and in the attack test (rank 1 only).
+- **Behaviour 9** (turning): the same code runs. For example, case 1 can
+  switch a turning fighter to behaviour 10 (attack + turning). The turn then
+  continues in turn(), and 0xdccc handles the attack. **Confirmed.**
+
+### 0xdccc: attack, behaviour 2 (and 10)
+
+```
+if (e.rel != 1) { e.beh = 1;  return }             // clears the turn flag; +12 not cleared
+if (ptf != 0 || P.mode == 1) {
+    e.beh = 9                                       // turn
+    e.t18 = (int16)e.dist / (int16)(e.speed / 100)
+} else if (e.dist > 130) e.tspeed = pspeed + 50
+else if (e.dist < 130)   e.tspeed = pspeed - 50     // 130 exactly: unchanged
+e.talt = P.alt
+da = P.alt - e.alt;  if (da < 0) da = -da
+armed = (P.mode == 0 && e.beh == 2)
+same  = (P.facing == e.facing)
+dx    = e.x - P.x
+if (armed && e.rank == 1 && da < 8 && e.frame == 0 && e.dist < 160
+    && same && (int16)(dx ^ P.facing) < 0) {
+    e.firing = 1                                    // flash and gun sound
+    if (debugInvuln(-$408c) == 0 && e.alt == P.alt && tickParity(-$3cb8) != 0) {
+        P.hits -= 1                                 // +10
+        if (P.hits <= 0) {
+            P.oil  -= 8                             // +12
+            P.fuel -= rand(32)                      // +e, may go below 0
+            P.hits  = rand(5) + 6                   // 6..10
+        }
+    }
+} else e.firing = 0
+```
+
+- **Where +12 is cleared:** only here (the else) and in the fighter's case 1
+  near branch. Spawning does not clear it. Three paths leave a stale 1:
+  - a fighter that leaves the attack because its relation changed (the
+    first line), or that goes to cases 2..4;
+  - a plane shot down while firing;
+  - a slot reused after one of those.
+
+  The stale flag keeps the muzzle flash drawn and, for states 1..2, the
+  enemy gun sound on. A falling plane shot while firing keeps flashing in
+  the near view until the slot is freed. **Confirmed** (quirk).
+- `e.beh = 1` on a relation change also clears a running turn. If that
+  happens mid-turn (a behaviour-10 plane that flips at 14), the frame stays
+  where it was, with the turn factor of that frame (0.05 at 15), until the
+  fighter code sets the turn flag again, usually on the next tick
+  (cases 2 or 4). **Confirmed** control flow.
+- **Tick parity** `-$3cb8`: at 0x13c6 in every unpaused logic tick,
+  `-$3cb8 = (-$3cb8 + 1) & 1`, before the input read and the flight
+  handler. Damage lands only on ticks where it is 1.
+- **Debug flag** `-$408c`: toggled by a debug key (0xd184, which also
+  refills the oil), 0 in normal play.
+- 0xde52 is the damage block above, not a separate routine.
+
+### Launches: 0x1510 (carrier deck roll) and 0x1574 (ship lists)
+
+The cooldown `-$3cb6` counts down at 0x143e: `-$3cb6 -= 1; if (< 0) = 0`.
+This runs every tick after the gun-strike code and before 0x1622 and 0x1510.
+A launch sets it to 100, so launches are at least 100 ticks apart. It is
+shared by all ships and airstrips.
+
+Plane list (64 bytes, built by 0x252c from per-map bytes and a template; see
+item 7):
+- +0 count;
+- +2 max airborne;
+- +4 lo and +6 hi, both in px;
+- 7 entries of 8 bytes at +8: state (0x8000 parked, 1 rolling), x in px,
+  altitude, direction.
+
+0x252c receives Hoff = ship record +0, a map offset, and uses Hpx =
+Hoff × 4. It writes lo = Hpx + tlo, hi = Hpx + thi and each entry's x =
+Hpx + tx. The altitude and direction are copied as they are.
+
+```
+// 0x1510, every tick
+L = list[JapCarrier]                                   // -$5e68
+if (L.count != 0) {
+    a = &L.entry[L.count - 1]
+    if (a.state > 0) {                                 // rolling (1); 0x8000 is negative
+        v = rollV(-$3cb4);  v = v + 8 - (v >> 4);  rollV = v      // lsr, unsigned
+        a.x -= v >> 4
+        if (JapCarrier.Hoff * 4 > a.x) {               // strict: x < Hpx
+            L.count -= 1
+            spawn(0, a.x, a.alt, -1)
+        }
+    }
+}
+if (cooldown != 0) return
+// 0x1574
+for (k = 0; k < 5; k++) {                              // destroyer, US carrier, battleship, cruiser, Jap. carrier
+    s = ship[k];  L = list[k]                          // -$5aa4 order; lists -$5f68 + 64k
+    if (s.present(+4) == 0 || s.bonus(+12) == 0 || s.hull(+c) <= 0) continue
+    if (px(-$4194) < L.lo || px > L.hi) continue       // inclusive window
+    if (airborne(-$5e28) >= L.max) continue            // the global count against this list's max
+    if (L.count == 0) continue
+    if (k == 4) {                                      // Japanese carrier: start the deck roll
+        a = &L.entry[L.count - 1]
+        a.state = 1;  rollV = 0
+        a.x = s.Hoff * 4 + 380;  a.alt = 33
+        cooldown = 100
+        return
+    }
+    L.count -= 1
+    a = &L.entry[L.count]
+    spawn(0, a.x, a.alt, -1)                           // always heading left; a.dir is for drawing only
+    cooldown = 100
+}
+```
+
+- `-$4194` is the player's x copied from `-$5f84` at 0x1288 (in 0x1274,
+  called earlier in the same tick), so it is this tick's x.
+- The loop does not stop after a launch: two ships whose windows both
+  contain the player can each launch in the same tick. The second compares
+  against the count already raised by the first. **Confirmed.**
+- The carrier roll takes about 63 ticks from H + 380 to the bow
+  (v → 128, 8 px/tick); simulated from the formula. Below the 100-tick
+  cooldown, so a roll is not restarted. **Inferred** (arithmetic).
+- **Afloat test:** present ≠ 0, bonus ≠ 0 (this excludes the US carrier),
+  hull +c > 0. The roll in 0x1510 has no afloat test. **Confirmed.**
+
+**Parked planes (0x391e, render loop, using the render copy `-$60c6` of the
+lists made at 0x102c):** for each present ship, entries 0 .. count − 1 with
+state ≠ 0 are drawn. So a launched entry disappears, because the count
+shrinks. A rolling carrier entry is still inside the count and is drawn
+moving. **Confirmed.**
+
+```
+sink = s.renderSink(+1a)
+if (!far) sink += bob(-$41a8)          // and for the Japanese carrier, clip bottom = min(clip, 0x8e + sink)
+else clipBottom = 0x96
+for (i = 0; i < L.count; i++) if (L.entry[i].state != 0)
+    drawWorld(L.entry[i].x, L.entry[i].alt - sink,
+              far ? (dir < 0 ? zpn0 : zpnn) : (dir < 0 ? jp21 : jp22))   // 0x5174
+drawWorld(x, alt, s):                  // 0x5174
+    sx = x - camX;  sy = base + 11 - alt
+    if (far) { sx >>= 3;  sy >>= 3 }
+    if (sx < -128 || sx > 448) return
+    blit(s, sx - s.ox, sy - s.oy)
+```
+
+jp21 is 48 × 14 with origin (26, 13); jp22 is 48 × 14 with origin (22, 13).
+
+### 0x1622 and 0x2c84: airstrips
+
+Zone record (20 bytes, 4 zones at `-$5d04`): +0 start, +2 end (px), +4 max,
++6 count, +8 rolling x (0 = none), +c roll speed, +e direction, +10 / +12
+render copies of +6 / +8. At each map load, 0x2adc first clears all 80
+bytes (0x3554). Later 0x2d5a → 0x2c84 clears +0/+2 of every zone again and
+fills the zones from the map, as in "Airstrips" above.
+
+```
+// 0x2c84 (per map): scan the map words in order; x = column * 8
+n = 0;  z = 0
+for each column c:
+    id = (word >> 2) & 0x1ff
+    if (id == 0x114 || id == 0x115) {
+        n += 1
+        if (n & 1) zone[z].start = x
+        else {
+            zone[z].end = x
+            zone[z].dir = (id == 0x114) ? -1 : 1
+            zone[z].count = tbl[map*4 + 2z];  zone[z].max = tbl[map*4 + 2z + 1]   // -$7b0a
+            // +4/+6: the words are cleared, then the low bytes come from the table.
+            // rollX etc. are 0 because 0x2adc cleared all 80 bytes (0x3554) before this.
+            z += 1
+        }
+    }
+
+// 0x1622, every tick (after the cooldown step)
+for each zone z (0..3):                                 // the roll
+    if (z.rollX == 0) continue
+    z.rollV = min(z.rollV + 1, 56)
+    step = z.rollV >> 3                                 // 0..7
+    if (z.dir == -1) { z.rollX -= step;  if (z.rollX >= z.start) continue }
+    else             { z.rollX += step;  if (z.rollX <= z.end)   continue }
+    spawn(0, z.rollX, 0, z.dir)                         // altitude 0
+    z.rollX = 0
+if (cooldown != 0) return
+for each zone z (0..3):                                 // a new roll
+    if (px < z.start - 480 || px > z.end + 480) continue    // inclusive
+    if (airborne >= z.max) return                       // NOTE: ends the scan
+    if (z.count <= 0) return                            // NOTE: ends the scan
+    z.count -= 1;  cooldown = 100
+    off = z.count << 6                                  // 64 px per parking place
+    z.rollX = (z.dir == -1) ? z.end - 32 - off : z.start + 32 + off
+    z.rollV = 0
+```
+
+- The take-off is at the strip's far end (x < start heading west,
+  x > end heading east), at altitude 0. The plane then climbs toward the
+  33 floor at 1..3 px/tick.
+- The roll on a 344 px strip from the nearest place (312 px) takes about
+  76 ticks: no step for 7 ticks, then 1 px/tick, and so on, up to 7 px/tick
+  from tick 56. That is less than the cooldown. **Inferred** (arithmetic).
+- An unused zone has start = end = 0. If the player is within 480 px of x 0
+  it reaches `airborne >= 0`, which returns. Unused zones come after the
+  real ones, so this is harmless. **Confirmed.**
+- A rolling plane is not counted as airborne until it takes off.
+
+**Drawing (0x3a18):**
+
+```
+for each zone z with z.end != 0:
+    n = z.renderCount;  y = base
+    if (z.dir == -1) { s = jp21;  x = z.end;   d = 32 }
+    else             { s = jp22;  x = z.start; d = -32 }
+    x -= camX
+    if (far) { x >>= 3;  d >>= 3;  y = (y >> 3) - 1;  s = (z.dir == -1) ? zpn0 : zpnn }
+    x -= d;  d *= 2;  x -= s.ox;  y -= s.oy
+    repeat n: { blit(s, x, y);  x -= d }        // places end-32, end-96, ... (west)
+    if (z.renderRollX != 0) {
+        rx = z.renderRollX - camX;  if (far) rx >>= 3
+        blit(s, rx - s.ox, y)                    // y already origin-adjusted
+    }
+```
+
+The parked planes stand at altitude 0 with the anchor exactly on the base
+line (no +11 as in 0x5174). Places are 64 px apart (8 px far). The rolling
+plane leaves place `count` (after the decrement), which is no longer drawn.
+**Confirmed.**
+
+### Muzzle flash (0x0e88, render loop, right after each plane is drawn)
+
+```
+// (sx, sy) = the plane's anchor: the code restores it after blitting the plane
+if (e.firing == 0 || far) skip
+e.flashCount(+2c) += 1                // only increment; never reset except at a new game (0xe608)
+k = e.flashCount & 3
+if ((k & 1) == 0) skip                // draws on k = 1 and 3
+idx = 16 + (k >> 1)                   // 16 or 17
+if (e.facing < 0) idx += 2            // 18 or 19
+s = japplaneShapes(-$69b8)[idx]       // 16 fc10, 17 fd10, 18 fc1a, 19 fd1a
+blit2(s, sx - s.ox, sy - s.oy)        // 0x10e24, another blit routine than the plane's
+```
+
+- The sequence per frame is off, fc, off, fd, …. The phase carries across
+  frames and slots.
+
+| Shape | Size | Origin | Relative to the anchor |
+| --- | --- | --- | --- |
+| fc10 | 16 × 3 | (−7, 0) | x + 7 .. x + 22, rows y .. y + 2 |
+| fd10 | 16 × 4 | (−7, 1) | x + 7 .. x + 22, rows y − 1 .. y + 2 |
+| fc1a | 32 × 3 | (25, 0) | x − 25 .. x + 6, rows y .. y + 2 |
+| fd1a | 32 × 4 | (25, 1) | x − 25 .. x + 6, rows y − 1 .. y + 2 |
+
+  For comparison, jp10 / jp1a span x − 25 .. x + 22 and rows y − 6 .. y + 4.
+  **Confirmed** (code and header data). The visual reading is **inferred**.
+- The drawing reads +12 for any state. The sound reads it only for states
+  1..2.
+
+### Enemy sounds (0x21c6 inside 0x2132, logic tick right after 0xe7d6)
+
+0x2132 returns at once while paused (`-$5aa8`) or when `-$5b07` is set
+(probably sound off).
+
+```
+nearest = 0xffff;  any = 0
+for each slot e:
+    if (e.state == 0 || e.state > 2) continue           // states 1..2 only
+    d = |e.x - P.x| + |e.alt - P.alt|                    // word; P = -$5f84 / -$5f86
+    if ((uint16)d < (uint16)nearest) nearest = d
+    any |= e.firing
+engineOn(-$3c4e) = 0
+v = (uint16)nearest >> 4                                 // 0x22ce
+vol = (v > 44) ? 0 : (v <= 5) ? 64 - 4*v : 64 - (v + 20)
+if (vol != 0) { engineVol(-$3c42) = vol;  engineOn = 0xff }
+gunOn(-$3c66) = any                                      // any nonzero = on
+```
+
+- Volume is 64, 60, 56, 52, 48, 44 for v = 0..5, then 38 at v = 6 down to
+  1 at v = 43, and silent from v = 44 (d ≥ 704). It is the nearest plane
+  only; the volume does not change while silent. **Confirmed.**
+- **Channel set-up** (0x1f76..0x1ff4, at sound load):
+  - Gun: record at `-$3c66`, sample `machinegun` (`-$4168`, length
+    `-$5a8c`), period 160, volume 57, loop −1. Fixed volume, so it does not
+    fall off with distance.
+  - Engine: record at `-$3c4e`, sample `Engine` (`-$41a6` / `-$5a84`),
+    period 330, loop −1. Its volume is set as above.
+  - The player's gun uses `-$3c96` (period 200, volume 64), and the
+    player's engine `-$3c7e`.
+
+  How the interrupt-side mixer starts and stops a channel from these flag
+  words was not traced. They are taken as "play while nonzero" (**inferred**).
+
+### Map j's battleship list as the port will read it
+
+Template `-$7a32` (words): lo −200, hi 620, then 5 entries
+(state, x, altitude, direction):
+
+| Entry | State | x (from Hpx) | Altitude | Direction |
+| --- | --- | --- | --- | --- |
+| 0 | 0x8000 | 233 | 56 | −1 |
+| 1 | 0x8000 | 507 | 47 | +1 |
+| 2 | 0x8000 | 746 | 32 | +1 |
+| 3 | 0x8000 | 194 | 56 | +1 |
+| 4 | 0x8000 | 546 | 47 | −1 |
+| 5 (read past the end) | −200 (0xff38) | 320 | −32768 | 29 |
+
+- The per-map bytes `-$7ab0`[map × 2]: map j (9) has count **6**, max **2**.
+  The others: k 5/2, l 4/2, m 5/2, n 5/3, o 5/2.
+- The template that follows is the cruiser's `-$7a0e`: lo −200, hi 320,
+  then (0x8000, 29, 62, +1), …. So entry 5 is made of the cruiser's lo, hi,
+  first state word and first x. **Confirmed** (data dump).
+- On map j, Hoff = anchor offset − 0x20 for anchor column 911: Hpx =
+  911 × 8 − 128 = 7160. The window is 6960..7780 px. The entries are at
+  7393, 7667, 7906, 7354, 7706 and 7480 (the ghost). **Confirmed**
+  arithmetic, matching docs/maps.md (battleship x 7160..7935).
+- Order: launches take entry count − 1 first, so the ghost (entry 5)
+  launches first, as a fighter at (7480, −32768) heading left. Then come
+  entries 4, 3, 2, 1, 0.
+- **Drawing before launch:** entry 5 has state −200 ≠ 0, so 0x391e draws
+  it with jp22 (direction 29 > 0) at altitude −32768 − sink. That wraps
+  (word arithmetic) to about +32764, far off screen. **Confirmed**
+  arithmetic; invisible (**inferred**).
+- To reproduce it, the port can append that entry to the j battleship
+  list. To skip it, use count 5. The ghost's effects (above) are then lost:
+  it holds one of the 2 airborne places for about 8 minutes and can take
+  rank 1.
+
 ## Open questions
 
 - The render-loop rate, as in the other notes: it sets how often the muzzle

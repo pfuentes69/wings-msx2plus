@@ -7,7 +7,7 @@
 /* Drawing the engine smoke and the dugout guns (banked, segment 22). Puffs are drawn behind the
  * plane and erased by repainting the terrain tiles under them (sky above
  * the terrain rows): no VRAM backup is needed. */
-#define SMOKE_DRAWN_MAX 74   /* 8 puffs, 3 dugout guns, 16 soldiers, 15 rockets, 16 ship guns, 8 splashes, 4 planes, 4 wrecks */
+#define SMOKE_DRAWN_MAX 80   /* 8 puffs, 3 dugout guns, 16 soldiers, 15 rockets, 16 ship guns, 8 splashes, 4 planes and flashes, wrecks, parked */
 typedef struct SmokeDrawn { u16 x; i16 row; u8 frame; } SmokeDrawn;
 /* What each page shows: Smoke_Restore erases it, and the verification
  * reads the displayed page's list (the pixel oracle). */
@@ -17,7 +17,11 @@ extern u8 g_SmokeDrawnCount[2];
 /* Erase the puffs drawn on this page (skipped on a full rebuild). Call
  * before the frame's new terrain columns. Returns 1 when the elevator's
  * columns were repainted (the elevator overlay must then redraw). */
+/* smoke_erase.c (segment 30). */
 u8 Smoke_Restore(u8 page, u8 rebuilt, u16 camera) WINGS_BANKED;
+/* The clip each page was drawn with (Smoke_Draw), for Smoke_Restore. */
+typedef struct SmokeClip { i16 left, right, top, limit; i8 heave; } SmokeClip;
+extern SmokeClip g_SmokeClip[2];
 /* Forget what both pages show (boot: RAM is not cleared; new plane). */
 void Smoke_ClearPages(void) WINGS_BANKED;
 /* Copy the smoke-path frames into their atlas places (boot). */

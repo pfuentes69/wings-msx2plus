@@ -7,6 +7,7 @@
 #include "mission.h"
 #include "rockets.h"
 extern CombatState g_Combat;   /* world_flight.c */
+extern uint8_t g_PlanesHoldTurn;   /* core/flight_model.c */
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_PLANES)
 
 /* Enemy planes, from the pseudo-code in docs/research/amiga-enemy-planes.md
@@ -31,7 +32,9 @@ static const uint8_t s_TurnFactor[PLANE_TURN_FRAMES] = {
 /* Altitude step by |target - altitude| / 20 (-$4e06). */
 static const uint8_t s_AltStep[6] = {1, 2, 2, 3, 4, 5};
 
-static uint16_t s_Random;   /* seeded by Planes_NewGame: no initialisers in a banked module */
+/* The planes' random source, shared with core/fighters.c: seeded by
+ * Planes_NewGame (no initialisers in a banked module). */
+uint16_t g_PlanesRandom;
 static uint8_t s_SeaSlide;  /* -$4368: one counter for all planes sinking */
 /* Shape index (0..27 facing left, 28..55 right) to the plane frames
  * (convert_hellcat.py PLANE_NEAR: jp10..jp1f 0..15, jt10 16, jt1a 17,
@@ -48,7 +51,7 @@ static const uint8_t s_PlaneFar[56] = {
 /* rand(n) (0xcac8): 0..n-1. The original's source is the beam position. */
 static uint8_t Rand(uint8_t n)
 {
-    return (uint8_t)(Xorshift(&s_Random) % n);
+    return (uint8_t)(Xorshift(&g_PlanesRandom) % n);
 }
 
 void Planes_Reset(void) WINGS_BANKED
@@ -59,6 +62,10 @@ void Planes_Reset(void) WINGS_BANKED
     g_Planes.live = 0;
     g_Planes.timer = 0;
     g_Planes.wrecks = 0;   /* 0x35c0: per mission */
+    Fighters_Reset();
+    g_Planes.firing = 0;
+    g_Planes.nearest = 65535u;
+    g_PlanesHoldTurn = 0;
 }
 
 /* 0xcae0: a puff of the given type at (x + 0..7, altitude + 6), at least 16
@@ -66,7 +73,7 @@ void Planes_Reset(void) WINGS_BANKED
  * stages are the original's types; 6 (fire) is the largest it has. */
 static void Effect(uint8_t type, int16_t x, int16_t altitude)
 {
-    x += Xorshift(&s_Random) & 7;
+    x += Xorshift(&g_PlanesRandom) & 7;
     altitude += 6;
     if (altitude < 16) altitude = 16;
     if (type > SMOKE_STAGE_FIRE) type = SMOKE_STAGE_FIRE;
@@ -80,7 +87,7 @@ void Planes_NewGame(void) WINGS_BANKED
     uint8_t* p = (uint8_t*)&g_Planes;
     uint16_t n;
     for (n = 0; n < sizeof g_Planes; ++n) p[n] = 0;
-    s_Random = 0x3c5au;
+    g_PlanesRandom = 0x3c5au;
     s_SeaSlide = 0;
 }
 
@@ -328,7 +335,7 @@ static void Dropped(Plane* e)
 static void Damage(Plane* e)
 {
     int16_t p = 128 - e->health;
-    if (p > (int16_t)(Xorshift(&s_Random) & 63)) Effect((uint8_t)((p >> 3) + 1), e->x, e->alt + 11);
+    if (p > (int16_t)(Xorshift(&g_PlanesRandom) & 63)) Effect((uint8_t)((p >> 3) + 1), e->x, e->alt + 11);
 }
 
 /* 0x46c6 / 0x46dc for a plane sliding fast: a rocket-type impact on the
@@ -356,7 +363,7 @@ static void ShotDown(Plane* e, uint32_t* score, uint16_t* kills)
 {
     int16_t p = 128 - e->health;
     uint8_t surface;
-    if (p > (int16_t)(Xorshift(&s_Random) & 63)) Effect((uint8_t)((p >> 3) + 1), e->x - 16, e->alt + 10);
+    if (p > (int16_t)(Xorshift(&g_PlanesRandom) & 63)) Effect((uint8_t)((p >> 3) + 1), e->x - 16, e->alt + 10);
     if (e->alt != e->talt) return;
     surface = e->x <= 0 || e->x >= (int16_t)(WINGS_WORLD_WIDTH - 8) ? MISSION_SEA : Mission_Surface((uint16_t)e->x);
     if (surface == MISSION_SEA && e->speed < 300)
@@ -444,7 +451,7 @@ static void Timer(const PlanesPlayer* p, uint8_t fire, uint8_t carrier)
     if (!g_Planes.timer || !carrier) return;
     if (--g_Planes.timer) return;
     if (d <= 0x1a00) return;
-    if (p->x < CARRIER_L || (p->x <= CARRIER_R && (Xorshift(&s_Random) & 0x8000u)))
+    if (p->x < CARRIER_L || (p->x <= CARRIER_R && (Xorshift(&g_PlanesRandom) & 0x8000u)))
         Planes_Spawn(PLANE_KIND_TORPEDO, p->x - PLANES_SPAWN_DISTANCE, 0, 1);
     else
         Planes_Spawn(PLANE_KIND_TORPEDO, p->x + PLANES_SPAWN_DISTANCE, 0, -1);
@@ -456,8 +463,9 @@ void Planes_Tick(const PlanesPlayer* player, uint8_t fire, uint8_t carrier,
     uint8_t i;
     Plane* e;
     g_Planes.drop = 0;
+    g_PlanesParity ^= 1;   /* -$3cb8, every tick */
     Timer(player, fire, carrier);
-    if (!g_Planes.live) return;
+    g_PlanesFlee = 0;
     for (i = 0, e = g_Planes.plane; i < PLANES_MAX; ++i, ++e)
     {
         if (e->state == PLANE_FREE) continue;
@@ -466,8 +474,13 @@ void Planes_Tick(const PlanesPlayer* player, uint8_t fire, uint8_t carrier,
         if (e->state == PLANE_FLYING)
         {
             Damage(e);
-            if (e->beh & PLANE_ARMED) TorpedoPlane(e, player);
-            else if (e->beh & PLANE_DROPPED) Dropped(e);
+            switch (e->beh & ~PLANE_TURNING)
+            {
+            case PLANE_FIGHTER:
+            case PLANE_ATTACK: Fighters_Behave(e, player); break;
+            case PLANE_ARMED: TorpedoPlane(e, player); break;
+            case PLANE_DROPPED: Dropped(e); break;
+            }
             if (e->state == PLANE_FREE) continue;
             Speed(e);
         }
@@ -484,4 +497,17 @@ void Planes_Tick(const PlanesPlayer* player, uint8_t fire, uint8_t carrier,
         }
     }
     if (player->gun && g_Planes.live) Gun(player, score);
+    /* The sounds' inputs (0x21c6) and the player's turn hold (0xaa6e). */
+    g_Planes.firing = 0; g_Planes.nearest = 65535u; g_PlanesHoldTurn = 0;
+    for (i = 0, e = g_Planes.plane; i < PLANES_MAX; ++i, ++e)
+    {
+        uint16_t d;
+        if (!e->state || e->state > PLANE_FLYING) continue;
+        d = (uint16_t)((e->x > player->x ? e->x - player->x : player->x - e->x) +
+                       (e->alt > player->alt ? e->alt - player->alt : player->alt - e->alt));
+        if (d < g_Planes.nearest) g_Planes.nearest = d;
+        g_Planes.firing |= e->firing;
+        if (e->beh == PLANE_FIGHTER && e->rel == 3 && e->frame == 13) g_PlanesHoldTurn = 1;
+    }
+    Fighters_Launch(player->x);
 }

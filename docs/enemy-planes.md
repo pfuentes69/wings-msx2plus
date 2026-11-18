@@ -10,8 +10,8 @@ DEF-01/02/03, OBJ-03, HUD-07). The original's behaviour comes from
 | 1 | The plane core: 4 slots, spawning, speed, motion, turns, the shape index, drawing in both views; the torpedo-plane timer and the torpedo plane's flight (cruise, descent, the drop's state change, turns) | Done |
 | 2 | The torpedo attack: the enemy torpedo (the player's torpedo code in a second slot), hits on the US carrier (4), the game over when it is sunk, the pilot-window arrow, the player's weapons destroying the torpedo | Done |
 | 3 | Shooting planes: the gun's hit test, 19 hits, +350, fall, crash, wreck, the kill counter and icons on the dashboard. Then map a is the original's first mission, with a scripted check | Done |
-| 4 | Fighters: the AI (0xd9c6), the attack and its hit-scan fire (0xdccc, 0xde52), the muzzle flash, launches from ships (map j) and airstrips, the sounds | |
-| 5 | Scripted verification of the fighters on map j | |
+| 4 | Fighters: the AI (0xd9c6), the attack and its hit-scan fire (0xdccc, 0xde52), the muzzle flash, launches from ships (map j), the gun sound. Airstrips, the Japanese carrier's deck roll and the enemy engine sound: not yet | Done |
+| 5 | Scripted verification of the fighters on map j | Done |
 
 Map a, the original's first mission, has no fighters. A torpedo plane
 attacks the carrier on every map, so steps 1 to 3 complete map a.
@@ -191,6 +191,88 @@ From the pseudo-code for 0xb682, 0xe728, 0xe244, 0xe3e8, 0x0da6 and 0xf178:
   Placements are re-checked after writing, because a Tcl write can land
   inside the game's own update of the record. Missed deadlines: 22 NTSC,
   4 PAL (limit 30).
+
+## Fighters (steps 4 and 5)
+
+`src/core/fighters.c` (segment 48, split from `planes.c` for room) follows
+the pseudo-code for 0xd9c6, 0xdccc / 0xde52 and 0x1574. It shares the
+planes' random source (`g_PlanesRandom`), so the model draws its numbers
+in the same order.
+
+- **The AI** (0xd9c6), by relation to the player:
+  - **On the tail:** closing fast beyond 160 px. Within 160, the nearest
+    (rank 1) attacks, and the others hang back by 70 × rank. If the player
+    starts a turn, they turn where it turned.
+  - **Ahead (fleeing):** it slows as the player falls back (− |dx| / 4, + 70
+    for each fleeing plane before it this tick), weaves between altitudes
+    35..95, and breaks 8..13 ticks after a hit. It turns after 550 ticks,
+    or beyond 1536 px, or when the player turns.
+  - **Opposite headings:** it waits for a turning player, or turns, aiming
+    32 px above or below the player.
+- **The attack** (0xdccc): it holds 130 px behind at the player's altitude.
+  The rank-1 fighter fires when it is level, on the same heading, within
+  160 px and 8 px of altitude. On ticks of odd parity at exactly the
+  player's altitude the player's hit counter runs down. Each run-out costs
+  oil 8 and fuel 0..31 (`Engine_Damage`), and the counter restarts at
+  6..10. The firing flag stays set when a fighter leaves the attack by a
+  relation change or is shot down (the original's quirk).
+- **The player's turn waits** while a fleeing fighter sits at its own turn
+  frame 13 (0xaa6e, `g_PlanesHoldTurn` in `flight_model.c`).
+- **Launches** (0x1574):
+  - Each enemy ship afloat whose window holds the player launches its last
+    parked plane as a fighter heading west.
+  - Launches share a cooldown of 100 ticks, and a ship launches only while
+    fewer fighters fly than its list's maximum.
+  - The lists come from the converter (`mission_planes.h`: windows and
+    entries from H, per-map counts and maxima). Map j: destroyer 4 / 2,
+    battleship 6 / 2.
+  - The battleship's sixth is the original's "ghost": read past its list,
+    at altitude −32768. It launches first and climbs out of sight for
+    minutes. Ranked by x alone, it can hold rank 1 on the player's tail and
+    keep the real fighter from attacking.
+  - The parked planes (`jp21`/`jp22`, streamed like the others) are drawn on
+    the decks, sinking with their ship.
+  - Not yet: airstrips (0x1622, maps d, e, h, i, k..o) and the Japanese
+    carrier's deck roll (0x1510, maps m, o). Neither is on a built map.
+- **The muzzle flash** (0x0e88): `fc`/`fd` on every other drawn frame,
+  close up, from the atlas.
+- **Sound:** an enemy firing drives the gun channel at a fixed level
+  (11/12) with a faster rattle. The enemy engine drone (0x22ce: by the
+  nearest plane's distance, `g_Planes.nearest`) needs a channel of its own
+  and is not played yet.
+- **Room:** `Smoke_Restore` (the erase) moved from segment 22 to 30
+  (`msx/smoke_erase.c`), with its own copy of the box table
+  (`smoke_erase_box.c`; `SMOKE_BOX_TABLE` names it for `Box()`).
+
+### Open question: the MSX view hides attackers
+
+An attacking fighter holds 130 px behind the player. The original's view is
+320 px wide with the player at x 160, so the attacker stays on screen. The
+MSX view is 256 px (248 visible) with the player centred: the attacker and
+its flash fall just past the edge. The player hears the gun and sees the oil
+fall, but cannot see the fighter. Options: move the camera's centre
+toward the tail, or leave it as is.
+
+### Verification (steps 4 and 5)
+
+- `tests/test_planes.py` (12 tests): the model gains the fighter AI, the
+  attack, the parity, the flee count, the turn hold and the sounds' inputs.
+  - Random runs with fighters, compared field for field, hooks included.
+  - A fighter on the tail attacks and its hits cost oil 8 and fuel 0..31.
+  - Map j's launches: the ghost first, then 100 ticks later the next;
+    the battleship's maximum of 2; the parked count.
+- `tools/verify_fighters.py` (map j, `tools/fighters_smoke.tcl`):
+  1. In the destroyer's window two fighters launch, and the parked planes
+     go 10 → 8 and are drawn.
+  2. One attacks from behind: it fires, the gun sound is on, and oil drops
+     128 → 119.
+  3. It is shot down westward, and the kill counts.
+
+  The ships' guns are set destroyed and torpedo planes kept off. During the
+  chase the target's evasions are pinned, and the oil is kept full against
+  the other fighter. Missed deadlines: 27 NTSC, 13 PAL (limit 30).
+- The P0 smoke and the ships gate keep all enemy planes off
+  (`no_enemy_planes`).
 
 ## What it cost
 

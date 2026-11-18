@@ -42,13 +42,16 @@ static const uint8_t s_TurnFactor[26] = {
 /* Pose 1..10 by (climb + 5000) / 500 (-$5526); pose 5 is level. */
 static const uint8_t s_Pose[18] = {10, 10, 9, 9, 8, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1};
 
+/* 0xaa6e: set by the enemy planes (core/planes.c) while a fleeing fighter
+ * is at its own turn frame 13: the player's turn waits. */
+uint8_t g_PlanesHoldTurn;
+
 /* 0xab80: a turn advances one frame every 2 ticks. The heading flips at
  * frame 14 and the turn ends after 25. Past frame 19, unless the new heading
- * is held, the frame mirrors (26 - frame) and the turn unwinds. (The original
- * also pauses turns while a particular weapon object is in flight, 0xaa6e;
- * not reproduced.) */
+ * is held, the frame mirrors (26 - frame) and the turn unwinds. */
 static void TurnAdvance(FlightState* f, uint8_t forward)
 {
+    if (g_PlanesHoldTurn) return;
     if (--f->turn_clock) return;
     f->turn_clock = 2;
     if (++f->turn > 25) { f->turn = 0; return; }

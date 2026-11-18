@@ -20,7 +20,7 @@ set late 60
 set sink_watch 30     ;# sinking step of the snapshot (bonus at 10, gone at 120)
 source [file join $env(WINGS_ROOT) tools smoke_lib.tcl]
 # Enemy planes have their own checks (docs/enemy-planes.md).
-no_torpedo_planes
+no_enemy_planes
 
 # g_Ships (src/core/ships.h, SDCC packs): down[40] +0, guns_down +121,
 # splashes +212, hits +215, hull[5] +218, hull_hits +223, step[4] +225,

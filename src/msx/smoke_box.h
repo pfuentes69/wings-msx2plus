@@ -15,6 +15,9 @@
  *     if (s_BoxBottom > s_Limit) s_BoxBottom = s_Limit;
  *     return s_BoxRight > s_BoxLeft && s_BoxBottom > s_BoxTop;
  * Signed compares flip the sign bits and compare unsigned. A = frame. */
+#ifndef SMOKE_BOX_TABLE
+#define SMOKE_BOX_TABLE _g_SmokeBox   /* the table's symbol (smoke_erase.c has a copy) */
+#endif
 static u8 Box(u8 frame) __naked
 {
     (void)frame;
@@ -23,7 +26,7 @@ static u8 Box(u8 frame) __naked
         ld      h, #0
         add     hl, hl
         add     hl, hl
-        ld      de, #_g_SmokeBox
+        ld      de, #SMOKE_BOX_TABLE
         add     hl, de              ; HL -> dx, dy, width, height
         ld      a, (hl)
         inc     hl

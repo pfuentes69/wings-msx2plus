@@ -185,7 +185,7 @@ proc publishing {} {
     # What the shown page drew (src/msx/smoke_draw.h): count, then x (2),
     # row (2), frame per shape; 27 entries per page.
     set page [value g_DisplayPage]
-    dump $name.smoke [binary format c [smoke_count]][debug read_block memory [expr {$::addr(g_SmokeDrawn)+$page*74*5}] [expr {74*5}]]
+    dump $name.smoke [binary format c [smoke_count]][debug read_block memory [expr {$::addr(g_SmokeDrawn)+$page*80*5}] [expr {80*5}]]
     dump $name.score [debug read_block memory $::addr(g_DisplayScore) 4]
     dump $name.island [debug read_block memory $::addr(g_Island) 315]
     dump $name.band [binary format cs [value g_DisplayBand] [word g_DisplayTicker]]
@@ -426,6 +426,16 @@ proc no_torpedo_planes {} {
         debug watchpoint create -type write_mem -address [expr {$::addr(g_Planes)+$offset}] -command {
             debug write memory [expr {$::addr(g_Planes)+$::PLANES_TIMER}] 0
             debug write memory [expr {$::addr(g_Planes)+$::PLANES_TIMER+1}] 0
+        }
+    }
+}
+# ... and no fighters from the ships' lists either (PlanesState.left[4] at
+# +192: the planes each list has left, held at 0).
+proc no_enemy_planes {} {
+    no_torpedo_planes
+    for {set k 0} {$k < 4} {incr k} {
+        debug watchpoint create -type write_mem -address [expr {$::addr(g_Planes)+192+$k}] -command {
+            for {set j 0} {$j < 4} {incr j} {debug write memory [expr {$::addr(g_Planes)+192+$j}] 0}
         }
     }
 }

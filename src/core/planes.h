@@ -2,6 +2,7 @@
 #define WINGS_PLANES_H
 #include <stdint.h>
 #include "../msx/banking.h"
+#include "engine.h"
 
 /* Enemy planes (docs/research/amiga-enemy-planes.md, docs/enemy-planes.md):
  * 4 slots shared by fighters and torpedo planes, updated once per original
@@ -12,6 +13,9 @@
 
 #define PLANES_MAX 4
 #define PLANES_WRECKS 8
+#define PLANES_LISTS_MAX 4
+#define PLANES_PARKED_MAX 16
+#define PLANES_LAUNCH_COOLDOWN 100
 #define PLANE_KILL_POINTS 350
 /* +0 state */
 #define PLANE_FREE 0
@@ -81,6 +85,9 @@ typedef struct PlanesPlayer {
     int16_t speed;     /* airspeed */
     int16_t climb;     /* the commanded climb (-$5bfc): the gun hits only at 0 */
     uint8_t gun;       /* the fire flag (-$5c94): gun held, flying, not turning */
+    int16_t hstep;     /* the horizontal step, px a tick (P +16) */
+    EngineState* engine;   /* a fighter's fire damages them (0xde52) */
+    SortieState* sortie;
 } PlanesPlayer;
 
 typedef struct PlanesState {
@@ -99,6 +106,22 @@ typedef struct PlanesState {
      * 40, unbounded; the port PLANES_WRECKS. */
     int16_t wreck[PLANES_WRECKS];
     uint8_t wrecks;
+    /* Launches (0x1574): the cooldown all sources share, and each ship
+     * list's planes left (they stand parked on the deck until launched). */
+    int16_t cooldown;
+    uint8_t left[PLANES_LISTS_MAX];
+    /* The parked planes to draw (0x391e), refreshed each tick: x, altitude
+     * less the ship's sink, facing left. */
+    uint8_t parked;
+    int16_t parked_x[PLANES_PARKED_MAX], parked_alt[PLANES_PARKED_MAX];
+    uint8_t parked_left[PLANES_PARKED_MAX];
+    /* The enemy sounds (0x21c6): any plane firing, the nearest one's
+     * distance |dx| + |dalt| (65535: none). */
+    uint8_t firing;
+    uint16_t nearest;
+    /* Ship lists with planes left (or launching): the tick has work even
+     * with no plane in the air. Last: scripts read the fields above. */
+    uint8_t lists;
 } PlanesState;
 extern PlanesState g_Planes;
 
@@ -112,6 +135,13 @@ static inline uint8_t Planes_Arrow(int16_t player_x)
         if (e->state && (e->beh & 7) == PLANE_ARMED) return (int16_t)(player_x - e->x) >= 0 ? 1 : 2;
     return 0;
 }
+
+/* core/fighters.c (banked, segment 48): the lists' reset, a fighter's
+ * behaviour for the tick (0xd9c6 / 0xdccc), and the launches (0x1574). */
+void Fighters_Reset(void) WINGS_BANKED;
+void Fighters_Behave(Plane* e, const PlanesPlayer* p) WINGS_BANKED;
+void Fighters_Launch(int16_t px) WINGS_BANKED;
+extern uint8_t g_PlanesFlee, g_PlanesParity;
 
 /* Banked. A new game: all clear, kills too. A new mission: the slots. */
 void Planes_NewGame(void) WINGS_BANKED;
