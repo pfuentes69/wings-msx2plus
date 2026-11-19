@@ -29,3 +29,9 @@ void Screens_Weapons(u8 page, u16 camera, u8 first, const GameState* game) WINGS
 void Screens_Briefing(u8 page, const GameState* game) WINGS_BANKED;
 void Screens_BriefingColours(u8 on) WINGS_BANKED;
 extern u8 g_BriefIslands, g_BriefShips;
+/* msx/screen_end.c: rank selection full screen (the original's picture),
+ * this line (0..6) highlighted; the highlight moved; its palette over the
+ * whole screen on (1) or the play's and dashboard's back (0). */
+void Screens_Rank(u8 page, u8 line) WINGS_BANKED;
+void Screens_RankLine(u8 page, u8 line) WINGS_BANKED;
+void Screens_RankColours(u8 on) WINGS_BANKED;

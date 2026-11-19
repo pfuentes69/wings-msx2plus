@@ -83,8 +83,8 @@ def main():
         assert (out/f'{name}.rom').read_bytes()==data[:32768],(name,'mapper restoration')
         # Colour 0 (the sky) is set once at boot and never by the ISR.
         terrain_palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
-        # (Black on the briefing: its full-screen frame, src/msx/screen_end.c.)
-        sky=b'\x00\x00' if game[0]==1 else terrain_palette[:2]
+        # (Black on rank selection and the briefing: full screen, src/msx/screen_end.c.)
+        sky=b'\x00\x00' if game[0] in (0,1) else terrain_palette[:2]
         assert (out/f'{name}.palette').read_bytes()[:2]==sky,(name,'sky colour 0',(out/f'{name}.palette').read_bytes()[:2])
         vram=(out/f'{name}.vram').read_bytes()
         # Tile cache: every loaded slot holds its strip's 8 tiles (ROM banks
@@ -161,7 +161,9 @@ def main():
             for col in range(8,256):
                 if spots['pilot_y']<=row<spots['pilot_y']+24 and spots['pilot_x']<=col<spots['pilot_x']+PILOT_WIDTH:continue
                 value=(vram[page*32768+(172+row)*128+col//2]>>(0 if col&1 else 4))&15
-                # The briefing is full screen: its dashboard rows are black.
+                # Rank selection and the briefing are full screen: no dashboard
+                # (the briefing's rows are black, rank selection's picture).
+                if game[0]==0: continue
                 want=0 if game[0]==1 else hud[row*256+col]
                 assert value==want,(name,'dashboard',col,172+row,value,want)
         palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
@@ -176,7 +178,7 @@ def main():
                             rope=(out/f'{name}.wheel').read_bytes()[2],smoke=(out/f'{name}.smoke').read_bytes()[0])
         if not args.headless:
             assert Image.open(out/f'{name}.png').size==(320,240)
-    required={'lift_paused','lift_pause_wait','lift_start','lift_rise_24','lift_rise_16','lift_rise_8','lift_left_down_8','lift_left_down_16','lift_left_down_24','lift_left_inside','service_left','lift_left_return','lift_right_down_8','lift_right_down_24','lift_right_inside','service_right','lift_right_return','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','approach','open_sea_right','rank','load_menu','briefing','rockets','torpedo','loadout','start','guns','aliases','short_press','paused',
+    required={'lift_paused','lift_pause_wait','lift_start','lift_rise_24','lift_rise_16','lift_rise_8','lift_left_down_8','lift_left_down_16','lift_left_down_24','lift_left_inside','service_left','lift_left_return','lift_right_down_8','lift_right_down_24','lift_right_inside','service_right','lift_right_return','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','approach','open_sea_right','rank','briefing','rockets','torpedo','loadout','start','guns','aliases','short_press','paused',
               'pause_wait','inverted','resumed','no_debug','restart','ground_roll','takeoff','turn','turn_complete','compensated_turn','joystick_guns','joystick_secondary','joystick_inverted','in_game_load','in_game_save'}
     required|={f'cannon_{pitch}_{heading}' for pitch in ('climb','level','dive') for heading in ('left','right')}
     required|={'stall_held','stall_released','dive_released','dive_persistent','dive_recovered'}

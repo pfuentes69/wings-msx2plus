@@ -38,8 +38,8 @@ for (const bank of [17, 18, 19, 20])
 
 RawFiles.push({ offset: 13 * 8192, file: "assets_msx/ship/bank_13.bin" });
 RawFiles.push({ offset: 15 * 8192, file: "assets_msx/elevator/bank_15.bin" });
-// The briefing's frame (tools/convert_screens.py BRIEF_BANKS).
-for (const bank of [51, 52])
+// The briefing's frame and rank selection (tools/convert_screens.py BRIEF_BANKS, RANK_BANKS, RANK_LINE_BANK).
+for (const bank of [51, 52, 53, 54, 55, 56, 57])
     RawFiles.push({ offset: bank * 8192, file: `assets_msx/screens/bank_${bank}.bin` });
 
 // Link each banked code segment at (segment << 16) | A000h, as listed in banking.h.

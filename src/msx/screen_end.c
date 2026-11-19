@@ -4,6 +4,7 @@
 #include "../generated/screens_art.h"
 #include "../generated/terrain.h"
 #include "scenery_load.h"
+#include "dashboard.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCREEN_END)
 
 #define END_X ((256 - END_PLATE_WIDTH) / 2)
@@ -94,4 +95,65 @@ void Screens_BriefingColours(u8 on) WINGS_BANKED
     const u8* colours = on ? g_BriefPalette : g_TerrainPalette;
     for (i = 2; i < 32; ++i) g_TopPalette[i] = colours[i];
     VDP_SetPaletteEntry(0, colours[0] | ((u16)colours[1] << 8));
+    /* Full screen, unscrolled: all 256 columns show (the play view masks
+     * the left 8, which its scroll exposes). */
+    VDP_EnableMask(!on);
+}
+
+/* Rank selection (shapes/selectrank, recomposed to 256 wide: banks 53..)
+ * full screen at row 6, and the chosen rank's line highlighted (the
+ * original's blue band, selectrank.shp rnk0..rnk6: bank 57). */
+#define RANK_TOP 6
+static u8 s_RankLine;
+static void RankLine(u16 base, u8 line, u8 highlighted)
+{
+    u8 row, y = RANK_LINE_Y + line * RANK_LINE_STEP;
+    u16 offset;
+    for (row = 0; row < RANK_LINE_HEIGHT; ++row, ++y)
+    {
+        if (highlighted)
+            Scenery_Read(RANK_LINE_BANK, ((u16)line * RANK_LINE_HEIGHT + row) * RANK_LINE_BYTES, s_Row, RANK_LINE_BYTES);
+        else
+        {
+            offset = (u16)y * 128 + RANK_LINE_X / 2;
+            Scenery_Read(RANK_BANK + (offset >> 13), offset & 8191, s_Row, RANK_LINE_BYTES);
+        }
+        VDP_WriteVRAM(s_Row, (base + RANK_TOP + y) * 128 + RANK_LINE_X / 2, 0, RANK_LINE_BYTES);
+    }
+}
+
+void Screens_Rank(u8 page, u8 line) WINGS_BANKED
+{
+    u8 row;
+    u16 offset = 0, base = (u16)page * 256;
+    VDP_CommandHMMV(0, base, 256, 212, 0);
+    VDP_CommandWait();
+    for (row = 0; row < 200; ++row, offset += 128)
+    {
+        Scenery_Read(RANK_BANK + (offset >> 13), offset & 8191, s_Row, 128);
+        VDP_WriteVRAM(s_Row, (base + RANK_TOP + row) * 128, 0, 128);
+    }
+    RankLine(base, line, 1);
+    s_RankLine = line;
+}
+
+void Screens_RankLine(u8 page, u8 line) WINGS_BANKED
+{
+    u16 base = (u16)page * 256;
+    if (line == s_RankLine) return;
+    RankLine(base, s_RankLine, 0);
+    RankLine(base, line, 1);
+    s_RankLine = line;
+}
+
+/* Its palette over the whole screen (1: the dashboard's rows too), or the
+ * play's and the dashboard's back (0). */
+extern u8 g_BottomPalette[32];
+void Screens_RankColours(u8 on) WINGS_BANKED
+{
+    u8 i;
+    if (!on) { Dashboard_CopyPalette(g_BottomPalette); Screens_BriefingColours(0); return; }
+    for (i = 2; i < 32; ++i) g_TopPalette[i] = g_BottomPalette[i] = g_RankPalette[i];
+    VDP_SetPaletteEntry(0, g_RankPalette[0] | ((u16)g_RankPalette[1] << 8));
+    VDP_EnableMask(FALSE);   /* all 256 columns, as for the briefing */
 }

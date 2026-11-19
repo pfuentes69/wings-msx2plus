@@ -192,7 +192,9 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
         return game->phase!=old ? GAME_CONTEXT_CHANGED : 0;
     }
     if (old==GAME_PAUSE || old==GAME_PLAY) return 0;
-    count=old==GAME_RANK ? 8 : (old==GAME_LOADOUT || old==GAME_SERVICE) ? 3 : 0;
+    /* Seven ranks: the original's "Return from R&R" is left out (no saved
+     * games). */
+    count=old==GAME_RANK ? 7 : (old==GAME_LOADOUT || old==GAME_SERVICE) ? 3 : 0;
     if (count)
     {
         prev=!!(pressed & (ACTION_UP|ACTION_LEFT));
@@ -229,8 +231,7 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
     }
     if (old==GAME_RANK)
     {
-        if (game->cursor==7) { game->phase=GAME_LOAD_MENU; game->cursor=GAME_RANK; }
-        else { game->progress.rank=game->cursor; FirstMission(game); game->phase=GAME_BRIEFING; }
+        game->progress.rank=game->cursor; FirstMission(game); game->phase=GAME_BRIEFING;
     }
     else if (old==GAME_BRIEFING)
     {

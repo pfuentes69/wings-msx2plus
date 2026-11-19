@@ -9,9 +9,8 @@ proc ready {} {
     require [expr {[view 0]==0 && [view 2]==3 && [view 4]==30}] "New game state"
     set ::armed 1
     dump debugdevices.txt [debug list]
-    snap rank {pulse 8 32 {cursor 7 {pulse 7 128 {phase 5 load_menu}}}}
+    snap rank choose_rank
 }
-proc load_menu {} {snap load_menu {pulse 7 128 {phase 0 choose_rank}}}
 proc choose_rank {} {pulse 8 64 {pulse 8 64 {cursor 2 {pulse 7 128 {phase 1 brief}}}}}
 proc brief {} {
     require [expr {[view 1]==2}] "Rank selection"

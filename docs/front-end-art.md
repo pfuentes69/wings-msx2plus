@@ -11,7 +11,7 @@ selection, the briefing, rank selection. The high-score table is set aside
 | The end | a winged plate over the play view, which keeps moving | `world.shp` gmov, 192 × 22 | done: over the view, frozen |
 | Weapon selection | a panel over the carrier view, top right; a blue band behind the chosen weapon (Rockets, Bombs, Torpedo; Bombs first) | `world.shp` selt (96 × 72), rock, bomb, torp (96 × 11..12) | done: over the carrier view, frozen |
 | Briefing | `rank.iff`'s frame, centred on black; the values in a light grey serif font | `world.shp` rank (256 × 95), newarmyfont | done: full screen on black |
-| Rank selection | `selectrank` (320 × 200), a blue band behind the chosen rank | `shapes/selectrank` | not yet; "Return from R&R" is dropped (no saved games) |
+| Rank selection | `selectrank` (320 × 200), a blue band behind the chosen rank | `shapes/selectrank`, `selectrank.shp` rnk0..rnk6 | done: full screen, 256 wide; "Return from R&R" dropped (no saved games) |
 
 `tools/convert_screens.py` decodes the shapes (`decode_shapes.py`, the
 `wingspalette` colours), maps their colours to the port's palette, and
@@ -20,7 +20,7 @@ transparent) with previews in `assets_msx/screens/`. The art and the code
 that draws it live together: the weapon panel in segment 49
 (`msx/screens.c`, `generated/screens_art.c`); "THE END" and the briefing in
 segment 50 (`msx/screen_end.c`, `generated/screen_end_art.c`), the
-briefing's frame in data banks 51..52.
+briefing's frame in data banks 51..52, rank selection in banks 53..57.
 
 ## The end
 
@@ -90,3 +90,30 @@ own size.
   it is written, so the frame stays whole.
 - The verification (`verify_p0`) expects colour 0 black and the dashboard's
   rows black on the briefing.
+
+## Rank selection
+
+The original's picture (`shapes/selectrank`, 320 × 200, 32 colours) fills
+the screen: a riveted frame, the winged logo, "SELECT RANK" and the ranks;
+the chosen rank sits on a blue band (`selectrank.shp` rnk0..rnk7, 192 × 9
+at x 64, 10 rows apart: the band with the letters as holes, the picture's
+gold showing through).
+
+- **256 wide.** The picture's content (logo, title, ranks) spans columns
+  70..247, so the middle rows keep the frame's 36-column sides and the
+  inner columns 68..251 (the band loses 4 plain columns at each end); the
+  top and bottom bars, which carry rivets every 21 columns, lose one 64-px
+  block from their flat middle instead (one rivet gap 1 px shorter). It is
+  drawn at row 6 of the 212.
+- **Colours.** Rounded to the MSX's 8 levels a channel the picture has 19
+  colours; the three rarest (6, 11 and 28 pixels) go to their nearest, so 16.
+  The palette covers the whole screen (play and dashboard areas, colour 0
+  black) and the column mask is off, so all 256 columns show; leaving gives
+  back the play's and the dashboard's palettes and the mask.
+- **The band.** Each line highlighted (the strip over the picture's line) is
+  stored ready (bank 57); a cursor move rewrites the old line from the
+  picture and the new one from the strips, on the page shown.
+- **"Return from R&R"** (rnk7) is left out: neither the manual nor the port
+  has saved games. The cursor has seven ranks, wrapping round.
+- RAM is not cleared at boot: the front-end screens' flags are zeroed in
+  `main` (a garbage "rank screen up" flag left the old menu at boot).

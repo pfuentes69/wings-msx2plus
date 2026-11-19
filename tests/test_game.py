@@ -111,12 +111,13 @@ class GameTests(unittest.TestCase):
         flags=self.action(g,64);self.assertEqual((g.phase,flags),(3,3))
     def test_rank_selection_starts_that_ranks_first_mission(self):
         g=self.game()
-        for _ in range(4): self.action(g,8)
+        for _ in range(4): self.action(g,4)
         self.action(g,16);self.assertEqual((g.progress.rank,g.mission.number,g.mission.map),(4,1,10))
-    def test_seven_ranks_plus_separate_load_command(self):
-        g=self.game();self.action(g,1);self.assertEqual(g.cursor,7)
-        self.action(g,16);self.assertEqual((g.phase,g.progress.rank),(5,0))
-        self.action(g,64);self.assertEqual((g.phase,g.cursor),(0,0))
+    def test_seven_ranks_without_return_from_r_and_r(self):
+        # The original's eighth line (Return from R&R) is left out: up from
+        # Midshipman wraps to Captain.
+        g=self.game();self.action(g,1);self.assertEqual(g.cursor,6)
+        self.action(g,16);self.assertEqual((g.phase,g.progress.rank),(1,6))
         for rank in range(7):
             g=self.game();g.cursor=rank;self.action(g,16)
             self.assertEqual((g.progress.rank,g.phase),(rank,1))

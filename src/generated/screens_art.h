@@ -21,3 +21,11 @@ extern const unsigned char g_BriefFontBits[];
 extern const char g_BriefFontChars[];
 extern const unsigned char g_BriefFontWidth[];
 extern const unsigned short g_BriefFontOffset[];
+#define RANK_BANK 53
+#define RANK_LINE_BANK 57
+#define RANK_LINE_Y 91
+#define RANK_LINE_STEP 10
+#define RANK_LINE_X 36
+#define RANK_LINE_BYTES 92
+#define RANK_LINE_HEIGHT 9
+extern const unsigned char g_RankPalette[32];

@@ -958,7 +958,7 @@ u8 g_BriefIslands, g_BriefShips;
 static u8 s_Panel, s_PanelRendered, s_LastPhase;
 /* The briefing's palette is up; a page's dashboard rows were drawn over (a
  * full-screen menu: restored before the page is drawn on again). */
-static u8 s_BriefColours, s_DashGone[2];
+static u8 s_BriefColours, s_DashGone[2], s_RankShown;
 #ifdef WINGS_HIGH_SCORES
 static u8 s_Typing;   /* the name entry has scanned the keyboard once */
 #endif
@@ -1082,6 +1082,10 @@ void main(void)
     g_InputEnabled=0; g_InputInvert=g_InputOverflow=0;
     Controls_Reset(&g_Controls); s_LastControl=0; s_UiDirty=1;
     Game_Reset(&g_Game);
+#ifdef WINGS_P1_FLIGHT
+    /* RAM is not cleared at boot: no front-end screen is up yet. */
+    s_Panel=s_PanelRendered=s_LastPhase=s_BriefColours=s_RankShown=s_DashGone[0]=s_DashGone[1]=0;
+#endif
 #ifdef WINGS_HIGH_SCORES
     Game_ClearScores();
 #endif
@@ -1456,8 +1460,9 @@ advance_clocks:
         {
             Screens_WeaponColours(0); s_Panel=0; s_PageScale[0]=s_PageScale[1]=255;
         }
+        if (s_RankShown && g_Game.phase!=GAME_RANK) { Screens_RankColours(0); s_RankShown=0; }
         if (s_BriefColours && g_Game.phase!=GAME_BRIEFING) { Screens_BriefingColours(0); s_BriefColours=0; }
-        if (s_DashGone[page] && g_Game.phase!=GAME_BRIEFING) { Dashboard_Restore(page); s_DashGone[page]=0; }
+        if (s_DashGone[page] && g_Game.phase!=GAME_BRIEFING && g_Game.phase!=GAME_RANK) { Dashboard_Restore(page); s_DashGone[page]=0; }
 #endif
         if (g_Game.phase!=GAME_PLAY)
         {
@@ -1465,6 +1470,23 @@ advance_clocks:
             s_Band[0] = s_Band[1] = 0;
 #endif
 #ifdef WINGS_P1_FLIGHT
+            /* Rank selection, full screen; then the highlight moves on the
+             * page shown (msx/screen_end.c). */
+            if (g_Game.phase==GAME_RANK)
+            {
+                page=g_DisplayPage;
+                if (s_UiDirty)
+                {
+                    if (s_RankShown) Screens_RankLine(page,g_Game.cursor);
+                    else
+                    {
+                        page^=1; Screens_Rank(page,g_Game.cursor); Screens_RankColours(1);
+                        s_DashGone[page]=1; s_PageScale[page]=255; s_RankShown=1;
+                    }
+                    s_UiDirty=0;
+                }
+            }
+            else
             /* The briefing, full screen (msx/screen_end.c). */
             if (g_Game.phase==GAME_BRIEFING)
             {
