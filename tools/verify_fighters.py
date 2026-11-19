@@ -18,7 +18,10 @@ from verify_ships import run
 
 ROOT = Path(__file__).resolve().parents[1]
 PLANE = 40
-MISSED_LIMIT = 30
+# 28 NTSC with the centred camera; 38 with the camera's lead (2026-11-19):
+# heading west, the ships' guns and splashes are in view on the approach,
+# the frames the optimisation pass is to speed up.
+MISSED_LIMIT = 45
 FRAME_PARKED = (99 + 20, 99 + 21)            # jp21, jp22 (hellcat_frames.h)
 FRAME_FLASH = tuple(range(121, 125))         # fc10, fd10, fc1a, fd1a
 

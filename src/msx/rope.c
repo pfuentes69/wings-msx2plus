@@ -65,10 +65,14 @@ void Rope_Draw(u8 page, i16 cable, i16 hook, i16 origin_row, u16 camera, i16 lim
     i16 low = cable < hook ? cable : hook, high = cable < hook ? hook : cable, half, left, right;
     /* Bresenham from the cable: the first half on the cable's row. */
     half = (high - low) / 2;
+    /* Even bounds, as in ship.c: the strip's save and restore (HMMM) move
+     * whole bytes, the rope (LMMV) single pixels. Clipped at an odd camera,
+     * an odd bound left a rope pixel unrestored at the view's edge, and the
+     * tile cache, seeing sky there, never redrew it. */
     left = low & ~1;
-    if (left < (i16)camera + 8) left = (i16)camera + 8;
+    if (left < (i16)camera + 8) left = ((i16)camera + 8) & ~1;
     right = (high + 2) & ~1;
-    if (right > (i16)camera + 256) right = (i16)camera + 256;
+    if (right > (i16)camera + 256) right = ((i16)camera + 257) & ~1;
     if (right <= left || origin_row + 6 >= limit || origin_row + 5 < 0) return;
     if (right - left > ROPE_BACKUP_WIDTH) right = left + ROPE_BACKUP_WIDTH;
     s_X[page] = left; s_Y[page] = origin_row + 5; s_Width[page] = right - left;

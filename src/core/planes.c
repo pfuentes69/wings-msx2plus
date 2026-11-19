@@ -87,6 +87,7 @@ void Planes_NewGame(void) WINGS_BANKED
     uint8_t* p = (uint8_t*)&g_Planes;
     uint16_t n;
     for (n = 0; n < sizeof g_Planes; ++n) p[n] = 0;
+    g_CameraLead = 0;
     g_PlanesRandom = 0x3c5au;
     s_SeaSlide = 0;
 }

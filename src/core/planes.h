@@ -142,6 +142,33 @@ void Fighters_Reset(void) WINGS_BANKED;
 void Fighters_Behave(Plane* e, const PlanesPlayer* p) WINGS_BANKED;
 void Fighters_Launch(int16_t px) WINGS_BANKED;
 extern uint8_t g_PlanesFlee, g_PlanesParity;
+/* The camera (docs/flight-model.md): the plane's view x less 128, plus the
+ * lead g_CameraLead, close-view px the view's centre sits right (+) of the
+ * plane. In flight (CAMERA_MOVE) it looks CAMERA_LEAD ahead (the plane at
+ * screen x 88 heading right, 168 left); with a fighter attacking, or on the
+ * tail within CAMERA_TAIL_RANGE, as far behind, held CAMERA_TAIL_HOLD
+ * VBlanks after the threat passes. It eases CAMERA_EASE px a VBlank.
+ * Without CAMERA_MOVE it holds; CAMERA_RESET sets it to 0. CAMERA_LEFT: the
+ * heading (it flips at turn frame 14); CAMERA_FAR: the far view (lead / 8);
+ * ticks: VBlanks this frame. Not static: the openMSX scenarios read it. */
+#ifndef CAMERA_LEAD
+#define CAMERA_LEAD 40
+#endif
+#ifndef CAMERA_TAIL_RANGE
+#define CAMERA_TAIL_RANGE 250
+#endif
+#ifndef CAMERA_TAIL_HOLD
+#define CAMERA_TAIL_HOLD 50
+#endif
+#ifndef CAMERA_EASE
+#define CAMERA_EASE 2
+#endif
+#define CAMERA_MOVE 1
+#define CAMERA_LEFT 2
+#define CAMERA_FAR 4
+#define CAMERA_RESET 8
+extern int8_t g_CameraLead;
+uint16_t Camera_Follow(uint16_t world, uint8_t flags, uint8_t ticks) WINGS_BANKED;
 
 /* Banked. A new game: all clear, kills too. A new mission: the slots. */
 void Planes_NewGame(void) WINGS_BANKED;

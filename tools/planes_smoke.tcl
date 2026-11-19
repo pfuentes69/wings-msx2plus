@@ -102,6 +102,15 @@ proc chase {} {
     setw $i 30 [expr {1200-[world_y]}]
     setw $i 28 [expr {1200-[world_y]}]
     setw $i 16 0
+    # A pin lost inside the game's update can still let a turn start (beh
+    # +1 bit 8), and a player who overtakes it makes it turn too: undo the
+    # turn, face it west again and put it back 140 px ahead.
+    if {([pb $i 1] & 8) || [pw $i 24] > [world_x]-40} {
+        debug write memory [expr {$::addr(g_Planes)+$::PLANE*$i+1}] [expr {[pb $i 1] & ~8}]
+        setw $i 14 0
+        debug write memory [expr {$::addr(g_Planes)+$::PLANE*$i+13}] 255
+        if {[pw $i 24] > [world_x]-40} {setw $i 24 [expr {[world_x]-140}]}
+    }
     pilot [expr {[world_x] > [pw $i 24]+120 ? 16 : 0}] 1120
     after time 0.02 chase
 }

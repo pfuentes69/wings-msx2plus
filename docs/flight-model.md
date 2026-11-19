@@ -59,12 +59,34 @@ past both ends of the map. The port does the same:
 - World x is a 16-bit ring read as signed. The map is 0..7607; open sea
   continues 16,000 px beyond either end (about 75 s at top speed), where the
   plane stops. That keeps every signed value within 16 bits.
-- The camera centres on the plane. The far view divides by 8 with a signed
-  shift, so the sea left of the map joins it seamlessly.
+- The camera follows the plane with a lead (below). The far view divides by
+  8 with a signed shift, so the sea left of the map joins it seamlessly.
 - Terrain columns outside the map draw a plain sea column: map x 5000, or far
   x 624. Wave bands that reach either end of the map run on, with the wave
   texture phase taken from the signed position.
 - Guns and bombs work only over the map. Beyond it there is nothing to hit.
+
+
+## Camera lead
+
+The original's view is 320 px wide with the plane at x 160. The MSX view is
+256 px (248 visible): centred, a fighter attacking from 130 px behind fell
+just off screen, and guns ahead opened fire before they showed. So the
+camera leads (`Camera_Lead`, core/fighters.c; constants in core/planes.h,
+overridable at build time):
+
+- Flying, the view's centre sits `CAMERA_LEAD` (40) px ahead: the plane at
+  screen x 88 heading right, 168 heading left, with 160 px visible ahead.
+- Tail view: while a fighter attacks (behaviour 2), or flies the player's
+  heading less than `CAMERA_TAIL_RANGE` (250) px behind, the lead swings
+  40 px the other way (160 px visible behind). It holds `CAMERA_TAIL_HOLD`
+  (50) VBlanks after the threat passes.
+- The lead follows the heading flip at turn frame 14, not the key, and
+  eases `CAMERA_EASE` (2) px a VBlank toward its target.
+- It moves only in flight. On deck, on the lift and during a crash it
+  holds (no camera motion against the plane over the carrier, the costliest
+  scene); out of play (the hold, the menus) it resets to 0, so each plane
+  comes up centred. The far view uses lead / 8.
 
 ## Engine failure
 

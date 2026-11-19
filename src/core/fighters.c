@@ -163,3 +163,32 @@ void Fighters_Behave(Plane* e, const PlanesPlayer* p) WINGS_BANKED
     if ((e->beh & ~PLANE_TURNING) == PLANE_FIGHTER) Fighter(e, p);
     else Attack(e, p);
 }
+
+int8_t g_CameraLead;
+static uint8_t s_TailHold;
+uint16_t Camera_Follow(uint16_t world, uint8_t flags, uint8_t ticks) WINGS_BANKED
+{
+    uint8_t left = flags & CAMERA_LEFT, i;
+    int8_t target = left ? -CAMERA_LEAD : CAMERA_LEAD, step;
+    const Plane* e;
+    int16_t behind, px = (int16_t)world;
+    if (flags & CAMERA_RESET) g_CameraLead = s_TailHold = 0;
+    else if (flags & CAMERA_MOVE)
+    {
+        for (i = 0, e = g_Planes.plane; i < PLANES_MAX; ++i, ++e)
+        {
+            if (e->state != PLANE_FLYING || !(e->beh & (PLANE_FIGHTER | PLANE_ATTACK))) continue;
+            behind = left ? e->x - px : px - e->x;
+            if ((e->beh & 7) == PLANE_ATTACK ||
+                ((e->facing < 0) == (left != 0) && behind >= 0 && behind < CAMERA_TAIL_RANGE))
+                s_TailHold = CAMERA_TAIL_HOLD;
+        }
+        if (s_TailHold) { target = -target; s_TailHold = s_TailHold > ticks ? s_TailHold - ticks : 0; }
+        step = (int8_t)(CAMERA_EASE * ticks);
+        target -= g_CameraLead;
+        if (target > step) target = step; else if (target < -step) target = -step;
+        g_CameraLead += target;
+    }
+    /* The far view: an arithmetic shift (FAR_X in world_flight.c). */
+    return (flags & CAMERA_FAR ? (uint16_t)((px >> 3) + (g_CameraLead >> 3)) : world + g_CameraLead) - 128;
+}

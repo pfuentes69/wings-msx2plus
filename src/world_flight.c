@@ -1390,8 +1390,13 @@ advance_clocks:
         y = s_World.flight.y >> 8;
         g_TerrainFar = WINGS_FLIGHT_MAX_Y - y > 186;
 #ifdef WINGS_P1_FLIGHT
-        /* The camera centres on the plane; past the map ends the sea goes on. */
-        camera = (g_TerrainFar ? FAR_X(world) : world) - 128;
+        /* The camera follows the plane with its lead (core/fighters.c);
+         * past the map ends the sea goes on. */
+        i = g_TerrainFar ? CAMERA_FAR : 0;
+        if (s_World.flight.facing_left) i |= CAMERA_LEFT;
+        if (g_Game.phase != GAME_PLAY) i |= CAMERA_RESET;
+        else if (!s_CrashSteps && g_Carrier.stage == CARRIER_DECK && !FLIGHT_ON_DECK(&s_World.flight)) i |= CAMERA_MOVE;
+        camera = Camera_Follow(world, i, present_ticks);
 #else
         camera = g_TerrainFar ? world >> 3 : world;
         { u16 maximum = g_TerrainFar ? ((WINGS_WORLD_WIDTH + 7) >> 3) - 256 : WINGS_WORLD_WIDTH - 256;

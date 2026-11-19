@@ -187,7 +187,9 @@ From the pseudo-code for 0xb682, 0xe728, 0xe244, 0xe3e8, 0x0da6 and 0xf178:
      follows ends the game.
 
   During the chase the script pins the target's altitude and its turn
-  countdown, since a chased torpedo plane weaves and breaks after each hit.
+  countdown, since a chased torpedo plane weaves and breaks after each hit;
+  a turn that starts anyway (a pin lost inside the game's update, or the
+  player overtaking it) is undone and the target put back 140 px ahead.
   Placements are re-checked after writing, because a Tcl write can land
   inside the game's own update of the record. Missed deadlines: 22 NTSC,
   4 PAL (limit 30).
@@ -251,7 +253,9 @@ An attacking fighter holds 130 px behind the player. The original's view is
 MSX view is 256 px (248 visible) with the player centred: the attacker and
 its flash fall just past the edge. The player hears the gun and sees the oil
 fall, but cannot see the fighter. Options: move the camera's centre
-toward the tail, or leave it as is.
+toward the tail, or leave it as is. Resolved: the camera's tail view
+(docs/flight-model.md, "Camera lead") swings the view 160 px behind while a
+fighter attacks or sits on the tail.
 
 ### Verification (steps 4 and 5)
 
@@ -270,7 +274,8 @@ toward the tail, or leave it as is.
 
   The ships' guns are set destroyed and torpedo planes kept off. During the
   chase the target's evasions are pinned, and the oil is kept full against
-  the other fighter. Missed deadlines: 27 NTSC, 13 PAL (limit 30).
+  the other fighter. Missed deadlines: 27 NTSC, 13 PAL (limit 30); with the camera's lead
+  38 NTSC, 14 PAL (limit 45: the ships' guns are in view on the approach).
 - The P0 smoke and the ships gate keep all enemy planes off
   (`no_enemy_planes`).
 
