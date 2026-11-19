@@ -20,7 +20,8 @@ proc brief {} {
 proc hold_confirm {} {
     require [expr {[view 0]==2 && [stat 32]==0}] "Secondary confirmation leaked: phase=[view 0] stock=[view 4] fired=[stat 32]"
     keymatrixup 4 8
-    after time 0.1 {pulse 8 64 {cursor 1 rockets}}
+    # The weapon panel's order: Rockets, Bombs, Torpedo (up from bombs).
+    after time 0.1 {pulse 8 32 {cursor 1 rockets}}
 }
 proc notice {then} {
     if {[view 7]==1} {after time 0.05 $then} else {after time 0.025 [list notice $then]}
@@ -29,13 +30,13 @@ proc rockets {} {
     require [expr {[view 3]==1 && [view 4]==15}] "Rocket inventory"
     # Rockets are playable: no confirmation here. The wait keeps the old
     # confirmation's 0.85 s, so the flights after it keep their timing.
-    snap rockets {after time 0.85 {pulse 8 64 {cursor 2 torpedo}}}
+    snap rockets {after time 0.85 {pulse 8 32 {cursor 2 torpedo}}}
 }
 proc torpedo {} {
     require [expr {[view 3]==2 && [view 4]==1}] "Torpedo inventory"
     # The torpedo is playable: no confirmation here (the wait keeps the old
     # confirmation's 0.8 s, so the flights after it keep their timing).
-    snap torpedo {after time 0.8 {pulse 8 32 {pulse 8 32 {cursor 0 loadout}}}}
+    snap torpedo {after time 0.8 {pulse 8 32 {cursor 0 loadout}}}
 }
 proc loadout {} {snap loadout {keymatrixdown 6 4; phase 3 held_start}}
 proc held_start {} {
@@ -88,7 +89,7 @@ proc lift_resume {} {
 }
 proc service_left_menu {} {
     require [expr {[view 4]==30 && [stat 30]==0 && [stat 32]==0}] "Service did not reload or elevator fired weapons"
-    snap service_left {pulse 8 64 {cursor 1 {require [expr {[view 0]==7 && [view 4]==15}] "Service rocket preview";after time 0.85 {pulse 8 32 {cursor 0 {pulse 7 128 {phase 3 {lift_pose lift_left_up_24 0 24 {lift_pose lift_left_up_8 0 8 {wait_lift_up service_left_return}}}}}}}}}}
+    snap service_left {pulse 8 32 {cursor 1 {require [expr {[view 0]==7 && [view 4]==15}] "Service rocket preview";after time 0.85 {pulse 8 64 {cursor 0 {pulse 7 128 {phase 3 {lift_pose lift_left_up_24 0 24 {lift_pose lift_left_up_8 0 8 {wait_lift_up service_left_return}}}}}}}}}}
 }
 proc service_left_return {} {
     require [expr {[value g_SelectedFrame]==52 && [view 4]==30}] "Left heading lost across service"

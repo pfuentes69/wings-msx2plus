@@ -70,12 +70,18 @@ class GameTests(unittest.TestCase):
         g.mission.objectives=17;g.sortie.stock=4;g.sortie.oil=90;g.sortie.fuel=23
         self.core.Game_OpenService(C.byref(g))
         self.assertEqual((g.phase,g.sortie.stock,g.sortie.oil,g.sortie.fuel),(7,30,128,192))
+        # The panel's order: Rockets, Bombs, Torpedo (the cursor is the weapon:
+        # 0 bombs, 1 rockets, 2 torpedo). Down from bombs is the torpedo, up
+        # the rockets; it wraps round.
+        self.action(g,4);self.assertEqual((g.phase,g.cursor,g.sortie.stock),(7,2,1))
         self.action(g,4);self.assertEqual((g.phase,g.cursor,g.sortie.stock),(7,1,15))
+        self.action(g,4);self.assertEqual((g.phase,g.cursor,g.sortie.stock),(7,0,30))
         self.action(g,4);self.assertEqual((g.phase,g.cursor,g.sortie.stock),(7,2,1))
         flags=self.action(g,64)   # the torpedo flies too
         self.assertEqual((g.phase,flags,g.sortie.weapon,g.sortie.stock,g.notice),(3,10,2,1,0))
         self.core.Game_OpenService(C.byref(g))
-        self.action(g,1);self.action(g,1);self.assertEqual((g.cursor,g.sortie.stock),(0,30))
+        self.action(g,1);self.action(g,1);self.assertEqual((g.cursor,g.sortie.stock),(1,15))
+        self.action(g,4);self.assertEqual((g.cursor,g.sortie.stock),(0,30))
         flags=self.action(g,64)
         self.assertEqual((g.phase,flags),(3,10))
         self.assertEqual((g.progress.score,g.progress.rank,g.progress.lives,g.mission.objectives),(12345,3,2,17))

@@ -2,24 +2,72 @@
 #include "vdp.h"
 #include "vdp_inl.h"
 #include "../generated/screens_art.h"
+#include "../generated/terrain.h"
+#include "dashboard.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCREENS)
 
-#define END_X ((256 - END_PLATE_WIDTH) / 2)
-#define END_Y 56
+/* The panel's place in the view: the original's right margin (32 of 320
+ * px) as 24 of 256, 20 rows down. */
+#define PANEL_X 136
+#define PANEL_Y 20
+#define PANEL_BYTES (WEAPON_PANEL_WIDTH / 2)
+static u8 s_PanelRing;   /* ring x of its left edge (even: whole bytes) */
+static u16 s_PanelBase;  /* its page's first row */
+extern u8 g_TopPalette[32];   /* world_flight.c: the play area's palette */
 
-void Screens_DrawEnd(u8 page, u16 camera) WINGS_BANKED
+/* Rows of the panel's packed pixels at ring x s_PanelRing, split at the
+ * ring's seam. */
+static void Rows(const u8* source, u8 row, u8 count)
 {
-    u8 row, x = (u8)camera + END_X, first;
-    u16 base = (u16)page * 256;
-    const u8* source = g_EndPlate;
-    /* Into the page's spare rows as it is, then over the view without its
-     * transparent (0) pixels, centred in the view: the page is a ring
-     * scrolled by the camera, so the copy splits at its seam. */
-    for (row = 0; row < END_PLATE_HEIGHT; ++row, source += END_PLATE_WIDTH / 2)
-        VDP_WriteVRAM(source, (base + 212 + row) * 128, 0, END_PLATE_WIDTH / 2);
-    first = (u16)x + END_PLATE_WIDTH > 256 ? (u8)(256 - x) : END_PLATE_WIDTH;
-    VDP_CommandLMMM(0, base + 212, x, base + END_Y, first, END_PLATE_HEIGHT, VDP_OP_TIMP);
-    if (first < END_PLATE_WIDTH)
-        VDP_CommandLMMM(first, base + 212, 0, base + END_Y, END_PLATE_WIDTH - first, END_PLATE_HEIGHT, VDP_OP_TIMP);
+    u16 first = 256 - s_PanelRing;
+    u16 address = (s_PanelBase + PANEL_Y + row) * 128;
+    first = first >= WEAPON_PANEL_WIDTH ? PANEL_BYTES : first / 2;
+    for (; count; --count, source += PANEL_BYTES, address += 128)
+    {
+        VDP_WriteVRAM(source, address + s_PanelRing / 2, 0, (u8)first);
+        if (first < PANEL_BYTES) VDP_WriteVRAM(source + first, address, 0, PANEL_BYTES - (u8)first);
+    }
+}
+
+static void Line(u8 line, u8 highlighted)
+{
+    u8 row = g_WeaponLineRow[line];
+    Rows(highlighted ? g_WeaponLines + g_WeaponLineOffset[line] : g_WeaponPanel + (u16)row * PANEL_BYTES,
+         row, g_WeaponLineHeight[line]);
+}
+
+void Screens_WeaponPanel(u8 page, u16 camera, u8 line) WINGS_BANKED
+{
+    s_PanelRing = (u8)(camera + PANEL_X) & 254;
+    s_PanelBase = (u16)page * 256;
+    Rows(g_WeaponPanel, 0, WEAPON_PANEL_HEIGHT);
+    Line(line, 1);
+}
+
+void Screens_WeaponLine(u8 page, u8 from, u8 to) WINGS_BANKED
+{
+    s_PanelBase = (u16)page * 256;
+    /* The lines share a row with their neighbours: the old one first. */
+    Line(from, 0);
+    Line(to, 1);
+}
+
+void Screens_WeaponColours(u8 lent) WINGS_BANKED
+{
+    u8 i;
+    for (i = 0; i < 8; ++i) g_TopPalette[24 + i] = lent ? g_WeaponColours[i] : g_TerrainPalette[24 + i];
+}
+
+/* Weapon selection on this page (the view already behind it): the whole
+ * panel the first time, else the highlight moved; and the dashboard's
+ * weapon and stock. */
+static u8 s_Line;
+void Screens_Weapons(u8 page, u16 camera, u8 first, const GameState* game) WINGS_BANKED
+{
+    u8 line = GAME_WEAPON_LINE(game->cursor);
+    if (first) { Screens_WeaponPanel(page, camera, line); Screens_WeaponColours(1); }
+    else Screens_WeaponLine(page, s_Line, line);
+    s_Line = line;
+    Dashboard_Status(page, game->sortie.weapon, game->sortie.stock, game->progress.lives);
     VDP_CommandWait();
 }

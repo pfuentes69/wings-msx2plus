@@ -57,7 +57,7 @@ proc ready {} {
     if {[value g_Ready]!=1 || [view 2]!=3 || [view 4]!=30} {after time 0.05 ready;return}
     set ::armed 1
     # Rank 0, the briefing, then rockets at the loadout.
-    snap rank {pulse 7 128 {phase 1 {snap briefing {pulse 7 128 {phase 2 {pulse 8 64 {cursor 1 {pulse 7 128 {phase 3 {wait_lift_up sortie_rockets}}}}}}}}}}
+    snap rank {pulse 7 128 {phase 1 {snap briefing {pulse 7 128 {phase 2 {pulse 8 32 {cursor 1 {pulse 7 128 {phase 3 {wait_lift_up sortie_rockets}}}}}}}}}}
 }
 proc sortie_rockets {} {
     require [expr {[view 3]==1 && [view 4]==15 && [word g_DisplayWorld]==$::cx}] "Rocket sortie: weapon=[view 3] stock=[view 4] world=[word g_DisplayWorld]"
@@ -201,7 +201,7 @@ proc landed_on_lift {} {
 }
 # Down the lift; the service offers the weapons: the torpedo (1).
 proc landed_rearm {} {
-    pulse 8 1 {phase 7 {pulse 8 64 {cursor 2 {snap service_torpedo {pulse 7 128 {phase 3 {wait_lift_up sortie_torpedo}}}}}}}
+    pulse 8 1 {phase 7 {pulse 8 32 {cursor 2 {snap service_torpedo {pulse 7 128 {phase 3 {wait_lift_up sortie_torpedo}}}}}}}
 }
 # The service offers the weapon carried first: the torpedo again.
 proc landed_rearm_destroyer {} {

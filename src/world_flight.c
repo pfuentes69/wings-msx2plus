@@ -976,6 +976,9 @@ static u8 s_Tapped;
  * plane joins at the hold (0x0122). */
 static u8 s_MissionAdvanced, s_Promotion;
 u8 g_BriefIslands, g_BriefShips;
+/* The weapon panel (msx/screens.c): drawn; the view rendered behind it this
+ * frame (its scroll is published); the last phase. */
+static u8 s_Panel, s_PanelRendered, s_LastPhase;
 #ifdef WINGS_HIGH_SCORES
 static u8 s_Typing;   /* the name entry has scanned the keyboard once */
 #endif
@@ -1241,6 +1244,13 @@ void main(void)
             /* The briefing closes by itself after 240 PAL frames (0x8590),
              * 4.8 s; 288 NTSC fields. */
             if (Game_Wait(&g_Game,present_ticks,g_VDP_REGSAV[9]&2)) { ConsumeActions(); s_UiDirty=1; }
+            /* The weapons are chosen over the carrier, the plane in the hold
+             * (the original's game start). */
+            if (g_Game.phase==GAME_LOADOUT && s_LastPhase==GAME_BRIEFING)
+            {
+                NewPlane(); g_Carrier.stage=CARRIER_HOLD;
+            }
+            s_LastPhase=g_Game.phase;
 #ifdef WINGS_HIGH_SCORES
             /* A high score's name, typed: keys held as it opens are old. */
             if (g_Game.phase==GAME_NAME)
@@ -1460,12 +1470,32 @@ advance_clocks:
             g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
             &g_Engine, &g_Game.sortie, &g_Combat) : 0;
 #endif
+#ifdef WINGS_P1_FLIGHT
+        /* The panel goes: the play colours back, both pages rebuilt. */
+        if (s_Panel && g_Game.phase!=GAME_LOADOUT && g_Game.phase!=GAME_SERVICE)
+        {
+            Screens_WeaponColours(0); s_Panel=0; s_PageScale[0]=s_PageScale[1]=255;
+        }
+#endif
         if (g_Game.phase!=GAME_PLAY)
         {
 #ifdef WINGS_P1_FLIGHT
             s_Band[0] = s_Band[1] = 0;
 #endif
 #ifdef WINGS_P1_FLIGHT
+            /* The weapon panel over the carrier view, frozen: at game start
+             * the view is rendered first; in the hold it is shown already. */
+            if (g_Game.phase==GAME_LOADOUT || g_Game.phase==GAME_SERVICE)
+            {
+                page=g_DisplayPage;
+                if (s_UiDirty)
+                {
+                    if (!s_Panel && s_PageScale[page]==255) { page^=1; Render(page,camera,world,y,frame); s_PanelRendered=1; }
+                    Screens_Weapons(page,s_PanelRendered ? camera : g_DisplayCamera,!s_Panel,&g_Game);
+                    s_Panel=1; s_UiDirty=0;
+                }
+            }
+            else
             /* "THE END" over the play view as it was, frozen (0xaf7c). */
             if (s_UiDirty && g_Game.phase==GAME_OVER)
             {
@@ -1540,7 +1570,8 @@ advance_clocks:
         }
         tick = g_VBlankTicks;
         /* "THE END" keeps the view as shown; menus scroll to 0. */
-        if (g_Game.phase==GAME_OVER) { camera=g_DisplayCamera; s_RenderHeave=g_DisplayHeave; s_RenderFine=g_DisplayFine; }
+        if (s_PanelRendered) s_PanelRendered=0;   /* the view just rendered: its scroll */
+        else if (g_Game.phase==GAME_OVER || s_Panel) { camera=g_DisplayCamera; s_RenderHeave=g_DisplayHeave; s_RenderFine=g_DisplayFine; }
         else if (g_Game.phase!=GAME_PLAY) { camera=0; s_RenderHeave=0; s_RenderFine=0; }
         VDP_SetPage(page);
         PublishScroll(page, camera);

@@ -3,3 +3,11 @@
 #define END_PLATE_WIDTH 192
 #define END_PLATE_HEIGHT 22
 extern const unsigned char g_EndPlate[];
+#define WEAPON_PANEL_WIDTH 96
+#define WEAPON_PANEL_HEIGHT 72
+extern const unsigned char g_WeaponPanel[];
+extern const unsigned char g_WeaponLines[];
+extern const unsigned char g_WeaponLineRow[3];
+extern const unsigned char g_WeaponLineHeight[3];
+extern const unsigned short g_WeaponLineOffset[3];
+extern const unsigned char g_WeaponColours[8];

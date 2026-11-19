@@ -197,12 +197,21 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
     {
         prev=!!(pressed & (ACTION_UP|ACTION_LEFT));
         next=!!(pressed & (ACTION_DOWN|ACTION_RIGHT));
-        if (prev!=next)
+        if (prev!=next && (old==GAME_LOADOUT || old==GAME_SERVICE))
+        {
+            /* The cursor is the weapon; it moves in the panel's order
+             * (Rockets, Bombs, Torpedo: the original's weapon panel). */
+            count=GAME_WEAPON_LINE(game->cursor);
+            count=next ? (count==2 ? 0 : count+1) : (count ? count-1 : 2);
+            game->cursor=count==0 ? WEAPON_ROCKETS : count==1 ? WEAPON_BOMBS : WEAPON_TORPEDO;
+            game->notice=0;
+            Game_SetLoadout(game,game->cursor);
+        }
+        else if (prev!=next)
         {
             if (next) game->cursor=(game->cursor+1)%count;
             else game->cursor=game->cursor ? game->cursor-1 : count-1;
             game->notice=0;
-            if (old==GAME_LOADOUT || old==GAME_SERVICE) Game_SetLoadout(game,game->cursor);
         }
     }
     if (!(pressed & (ACTION_BUTTONS))) return 0;

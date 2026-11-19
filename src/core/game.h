@@ -19,6 +19,9 @@
 #define WEAPON_BOMBS 0
 #define WEAPON_ROCKETS 1
 #define WEAPON_TORPEDO 2
+/* A weapon's line in the original's weapon panel (0 Rockets, 1 Bombs,
+ * 2 Torpedo, top to bottom). */
+#define GAME_WEAPON_LINE(weapon) ((weapon) == WEAPON_BOMBS ? 1 : (weapon) == WEAPON_ROCKETS ? 0 : 2)
 #define GAME_START_SORTIE 1
 #define GAME_CONTEXT_CHANGED 2
 #define GAME_RESTARTED 4
