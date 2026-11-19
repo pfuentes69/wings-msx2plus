@@ -43,7 +43,10 @@ navy, 1, since 0 is the sky and transparent). When the game ends
 rows (212.., the aircraft backups, unused once the game is over) and
 copies it over the view without its transparent pixels (LMMM, TIMP),
 centred in the view: the page is a ring scrolled by the camera, so the copy
-splits at the ring's seam when it has to. The view stays as it was: the
+splits at the ring's seam when it has to. Those rows also hold the wave strip's
+frames (x 48 and 144, `Dashboard_LoadWaves`): the rank screen, which always
+follows, loads them again (the user, 2026-11-19: the next game's sea showed
+pieces of the plate). The view stays as it was: the
 main loop republishes the same scroll, and the dashboard is redrawn with
 the final state. After 150 frames, or a button after 30, the game goes back
 to rank selection.

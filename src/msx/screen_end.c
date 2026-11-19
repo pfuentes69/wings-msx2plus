@@ -142,6 +142,8 @@ void Screens_Rank(u8 page, u8 line) WINGS_BANKED
 {
     u8 row;
     u16 offset = 0, base = (u16)page * 256;
+    /* After "THE END": its plate was staged over the wave frames. */
+    Dashboard_LoadWaves();
     VDP_CommandHMMV(0, base, 256, 212, 0);
     VDP_CommandWait();
     for (row = 0; row < 200; ++row, offset += 128)

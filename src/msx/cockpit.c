@@ -17,7 +17,7 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_COCKPIT)
 #define SEA 0x99
 #define LAND 0x55
 #define FAR_ALTITUDE 186     /* above: the distant view, plain sky */
-#define LIFT 5               /* the port's picture sits higher: the near bands show */
+#define LIFT 5               /* the port's horizon: 5 rows higher than the original's, dropping half as fast */
 #define KIND_TOWER 4
 
 CockpitState g_Cockpit;
@@ -141,7 +141,8 @@ static u16 Mask(u16 first, u16 last)
 }
 
 /* The planes (0x4206): in a band 48..1280 px ahead, their row from the
- * original's horizon (base: the port's) and their altitude; each slot's row
+ * original's horizon (base: altitude / 16 + 17, which the gunsight matches)
+ * and their altitude; each slot's row
  * and view + 1 (0: not shown) into s_InPlanes. Returns 1 if they changed. */
 static u8 Planes(u8 base, u16 col, u8 left)
 {
@@ -158,7 +159,7 @@ static u8 Planes(u8 base, u16 col, u8 left)
         if (at < 0 || at >= 160) goto next;
         b = g_CockpitPlaneBand[(u8)at];
         if (b == 255) goto next;
-        row = (int16_t)(base + COCKPIT_LIFT + 10 - b) - ((e->alt >> 2) + 4);
+        row = (int16_t)(base + 10 - b) - ((e->alt >> 2) + 4);
         if (row < -12 || row >= 36) goto next;
         view = e->shape + (left ? 0 : 28);
         if (view >= 56) view -= 56;
@@ -183,7 +184,7 @@ static void Scene(u16 x, u8 altitude, u8 left, u8 arrow)
     s_Next[2] = arrow;
     if (altitude > FAR_ALTITUDE) { s_Next[0] = 255; return; }
     s_Col = x >> 3; s_Left = left;
-    s_Next[0] = (altitude >> 4) + 17 - LIFT;
+    s_Next[0] = (altitude >> 5) + 17 - LIFT;   /* the original's altitude / 16 + 17 (convert_cockpit.horizon) */
     s_Next[3] = altitude >= 81 ? 17 : ((81 - altitude) >> 2) + 6;
     s_Next[1] = left;
     deck = s_Col >= COCKPIT_CARRIER_FIRST && s_Col <= COCKPIT_CARRIER_LAST;
@@ -351,15 +352,6 @@ static void ComposeNear(void)
     const u8* object = s_Next + 8 + 10;
     if (base != 255)
     {
-        for (row = base; object >= s_Next + 8; ++row, --object)
-            if (*object) Blit(*object - 1, row, 0);
-        /* The planes: the farthest size first, then by slot. */
-        for (size = COCKPIT_PLANE3; ; size = size == COCKPIT_PLANE3 ? COCKPIT_PLANE2 : COCKPIT_PLANE1)
-        {
-            for (object = s_Next + 19; object < s_Next + 19 + 2 * PLANES_MAX; object += 2)
-                if (object[1] && object[1] - 1 >= size && object[1] - 1 < size + 26) Blit(object[1] - 1, object[0], 0);
-            if (size == COCKPIT_PLANE1) break;
-        }
         if (s_Next[1] & 2)
         {
             /* The deck view (0x4430): it slides down a row every 6 columns
@@ -372,7 +364,18 @@ static void ComposeNear(void)
             Blit(COCKPIT_CARRIER + shape, row, top);
             Blit(COCKPIT_TOWER + shape, row, 0);
         }
+        /* The gunsight under the targets and planes (the original draws it
+         * last, over them: it hid them, on the column they are drawn at). */
         Blit(COCKPIT_SIGHT, s_Next[3], 0);
+        for (row = base; object >= s_Next + 8; ++row, --object)
+            if (*object) Blit(*object - 1, row, 0);
+        /* The planes: the farthest size first, then by slot. */
+        for (size = COCKPIT_PLANE3; ; size = size == COCKPIT_PLANE3 ? COCKPIT_PLANE2 : COCKPIT_PLANE1)
+        {
+            for (object = s_Next + 19; object < s_Next + 19 + 2 * PLANES_MAX; object += 2)
+                if (object[1] && object[1] - 1 >= size && object[1] - 1 < size + 26) Blit(object[1] - 1, object[0], 0);
+            if (size == COCKPIT_PLANE1) break;
+        }
     }
     VDP_CommandWait();
 }
@@ -424,7 +427,7 @@ u8 Cockpit_Draw(u8 page, u16 x, u16 y, u8 facing_left) WINGS_BANKED
     /* The scene only when what it comes from has changed: the plane's
      * place, and the planes' rows and views (they move on their own). */
     /* (None in the air: nothing to look at, unless some were shown.) */
-    planes = g_Planes.live || s_PlanesShown ? Planes(base == 255 ? 255 : base + 17 - LIFT, x >> 3, facing_left) : 0;
+    planes = g_Planes.live || s_PlanesShown ? Planes(base == 255 ? 255 : base + 17, x >> 3, facing_left) : 0;
     s_PlanesShown = g_Planes.live;
     if (changed || planes || (x >> 3) != s_InCol || base != s_InBase || sight != s_InSight ||
         facing_left != s_InLeft || arrow != s_InArrow || wrecked != s_InWrecked || gone != s_InGone)

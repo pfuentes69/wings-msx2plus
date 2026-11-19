@@ -40,6 +40,7 @@ def main():
     parser.add_argument('--no-fm',action='store_true',help='turn the MSX-MUSIC driver off: PSG-only sound')
     parser.add_argument('--record',type=Path,help="save the run's sound to this WAV file")
     parser.add_argument('--output',type=Path,default=ROOT/'tools/.build/p0-ntsc')
+    parser.add_argument('--reuse',action='store_true',help="check the last run's snapshots again, without running it")
     args=parser.parse_args();out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
     (out/'verification.json').unlink(missing_ok=True)
     rom=ROOT/'out/mission-flight/mission-flight.rom';data=rom.read_bytes()
@@ -59,7 +60,8 @@ def main():
     if args.headless:
         config=out/'headless.xml';config.write_text('<?xml version="1.0"?><!DOCTYPE settings SYSTEM "settings.dtd"><settings><settings><setting id="renderer">none</setting><setting id="save_settings_on_exit">false</setting></settings></settings>')
         settings=['-setting',str(config)]
-    with (out/'openmsx.log').open('w') as log:
+    if not args.reuse:
+      with (out/'openmsx.log').open('w') as log:
         with subprocess.Popen([shutil.which('openmsx'),'-control','stdio',*settings,'-machine',args.machine,'-cart',str(rom),'-romtype','ASCII8',
                         '-script',str(ROOT/'tools/p0_smoke.tcl')],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT,stdin=subprocess.PIPE) as emulator:
             try:
@@ -69,6 +71,7 @@ def main():
     assert rom.read_bytes()==data,'ROM changed during verification'
     report=(out/'emulator-report.txt').read_text();assert report.rstrip().endswith('PASS'),report[-3000:]
     snapshots={}
+    waves_source=(ROOT/'assets_msx/dashboard/waves.sc5').read_bytes()
     scene=AircraftScene()
     terrain=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())
     from convert_hellcat import aircraft_bank
@@ -91,6 +94,15 @@ def main():
         # dark sea, colour 1 (msx/screen_end.c Screens_Palette).
         assert (out/f'{name}.regs').read_bytes()[7]==(0 if game[0] in (0,1) else 1),(name,'border',(out/f'{name}.regs').read_bytes()[7])
         vram=(out/f'{name}.vram').read_bytes()
+        # The wave strip's frames (rows 212.. of pages 0 and 1, x 48 and
+        # 144: src/msx/dashboard.c Dashboard_LoadWaves) are intact in play:
+        # "THE END" stages its plate there and the rank screen reloads them.
+        if game[0]==3:
+            for f in range(12):
+                for row in range(11 if f&3!=3 else 9):
+                    wx=144 if 4<=f<8 else 48;wy=212+(f&3)*11+(256 if f>=8 else 0)+row
+                    want=waves_source[(f*11+row)*48:(f*11+row)*48+48]
+                    assert vram[wy*128+wx//2:wy*128+wx//2+48]==want,(name,'wave frame',f,row)
         # Tile cache: every loaded slot holds its strip's 8 tiles (ROM banks
         # from 32, 256 bytes a strip), as 64 rows of 4 bytes at rows 180..
         # of VRAM page 2 or 3.

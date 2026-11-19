@@ -82,8 +82,7 @@ void Dashboard_Restore(u8 page) WINGS_BANKED
 
 void Dashboard_Load(void) WINGS_BANKED
 {
-    u8 page, frame, row, piece;
-    u16 x, y, offset = 0;
+    u8 page, frame;
     Waves_Init();
     s_FieldValid = 0;
     g_Cockpit.generation = 255;   /* RAM is not cleared at boot */
@@ -106,6 +105,16 @@ void Dashboard_Load(void) WINGS_BANKED
     Input(ARROWRLE_OFFSET);
     Expand(HUD_ARROW0_ATLAS_X, HUD_ARROW0_ATLAS_Y, 16, HUD_ARROW_HEIGHT);
     Expand(HUD_ARROW1_ATLAS_X, HUD_ARROW1_ATLAS_Y, 16, HUD_ARROW_HEIGHT);
+    Dashboard_LoadWaves();
+}
+
+/* The wave strip's twelve frames into rows 212.. of pages 0 and 1 (x 48 and
+ * 144), and their tails. Again after "THE END", whose plate is staged in
+ * the shown page's rows 212.. (msx/screen_end.c). */
+void Dashboard_LoadWaves(void) WINGS_BANKED
+{
+    u8 frame, row, piece;
+    u16 x, y, offset = 0;
     for (frame = 0; frame < 12; ++frame)
     {
         x = frame >= 4 && frame < 8 ? 144 : 48;

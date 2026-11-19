@@ -16,6 +16,7 @@ gunsight last. This module holds the port's half of it:
 - a model of the runtime (`scene`, `compose`): the verifiers' oracle.
 
   python tools/convert_cockpit.py --map a     # src/generated/map_a/cockpit_map.h
+  python tools/convert_cockpit.py --views     # docs/cockpit/views.png
 """
 import argparse
 import functools
@@ -216,9 +217,17 @@ def plane_band(d):
     return next((b for b in range(11) if EDGE[b + 1] <= d < EDGE[b + 2]), 255)
 
 
-def plane_scene(s, b, alt, shape, left):
-    """A plane's (row, view + 1) in band b: row from the original's horizon."""
-    row = s[0] + LIFT + 10 - b - ((alt >> 2) + 4)
+def horizon(altitude):
+    """The port's horizon row: the original's is altitude / 16 + 17, which
+    puts the near bands below the window, and above altitude 100 nearly all
+    of them; the port's starts 5 rows higher and drops half as fast."""
+    return altitude // 32 + 17 - LIFT
+
+
+def plane_scene(original, b, alt, shape, left):
+    """A plane's (row, view + 1) in band b: its row from the original's
+    horizon (altitude / 16 + 17), which the gunsight's row matches."""
+    row = original + 10 - b - ((alt >> 2) + 4)
     view = FIRST[f'PLANE{PLANE_SIZE[b]}'] + PLANE_VIEWS.index(PLANE_LIST[(shape + (0 if left else 28)) % 56])
     return row, view + 1
 
@@ -335,7 +344,7 @@ def scene(map_name, x, altitude, facing_left, arrow=0, wrecked=(), planes=(), go
         s[0] = 255
         return bytes(s)
     col = x >> 3
-    s[0] = altitude // 16 + 17 - LIFT
+    s[0] = horizon(altitude)
     s[3] = 17 if altitude >= 81 else (81 - altitude) // 4 + 6
     deck = carrier and carrier[0] <= col <= carrier[1]
     s[1] = facing_left
@@ -378,7 +387,7 @@ def scene(map_name, x, altitude, facing_left, arrow=0, wrecked=(), planes=(), go
         if state not in PLANE_STATES: continue
         d = (col - (px >> 3)) if facing_left else ((px >> 3) - col)
         if not 0 <= d < 160 or plane_band(d) == 255: continue
-        row, view = plane_scene(s, plane_band(d), alt, shape, facing_left)
+        row, view = plane_scene(altitude // 16 + 17, plane_band(d), alt, shape, facing_left)
         if -12 <= row < 36: s[19 + 2 * i], s[20 + 2 * i] = row & 255, view
     return bytes(s)
 
@@ -406,6 +415,15 @@ def compose(scene_bytes, arrows=None):
             row = base + 10 - k
             if land >> k & 1 and row < HEIGHT: win[row * SLOT:(row + 1) * SLOT] = bytes([LAND]) * SLOT
             if trees >> k & 1: blit(FIRST['TREE'] + K6[k] - 1, row)
+        # The deck view, then the gunsight: under the targets and planes
+        # (the original draws it last, over them, at the column they are on).
+        if s[1] & 2:
+            step = s[1] >> 4; y = base + step + 9; top = base + max(0, step - 7)
+            left = s[1] & 1
+            blit(FIRST['DECK'] + min(3, step // 2), y + 1, top)
+            blit(FIRST['CARRIER'] + (13 if left else 5), y, top)
+            blit(FIRST['TOWER'] + (13 if left else 5), y)
+        blit(FIRST['SIGHT'], s[3])
         for k in range(10, -1, -1):
             if s[8 + k]: blit(s[8 + k] - 1, base + 10 - k)
         # The planes, the farthest size first, then by slot.
@@ -414,13 +432,6 @@ def compose(scene_bytes, arrows=None):
         for i in order:
             row = s[19 + 2 * i]
             blit(s[20 + 2 * i] - 1, row - 256 if row > 127 else row)
-        if s[1] & 2:
-            step = s[1] >> 4; y = base + step + 9; top = base + max(0, step - 7)
-            left = s[1] & 1
-            blit(FIRST['DECK'] + min(3, step // 2), y + 1, top)
-            blit(FIRST['CARRIER'] + (13 if left else 5), y, top)
-            blit(FIRST['TOWER'] + (13 if left else 5), y)
-        blit(FIRST['SIGHT'], s[3])
     if s[2] and arrows:
         pixels, ax = arrows[s[2] - 1]
         for yy in range(len(pixels) // 16):
@@ -430,11 +441,46 @@ def compose(scene_bytes, arrows=None):
     return bytes(b for y in range(HEIGHT) for b in win[y * SLOT:y * SLOT + WIDTH])
 
 
+VIEWS = [('a', 'Flying west over the island, altitude 40: the dugout, the huts, the far dugout', [(3700, 40, 1), (3300, 40, 1), (2900, 40, 1), (2600, 40, 1)]),
+         ('a', 'The same at altitude 150', [(3700, 150, 1), (3300, 150, 1), (2900, 150, 1), (2600, 150, 1)]),
+         ('a', 'Both huts wrecked (altitude 40)', [(3700, 40, 1, {0, 1}), (3300, 40, 1, {0, 1}), (2900, 40, 1, {0, 1}), (2600, 40, 1, {0, 1})]),
+         ('a', 'An enemy plane ahead, closing (player at altitude 80)', [(5200, 80, 1, (), [(2, 5200 - d, 80, 0)]) for d in (900, 600, 350, 150)]),
+         ('a', 'Back east to the carrier, altitude 50', [(5300, 50, 0), (5800, 50, 0), (6200, 50, 0), (6450, 50, 0)]),
+         ('a', 'Landing from the east, then rolling along the deck', [(7550, 45, 1), (7420, 44, 1), (7340, 40, 1), (7200, 40, 1)]),
+         ('j', 'Map j: the destroyer, then the battleship (altitude 40)', [(1600, 40, 1), (1000, 40, 1), (6300, 40, 0), (6900, 40, 0)]),
+         ('a', 'Climbing: the horizon drops; above 186 the distant view', [(4300, 0, 1), (4300, 100, 1), (4300, 160, 1), (4300, 200, 1)])]
+
+
+def views(path):
+    """docs/cockpit/views.png: the model's window in typical places."""
+    from PIL import Image, ImageDraw
+    from convert_dashboard import dashboard_palette
+    pal = dashboard_palette()
+    rgb = [v for i in range(16) for v in (((pal[2 * i] >> 4) & 7) * 255 // 7, (pal[2 * i + 1] & 7) * 255 // 7, (pal[2 * i] & 7) * 255 // 7)]
+    w, h = WIDTH * 4, HEIGHT * 4
+    sheet = Image.new('RGB', (4 * (w + 12) + 12, len(VIEWS) * (h + 30) + 10), (24, 24, 28))
+    draw = ImageDraw.Draw(sheet)
+    for r, (m, title, cases) in enumerate(VIEWS):
+        y0 = 10 + r * (h + 30)
+        draw.text((12, y0), title, fill=(220, 220, 220))
+        for k, case in enumerate(cases):
+            x, alt, left = case[:3]
+            window = compose(scene(m, x, alt, left, 0, case[3] if len(case) > 3 else (), case[4] if len(case) > 4 else ()))
+            im = Image.frombytes('P', (WIDTH, HEIGHT), window)
+            im.putpalette(rgb + [0] * 720)
+            sheet.paste(im.convert('RGB').resize((w, h), Image.NEAREST), (12 + k * (w + 12), y0 + 16))
+    sheet.save(path)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--map', default='a')
     parser.add_argument('--check', action='store_true')
+    parser.add_argument('--views', action='store_true', help='write docs/cockpit/views.png')
     args = parser.parse_args()
+    if args.views:
+        views(ROOT / 'docs/cockpit/views.png')
+        return
     path = ROOT / f'src/generated/map_{args.map}/cockpit_map.h'
     text = map_header(args.map)
     if args.check:

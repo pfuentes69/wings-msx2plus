@@ -45,16 +45,18 @@ plain sky.
   from `g_Island`; dugouts; AA guns; the carrier and its tower). The
   original's scan lets any other non-empty map word in a band hide its
   object; the port does not: each band shows its farthest object.
-- **Two adaptations after play-testing** (2026-11-19, the user: arriving at
-  the island, the first dugout showed, then only jungle): with the
-  original's arithmetic, a nearer band's jungle strip (4..7 rows, full
-  width, one row lower) covers the targets in the bands behind it, and at
-  usual altitudes the near bands fall below the window (horizon at
-  `altitude / 16 + 17`: at 40, only the bands 500 px and more ahead show),
-  so a target was seen far off and then vanished instead of growing. The
-  port draws the targets after all the ground, and its picture sits 5 rows
-  higher (horizon at `altitude / 16 + 12`), so targets stay in view as they
-  approach, and the carrier and deck show more on landing.
+- **Adaptations after play-testing** (2026-11-19). The user, twice: over
+  the island the window showed the first dugout, then only jungle. With the
+  original's arithmetic a nearer band's jungle strip (4..7 rows, full
+  width, one row lower) covers the targets behind it; the near bands fall
+  below the window (horizon at `altitude / 16 + 17`: at 40 only the bands
+  500 px and more ahead show, above 100 nearly none); and the gunsight,
+  drawn last on the centre column every target is drawn at, covers them.
+  The port draws the targets after all the ground, the gunsight under the
+  targets and planes, and its horizon at `altitude / 32 + 12` (5 rows
+  higher, dropping half as fast), so targets stay in view and grow as they
+  approach at any altitude. The planes keep the original's rows (from its
+  horizon), which the gunsight's row matches.
 - **Scene** (`msx/cockpit.c`, segment 51): from the plane's column,
   altitude, facing, the torpedo plane's arrow and the huts, 19 bytes: the
   horizon, the deck step, the sight's row, the land and jungle bands, each
@@ -62,8 +64,8 @@ plain sky.
   falls in (`Bands`, in Z80); only objects within reach are looked at (a
   window over the sorted list moves with the plane).
 - **Composing**: when the scene changes, it is drawn into the buffer (VDP
-  fills and transparent copies: the sky, sea and ground; then the targets,
-  the deck view and the sight), then each page copies the buffer (one
+  fills and transparent copies: the sky, sea and ground; then the deck
+  view, the sight, the targets and the planes), then each page copies the buffer (one
   HMMM) the next time it is rendered, the arrow on top. The work (about
   30,000..45,000 T-states) is done in the idle time before a VBlank, like
   the terrain prefetch (`Cockpit_Work`); a render costs about 2,000. Without
@@ -106,6 +108,11 @@ plain sky.
   logged by a stub and replayed: 168 views on map a, 150 with planes, 88
   on map j with its ships whole or sunk, wrecked huts, no commands for an unchanged scene, the step-by-step
   fallback.
+- `verify_cockpit` (`tools/cockpit_smoke.tcl`, map a): a game lost at once
+  ("THE END"), then a sortie low over the whole island west and back east:
+  the window keeps up with the plane (at most 0.2 s behind the model's
+  scene for its place), shows huts and dugouts, matches the model in every
+  snapshot, and the wave frames are whole after "THE END".
 - `verify_p0`: the snapshots dump `g_Cockpit`; where the page shown holds
   the buffer's picture, the window is compared pixel for pixel with the
   model's (73 of 82 gameplay snapshots on NTSC).

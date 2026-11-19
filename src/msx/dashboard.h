@@ -5,6 +5,8 @@
 #include "../generated/dashboard_tables.h"
 void Dashboard_LoadTables(void) WINGS_BANKED;
 void Dashboard_Load(void) WINGS_BANKED;
+/* The wave strip's frames back into VRAM (after "THE END" drew over them). */
+void Dashboard_LoadWaves(void) WINGS_BANKED;
 void Dashboard_Waves(u8 page, u16 camera, u8 frame, u8 heave) WINGS_BANKED;
 void Dashboard_RestoreWaves(u8 page, u8 reset) WINGS_BANKED;
 /* waves.c (segment 21): the band layout; no wave backdrop saved yet. */
