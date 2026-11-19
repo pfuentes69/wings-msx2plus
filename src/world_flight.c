@@ -36,6 +36,7 @@ volatile u8 g_DisplayElevator;
 #include "core/game.h"
 #include "msx/input_sampler.h"
 #include "msx/menu.h"
+#include "msx/screens.h"
 GameState g_Game;
 u8 g_GameView[8], g_TopPalette[32], g_BottomPalette[32];
 static u8 s_NextGameView[8];
@@ -1464,6 +1465,20 @@ advance_clocks:
 #ifdef WINGS_P1_FLIGHT
             s_Band[0] = s_Band[1] = 0;
 #endif
+#ifdef WINGS_P1_FLIGHT
+            /* "THE END" over the play view as it was, frozen (0xaf7c). */
+            if (s_UiDirty && g_Game.phase==GAME_OVER)
+            {
+                /* Drawn on the page shown: the view stays as it is (not a
+                 * render, so g_Rendering stays clear). */
+                page=g_DisplayPage;
+                Screens_DrawEnd(page,g_DisplayCamera);
+                Dashboard_Status(page,g_Game.sortie.weapon,g_Game.sortie.stock,g_Game.progress.lives);
+                VDP_CommandWait();
+                s_PageScale[0]=s_PageScale[1]=255; s_UiDirty=0;
+            }
+            else
+#endif
             if (s_UiDirty)
             {
                 g_RenderPage=page; g_Rendering=1;
@@ -1524,7 +1539,9 @@ advance_clocks:
             WaitVBlank();
         }
         tick = g_VBlankTicks;
-        if (g_Game.phase!=GAME_PLAY) { camera=0; s_RenderHeave=0; s_RenderFine=0; }
+        /* "THE END" keeps the view as shown; menus scroll to 0. */
+        if (g_Game.phase==GAME_OVER) { camera=g_DisplayCamera; s_RenderHeave=g_DisplayHeave; s_RenderFine=g_DisplayFine; }
+        else if (g_Game.phase!=GAME_PLAY) { camera=0; s_RenderHeave=0; s_RenderFine=0; }
         VDP_SetPage(page);
         PublishScroll(page, camera);
         g_DisplayPage = page;

@@ -28,6 +28,7 @@
 #define WINGS_SEGMENT_PATCH 30  /* terrain column remap and band repaint (msx/terrain_patch.c), engine smoke (core/smoke.c) */
 #define WINGS_SEGMENT_PLANES 31 /* enemy planes (core/planes.c) */
 #define WINGS_SEGMENT_FIGHTERS 48 /* enemy fighters (core/fighters.c); banks 32.. hold map data, 48 is clear of it */
+#define WINGS_SEGMENT_SCREENS 49 /* the front end's artwork and its drawing (msx/screens.c, generated/screens_art.c) */
 
 #if defined(WINGS_BANKED_CODE) && defined(__SDCC)
 #define WINGS_BANKED __banked
