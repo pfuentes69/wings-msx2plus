@@ -28,6 +28,20 @@ WIDTH, HEIGHT, SLOT = 46, 24, 48     # the window, rows, an atlas slot's width
 CENTRE = 22                         # the original's x 319 in the window
 SKY, SEA, LAND = 2, 9, 5            # dashboard colours (the original's 2, 1, 5)
 
+PLANE_VIEWS = '0123456789abcdefghijklmnop'
+# A plane's shape (0..55, +28 facing right; the original's +30), made the
+# view seen from the cockpit: +28 more when the player faces right (0x4206).
+# The original's name lists (DATA 0x3118, 0x3188): the first 28 and the
+# last 28 of each size.
+PLANE_LIST = ('0111222334455 6kkllmmnnnooopp'.replace(' ', '') +
+              'deeeffffghhiij77889 9aaabbb00'.replace(' ', ''))
+# The size by band: zr1 for the nearest 3, zr2 for the next 6, zr3 for the
+# farthest 2 (the original's table, -$696c, steps half a set and flips some
+# views to the other facing; the sizes are kept, the facing set right).
+PLANE_SIZE = [1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3]
+PLANE_STATES = (2, 4)   # flying, shot down (planes.h)
+PLANE_SLOTS = 4
+
 # The shapes, in table order. The frame sets are the ones the original
 # evidently meant (its arithmetic is off by one or two for trees, the
 # carrier facing left and the tower; same cost, see the research's anomalies).
@@ -40,7 +54,11 @@ SETS = [('TREE', [f'3dl{i}' for i in range(4, 10)]),
         ('CARRIER', [f'3dc{c}' for c in 'abcdefghijklmnop']),
         ('TOWER', [f'3dt{c}' for c in 'abcdefghijklmnop']),
         ('DECK', [f'dec{i}' for i in range(4)]),
-        ('SIGHT', ['targ'])]
+        ('SIGHT', ['targ']),
+        # The enemy planes seen from the cockpit (zr*), three sizes.
+        ('PLANE1', [f'zr1{c}' for c in PLANE_VIEWS]),
+        ('PLANE2', [f'zr2{c}' for c in PLANE_VIEWS]),
+        ('PLANE3', [f'zr3{c}' for c in PLANE_VIEWS])]
 NAMES = [n for _, names in SETS for n in names]
 FIRST, _count = {}, 0
 for _key, _names in SETS:
@@ -62,7 +80,7 @@ LIFT = 5
 # Object kinds in a map's spans.
 KIND_HUT, KIND_DUGOUT, KIND_GUN, KIND_CARRIER, KIND_TOWER = range(5)
 TOWERS = (0x22, 0xf6)
-SCENE_BYTES = 19
+SCENE_BYTES = 19 + 2 * PLANE_SLOTS   # ... and per plane slot: its row, its view + 1
 
 
 def shape(name):
@@ -161,12 +179,28 @@ def art_source(slots_xy, defines=()):
     # starting by it (255: none).
     first = [min([b for b in range(11) if BAND_FAR[b] >= d], default=255) for d in range(191)]
     last = [max([b for b in range(11) if BAND_NEAR[b] <= d], default=255) for d in range(191)]
-    h += ['extern const unsigned char g_CockpitFirstBand[191];', 'extern const unsigned char g_CockpitLastBand[191];']
+    h += ['extern const unsigned char g_CockpitFirstBand[191];', 'extern const unsigned char g_CockpitLastBand[191];',
+          'extern const unsigned char g_CockpitPlaneBand[160];', 'extern const unsigned char g_CockpitPlaneView[56];',
+          f'#define COCKPIT_LIFT {LIFT}']
+    c.append(f'const unsigned char g_CockpitPlaneBand[160] = {{{", ".join(str(plane_band(d)) for d in range(160))}}};')
+    c.append(f'const unsigned char g_CockpitPlaneView[56] = {{{", ".join(str(PLANE_VIEWS.index(v)) for v in PLANE_LIST)}}};')
     c.append(f'const unsigned char g_CockpitFirstBand[191] = {{{", ".join(map(str, first))}}};')
     c.append(f'const unsigned char g_CockpitLastBand[191] = {{{", ".join(map(str, last))}}};')
     c.append(f'const unsigned char g_CockpitSlotX[COCKPIT_SLOTS] = {{{", ".join(str(x) for x, y in slots_xy[:used])}}};')
     c.append(f'const unsigned short g_CockpitSlotY[COCKPIT_SLOTS] = {{{", ".join(str(y) for x, y in slots_xy[:used])}}};')
     return '\n'.join(c) + '\n', '\n'.join(h) + '\n', bank
+
+
+def plane_band(d):
+    """The band of a plane d columns ahead (EDGE[b+1] <= d < EDGE[b+2]), 255: none."""
+    return next((b for b in range(11) if EDGE[b + 1] <= d < EDGE[b + 2]), 255)
+
+
+def plane_scene(s, b, alt, shape, left):
+    """A plane's (row, view + 1) in band b: row from the original's horizon."""
+    row = s[0] + LIFT + 10 - b - ((alt >> 2) + 4)
+    view = FIRST[f'PLANE{PLANE_SIZE[b]}'] + PLANE_VIEWS.index(PLANE_LIST[(shape + (0 if left else 28)) % 56])
+    return row, view + 1
 
 
 def map_words(map_name):
@@ -242,8 +276,9 @@ def map_header(map_name):
 
 # The runtime's model (msx/cockpit.c), for the verifiers.
 
-def scene(map_name, x, altitude, facing_left, arrow=0, wrecked=()):
-    """The scene bytes msx/cockpit.c computes (g_Cockpit.scene)."""
+def scene(map_name, x, altitude, facing_left, arrow=0, wrecked=(), planes=()):
+    """The scene bytes msx/cockpit.c computes (g_Cockpit.scene); planes:
+    (state, x, alt, shape) per slot."""
     land, trees, objects, carrier = features(map_name)
     s = bytearray(SCENE_BYTES)
     s[2] = arrow
@@ -284,6 +319,14 @@ def scene(map_name, x, altitude, facing_left, arrow=0, wrecked=()):
             elif kind == KIND_GUN: frame = FIRST['GUN'] + K6[k] - 1
             else: frame = FIRST['CARRIER' if kind == KIND_CARRIER else 'TOWER'] + K7[k] + (8 if facing_left else 0)
             s[8 + k] = frame + 1
+    # The planes, slot by slot: in a band 48..1280 px ahead, and in rows
+    # -12..35 of the window (else not shown).
+    for i, (state, px, alt, shape) in enumerate(planes):
+        if state not in PLANE_STATES: continue
+        d = (col - (px >> 3)) if facing_left else ((px >> 3) - col)
+        if not 0 <= d < 160 or plane_band(d) == 255: continue
+        row, view = plane_scene(s, plane_band(d), alt, shape, facing_left)
+        if -12 <= row < 36: s[19 + 2 * i], s[20 + 2 * i] = row & 255, view
     return bytes(s)
 
 
@@ -313,6 +356,12 @@ def compose(scene_bytes, arrows=None):
             if trees >> k & 1: blit(FIRST['TREE'] + K6[k] - 1, row)
         for k in range(10, -1, -1):
             if s[8 + k]: blit(s[8 + k] - 1, base + 10 - k)
+        # The planes, the farthest size first, then by slot.
+        def size(view): return 3 if view - 1 >= FIRST['PLANE3'] else 2 if view - 1 >= FIRST['PLANE2'] else 1
+        order = sorted((i for i in range(PLANE_SLOTS) if s[20 + 2 * i]), key=lambda i: (-size(s[20 + 2 * i]), i))
+        for i in order:
+            row = s[19 + 2 * i]
+            blit(s[20 + 2 * i] - 1, row - 256 if row > 127 else row)
         if s[1] & 2:
             step = s[1] >> 4; y = base + step + 9; top = base + max(0, step - 7)
             left = s[1] & 1

@@ -27,6 +27,11 @@ static const u8 s_Far[11] = {20, 29, 39, 50, 62, 75, 89, 104, 120, 155, 190};
 static const u8 s_K6[11] = {6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1};
 static const u8 s_K7[11] = {7, 7, 6, 6, 5, 4, 3, 2, 1, 0, 0};
 
+/* The planes' view size by band (tools/convert_cockpit.py PLANE_SIZE). */
+static const u8 s_PlaneSet[11] = {
+    COCKPIT_PLANE1, COCKPIT_PLANE1, COCKPIT_PLANE1, COCKPIT_PLANE2, COCKPIT_PLANE2, COCKPIT_PLANE2,
+    COCKPIT_PLANE2, COCKPIT_PLANE2, COCKPIT_PLANE2, COCKPIT_PLANE3, COCKPIT_PLANE3};
+
 /* (1 << b) - 1 */
 static const u16 s_Below[12] = {0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047};
 
@@ -35,12 +40,12 @@ static u8 s_Left, s_First, s_Last, s_ObjectLo;
 static int16_t s_Hi;
 /* What the scene was last computed from (Cockpit_Draw). */
 static u16 s_InCol;
-static u8 s_InBase, s_InSight, s_InLeft, s_InArrow, s_InWrecked;
+static u8 s_InBase, s_InSight, s_InLeft, s_InArrow, s_InWrecked, s_InPlanes[2 * PLANES_MAX], s_PlanesShown;
 /* A scene waiting to be composed (from Cockpit_Draw's inputs), and the
  * renders it has waited. */
 static u8 s_Pending, s_Again, s_Stale, s_PendAltitude;
 static u16 s_PendX;
-#define STALE 2   /* renders a scene may wait for idle time */
+#define STALE 12  /* renders a picture waits for idle time (about 1.6 s) before renders step it */
 
 /* The bands the columns first..last fall in: s_First..s_Last (0: none);
  * s_Hi their farthest distance ahead. In C:
@@ -134,6 +139,36 @@ static u16 Mask(u16 first, u16 last)
     return Bands(first, last) ? s_Below[s_Last + 1] & ~s_Below[s_First] : 0;
 }
 
+/* The planes (0x4206): in a band 48..1280 px ahead, their row from the
+ * original's horizon (base: the port's) and their altitude; each slot's row
+ * and view + 1 (0: not shown) into s_InPlanes. Returns 1 if they changed. */
+static u8 Planes(u8 base, u16 col, u8 left)
+{
+    const Plane* e = g_Planes.plane;
+    u8* out = s_InPlanes;
+    int16_t at, row;
+    u8 i, b, view, r, v, changed = 0;
+    for (i = 0; i < PLANES_MAX; ++i, ++e, out += 2)
+    {
+        r = v = 0;
+        if (base == 255 || (e->state != PLANE_FLYING && e->state != PLANE_DOWN)) goto next;
+        at = e->x >> 3;
+        at = left ? (int16_t)col - at : at - (int16_t)col;
+        if (at < 0 || at >= 160) goto next;
+        b = g_CockpitPlaneBand[(u8)at];
+        if (b == 255) goto next;
+        row = (int16_t)(base + COCKPIT_LIFT + 10 - b) - ((e->alt >> 2) + 4);
+        if (row < -12 || row >= 36) goto next;
+        view = e->shape + (left ? 0 : 28);
+        if (view >= 56) view -= 56;
+        r = (u8)row;
+        v = s_PlaneSet[b] + g_CockpitPlaneView[view] + 1;
+    next:
+        if (out[0] != r || out[1] != v) { out[0] = r; out[1] = v; changed = 1; }
+    }
+    return changed;
+}
+
 static void Scene(u16 x, u8 altitude, u8 left, u8 arrow)
 {
     u8 i, b, kind, frame, cur, d, deck;
@@ -194,13 +229,15 @@ static void Scene(u16 x, u8 altitude, u8 left, u8 arrow)
             s_Next[8 + b] = frame + 1;
         }
     }
+    for (i = 0; i < 2 * PLANES_MAX; ++i) s_Next[19 + i] = s_InPlanes[i];
 }
 
 void Cockpit_Load(void) WINGS_BANKED
 {
     u8 slot, row, line[24];
     u16 offset = 0, y;
-    s_Pending = s_Again = 0;   /* RAM is not cleared at boot */
+    s_Pending = s_Again = s_PlanesShown = 0;   /* RAM is not cleared at boot */
+    for (slot = 0; slot < 2 * PLANES_MAX; ++slot) s_InPlanes[slot] = 0;
     for (slot = 1; slot < COCKPIT_SLOTS; ++slot)
         for (row = 0, y = g_CockpitSlotY[slot] - 512; row < 24; ++row, ++y, offset += 24)
         {
@@ -306,12 +343,19 @@ static void ComposeFar(void)
 
 static void ComposeNear(void)
 {
-    u8 base = s_Next[0], row, step, top, shape;
+    u8 base = s_Next[0], row, step, top, shape, size;
     const u8* object = s_Next + 8 + 10;
     if (base != 255)
     {
         for (row = base; object >= s_Next + 8; ++row, --object)
             if (*object) Blit(*object - 1, row, 0);
+        /* The planes: the farthest size first, then by slot. */
+        for (size = COCKPIT_PLANE3; ; size = size == COCKPIT_PLANE3 ? COCKPIT_PLANE2 : COCKPIT_PLANE1)
+        {
+            for (object = s_Next + 19; object < s_Next + 19 + 2 * PLANES_MAX; object += 2)
+                if (object[1] && object[1] - 1 >= size && object[1] - 1 < size + 26) Blit(object[1] - 1, object[0], 0);
+            if (size == COCKPIT_PLANE1) break;
+        }
         if (s_Next[1] & 2)
         {
             /* The deck view (0x4430): it slides down a row every 6 columns
@@ -350,7 +394,7 @@ static void Step(void)
         Keep();
         if (++g_Cockpit.generation == 255) g_Cockpit.generation = 0;
         s_Pending = s_Again;
-        s_Again = 0;
+        s_Again = s_Stale = 0;   /* the next picture waits again */
         break;
     }
     if (!s_Pending) s_Stale = 0;
@@ -365,15 +409,19 @@ u8 Cockpit_Work(void) WINGS_BANKED
 
 u8 Cockpit_Draw(u8 page, u16 x, u16 y, u8 facing_left) WINGS_BANKED
 {
-    u8 changed = g_Cockpit.generation == 255, altitude, base, sight, wrecked;
-    u8 arrow = Planes_Arrow((int16_t)x);
+    u8 changed = g_Cockpit.generation == 255, altitude, base, sight, wrecked, planes;
+    u8 arrow = g_Planes.live ? Planes_Arrow((int16_t)x) : 0;
     y = WINGS_FLIGHT_MAX_Y - y;
     altitude = y > 255 ? 255 : (u8)y;
     base = altitude > FAR_ALTITUDE ? 255 : altitude >> 4;
     sight = altitude >= 81 ? 17 : ((81 - altitude) >> 2) + 6;
     wrecked = g_IslandWrecks;
-    /* The scene only when what it comes from has changed. */
-    if (changed || (x >> 3) != s_InCol || base != s_InBase || sight != s_InSight ||
+    /* The scene only when what it comes from has changed: the plane's
+     * place, and the planes' rows and views (they move on their own). */
+    /* (None in the air: nothing to look at, unless some were shown.) */
+    planes = g_Planes.live || s_PlanesShown ? Planes(base == 255 ? 255 : base + 17 - LIFT, x >> 3, facing_left) : 0;
+    s_PlanesShown = g_Planes.live;
+    if (changed || planes || (x >> 3) != s_InCol || base != s_InBase || sight != s_InSight ||
         facing_left != s_InLeft || arrow != s_InArrow || wrecked != s_InWrecked)
     {
         s_InCol = x >> 3; s_InBase = base; s_InSight = sight;

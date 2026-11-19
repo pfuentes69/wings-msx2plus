@@ -104,7 +104,8 @@ def main():
         # The cockpit window (tools/convert_cockpit.py): known when the page
         # shown holds the compose buffer's picture.
         cockpit=(out/f'{name}.cockpit').read_bytes()
-        pilot=convert_cockpit.compose(cockpit[:19],arrow_frames()) if cockpit[20+page]==cockpit[19]!=255 else None
+        n=convert_cockpit.SCENE_BYTES   # then the generation, then each page's
+        pilot=convert_cockpit.compose(cockpit[:n],arrow_frames()) if cockpit[n+1+page]==cockpit[n]!=255 else None
         stage,depth,lift_tick=(out/f'{name}.lift').read_bytes()
         crew=(out/f'{name}.crew').read_bytes()[0]
         projectiles=[]
@@ -181,7 +182,7 @@ def main():
         preview.save(out/f'{name}-vram.png')
         shots,secondary,impacts=struct.unpack_from('<HHH',combat,152)
         snapshots[name]=dict(phase=game[0],rank=game[1],lives=game[2],weapon=game[3],stock=game[4],invert=game[5],
-                            stage=stage,depth=depth,crew=crew,scale=scale,pilot=cockpit[19],camera=int(camera),world=int(world),y=int(y),pose=int(pose),wave=int(wave),heave=int(heave),ship=int(ship),
+                            stage=stage,depth=depth,crew=crew,scale=scale,pilot=cockpit[convert_cockpit.SCENE_BYTES],camera=int(camera),world=int(world),y=int(y),pose=int(pose),wave=int(wave),heave=int(heave),ship=int(ship),
                             shots=shots,secondary=secondary,impacts=impacts,projectiles=projectiles,flash=combat[158],
                             wheel=(out/f'{name}.wheel').read_bytes()[0],gear=(out/f'{name}.wheel').read_bytes()[1],
                             rope=(out/f'{name}.wheel').read_bytes()[2],smoke=(out/f'{name}.smoke').read_bytes()[0])

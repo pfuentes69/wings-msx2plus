@@ -24,6 +24,8 @@ FLAGS = ['-mz80', '--opt-code-speed', '-DTARGET=TARGET_ROM_ASCII8', '-DROM_SIZE=
          f'-I{ROOT}', f'-I{ROOT}/MSXgl/engine/src', f'-I{ROOT}/MSXgl/engine/content', f'-I{ROOT}/MSXgl/tools',
          f'-I{ROOT}/src', f'-I{ROOT}/src/generated/map_a', '-DWINGS_FLIGHT_MAX_Y=1200u']
 LOG, STACK, SENTINEL = 0xD000, 0xF000, 0x3000
+import convert_cockpit
+SCENE = convert_cockpit.SCENE_BYTES
 # The VDP: each command's registers (g_VDP_Command, 15 bytes) appended to a
 # log at LOG + 2 (LOG holds the end).
 STUB = """
@@ -70,7 +72,7 @@ class Cockpit:
         self.machine.set_memory_block(SENTINEL, b'\x76')
         self.machine.set_breakpoint(SENTINEL)
         state = self.symbols['_g_Cockpit']
-        self.machine.set_memory_block(state, bytes(19) + b'\xff\xff\xff')   # nothing composed, nothing shown
+        self.machine.set_memory_block(state, bytes(SCENE) + b'\xff\xff\xff')   # nothing composed, nothing shown
         self.ticks = []
 
     def wreck(self, huts):
@@ -80,6 +82,21 @@ class Cockpit:
             self.machine.set_memory_block(island + 8 * i + 3, bytes([1 if i in huts else 0]))
         wrecks = self.symbols['_g_IslandWrecks']
         self.machine.set_memory_block(wrecks, bytes([(self.machine.memory[wrecks] + 1) & 255]))
+
+    def planes(self, planes):
+        """The plane slots (Plane, 40 bytes: state +0, x +24, alt +30,
+        shape +35): (state, x, alt, shape) each, the rest free."""
+        base = self.symbols['_g_Planes']
+        for i in range(4):
+            state, x, alt, shape = planes[i] if i < len(planes) else (0, 0, 0, 0)
+            record = bytearray(40)
+            record[0] = state
+            record[24:26] = (x & 0xFFFF).to_bytes(2, 'little')
+            record[30:32] = (alt & 0xFFFF).to_bytes(2, 'little')
+            record[35] = shape
+            self.machine.set_memory_block(base + 40 * i, bytes(record))
+        # PlanesState.live (+164: after the 4 records, timer, fighters, kills).
+        self.machine.set_memory_block(base + 164, bytes([sum(1 for p in planes if p[0])]))
 
     def call(self, entry, stack=b'', **registers):
         m = self.machine
@@ -113,7 +130,7 @@ class Cockpit:
 
     def scene(self):
         state = self.symbols['_g_Cockpit']
-        return bytes(self.machine.memory[state:state + 19])
+        return bytes(self.machine.memory[state:state + SCENE])
 
 
 class VRAM:
@@ -164,9 +181,10 @@ class CockpitZ80Tests(unittest.TestCase):
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def check(self, page, x, altitude, left, huts=()):
+    def check(self, page, x, altitude, left, huts=(), planes=()):
+        self.cockpit.planes(planes)
         commands = self.cockpit.draw(page, x, altitude, left)
-        want = self.model.scene('a', x, altitude, left, 0, set(huts))
+        want = self.model.scene('a', x, altitude, left, 0, set(huts), planes)
         self.assertEqual(self.cockpit.scene(), want, (x, altitude, left))
         for c in commands: self.vram.run(c)
         wx, wy = self.window
@@ -183,6 +201,19 @@ class CockpitZ80Tests(unittest.TestCase):
         cases += [(rng.randrange(0, 7608), rng.randrange(0, 256), rng.randrange(2)) for _ in range(150)]
         for page, (x, altitude, left) in enumerate(cases):
             self.check(page & 1, x, altitude, left)
+
+    def test_planes_match_the_model(self):
+        rng = random.Random(3)
+        for k in range(150):
+            x, altitude, left = rng.randrange(0, 7608), rng.randrange(0, 187), rng.randrange(2)
+            planes = []
+            for _ in range(rng.randrange(1, 5)):
+                ahead = rng.randrange(-200, 1400)
+                px = x - ahead if left else x + ahead
+                state = rng.choice((2, 2, 2, 4, 0, 16))
+                planes.append((state, px, rng.choice((rng.randrange(0, 200), -32768)), rng.randrange(56)))
+            self.check(k & 1, x, altitude, left, planes=planes)
+        self.cockpit.planes(())
 
     def test_a_wrecked_hut_changes_the_view(self):
         self.cockpit.wreck(())
@@ -203,12 +234,12 @@ class CockpitZ80Tests(unittest.TestCase):
         self.check(0, 3300, 40, 1)
         m = self.cockpit.machine
         state = self.cockpit.symbols['_g_Cockpit']
-        generation = m.memory[state + 19]
-        for k in range(4):
+        generation = m.memory[state + SCENE]
+        for k in range(14):   # STALE (12) renders waiting, then the scene, the ground
             self.cockpit.render(0, 3200, 40, 1)
-            self.assertEqual(m.memory[state + 19], generation, k)   # waiting, then a step a render
+            self.assertEqual(m.memory[state + SCENE], generation, k)   # waiting, then a step a render
         self.cockpit.render(0, 3200, 40, 1)
-        self.assertNotEqual(m.memory[state + 19], generation)
+        self.assertNotEqual(m.memory[state + SCENE], generation)
         self.assertEqual(self.cockpit.scene(), self.model.scene('a', 3200, 40, 1))
 
     def test_cost(self):

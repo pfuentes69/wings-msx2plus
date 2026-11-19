@@ -65,23 +65,38 @@ plain sky.
   fills and transparent copies: the sky, sea and ground; then the targets,
   the deck view and the sight), then each page copies the buffer (one
   HMMM) the next time it is rendered, the arrow on top. The work (about
-  30,000 T-states) is done in the idle time before a VBlank, like the
-  terrain prefetch (`Cockpit_Work`); a render costs about 2,700. Without
-  idle time (the heaviest frames), renders that have waited two frames do
-  it a step at a time: the scene, then the ground, then the rest. A page never copies a half-drawn buffer, and a change
+  30,000..45,000 T-states) is done in the idle time before a VBlank, like
+  the terrain prefetch (`Cockpit_Work`); a render costs about 2,000. Without
+  idle time for 12 renders (about 1.6 s; the heaviest stretches still
+  have some), renders do it a step at a time: the scene, then the ground,
+  then the rest; each picture then waits again. Stepping sooner cost the
+  planes run 11 missed deadlines (17 with none, 19 with these 12). A page never copies a half-drawn buffer, and a change
   meanwhile waits for the picture under way, so a run of changes still
   shows.
-- **Not yet**: the enemy planes (`zr1*`/`zr2*`, from 48 to 1280 px ahead,
-  by their altitude) and the enemy ships (their own archives' views: the
-  destroyer, battleship and cruiser). AA guns are drawn intact (no map
-  played so far has any).
+- **Enemy planes** (flying or shot down, 48..1280 px ahead): in the band
+  their distance falls in (the planes' own band edges, 0x4206), at the row
+  the original gives, `band row - (altitude / 4 + 4)` from the original's
+  horizon (not the port's raised one: a plane at the player's altitude
+  sits near the gunsight, as there; one well above is out of the window),
+  in the view its shape gives (`zr*`, the original's two name lists at
+  DATA 0x3118 and 0x3188, swapped when the player faces right). Sizes: zr1
+  for the nearest 3 bands, zr2 for the next 6, zr3 for the farthest 2. The
+  original's offsets step half a set (0, 28, 56, 84) and so show some
+  views from the other facing list; the port keeps the sizes and the right
+  facing. They are drawn after the targets, the farthest size first. The
+  render works out each plane's row and view (cheap; skipped when no plane
+  slot is in use) and recomposes only when they change.
+- **Not yet**: the enemy ships (their own archives' views: the destroyer,
+  battleship and cruiser). AA guns are drawn intact (no map played so far
+  has any).
 
 ## Verification
 
 - `tests/test_cockpit_z80.py`: the compiled code on an emulated Z80
   against the converter's model (`scene`, `compose`), its VDP commands
-  logged by a stub and replayed: 168 views on map a, wrecked huts, no
-  commands for an unchanged scene, the step-by-step fallback.
+  logged by a stub and replayed: 168 views on map a, 150 with planes,
+  wrecked huts, no commands for an unchanged scene, the step-by-step
+  fallback.
 - `verify_p0`: the snapshots dump `g_Cockpit`; where the page shown holds
   the buffer's picture, the window is compared pixel for pixel with the
   model's (73 of 82 gameplay snapshots on NTSC).

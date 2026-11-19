@@ -210,7 +210,7 @@ proc publishing {} {
     }
     dump $name.lift [debug read_block memory $::addr(g_Carrier) 3]
     dump $name.view [debug read_block memory $::addr(g_DisplayScale) 3]
-    dump $name.cockpit [debug read_block memory $::addr(g_Cockpit) 22]
+    dump $name.cockpit [debug read_block memory $::addr(g_Cockpit) 30]
     dump $name.crew [debug read_block memory $::addr(g_CrewFrame) 1]
     dump $name.gauges [debug read_block memory $::addr(g_DisplayGauges) 3]
     dump $name.flight [debug read_block memory $::addr(s_World) 37]
