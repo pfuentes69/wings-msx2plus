@@ -76,13 +76,81 @@ void Game_OpenService(GameState* game) WINGS_BANKED
     game->sortie.oil=ENGINE_OIL_FULL; game->sortie.fuel=ENGINE_FUEL_FULL;
 }
 
+HighScore g_HighScores[GAME_SCORE_COUNT];
+char g_Name[GAME_NAME_LENGTH];
+uint8_t g_NameLength;
+static uint16_t s_Wait;      /* VBlanks the current phase has shown */
+static uint8_t s_WaitPhase, s_Pal;
+
+void Game_ClearScores(void) WINGS_BANKED
+{
+    uint8_t i, k;
+    for (i=0; i<GAME_SCORE_COUNT; ++i)
+    {
+        g_HighScores[i].score=0; g_HighScores[i].rank=0;
+        for (k=0; k<GAME_NAME_LENGTH; ++k) g_HighScores[i].name[k]=' ';
+    }
+    s_WaitPhase=255;
+}
+
+/* PAL frames as VBlanks of this machine. */
+static uint16_t Frames(uint16_t pal) { return s_Pal ? pal : pal + pal / 5; }
+
+/* The game ends (the last plane, Ctrl-R): the name if the score beats the
+ * tenth (0x9856), then the table. */
+static void EndGame(GameState* game)
+{
+    game->phase=g_HighScores[GAME_SCORE_COUNT-1].score<game->progress.score ? GAME_NAME : GAME_SCORES;
+    g_NameLength=0; game->cursor=game->notice=0;
+}
+
+/* The entry goes in below the scores it does not beat (the original's
+ * bubble sort swaps on "less than" only). */
+static void Enter(GameState* game)
+{
+    uint8_t i=GAME_SCORE_COUNT-1, k;
+    HighScore* e;
+    while (i && g_HighScores[i-1].score<game->progress.score) { g_HighScores[i]=g_HighScores[i-1]; --i; }
+    e=&g_HighScores[i];
+    e->score=game->progress.score; e->rank=game->progress.rank;
+    for (k=0; k<GAME_NAME_LENGTH; ++k) e->name[k]=k<g_NameLength ? g_Name[k] : ' ';
+    game->phase=GAME_SCORES;
+}
+
+static void NewGame(GameState* game)
+{
+    uint8_t invert=game->invert;
+    Game_Reset(game); game->invert=invert;
+}
+
+uint8_t Game_Type(GameState* game, uint8_t key) WINGS_BANKED
+{
+    if (game->phase!=GAME_NAME) return 0;
+    if (key==8) { if (!g_NameLength) return 0; --g_NameLength; return 1; }
+    if (g_NameLength==GAME_NAME_LENGTH) return 0;
+    if (!((key>='A' && key<='Z') || (key>='0' && key<='9') || key==' ' || key=='.')) return 0;
+    g_Name[g_NameLength++]=(char)key;
+    return 1;
+}
+
 uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
 {
     uint8_t old=game->phase, prev, next, count;
     if (pressed & ACTION_RESTART)
     {
-        prev=game->invert; Game_Reset(game); game->invert=prev;
+        /* Ctrl-R ends the game through the high scores, as the last plane
+         * does (0x01c6); on their own screens and at rank selection it does
+         * nothing. */
+        if (old==GAME_RANK || old==GAME_NAME || old==GAME_SCORES) return 0;
+        EndGame(game);
         return GAME_CONTEXT_CHANGED|GAME_RESTARTED;
+    }
+    if (old==GAME_NAME)
+    {
+        /* Return, a fire button, or up / down end the name (0x9856). */
+        if (!(pressed & (ACTION_BUTTONS|ACTION_UP|ACTION_DOWN))) return 0;
+        Enter(game);
+        return GAME_CONTEXT_CHANGED;
     }
     if (old==GAME_PLAY && (pressed & (ACTION_LOAD|ACTION_SAVE)))
     {
@@ -123,8 +191,14 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
     if (!(pressed & (ACTION_BUTTONS))) return 0;
     if (old==GAME_OVER)
     {
-        /* High-score entry arrives with P6; return to rank selection. */
-        prev=game->invert; Game_Reset(game); game->invert=prev;
+        /* "The end" takes a button after 30 frames. */
+        if (s_WaitPhase==GAME_OVER && s_Wait<Frames(30)) return 0;
+        EndGame(game);
+        return GAME_CONTEXT_CHANGED;
+    }
+    if (old==GAME_SCORES)
+    {
+        NewGame(game);
         return GAME_CONTEXT_CHANGED;
     }
     if (old==GAME_RANK)
@@ -153,12 +227,16 @@ void Game_View(const GameState* game, uint8_t* view) WINGS_BANKED
     view[6]=game->cursor; view[7]=game->notice;
 }
 
-static uint16_t s_BriefWait;
 uint8_t Game_Wait(GameState* game, uint8_t ticks, uint8_t pal) WINGS_BANKED
 {
-    if (game->phase != GAME_BRIEFING) { s_BriefWait = 0; return 0; }
-    if ((s_BriefWait += ticks) < (pal ? 240u : 288u)) return 0;
-    s_BriefWait = 0;
-    Game_HandleAction(game, ACTION_ENTER);
+    uint16_t limit;
+    s_Pal=pal;
+    if (game->phase!=s_WaitPhase) { s_WaitPhase=game->phase; s_Wait=0; }
+    s_Wait+=ticks;
+    limit=game->phase==GAME_BRIEFING ? 240 : game->phase==GAME_OVER ? 150 : game->phase==GAME_SCORES ? 1800 : 0;
+    if (!limit || s_Wait<Frames(limit)) return 0;
+    if (game->phase==GAME_BRIEFING) Game_HandleAction(game, ACTION_ENTER);
+    else if (game->phase==GAME_OVER) EndGame(game);
+    else NewGame(game);
     return 1;
 }

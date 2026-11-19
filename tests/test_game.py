@@ -16,6 +16,8 @@ class Sortie(C.Structure):
 class Game(C.Structure):
     _fields_=[('progress',Progress),('mission',Mission),('sortie',Sortie),
               ('phase',C.c_uint8),('cursor',C.c_uint8),('invert',C.c_uint8),('notice',C.c_uint8)]
+class HighScore(C.Structure):
+    _fields_=[('score',C.c_uint32),('rank',C.c_uint8),('name',C.c_char*16)]
 class Session(C.Structure):
     _fields_=[('game',Game),('x',C.c_uint16),('y',C.c_uint16),
               ('vx',C.c_int16),('vy',C.c_int16),('left',C.c_uint8)]
@@ -127,8 +129,69 @@ class GameTests(unittest.TestCase):
         for key in (16,32,64,1,2,4,8):self.action(g,key);self.assertEqual(g.phase,4)
         self.assertEqual((g.sortie.stock,g.progress.score),(23,123))
         self.action(g,128);self.assertEqual(g.phase,3)
-        self.action(g,256|32);self.assertEqual((g.phase,g.progress.lives,g.sortie.stock,g.invert),(0,3,30,1))
+        # Ctrl-R ends the game through the high scores (0x01c6): 123 beats
+        # the empty table, so the name first; then the table; then a new game.
+        self.core.Game_ClearScores()
+        self.action(g,256|32);self.assertEqual((g.phase,g.progress.score),(9,123))
+        self.action(g,64);self.assertEqual(g.phase,10)
+        self.action(g,16);self.assertEqual((g.phase,g.progress.lives,g.sortie.stock,g.invert),(0,3,30,1))
         self.assertEqual(g.progress.score,0)
+        self.assertEqual(self.action(g,256),0)   # at rank selection Ctrl-R does nothing
+    def scores(self):
+        table=(HighScore*10).in_dll(self.core,'g_HighScores')
+        return [(e.score,e.rank,bytes(e.name).rstrip(b' ').decode()) for e in table]
+    def end_game(self,score,rank,name=b''):
+        g=self.game();g.phase=3;g.progress.score=score;g.progress.rank=rank
+        self.action(g,256)
+        if g.phase==9:
+            for key in name: self.core.Game_Type(C.byref(g),key)
+            self.action(g,16)
+        self.assertEqual(g.phase,10)
+        return g
+    def test_high_scores_keep_the_ten_best_ties_below(self):
+        self.core.Game_Type.argtypes=[C.POINTER(Game),C.c_uint8];self.core.Game_Type.restype=C.c_uint8
+        self.core.Game_ClearScores()
+        self.assertEqual(self.scores(),[(0,0,'')]*10)
+        g=self.end_game(0,0)                   # 0 does not beat an empty row: the table only
+        self.end_game(500,1,b'ANNE')
+        self.end_game(900,2,b'BOB')
+        self.end_game(500,3,b'CARL')            # a tie goes below the older 500
+        got=self.scores()
+        self.assertEqual(got[:3],[(900,2,'BOB'),(500,1,'ANNE'),(500,3,'CARL')])
+        for i in range(10): self.end_game(1000+i,0,b'X%d'%i)
+        got=self.scores()
+        self.assertEqual([e[0] for e in got],[1009-i for i in range(10)])
+        self.end_game(1000,0,b'NO')             # equal to the tenth: does not qualify
+        self.assertEqual(self.scores(),got)
+    def test_name_entry_types_and_deletes(self):
+        self.core.Game_Type.argtypes=[C.POINTER(Game),C.c_uint8];self.core.Game_Type.restype=C.c_uint8
+        self.core.Game_ClearScores()
+        g=self.game();g.phase=3;g.progress.score=10;self.action(g,256);self.assertEqual(g.phase,9)
+        typed=[self.core.Game_Type(C.byref(g),k) for k in b'AB?c 1.']
+        self.assertEqual(typed,[1,1,0,0,1,1,1])         # '?' and lower case are not in the font
+        self.assertEqual(self.core.Game_Type(C.byref(g),8),1)
+        for k in b'0123456789ABCDEFGH': self.core.Game_Type(C.byref(g),k)
+        length=C.c_uint8.in_dll(self.core,'g_NameLength').value
+        self.assertEqual(length,16)
+        self.action(g,4)                                 # down ends the name too
+        self.assertEqual(self.scores()[0][2],'AB 10123456789AB')
+    def test_the_end_takes_a_button_after_30_frames_and_moves_on_after_150(self):
+        self.core.Game_Wait.argtypes=[C.POINTER(Game),C.c_uint8,C.c_uint8];self.core.Game_Wait.restype=C.c_uint8
+        self.core.Game_ClearScores()
+        g=self.game();g.phase=8;g.progress.score=0
+        self.assertEqual(self.core.Game_Wait(C.byref(g),8,1),0)
+        self.action(g,64);self.assertEqual(g.phase,8)    # too early
+        for _ in range(3): self.core.Game_Wait(C.byref(g),8,1)
+        self.action(g,64);self.assertEqual(g.phase,10)   # 32 frames: the table
+        frames=0
+        while g.phase==10:
+            self.core.Game_Wait(C.byref(g),8,1);frames+=8
+        self.assertEqual((g.phase,frames),(0,1800))
+        g=self.game();g.phase=8
+        frames=0
+        while g.phase==8:
+            self.core.Game_Wait(C.byref(g),6,0);frames+=6
+        self.assertEqual((g.phase,frames),(10,180))       # NTSC: 150 PAL frames as fields
     def test_in_game_storage_shells_return_to_game_without_mutation(self):
         for key,phase in ((1024,5),(2048,6)):
             g=self.game();g.phase=3;g.sortie.stock=19;g.progress.score=42

@@ -52,6 +52,39 @@ proc pulse {row mask then} {
     after time 0.8 $then
 }
 proc snap {name then} {set ::pending [list $name $then]}
+# After the game ends (last plane, Ctrl-R): "the end" moves on by itself,
+# a name (if any) is left empty with Return, and Return leaves the table
+# (src/core/game.c). Snapshots name_entry and scores once each, if asked.
+# Keys (row mask pairs) pressed one after another.
+proc type_keys {keys then} {
+    if {![llength $keys]} {after time 0.1 $then; return}
+    lassign $keys row mask
+    keymatrixdown $row $mask
+    after time 0.06 [list keymatrixup $row $mask]
+    after time 0.15 [list type_keys [lrange $keys 2 end] $then]
+}
+proc after_game {then {snaps 0}} {
+    set p [view 0]
+    if {$p==9} {
+        # With snapshots: type "ACE 1" (A row 2 bit 6, C and E row 3, space
+        # row 8, 1 row 0) and check it before Return.
+        if {$snaps} {
+            type_keys {2 64 3 1 3 4 8 1 0 2} [list wait_for {[value g_NameLength]==5} [list snap name_entry [list name_typed $then]] "the name typed" 3]
+        } else {pulse 7 128 [list after_game $then]}
+        return
+    }
+    if {$p==10} {
+        if {$snaps} {snap scores [list pulse 7 128 [list after_game $then 0]]} else {pulse 7 128 [list after_game $then]}
+        return
+    }
+    if {$p==0} {after time 0.05 $then; return}
+    after time 0.025 [list after_game $then $snaps]
+}
+proc name_typed {then} {
+    set typed [debug read_block memory $::addr(g_Name) [value g_NameLength]]
+    require [expr {$typed eq "ACE 1"}] "Name entry typed '$typed'"
+    pulse 7 128 [list after_game $then 1]
+}
 proc finish {name then} {
     if {$::env(WINGS_HEADLESS) eq "0"} {
         screenshot -raw [file join $::out $name.png]

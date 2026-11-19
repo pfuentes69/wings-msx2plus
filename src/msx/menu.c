@@ -2,8 +2,9 @@
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCENE)
 #include "vdp.h"
 #include "vdp_inl.h"
+#include "input_sampler.h"
 
-static const u8 s_Font[40][21] = {
+static const u8 s_Font[41][21] = {
     {0x1b,0xbb,0x11,0xb1,0x11,0xb1,0xb1,0x11,0xb1,0xbb,0xbb,0xb1,0xb1,0x11,0xb1,0xb1,0x11,0xb1,0xb1,0x11,0xb1},
     {0xbb,0xbb,0x11,0xb1,0x11,0xb1,0xb1,0x11,0xb1,0xbb,0xbb,0x11,0xb1,0x11,0xb1,0xb1,0x11,0xb1,0xbb,0xbb,0x11},
     {0x1b,0xbb,0xb1,0xb1,0x11,0x11,0xb1,0x11,0x11,0xb1,0x11,0x11,0xb1,0x11,0x11,0xb1,0x11,0x11,0x1b,0xbb,0xb1},
@@ -45,6 +46,8 @@ static const u8 s_Font[40][21] = {
     /* '.' and ':' */
     {0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0xb1,0x11},
     {0x11,0x11,0x11,0x11,0x11,0x11,0x11,0xb1,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0xb1,0x11,0x11,0x11,0x11},
+    /* '#': the name entry's cursor block */
+    {0xbb,0xbb,0xb1,0xbb,0xbb,0xb1,0xbb,0xbb,0xb1,0xbb,0xbb,0xb1,0xbb,0xbb,0xb1,0xbb,0xbb,0xb1,0xbb,0xbb,0xb1},
 };
 /* The rank screen's names (shapes/selectrank) and the briefing's (the
  * executable's table at -$56ee, 0x8590). */
@@ -54,12 +57,13 @@ static const char* const s_RankShort[7] = {
     "MIDSHIPMAN", "ENSIGN", "LT. JR. GR.", "LIEUTENANT", "LT.COMMD", "COMMANDER", "CAPTAIN"};
 static u8 s_Line[128];
 
-static void Text(u8 page, u8 y, const char* text)
+/* Text at byte column x (2 px a byte), 38 characters at most. */
+static void TextAt(u8 page, u8 x, u8 y, const char* text)
 {
     u8 row, offset=0, length=0, character, i;
     u8* destination;
     const u8* source;
-    while (length<37 && text[length]) ++length;
+    while (length<38 && text[length]) ++length;
     for (row=0; row<7; ++row)
     {
         destination=s_Line;
@@ -68,16 +72,17 @@ static void Text(u8 page, u8 y, const char* text)
             character=text[i];
             if (character>='A' && character<='Z') character-='A';
             else if (character>='0' && character<='9') character=26+character-'0';
-            else character=character=='>' ? 36 : character=='.' ? 38 : character==':' ? 39 : 37;
+            else character=character=='>' ? 36 : character=='.' ? 38 : character==':' ? 39 : character=='#' ? 40 : 37;
             source=s_Font[character]+offset;
             *destination++=*source++;
             *destination++=*source++;
             *destination++=*source;
         }
-        VDP_WriteVRAM(s_Line,((u16)page*256+y+row)*128+12,0,length*3);
+        VDP_WriteVRAM(s_Line,((u16)page*256+y+row)*128+x,0,length*3);
         offset+=3;
     }
 }
+#define Text(page, y, text) TextAt(page, 12, y, text)
 
 /* "label" and a number (0..255) into s_Text. */
 static char s_Text[24];
@@ -98,6 +103,62 @@ static const char* Pick(u8 selected, const char* text)
     while (*text) *out++ = *text++;
     *out = 0;
     return s_Text;
+}
+
+/* A high-score row (0x9856: position, score, rank, name; the full rank
+ * names do not fit 256 px, so the briefing's short ones). */
+static char s_Row[40];
+static const char* ScoreRow(u8 i)
+{
+    const HighScore* e = &g_HighScores[i];
+    char* out = s_Row;
+    const char* rank = s_RankShort[e->rank < 7 ? e->rank : 6];
+    u32 value = e->score, ten = 100000;
+    u8 k, started = 0, digit;
+    *out++ = i + 1 >= 10 ? '1' : ' '; *out++ = '0' + (i + 1) % 10; *out++ = ' ';
+    for (k = 0; k < 6; ++k, ten /= 10)
+    {
+        for (digit = 0; value >= ten; value -= ten) ++digit;
+        if (digit || started || k == 5) { *out++ = '0' + digit; started = 1; }
+    }
+    while (out < s_Row + 10) *out++ = ' ';
+    for (k = 0; rank[k]; ++k) *out++ = rank[k];
+    while (out < s_Row + 22) *out++ = ' ';
+    for (k = 0; k < GAME_NAME_LENGTH; ++k) *out++ = e->name[k];
+    *out = 0;
+    return s_Row;
+}
+
+/* The keys typed for a name (the original reads them as text): queued in
+ * order by the VBlank interrupt (msx/input_sampler.c), taken here one at a
+ * time as Game_Type wants them, or 0. reset: start typing, keys already
+ * down count as old (Ctrl-R's R, the button that ended the game). Keys
+ * with CTRL held are ignored. */
+static const char s_KeyChars[6][8] = {
+    {'0','1','2','3','4','5','6','7'}, {'8','9',0,0,0,0,0,0}, {0,0,0,'.',0,0,'A','B'},
+    {'C','D','E','F','G','H','I','J'}, {'K','L','M','N','O','P','Q','R'}, {'S','T','U','V','W','X','Y','Z'}};
+u8 Menu_Key(u8 reset) WINGS_BANKED
+{
+    u8 i, code, row, bit, key = 0;
+    if (reset)
+    {
+        g_TypeMode = 0;
+        for (i = 0; i < 9; ++i) g_KeyDown[i] = 0xFF;
+        g_KeyHead = g_KeyTail = 0;   /* RAM is not cleared at boot */
+        g_TypeMode = 1;
+        return 0;
+    }
+    while (!key && g_KeyTail != g_KeyHead)
+    {
+        code = g_KeyQueue[g_KeyTail];
+        g_KeyTail = (g_KeyTail + 1) & 7;
+        if (g_KeyDown[6] & 2) continue;              /* CTRL */
+        row = code >> 3; bit = code & 7;
+        if (row < 6) key = s_KeyChars[row][bit];
+        else if (row == 7 && bit == 5) key = 8;      /* BS */
+        else if (row == 8) key = bit == 0 ? ' ' : bit == 3 ? 8 : 0;   /* space, DEL */
+    }
+    return key;
 }
 
 void Menu_Draw(u8 page, const GameState* game) WINGS_BANKED
@@ -134,7 +195,24 @@ void Menu_Draw(u8 page, const GameState* game) WINGS_BANKED
     }
     else if (game->phase==GAME_OVER)
     {
-        Text(page,65,"GAME OVER"); Text(page,100,"ENTER OR BUTTON TO CONTINUE");
+        /* The original's plate (world shape gmov) says THE END. */
+        Text(page,80,"THE END");
+    }
+    else if (game->phase==GAME_NAME)
+    {
+        Text(page,70,"YOUR NAME IS TO BE ENTERED");
+        Text(page,81,"IN THE HALL OF FAME.");
+        for (i=0; i<g_NameLength; ++i) s_Row[i]=g_Name[i];
+        if (i<GAME_NAME_LENGTH) s_Row[i++]='#';
+        s_Row[i]=0;
+        Text(page,103,s_Row);
+        Text(page,151,"ENTER OR BUTTON WHEN DONE");
+    }
+    else if (game->phase==GAME_SCORES)
+    {
+        Text(page,28,"ACES");
+        for (i=0; i<GAME_SCORE_COUNT; ++i)
+            if (g_HighScores[i].score) TextAt(page,10,44+i*11,ScoreRow(i));
     }
     else if (game->phase==GAME_PAUSE)
     {

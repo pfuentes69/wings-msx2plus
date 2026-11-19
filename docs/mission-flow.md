@@ -74,6 +74,38 @@ fields). Rank selection lists the names of the original's screen
 (`selectrank`: Midshipman, Ensign, Lt. Junior Grade, Lieutenant,
 Lt. Commander, Commander, Captain, Return from R&R).
 
+## The end of a game and the high scores (2026-11-19)
+
+From the original ([research/amiga-hiscores.md](research/amiga-hiscores.md)):
+the last plane lost shows a plate reading "THE END" (0xaf7c) for 150
+frames, or until a button after 30. Then (0x9856, also after Ctrl-R) a
+score above the table's tenth takes a name, typed on the keyboard (16
+characters at most), and the table of the ten best is shown every time,
+for 1800 frames or until a fire button; then rank selection. A new entry
+goes below the scores it does not beat. The table starts empty (the
+original saves it as the file `highscore`).
+
+The port (`core/game.c`, `msx/menu.c`):
+- `GAME_OVER` is "THE END", then `GAME_NAME` (if the score qualifies) and
+  `GAME_SCORES`; `Game_Wait` runs their timers (PAL frames, NTSC fields
+  6/5 as many). Ctrl-R from play, pause, the menus or the service goes
+  the same way; at rank selection and on these screens it does nothing.
+- The table (`g_HighScores`, 10 × score, rank, 16-character name) is in
+  RAM: it lasts until the machine is switched off.
+- Typing (`Menu_Key`, the keyboard matrix scanned while the name is
+  entered, every VBlank): A..Z, 0..9, space and `.` (the menu font's),
+  Backspace or Del to delete. Return, a fire button, Up or Down end it; an
+  empty name is accepted. Keys already down when it opens are not typed.
+  The VBlank interrupt queues the keys in order while the name is typed
+  (`Input_Keys`, msx/input_sampler.c), so a tap during a redraw is kept;
+  the space bar types a space then, not fire (the joystick's button still
+  ends the name).
+  The original's cursor movement within the name is not done.
+- The rows show position, score, rank and name; the rank is the short name,
+  as the full ones don't fit 256 px in this font.
+- The plate, the ACES banner, the slab and the font are for the artwork
+  step.
+
 Not yet:
 - only maps a and j are built, so every mission flies the ROM's map again;
 - no victory ceremony screen;

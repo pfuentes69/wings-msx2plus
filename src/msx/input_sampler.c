@@ -136,6 +136,77 @@ sample_6$:
     __endasm;
 }
 
+volatile u8 g_TypeMode, g_KeyHead, g_KeyTail;
+volatile u8 g_KeyQueue[8], g_KeyDown[9];
+
+// In the ISR while typing: every key newly down, queued in order (rows 0..8).
+static void Input_Keys(void) __naked
+{
+    __asm
+        in a, (0xaa)
+        push af                 ; the row select, restored at the end
+        and #0xf0
+        ld e, a                 ; E: the port's other bits
+        ld hl, #_g_KeyDown
+        ld c, #0                ; C: the row
+    keys_row$:
+        ld a, e
+        or c
+        out (0xaa), a
+        in a, (0xa9)
+        cpl                     ; 1 = down
+        ld b, (hl)
+        ld (hl), a
+        ld d, a
+        ld a, b
+        cpl
+        and d                   ; newly down
+        jr z, keys_next$
+        ld d, a                 ; D: the keys left to queue
+        ld a, c
+        add a, a
+        add a, a
+        add a, a
+        ld b, a                 ; B: row * 8 + bit
+    keys_bit$:
+        srl d
+        jr nc, keys_skip$
+        push hl
+        ld a, (_g_KeyHead)
+        ld l, a
+        inc a
+        and #7
+        ld h, a
+        ld a, (_g_KeyTail)
+        cp h
+        jr z, keys_full$        ; full: dropped
+        ld a, h
+        ld (_g_KeyHead), a
+        ld h, #0
+        push de
+        ld de, #_g_KeyQueue
+        add hl, de
+        ld (hl), b
+        pop de
+    keys_full$:
+        pop hl
+    keys_skip$:
+        inc b
+        ld a, d
+        or a
+        jr nz, keys_bit$
+    keys_next$:
+        inc hl
+        inc c
+        ld a, c
+        cp #9
+        jr c, keys_row$
+        pop af
+        out (0xaa), a
+        ret
+    __endasm;
+}
+
 // The CRT saves registers. No BIOS input function may enable IRQs here.
 void Input_Sample(void)
 {
@@ -145,6 +216,7 @@ void Input_Sample(void)
 #endif
     u16 state=0;
     if (!g_InputEnabled) return;
+    if (g_TypeMode) Input_Keys();
     if (!Input_Read() && s_Sampled) return;
     s_Sampled=1;
     row3=s_Raw[0]; row4=s_Raw[1]; row6=s_Raw[2];
@@ -156,7 +228,8 @@ void Input_Sample(void)
     if (!(joy&2) || !(row8&64)) state|=ACTION_DOWN;
     if (!(joy&4) || !(row8&16)) state|=ACTION_LEFT;
     if (!(joy&8) || !(row8&128)) state|=ACTION_RIGHT;
-    if (!(joy&16) || !(row8&1)) state|=ACTION_PRIMARY;
+    /* While a name is typed the space bar types a space, not fire. */
+    if (!(joy&16) || (!(row8&1) && !g_TypeMode)) state|=ACTION_PRIMARY;
     if (!(joy&32) || !(row4&8) || !(row6&4)) state|=ACTION_SECONDARY;
     if (!(row7&128)) state|=ACTION_ENTER;
     if (!(row7&4)) state|=ACTION_ESCAPE;

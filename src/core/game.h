@@ -11,7 +11,11 @@
 #define GAME_LOAD_MENU 5
 #define GAME_SAVE_MENU 6
 #define GAME_SERVICE 7
-#define GAME_OVER 8
+#define GAME_OVER 8      /* "The end" (0xaf7c): 150 frames, or a button after 30 */
+#define GAME_NAME 9      /* a high score's name (0x9856): typed, 16 at most */
+#define GAME_SCORES 10   /* the ten best (0x9856): 1800 frames or a button */
+#define GAME_SCORE_COUNT 10
+#define GAME_NAME_LENGTH 16
 #define WEAPON_BOMBS 0
 #define WEAPON_ROCKETS 1
 #define WEAPON_TORPEDO 2
@@ -32,7 +36,20 @@ typedef struct GameState {
     uint8_t phase,cursor,invert,notice;
 } GameState;
 
+/* The high-score table (docs/research/amiga-hiscores.md): ten entries,
+ * best first; a score of 0 is an empty row. RAM only (the original keeps a
+ * `highscore` file). */
+typedef struct HighScore { uint32_t score; uint8_t rank; char name[GAME_NAME_LENGTH]; } HighScore;
+extern HighScore g_HighScores[GAME_SCORE_COUNT];
+extern char g_Name[GAME_NAME_LENGTH];   /* the name being entered */
+extern uint8_t g_NameLength;
+
 uint8_t Game_WeaponStock(uint8_t weapon) WINGS_BANKED;
+/* Boot: the table empty (RAM is not cleared). */
+void Game_ClearScores(void) WINGS_BANKED;
+/* A key typed while a name is entered: 'A'..'Z', '0'..'9', ' ', '.' are
+ * added, 8 deletes the last. Returns 1 when the name changed. */
+uint8_t Game_Type(GameState* game, uint8_t key) WINGS_BANKED;
 void Game_SetLoadout(GameState* game, uint8_t weapon) WINGS_BANKED;
 void Game_OpenService(GameState* game) WINGS_BANKED;
 void Game_Reset(GameState* game) WINGS_BANKED;
@@ -47,8 +64,10 @@ uint8_t Game_AdvanceMission(GameState* game) WINGS_BANKED;
  * plane, then the next mission's briefing. */
 void Game_NextMission(GameState* game, uint8_t promoted) WINGS_BANKED;
 void Game_View(const GameState* game, uint8_t* view) WINGS_BANKED;
-/* Once a presented frame: the briefing closes by itself after 240 PAL
- * frames (0x8590), 4.8 s; 288 NTSC fields. ticks: VBlanks since the last
- * call; pal: nonzero at 50 Hz. Returns 1 when it moved on (to the loadout). */
+/* Once a presented frame, the screens that move on by themselves, in PAL
+ * frames (NTSC fields 6/5 as many): the briefing after 240 (0x8590), "the
+ * end" after 150 (0xaf7c), the high scores after 1800 (0x9856). ticks:
+ * VBlanks since the last call; pal: nonzero at 50 Hz. Returns 1 when the
+ * phase changed. */
 uint8_t Game_Wait(GameState* game, uint8_t ticks, uint8_t pal) WINGS_BANKED;
 #endif

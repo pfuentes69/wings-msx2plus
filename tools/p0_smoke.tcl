@@ -1,4 +1,4 @@
-set extra_symbols {g_Planes}
+set extra_symbols {g_Planes g_NameLength g_Name g_HighScores}
 source [file join $env(WINGS_ROOT) tools smoke_lib.tcl]
 # Enemy planes have their own verifier (docs/enemy-planes.md); the P0's
 # pixel model does not know them: keep the torpedo-plane timer (g_Planes
@@ -151,7 +151,7 @@ proc taxi_left_end {} {
 proc taxi_restart {} {
     keymatrixdown 6 2;keymatrixdown 4 128
     after time 0.15 {keymatrixup 4 128;keymatrixup 6 2}
-    phase 0 {pulse 7 128 {phase 1 {pulse 7 128 {phase 2 {pulse 7 128 {phase 3 {wait_lift_up launch_roll}}}}}}}
+    after time 0.3 {after_game {pulse 7 128 {phase 1 {pulse 7 128 {phase 2 {pulse 7 128 {phase 3 {wait_lift_up launch_roll}}}}}}}}
 }
 # Flight from the release controls; the original model runs once per 12
 # simulation steps (12.5 Hz). Keyboard row 8: 1 space, 16 left, 32 up,
@@ -511,9 +511,16 @@ proc mission_two {} {
 }
 proc restart_game {} {
     fly 0
-    keymatrixdown 6 2;keymatrixdown 4 136;after time 0.4 {keymatrixup 4 136;keymatrixup 6 2};phase 0 restarted
+    keymatrixdown 6 2;keymatrixdown 4 136;after time 0.4 {keymatrixup 4 136;keymatrixup 6 2}
+    # Ctrl-R ends the game through the high scores (a name: the score beats
+    # the empty table); R and N still held must not type into it.
+    after time 0.6 {require [expr {[view 0]==9 && [value g_NameLength]==0}] "Ctrl-R: no name entry, or held keys typed"; after_game restarted 1}
 }
 proc restarted {} {
+    # The table's first row: score > 0, rank 0 (Midshipman), name "ACE 1".
+    set row [debug read_block memory $::addr(g_HighScores) 21]
+    binary scan $row iucua16 score rank name
+    require [expr {$score>0 && $rank==0 && [string trimright $name]=="ACE 1"}] "High score entry: $score $rank '$name'"
     require [expr {[view 2]==3 && [view 4]==30 && [view 5]==1 && [stat 30]==0 && [stat 32]==0}] "Ctrl-R game reset or setting retention"
     snap restart engine_new_game
 }
@@ -612,7 +619,7 @@ proc engine_wait_game_over {} {
     require [expr {[machine_info time]<$::crash_deadline}] "Last plane never crashed"
     if {[view 0]!=8} {after time 0.05 engine_wait_game_over;return}
     require [expr {[view 2]==0}] "Game over with planes remaining"
-    snap game_over {pulse 7 128 {phase 0 {require [expr {[view 2]==3}] "Game over did not reset"; done}}}
+    snap game_over {after_game {require [expr {[view 2]==3}] "Game over did not reset"; done}}
 }
 after time 1 {guard ready}
 after time 1500 {bgerror "P0 scenario timeout"}
