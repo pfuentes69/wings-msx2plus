@@ -60,26 +60,9 @@ static i16 s_BoxLeft, s_BoxRight, s_BoxTop, s_BoxBottom, s_BX, s_BY;
 static i16 s_X, s_Row;
 static u8 s_Page;
 
-/* Statics, not locals: SDCC reaches them directly (the locals' IX frame
- * made this ~2,700 T-states a piece). */
+/* Piece's scratch, and Piece (Z80, smoke_piece.h). */
 static i16 s_PL, s_PT, s_PR, s_PB;
-static void Piece(const AircraftShape* piece)
-{
-    s_PL = s_X + piece->dx; s_PR = s_PL + piece->width;
-    s_PT = s_Row + piece->dy; s_PB = s_PT + piece->height;
-    g_VDP_Command.SX = piece->atlas_x;
-    g_VDP_Command.SY = piece->atlas_y;
-    if (s_PL < s_Left) { g_VDP_Command.SX += s_Left - s_PL; s_PL = s_Left; }
-    if (s_PR > s_Right) s_PR = s_Right;
-    if (s_PT < s_Top) { g_VDP_Command.SY += s_Top - s_PT; s_PT = s_Top; }
-    if (s_PB > s_Limit) s_PB = s_Limit;
-    if (s_PR <= s_PL || s_PB <= s_PT) return;
-    g_VDP_Command.DY = ((u16)s_Page << 8) + s_PT;
-    g_VDP_Command.NY = s_PB - s_PT;
-    g_VDP_Command.ARG = 0;
-    g_VDP_Command.CMD = VDP_CMD_LMMM + VDP_OP_TIMP;
-    Vdp_RingCopy((u8)s_PL, s_PR - s_PL);
-}
+#include "smoke_piece.h"
 
 /* Place a shape at world (x, y) in this view (s_Far, s_Shift). */
 static u8 s_Far, s_Drawn, s_FlagPhase;

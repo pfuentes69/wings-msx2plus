@@ -244,6 +244,26 @@ plane and flight models (`__divsint`, ~1,250 T-states each), the plane
 updates themselves, and on the render side the tile streaming (column runs,
 tile repaints, strip uploads: ~15 ms in a heavy frame).
 
+### The smoke path in Z80 (2026-11-19)
+
+Over the battleship (rocket passes, ships run) the frames carry a full pool
+of smoke puffs plus 5-13 gun barrels and splashes; each shape is drawn and,
+two frames later, erased (a sky fill or a tile-by-tile repaint). Three of
+its loops are now Z80, each with a test against the C it replaced:
+
+- `AllSky` (msx/smoke_sky.h): whether a box lies over plain sky, all its
+  columns and rows at once (~110 T-states a tile, was ~600);
+- `RepaintColumn` (msx/smoke_repaint.h): a column of the repaint, one VDP
+  command per tile, decoding the map once under an overlay;
+- `Piece` (msx/smoke_piece.h): a shape's piece, clipped and copied.
+
+Per heavy ships frame (render > 85 ms): repaint 3.5 → 2.0 ms, sky test
+2.1 → 0.7, the erase loop 3.6 → 2.7; `Piece` 2.5 → 2.1 (the cost is the
+number of pieces, not its arithmetic). Missed deadlines: ships 21 → 18
+NTSC (8 → 7 PAL), fighters 16 → 15 (5 → 2), planes 19 → 18 (2 → 0). In
+those frames the VDP waits (~30 ms, half of it `PanStep`'s page move) now
+outweigh the whole smoke path (~16 ms).
+
 ## Candidates, in order of expected value
 
 1. **Schedule render work to overlap CPU with VDP** (the largest item over
@@ -273,3 +293,4 @@ tile repaints, strip uploads: ~15 ms in a heavy frame).
 | `Column_Runs` in Z80; dial redraws held in fast carrier frames | worst carrier frame 148 → 117 ms at the original's speed; reservation removed |
 | `Scenery_Read` copies with LDIR (was a C byte loop, ~80 T-states a byte) | a dial patch or streamed shape: ~8 ms → ~2 ms of ROM reads |
 | `Fighters_Launch` parked list cached; quiet steps batched (`Step_Batch`, Z80 `Flight_StepMany`) | fighters run: simulation 61.7 → 46.5 ms a frame, misses 38 → 16 |
+| Smoke path: `AllSky`, `RepaintColumn`, `Piece` in Z80 | heavy ships frames ~4 ms less; ships misses 21 → 18 |

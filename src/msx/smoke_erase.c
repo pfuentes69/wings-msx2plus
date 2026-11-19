@@ -17,20 +17,6 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_PATCH)
 #define ELEVATOR_LEFT ((int)CARRIER_X - 28)
 #define ELEVATOR_RIGHT ((int)CARRIER_X + 36)
 
-/* 1 when the page's tiles in this column, tile rows first..last, are all
- * plain sky (solid colour 0): the puff can be erased with a fill. */
-static u8 SkyRows(u8 page, u16 world, u8 first, u8 last)
-{
-    u8 slot = (world & 255) >> 3;
-    const u16* cached = &g_TerrainCached[page][slot][first];
-    for (;;)
-    {
-        if (*cached >= TERRAIN_TILE_COUNT || TERRAIN_TILE_COLOR(*cached)) return 0;
-        if (first++ == last) return 1;
-        ++cached;
-    }
-}
-
 /* Repaint VRAM rows top..bottom - 1 (top at or below map row 0) over the
  * 8-px columns that left..right touches, from the page's tile cache: one
  * VDP command per tile, a copy from the tile atlas or a fill for a solid
@@ -44,57 +30,25 @@ static u8 SkyRows(u8 page, u16 world, u8 first, u8 last)
  * column flagged invalid for that reason still has valid rows: skipping it
  * left 8-px blocks of smoke in the sky over the carrier. */
 static u16 s_Decoded[TERRAIN_MAP_ROWS + 1];
-/* The loop's state as statics (SDCC reaches them directly, where locals go
- * through the IX frame); each tile fills g_VDP_Command and issues it, the
- * column's DX, NX and ARG set once. */
-static u16 s_Column, s_PageBase;
-static i16 s_Y, s_Next, s_Bottom, s_Origin;
-static u8 s_RepaintRow, s_First;
+/* RepaintColumn's state (smoke_repaint.h), as statics. */
+static u16 s_Column;
 static const u16* s_Cached;
+static u8 s_RepaintRow, s_Y8, s_Next8, s_Bottom8, s_Origin8, s_Page8, s_DecodedOnce;
+#include "smoke_repaint.h"
 static void RepaintTiles(u8 page, i16 left, i16 right, i16 top, i16 bottom)
 {
-    u16 tile;
-    u8 color, decoded;
-    s_Origin = TERRAIN_TOP + g_PanRows;
-    s_Bottom = bottom;
-    s_PageBase = (u16)page << 8;
-    s_First = (u8)((top - s_Origin) >> 3);
+    u8 first;
+    s_Origin8 = TERRAIN_TOP + g_PanRows;
+    s_Bottom8 = (u8)bottom;
+    s_Page8 = page;
+    first = (u8)((top - s_Origin8) >> 3);
     g_VDP_Command.NX = 8; g_VDP_Command.ARG = 0;
     for (s_Column = (u16)(left & ~7); (i16)s_Column < right; s_Column += 8)
     {
-        s_Cached = &g_TerrainCached[page][(u8)s_Column >> 3][s_First];
-        s_RepaintRow = s_First; s_Y = top; decoded = 0;
+        s_Cached = &g_TerrainCached[page][(u8)s_Column >> 3][first];
+        s_RepaintRow = first; s_Y8 = (u8)top; s_DecodedOnce = 0;
         g_VDP_Command.DX = (u8)s_Column;
-        do
-        {
-            s_Next = s_Origin + ((i16)(s_RepaintRow + 1) << 3);
-            if (s_Next > s_Bottom) s_Next = s_Bottom;
-            tile = *s_Cached++;
-            if (tile >= TERRAIN_TILE_COUNT)
-            {
-                if (!decoded) { Terrain_DecodeColumn(s_Column, s_Decoded); decoded = 1; }
-                tile = s_Decoded[s_RepaintRow];
-            }
-            if (tile < TERRAIN_TILE_COUNT)
-            {
-                g_VDP_Command.DY = s_PageBase + s_Y;
-                g_VDP_Command.NY = s_Next - s_Y;
-                color = TERRAIN_TILE_COLOR(tile);
-                if (color != 255)
-                {
-                    g_VDP_Command.CLR = color * 17;
-                    g_VDP_Command.CMD = VDP_CMD_HMMV;
-                }
-                else
-                {
-                    g_VDP_Command.SY = Terrain_TileY(tile) + (u8)(s_Y - s_Origin) - ((u16)s_RepaintRow << 3);
-                    g_VDP_Command.SX = g_TileSourceX;
-                    g_VDP_Command.CMD = VDP_CMD_HMMM;
-                }
-                VDP_CommandSetupR32();
-            }
-            s_Y = s_Next; ++s_RepaintRow;
-        } while (s_Y < s_Bottom);
+        RepaintColumn();
     }
 }
 
@@ -121,10 +75,14 @@ static void UseClip(const SmokeClip* clip)
 static i16 s_BoxLeft, s_BoxRight, s_BoxTop, s_BoxBottom, s_BX, s_BY;
 #define SMOKE_BOX_TABLE _g_SmokeEraseBox
 #include "smoke_box.h"
+/* AllSky's input (smoke_sky.h): the box's first cache entry and ring slot,
+ * its columns and tile rows. */
+static const u16* s_SkyPtr;
+static u8 s_SkySlot, s_SkyCols, s_SkyRows;
+#include "smoke_sky.h"
 
 u8 Smoke_Restore(u8 page, u8 rebuilt, u16 camera) WINGS_BANKED
 {
-    u16 column;
     u8 i, elevator = 0, first, last, n = g_SmokeDrawnCount[page];
     const SmokeDrawn* d = g_SmokeDrawn[page];
     i16 left, right, top = TERRAIN_TOP + g_PanRows;   /* VRAM row of map row 0 */
@@ -143,9 +101,11 @@ u8 Smoke_Restore(u8 page, u8 rebuilt, u16 camera) WINGS_BANKED
         first = (u8)(((s_BoxTop < top ? top : s_BoxTop) - top) >> 3);
         last = (u8)((s_BoxBottom - 1 - top) >> 3);
         /* Over plain sky (the usual case) one fill erases the puff. */
-        for (column = (u16)(left & ~7); (i16)column < right; column += 8)
-            if (!SkyRows(page, column, first, last)) break;
-        if ((i16)column >= right) { SkyFill(page, left, right, s_BoxTop, s_BoxBottom); continue; }
+        s_SkySlot = (u8)left >> 3;
+        s_SkyPtr = &g_TerrainCached[page][s_SkySlot][first];
+        s_SkyCols = (u8)((right - (left & ~7) + 7) >> 3);
+        s_SkyRows = last - first + 1;
+        if (AllSky()) { SkyFill(page, left, right, s_BoxTop, s_BoxBottom); continue; }
         if (s_BoxTop < top) SkyFill(page, left, right, s_BoxTop, top);
         /* The elevator (map rows 13.., Elevator_Draw) is redrawn only when
          * a repaint reached its rows, not for smoke in the sky above it. */
