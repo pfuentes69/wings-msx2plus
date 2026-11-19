@@ -7,6 +7,7 @@
 #include "ships.h"
 #include "rockets.h"
 #include "xorshift.h"
+uint8_t g_IslandWrecks;
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
 
 #ifdef WINGS_P1_FLIGHT  /* smoke.h: the debug ROM keeps the P0 flight */
@@ -65,6 +66,7 @@ void Island_Reset(void) WINGS_BANKED
         b->waiting = b->release = b->wrecked = 0;
         b->c = b->e = 0;
     }
+    ++g_IslandWrecks;
     for (i = 0; i < ISLAND_MAX; ++i) g_Island.soldiers[i] = g_Island.guns[i] = 0;
     for (i = 0; i < ISLAND_MAX_DUGOUTS; ++i)
     {
@@ -181,6 +183,7 @@ uint16_t Island_Bombed(uint16_t x) WINGS_BANKED
         if (b->wrecked) return 0;   /* now hutb, id 5: no target */
         s_Struck = 1;
         b->wrecked = 1;
+        ++g_IslandWrecks;
         Wreck(i, 1);
         b->c = 50; b->e = 1;
         ++s_Smoking;

@@ -26,7 +26,6 @@ class DashboardBankTests(unittest.TestCase):
         self.assertLessEqual(len(bank),8192)
         self.assertEqual(metadata['sha256'],hashlib.sha256(bank).hexdigest())
         streams=[('DashboardPanel',pack_pixels(panel())),
-                 ('PilotRLE',pack_pixels((ROOT/'assets_msx/dashboard/pilot.indices').read_bytes())),
                  ('FarPlaneRLE',pack_pixels((ROOT/'assets_msx/dashboard/far-plane.indices').read_bytes())),
                  ('BombRLE',pack_pixels(bomb_pixels())),
                  ('ArrowRLE',b''.join(pack_pixels(p) for p,_ in arrow_frames()))]
@@ -40,6 +39,15 @@ class DashboardBankTests(unittest.TestCase):
                 self.assertGreater(count,0)
                 decoded.extend(bytes([value])*count)
             self.assertEqual(decoded,expected,name)
+
+    def test_the_cockpit_bank_holds_its_shape_slots(self):
+        import convert_cockpit
+        slots,place=convert_cockpit.art()
+        used=max(p[0] for p in place)+1
+        bank=(ROOT/f'assets_msx/cockpit/bank_{convert_cockpit.COCKPIT_BANK}.bin').read_bytes()
+        self.assertLessEqual(len(bank),8192)
+        self.assertEqual(bank,b''.join(pack_pixels(slots[s]) for s in range(1,used)))
+        self.assertEqual(slots[0],bytes(48*24))   # the compose buffer
 
     def test_hud_values_are_byte_aligned_crops_of_the_composed_panel(self):
         banks={b:(ROOT/f'assets_msx/dashboard/bank_{b}.bin').read_bytes() for b in (17,18,19,20)}

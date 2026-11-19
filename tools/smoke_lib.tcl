@@ -24,7 +24,7 @@ set report [open [file join $out emulator-report.txt] w]
 if {![info exists env(WINGS_ROM)] || $env(WINGS_ROM) eq ""} {set env(WINGS_ROM) [file join $env(WINGS_ROOT) out mission-flight mission-flight.rom]}
 set sf [open [file rootname $env(WINGS_ROM)].noi r]
 set symbols [read $sf];close $sf
-foreach n [concat [list Input_JoySample g_SoundPlaying g_SoundFM g_TerrainSlotStrip g_DisplayBand g_DisplayTicker g_MessageActive g_HudScore g_DisplayScore g_SmokeDrawn g_SmokeDrawnCount g_Smoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage] {*}[expr {[info exists extra_symbols] ? $extra_symbols : {}}]] {
+foreach n [concat [list Input_JoySample g_SoundPlaying g_SoundFM g_TerrainSlotStrip g_DisplayBand g_DisplayTicker g_MessageActive g_HudScore g_DisplayScore g_SmokeDrawn g_SmokeDrawnCount g_Smoke g_Island g_DisplayFine g_PanOverruns g_DisplayRope g_DisplayWheel g_DisplayGear g_DisplayCrash s_World g_LastContact g_DisplayGauges g_Engine g_Game g_Controls g_Ready g_GameView g_Combat g_FramePublished g_DisplayPage g_DisplayCamera g_DisplayWorld g_DisplayY g_SelectedFrame g_DisplayWave g_DisplayHeave g_DisplayShipFrame g_DisplayScale g_Cockpit g_ViewChange g_VBlankTicks g_Carrier g_DisplayElevator g_CrewFrame g_TaxiTurn g_HoldFlight g_MissedFrames g_InputOverflow g_Turning g_Rendering g_RenderPage] {*}[expr {[info exists extra_symbols] ? $extra_symbols : {}}]] {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $symbols -> a]} {error "Missing $n"}
     set addr($n) $a
 }
@@ -210,6 +210,7 @@ proc publishing {} {
     }
     dump $name.lift [debug read_block memory $::addr(g_Carrier) 3]
     dump $name.view [debug read_block memory $::addr(g_DisplayScale) 3]
+    dump $name.cockpit [debug read_block memory $::addr(g_Cockpit) 22]
     dump $name.crew [debug read_block memory $::addr(g_CrewFrame) 1]
     dump $name.gauges [debug read_block memory $::addr(g_DisplayGauges) 3]
     dump $name.flight [debug read_block memory $::addr(s_World) 37]

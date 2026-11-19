@@ -4,10 +4,11 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_HUD)
 #include "vdp_inl.h"
 #include "scenery_load.h"
 #include "../generated/dashboard.h"
+#include "cockpit.h"
 #include "mission_surfaces.h"
 extern u8 g_PanRows;   /* terrain_renderer.h */
 
-static u8 s_Row[128], s_Count, s_Value, s_Pilot[2];
+static u8 s_Row[128], s_Count, s_Value;
 static u8 s_Stream[64], s_StreamPos;
 static u16 s_StreamOffset;
 // Value currently shown per page for each pre-rendered HUD element.
@@ -70,7 +71,7 @@ void Dashboard_LoadTables(void) WINGS_BANKED
 void Dashboard_Restore(u8 page) WINGS_BANKED
 {
     u8 frame;
-    s_Pilot[page] = 255;
+    g_Cockpit.shown[page] = 255;
     for (frame = 0; frame < HUD_ELEMENT_COUNT; ++frame) s_Hud[page][frame] = s_HudDefault[frame];
     s_Status[page][0] = s_Status[page][1] = s_Status[page][2] = 255;
     g_HudScore[page] = 0;
@@ -85,18 +86,17 @@ void Dashboard_Load(void) WINGS_BANKED
     u16 x, y, offset = 0;
     Waves_Init();
     s_FieldValid = 0;
+    g_Cockpit.generation = 255;   /* RAM is not cleared at boot */
     for (page = 0; page < 2; ++page)
     {
-        s_Pilot[page] = 255;
+        g_Cockpit.shown[page] = 255;
         for (frame = 0; frame < HUD_ELEMENT_COUNT; ++frame) s_Hud[page][frame] = s_HudDefault[frame];
         s_Status[page][0] = s_Status[page][1] = s_Status[page][2] = 255;
         g_HudScore[page] = 0;
         Input(DASHBOARDPANEL_OFFSET);
         Expand(0, (u16)page * 256 + 172, 256, 40);
     }
-    Input(PILOTRLE_OFFSET);
-    for (frame = 0; frame < 24; ++frame)
-        Expand(g_PilotX[frame], g_PilotY[frame], 48, 24);
+    Cockpit_Load();
     Input(FARPLANERLE_OFFSET);
     for (frame = 0; frame < FAR_PLANE_COUNT; ++frame)
         Expand(g_FarShapes[frame].atlas_x, g_FarShapes[frame].atlas_y, 16, 5);
@@ -123,26 +123,6 @@ void Dashboard_Load(void) WINGS_BANKED
             ++y;
         }
     }
-}
-
-u8 Dashboard_Draw(u8 page, u8 area, u8 altitude, u8 arrow) WINGS_BANKED
-{
-    u8 profile = area * 8 + (altitude >> 5);
-    u8 key = profile | (arrow << 5);
-    if (s_Pilot[page] != key)
-    {
-        VDP_CommandHMMM(g_PilotX[profile], g_PilotY[profile], HUD_PILOT_X,
-                        (u16)page * 256 + 172 + HUD_PILOT_Y, HUD_PILOT_WIDTH, 24);
-        /* The torpedo plane's arrow (0xf21a) at the window's top centre. */
-        if (arrow == 1)
-            VDP_CommandLMMM(HUD_ARROW0_ATLAS_X, HUD_ARROW0_ATLAS_Y, HUD_PILOT_X + HUD_ARROW_LEFT_X,
-                            (u16)page * 256 + 172 + HUD_PILOT_Y, 16, HUD_ARROW_HEIGHT, VDP_OP_TIMP);
-        else if (arrow == 2)
-            VDP_CommandLMMM(HUD_ARROW1_ATLAS_X, HUD_ARROW1_ATLAS_Y, HUD_PILOT_X + HUD_ARROW_RIGHT_X,
-                            (u16)page * 256 + 172 + HUD_PILOT_Y, 16, HUD_ARROW_HEIGHT, VDP_OP_TIMP);
-        s_Pilot[page] = key;
-    }
-    return profile;
 }
 
 void Dashboard_CopyPalette(u8* destination) WINGS_BANKED

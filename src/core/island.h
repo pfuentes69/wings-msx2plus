@@ -92,6 +92,9 @@ typedef struct IslandState {
     uint8_t sunk;                  /* the message is a ship's ". . . %s sunk": its kind + 1 */
 } IslandState;
 extern IslandState g_Island;
+/* Counts hut wrecks and resets: what reads the huts' state can tell it changed
+ * (msx/cockpit.c). Any value at boot. */
+extern uint8_t g_IslandWrecks;
 
 /* Banked (segment 23). */
 void Island_Reset(void) WINGS_BANKED;

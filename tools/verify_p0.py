@@ -11,7 +11,8 @@ import statistics
 import subprocess
 from PIL import Image
 from verify_world_flight import vram_image, expected_pixels, gun_flash_shape, island_background, vram_row
-from convert_dashboard import compose, layout, PILOT_WIDTH
+from convert_dashboard import compose, layout, PILOT_WIDTH, arrow_frames
+import convert_cockpit
 from aircraft_scene import AircraftScene
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -97,6 +98,10 @@ def main():
             assert got==want,(name,'tile slot',slot,'strip',strip,[r for r in range(64) if got[r*4:r*4+4]!=want[r*4:r*4+4]][:8])
         fine=struct.unpack('b',(out/f'{name}.fine').read_bytes())[0]   # -1..7
         scale,wave_view,pilot=(out/f'{name}.view').read_bytes()
+        # The cockpit window (tools/convert_cockpit.py): known when the page
+        # shown holds the compose buffer's picture.
+        cockpit=(out/f'{name}.cockpit').read_bytes()
+        pilot=convert_cockpit.compose(cockpit[:19],arrow_frames()) if cockpit[20+page]==cockpit[19]!=255 else None
         stage,depth,lift_tick=(out/f'{name}.lift').read_bytes()
         crew=(out/f'{name}.crew').read_bytes()[0]
         projectiles=[]
@@ -132,6 +137,7 @@ def main():
                         ring=col if row>=172 else (int(camera)+col)%256
                         sy=row if row>=172 else vram_row(row,fine,int(heave))
                         want=expected[row][col]
+                    if want is None:continue   # the cockpit window, not known
                     value=vram[page*32768+sy*128+ring//2]
                     value=(value>>(0 if ring%2 else 4))&15
                     assert value==want,(name,'composite',col,row,value,want,band)
@@ -172,7 +178,7 @@ def main():
         preview.save(out/f'{name}-vram.png')
         shots,secondary,impacts=struct.unpack_from('<HHH',combat,152)
         snapshots[name]=dict(phase=game[0],rank=game[1],lives=game[2],weapon=game[3],stock=game[4],invert=game[5],
-                            stage=stage,depth=depth,crew=crew,scale=scale,pilot=pilot,camera=int(camera),world=int(world),y=int(y),pose=int(pose),wave=int(wave),heave=int(heave),ship=int(ship),
+                            stage=stage,depth=depth,crew=crew,scale=scale,pilot=cockpit[19],camera=int(camera),world=int(world),y=int(y),pose=int(pose),wave=int(wave),heave=int(heave),ship=int(ship),
                             shots=shots,secondary=secondary,impacts=impacts,projectiles=projectiles,flash=combat[158],
                             wheel=(out/f'{name}.wheel').read_bytes()[0],gear=(out/f'{name}.wheel').read_bytes()[1],
                             rope=(out/f'{name}.wheel').read_bytes()[2],smoke=(out/f'{name}.smoke').read_bytes()[0])

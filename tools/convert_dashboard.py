@@ -9,6 +9,7 @@ from pathlib import Path
 from PIL import Image
 from convert_hellcat import c_array, pack_pixels
 from extract_iff import iff_img
+import convert_cockpit
 from unpack_shapes import read_ppkc, unpack_rpck
 from decode_shapes import decode_record
 
@@ -552,9 +553,15 @@ def artifacts():
     png('assets_src/dashboard/original.png',image)
     indexed('assets_msx/dashboard/panel.png',panel(),256,40, dashboard=True)
     files[ROOT/'assets_msx/dashboard/palette.bin']=dashboard_palette()
-    slots, water_backups, ship_slots, tails, weapon_backups, crew_slots, bomb_slots=atlas_slots(27, reserve_water=True, reserve_ship=True, reserve_combat=True, reserve_crew=True); profiles=[pilot_frame(kind,level) for kind in range(3) for level in range(8)]
-    pilot=b''.join(pack_pixels(p) for p in profiles)
+    slots, water_backups, ship_slots, tails, weapon_backups, crew_slots, bomb_slots=atlas_slots(27, reserve_water=True, reserve_ship=True, reserve_combat=True, reserve_crew=True); profiles=convert_cockpit.art()[0]   # the cockpit window's shapes; slot 0 its compose buffer
     files[ROOT/'assets_msx/dashboard/pilot.indices']=b''.join(profiles)
+    spots=layout(); arrows=arrow_frames()
+    cockpit_c,cockpit_h,cockpit_bank=convert_cockpit.art_source(slots[:24],[('WINDOW_X',spots['pilot_x']),('WINDOW_Y',spots['pilot_y']),
+        ('ARROW_HEIGHT',ARROW_HEIGHT),('ARROW_LEFT_X',arrows[0][1]),('ARROW_RIGHT_X',arrows[1][1])]+
+        [(f'ARROW{i}_ATLAS_{a}',v) for i,(x,y) in enumerate(ARROW_SLOTS) for a,v in (('X',x),('Y',y))])
+    files[ROOT/f'assets_msx/cockpit/bank_{convert_cockpit.COCKPIT_BANK}.bin']=cockpit_bank
+    files[ROOT/'src/generated/cockpit_art.c']=cockpit_c.encode()
+    files[ROOT/'src/generated/cockpit_art.h']=cockpit_h.encode()
     indexed('assets_msx/dashboard/pilot-sheet.png',b''.join(profiles),48,24*24, dashboard=True)
     water=waves();files[ROOT/'assets_msx/dashboard/waves.sc5']=b''.join(pack_pixels(w) for w in water)
     files[ROOT/'assets_msx/dashboard/waves.indices']=b''.join(water)
@@ -604,7 +611,7 @@ def artifacts():
     bundle=bytearray(); offsets={}
     arrows=arrow_frames()
     indexed('assets_msx/dashboard/arrows.png',b''.join(p for p,_ in arrows),16,ARROW_HEIGHT*2, dashboard=True)
-    for name,data in [('DashboardPanel',pack_pixels(panel())),('PilotRLE',pilot),('FarPlaneRLE',pack_pixels(far_pixels)),('BombRLE',pack_pixels(bomb_pixels())),
+    for name,data in [('DashboardPanel',pack_pixels(panel())),('FarPlaneRLE',pack_pixels(far_pixels)),('BombRLE',pack_pixels(bomb_pixels())),
                       ('ArrowRLE',b''.join(pack_pixels(p) for p,_ in arrows))]:
         offsets[name]=len(bundle); bundle.extend(rle(data))
         code+=f'#define {name.upper()}_OFFSET {offsets[name]}\n'
@@ -695,7 +702,7 @@ def artifacts():
         wave_source_sha256=hashlib.sha256(b''.join(source_frames)).hexdigest(),
         wave_source_to_msx=wave_mapping(), wave_backdrop_slots=water_backups, wave_tail_slots=tails, weapon_backups=weapon_backups,
         wave_names=['wav'+c for c in 'abcdefghijkl'],target=dict(width=256,height=40,visible_width=248),
-        scope='original dashboard and perspective sprites; forward-looking altitude profiles and lookahead classification are MSX adaptations')
+        scope='original dashboard and perspective sprites; the pilot window shapes are scaled for the cockpit view (tools/convert_cockpit.py)')
     files[ROOT/'assets_src/dashboard/manifest.json']=(json.dumps(manifest,indent=2)+'\n').encode()
     return files
 

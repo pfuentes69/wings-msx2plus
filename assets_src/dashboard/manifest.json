@@ -5066,15 +5066,14 @@
   },
   "asset_bank": {
     "bank": 12,
-    "bytes": 7420,
+    "bytes": 4356,
     "offsets": {
       "DashboardPanel": 0,
-      "PilotRLE": 3404,
-      "FarPlaneRLE": 6468,
-      "BombRLE": 7062,
-      "ArrowRLE": 7366
+      "FarPlaneRLE": 3404,
+      "BombRLE": 3998,
+      "ArrowRLE": 4302
     },
-    "sha256": "1d398420f3ef96a84e1c8b32732d23d91c00702311445d611f20e26fd3c56140"
+    "sha256": "716c0bd80edf471fc8cd7170a84fbee6f5da1952ed6d959026b8b14729fe73dd"
   },
   "bomb_slots": [
     [
@@ -6572,5 +6571,5 @@
     "height": 40,
     "visible_width": 248
   },
-  "scope": "original dashboard and perspective sprites; forward-looking altitude profiles and lookahead classification are MSX adaptations"
+  "scope": "original dashboard and perspective sprites; the pilot window shapes are scaled for the cockpit view (tools/convert_cockpit.py)"
 }

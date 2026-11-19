@@ -9,11 +9,11 @@ VBlank restores the flight-view offsets.
 
 ![Current dashboard in flight](mission/dashboard-fidelity-flight.png)
 
-The central window is a forward-looking pilot display, not a miniature
-side-view map. It now uses original `3dl`/`3dc` perspective sprites, altitude
-profiles, forward surface queries and a fixed `targ` reticle. The earlier 2D
-overview has been replaced. The original continuous projection and dynamic
-entities remain future work; the current profiles are an MSX adaptation.
+The central window is the pilot's view ahead: the original's depth bands of
+pre-drawn `dash.shp` shapes (the island's targets, the carrier, the deck on
+landing, the gunsight), composed when the scene changes; see
+[cockpit.md](cockpit.md). (Until 2026-11-19 it showed 24 fixed altitude
+profiles.)
 
 ## Recomposed panel (2026-11-14)
 
@@ -91,8 +91,7 @@ Checks capture both raw pixels and normal display screenshots.
 ![Normal emulator display with crisp scaling](mission/dashboard-fidelity-display.png)
 
 The 248-pixel display width still requires horizontal compression, and MSX RGB3
-cannot reproduce every original RGB4 shade. The pilot display remains the
-altitude-profile adaptation described above.
+cannot reproduce every original RGB4 shade.
 
 The [source manifest](../assets_src/dashboard/manifest.json) retains hashes,
 dimensions and origins for all 223 `dash.shp` records, as well as the packed

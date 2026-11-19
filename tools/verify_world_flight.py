@@ -180,10 +180,16 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
                 for row in range(band['row'], band['row'] + band['height']):
                     color = water[row * 96 + wx % 96]
                     if color and 161 + row + pan < 172: pixels[161 + row + pan][x] = color
-    cockpit = pilot_frame(pilot // 8, pilot % 8)
+    # pilot: the cockpit window's pixels (46 x 24, tools/convert_cockpit.py
+    # compose), None when not known (not compared), or the old profile number.
     hud = layout()
+    if isinstance(pilot, int):
+        cockpit = pilot_frame(pilot // 8, pilot % 8)
+        cockpit = [cockpit[row*48:row*48 + PILOT_WIDTH] for row in range(24)]
+    else:
+        cockpit = [pilot[row*PILOT_WIDTH:(row+1)*PILOT_WIDTH] if pilot else [None] * PILOT_WIDTH for row in range(24)]
     for row in range(24):
-        pixels[172 + hud['pilot_y'] + row][hud['pilot_x']:hud['pilot_x'] + PILOT_WIDTH] = cockpit[row*48:row*48 + PILOT_WIDTH]
+        pixels[172 + hud['pilot_y'] + row][hud['pilot_x']:hud['pilot_x'] + PILOT_WIDTH] = cockpit[row]
     shape = scene.frames[frame]
     if scale == 8:
         meta = json.loads((ROOT / 'assets_src/dashboard/manifest.json').read_text())

@@ -27,6 +27,7 @@ volatile u8 g_DisplayElevator;
 #include "mission_tiles.h"
 #include "core/mission.h"
 #include "msx/dashboard.h"
+#include "msx/cockpit.h"
 #include "msx/ship.h"
 #include "msx/weapons.h"
 #include "core/combat.h"
@@ -851,10 +852,7 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
      * around the dashboard split (see VDP_HBlankHandler). */
     VDP_CommandHMMV(0, (u16)page * 256 + s_GuardTop[page], 256, 172 - s_GuardTop[page], 0x11);
     {
-        u16 ahead = s_Aircraft.facing_left ? world - 128 : world + 128;
-        u16 altitude = WINGS_FLIGHT_MAX_Y - y;
-        s_RenderPilot = Dashboard_Draw(page, Mission_Surface(ahead), altitude > 255 ? 255 : altitude,
-                                       Planes_Arrow((int16_t)world));
+        s_RenderPilot = Cockpit_Draw(page, world, y, s_Aircraft.facing_left);
     }
     // Query the strip while the final miniature command is still executing.
     s_RenderSurface = Mission_Query(world);
@@ -1581,6 +1579,8 @@ advance_clocks:
             /* The tile strips ahead, with a whole frame still to spare. */
             if (g_Game.phase == GAME_PLAY && (u8)(g_VBlankTicks - tick) + 1 < present_ticks &&
                 Terrain_Prefetch(camera, s_World.flight.facing_left ? -1 : 1)) continue;
+            /* The cockpit window's next picture, likewise (msx/cockpit.c). */
+            if (g_Game.phase == GAME_PLAY && (u8)(g_VBlankTicks - tick) + 1 < present_ticks && Cockpit_Work()) continue;
 #endif
             WaitVBlank();
         }
