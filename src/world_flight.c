@@ -45,7 +45,7 @@ static u8 s_UiDirty;
 CombatState g_Combat;
 #ifdef WINGS_P1_FLIGHT
 EngineState g_Engine;
-static u8 s_CrashSteps;          /* 1-second hold after a crash */
+u8 s_CrashSteps;          /* 1-second hold after a crash (msx/step_batch.c reads it) */
 u8 g_LastContact;                /* latest LANDING_* contact, for verification */
 static u8 s_CrashSplash;         /* crash art: 0 explosion (deck, island), 1 sea splash */
 u8 s_ContactBottom, s_ContactSurface; /* per-frame contact gate (Landing_Prepare; msx/step_batch.c) */
@@ -911,29 +911,6 @@ static void NewPlane(void)
 }
 
 #ifdef WINGS_P1_FLIGHT
-/* One original tick of the enemy planes, with the player as they see it. */
-static void PlanesTick(u8 weapons)
-{
-    static PlanesPlayer player;
-    player.x = (int16_t)(s_World.x >> 8);
-    player.alt = (int16_t)(WINGS_FLIGHT_MAX_Y - (s_World.flight.y >> 8));
-    player.facing = s_World.flight.facing_left ? -1 : 1;
-    player.mode = s_CrashSteps ? PLANES_PLAYER_CRASHED :
-                  s_World.flight.mode == FLIGHT_DEAD ? PLANES_PLAYER_ENGINE_OUT :
-                  FLIGHT_ON_DECK(&s_World.flight) || g_Carrier.stage != CARRIER_DECK ? PLANES_PLAYER_DECK :
-                  PLANES_PLAYER_FLYING;
-    player.turn = s_World.flight.turn;
-    player.speed = s_World.flight.speed;
-    player.climb = s_World.flight.climb;
-    { int16_t vx = s_World.flight.vx < 0 ? -s_World.flight.vx : s_World.flight.vx;
-      player.hstep = (int16_t)(((int32_t)vx * 12) >> 8); }   /* Q8 a step, 12 steps a tick */
-    player.engine = &g_Engine; player.sortie = &g_Game.sortie;
-    /* The fire flag (0xb5b0): the gun held in flight, not turning. */
-    player.gun = (weapons & COMBAT_FIRE) && player.mode == PLANES_PLAYER_FLYING && !player.turn;
-    Planes_Tick(&player, weapons != 0, g_Ships.hull[SHIP_MAX] != 0, &g_Game.progress.score, &g_Game.progress.kills);
-    if (g_Planes.drop) Torpedo_Drop(&g_Combat, g_Planes.drop_x, g_Planes.drop_alt, g_Planes.drop_speed, g_Planes.drop_facing);
-}
-
 /* Contact crash: hold the scene for one second while the original crash art
  * plays at the plane - the sea splash over water, the explosion elsewhere
  * (the original picks its crash outcome by surface, 0xafba). */
@@ -979,6 +956,9 @@ u8 g_BriefIslands, g_BriefShips;
 /* The weapon panel (msx/screens.c): drawn; the view rendered behind it this
  * frame (its scroll is published); the last phase. */
 static u8 s_Panel, s_PanelRendered, s_LastPhase;
+/* The briefing's palette is up; a page's dashboard rows were drawn over (a
+ * full-screen menu: restored before the page is drawn on again). */
+static u8 s_BriefColours, s_DashGone[2];
 #ifdef WINGS_HIGH_SCORES
 static u8 s_Typing;   /* the name entry has scanned the keyboard once */
 #endif
@@ -1396,7 +1376,7 @@ advance_clocks:
                          * (0xbc02), after the player's move. */
                         /* Only with something to do: planes up, the timer
                          * running, ship lists with planes left. */
-                        if (g_Planes.live || g_Planes.timer || g_Planes.lists) PlanesTick(weapons);
+                        if (g_Planes.live || g_Planes.timer || g_Planes.lists) Step_Planes(weapons);
 #endif
                     }
 #ifdef WINGS_P1_FLIGHT
@@ -1476,6 +1456,8 @@ advance_clocks:
         {
             Screens_WeaponColours(0); s_Panel=0; s_PageScale[0]=s_PageScale[1]=255;
         }
+        if (s_BriefColours && g_Game.phase!=GAME_BRIEFING) { Screens_BriefingColours(0); s_BriefColours=0; }
+        if (s_DashGone[page] && g_Game.phase!=GAME_BRIEFING) { Dashboard_Restore(page); s_DashGone[page]=0; }
 #endif
         if (g_Game.phase!=GAME_PLAY)
         {
@@ -1483,6 +1465,18 @@ advance_clocks:
             s_Band[0] = s_Band[1] = 0;
 #endif
 #ifdef WINGS_P1_FLIGHT
+            /* The briefing, full screen (msx/screen_end.c). */
+            if (g_Game.phase==GAME_BRIEFING)
+            {
+                if (!s_UiDirty) page=g_DisplayPage;
+                else
+                {
+                    Screens_Briefing(page,&g_Game);
+                    if (!s_BriefColours) { Screens_BriefingColours(1); s_BriefColours=1; }
+                    s_DashGone[page]=1; s_PageScale[page]=255; s_UiDirty=0;
+                }
+            }
+            else
             /* The weapon panel over the carrier view, frozen: at game start
              * the view is rendered first; in the hold it is shown already. */
             if (g_Game.phase==GAME_LOADOUT || g_Game.phase==GAME_SERVICE)

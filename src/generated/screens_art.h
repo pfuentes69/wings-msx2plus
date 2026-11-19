@@ -11,3 +11,13 @@ extern const unsigned char g_WeaponLineRow[3];
 extern const unsigned char g_WeaponLineHeight[3];
 extern const unsigned short g_WeaponLineOffset[3];
 extern const unsigned char g_WeaponColours[8];
+#define BRIEF_FRAME_HEIGHT 95
+#define BRIEF_BANK 51
+#define BRIEF_INK 7
+extern const unsigned char g_BriefPalette[32];
+#define BRIEF_FONT_HEIGHT 12
+#define BRIEF_FONT_COUNT 64
+extern const unsigned char g_BriefFontBits[];
+extern const char g_BriefFontChars[];
+extern const unsigned char g_BriefFontWidth[];
+extern const unsigned short g_BriefFontOffset[];

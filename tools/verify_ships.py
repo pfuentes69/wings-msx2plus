@@ -129,7 +129,9 @@ def main():
             for col in range(8, 256):
                 if spots['pilot_y'] <= row < spots['pilot_y'] + 24 and spots['pilot_x'] <= col < spots['pilot_x'] + PILOT_WIDTH: continue
                 value = (vram[page * 32768 + (172 + row) * 128 + col // 2] >> (0 if col & 1 else 4)) & 15
-                assert value == hud[row * 256 + col], (name, 'dashboard', col, 172 + row, value, hud[row * 256 + col])
+                # The briefing is full screen: its dashboard rows are black.
+                want = 0 if game[0] == 1 else hud[row * 256 + col]
+                assert value == want, (name, 'dashboard', col, 172 + row, value, want)
         # The ticker at the top (src/msx/message.c): the text pixel `ticker`
         # at the band's right edge, ink 11 on the sky.
         band, ticker = struct.unpack('<BH', read('band'))

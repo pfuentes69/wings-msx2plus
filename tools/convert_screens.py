@@ -8,7 +8,10 @@ So far, both drawn over the play view in the play palette
 (assets_msx/mission_a/palette.bin):
 - the "THE END" plate (world shape gmov, 192 x 22);
 - the weapon selection panel (selt, 96 x 72) and its highlighted lines
-  (rock, bomb, torp), with four play colours lent while it shows."""
+  (rock, bomb, torp), with four play colours lent while it shows.
+And on its own palette, full screen: the briefing's frame (world shape
+rank, 256 x 95: rank.iff's frame pixel for pixel) in data banks 51..52,
+with the font its values are printed in (newarmyfont)."""
 import argparse
 from pathlib import Path
 from PIL import Image
@@ -21,6 +24,13 @@ OUT_C = ROOT / 'src/generated/screens_art.c'          # segment 49: the weapon p
 OUT_END = ROOT / 'src/generated/screen_end_art.c'     # segment 50: "THE END"
 OUT_H = ROOT / 'src/generated/screens_art.h'
 OUT_PNG = ROOT / 'assets_msx/screens'
+BRIEF_BANKS = (51, 52)   # the briefing frame's rows, 128 bytes each
+# The briefing's palette (0..7 a channel): black, rank.iff's red and blue,
+# its four greys; the values' light grey (the capture: 172,170,173).
+BRIEF_PALETTE = [(0, 0, 0), (6, 1, 0), (0, 1, 6), (2, 2, 2), (3, 3, 3), (4, 4, 4), (5, 5, 5), (6, 6, 6)] + [(0, 0, 0)] * 8
+BRIEF_COLOURS = {24: 0, 26: 1, 27: 2, 28: 3, 29: 4, 30: 5, 31: 6}   # shape colour -> palette (exact: matched on rank.iff)
+BRIEF_INK = 7
+FONT_CHARS = ' .0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
 
 def world_shapes(names):
@@ -139,21 +149,57 @@ def artifacts():
           'extern const unsigned char g_WeaponLineHeight[3];', 'extern const unsigned short g_WeaponLineOffset[3];',
           'extern const unsigned char g_WeaponColours[8];']
     images['weapon-panel.png'] = preview(bytes(shown), width, height, lent)
-    return {OUT_C: '\n'.join(c) + '\n', OUT_END: '\n'.join(end) + '\n', OUT_H: '\n'.join(h) + '\n'}, images
+    # The briefing: the frame to banks, its palette and the font in segment 50.
+    brief = world_shapes({'rank'})[0]['rank']
+    pixels, width, height, _ = brief
+    frame = bytes(BRIEF_COLOURS[c] for c in pixels)
+    images['briefing.png'] = preview(frame, width, height, BRIEF_PALETTE)
+    banks = pack(frame, width)
+    assert width == 256 and len(banks) <= 8192 * len(BRIEF_BANKS)
+    binaries = {OUT_PNG / f'bank_{b}.bin': banks[i * 8192:(i + 1) * 8192] for i, b in enumerate(BRIEF_BANKS)}
+    h += [f'#define BRIEF_FRAME_HEIGHT {height}', f'#define BRIEF_BANK {BRIEF_BANKS[0]}', f'#define BRIEF_INK {BRIEF_INK}',
+          'extern const unsigned char g_BriefPalette[32];']
+    words = [(r << 4 | b, g) for r, g, b in BRIEF_PALETTE]
+    end.append('/* The briefing\'s palette (0RRR0BBB, 00000GGG). */')
+    end.append(f'const unsigned char g_BriefPalette[32] = {{{", ".join(f"0x{v:02x}" for w in words for v in w)}}};')
+    from convert_font import glyphs
+    fheight, first, last, font = glyphs()
+    bits, offsets, advances = bytearray(), [], []
+    for ch in FONT_CHARS:
+        w, rows = font[ord(ch)]
+        offsets.append(len(bits)); advances.append(w)
+        stride = (w + 7) // 8
+        for row in rows:
+            value = 0
+            for x, b in enumerate(row): value |= b << (stride * 8 - 1 - x)
+            bits += value.to_bytes(stride, 'big')
+    end += c_bytes('g_BriefFontBits', bytes(bits), 'newarmyfont, 1 bit a pixel, rows of (width + 7) / 8 bytes, most significant bit left.')
+    end.append(f'const char g_BriefFontChars[] = "{FONT_CHARS}";')
+    end.append(f'const unsigned char g_BriefFontWidth[{len(FONT_CHARS)}] = {{{", ".join(map(str, advances))}}};')
+    end.append(f'const unsigned short g_BriefFontOffset[{len(FONT_CHARS)}] = {{{", ".join(map(str, offsets))}}};')
+    h += [f'#define BRIEF_FONT_HEIGHT {fheight}', f'#define BRIEF_FONT_COUNT {len(FONT_CHARS)}',
+          'extern const unsigned char g_BriefFontBits[];', 'extern const char g_BriefFontChars[];',
+          'extern const unsigned char g_BriefFontWidth[];', 'extern const unsigned short g_BriefFontOffset[];']
+    texts = {OUT_C: '\n'.join(c) + '\n', OUT_END: '\n'.join(end) + '\n', OUT_H: '\n'.join(h) + '\n'}
+    return texts, images, binaries
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
-    texts, images = artifacts()
+    texts, images, binaries = artifacts()
     if args.check:
         for path, text in texts.items():
             assert path.read_text() == text, f'{path} is out of date'
+        for path, data in binaries.items():
+            assert path.read_bytes() == data, f'{path} is out of date'
         return
     for path, text in texts.items():
         path.write_text(text)
     OUT_PNG.mkdir(parents=True, exist_ok=True)
+    for path, data in binaries.items():
+        path.write_bytes(data)
     for name, image in images.items():
         image.convert('RGB').resize((image.width * 3, image.height * 3), Image.NEAREST).save(OUT_PNG / name)
 

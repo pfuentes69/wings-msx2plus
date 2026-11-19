@@ -38,6 +38,9 @@ for (const bank of [17, 18, 19, 20])
 
 RawFiles.push({ offset: 13 * 8192, file: "assets_msx/ship/bank_13.bin" });
 RawFiles.push({ offset: 15 * 8192, file: "assets_msx/elevator/bank_15.bin" });
+// The briefing's frame (tools/convert_screens.py BRIEF_BANKS).
+for (const bank of [51, 52])
+    RawFiles.push({ offset: bank * 8192, file: `assets_msx/screens/bank_${bank}.bin` });
 
 // Link each banked code segment at (segment << 16) | A000h, as listed in banking.h.
 const banking = require("fs").readFileSync(`${ProjDir}src/msx/banking.h`, "utf8");

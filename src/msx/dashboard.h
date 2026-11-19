@@ -26,3 +26,5 @@ extern u32 g_HudScore[2];  /* what each page shows */
 /* hold: redraw nothing this page (a heavy frame); gauges still reports what
  * the page shows. */
 void Dashboard_Gauges(u8 page, u8* gauges, u8 hold) WINGS_BANKED;
+/* The dashboard's rows on this page again, after a full-screen menu. */
+void Dashboard_Restore(u8 page) WINGS_BANKED;

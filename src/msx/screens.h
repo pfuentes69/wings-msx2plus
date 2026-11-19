@@ -22,3 +22,10 @@ void Screens_WeaponLine(u8 page, u8 from, u8 to) WINGS_BANKED;
 void Screens_WeaponColours(u8 lent) WINGS_BANKED;
 /* One weapon-selection update (first: the whole panel and the colours). */
 void Screens_Weapons(u8 page, u16 camera, u8 first, const GameState* game) WINGS_BANKED;
+/* msx/screen_end.c: the briefing full screen on black (the original's
+ * rank.iff frame and its values), drawn on this page; its palette on (1)
+ * or the play's back (0). The dashboard's rows are blacked: Dashboard_Restore
+ * puts them back. */
+void Screens_Briefing(u8 page, const GameState* game) WINGS_BANKED;
+void Screens_BriefingColours(u8 on) WINGS_BANKED;
+extern u8 g_BriefIslands, g_BriefShips;

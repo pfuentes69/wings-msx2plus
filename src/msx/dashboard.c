@@ -65,6 +65,20 @@ void Dashboard_LoadTables(void) WINGS_BANKED
     Scenery_Read(7,AIRCRAFT_TABLE_OFFSET+512,(u8*)g_AircraftShapes+512,sizeof(g_AircraftShapes)-512);
 }
 
+/* A page whose dashboard rows were drawn over (a full-screen menu): the
+ * panel again, and its values redrawn when next shown. */
+void Dashboard_Restore(u8 page) WINGS_BANKED
+{
+    u8 frame;
+    s_Pilot[page] = 255;
+    for (frame = 0; frame < HUD_ELEMENT_COUNT; ++frame) s_Hud[page][frame] = s_HudDefault[frame];
+    s_Status[page][0] = s_Status[page][1] = s_Status[page][2] = 255;
+    g_HudScore[page] = 0;
+    s_FieldValid = 0;
+    Input(DASHBOARDPANEL_OFFSET);
+    Expand(0, (u16)page * 256 + 172, 256, 40);
+}
+
 void Dashboard_Load(void) WINGS_BANKED
 {
     u8 page, frame, row, piece;

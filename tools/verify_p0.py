@@ -83,7 +83,9 @@ def main():
         assert (out/f'{name}.rom').read_bytes()==data[:32768],(name,'mapper restoration')
         # Colour 0 (the sky) is set once at boot and never by the ISR.
         terrain_palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
-        assert (out/f'{name}.palette').read_bytes()[:2]==terrain_palette[:2],(name,'sky colour 0',(out/f'{name}.palette').read_bytes()[:2])
+        # (Black on the briefing: its full-screen frame, src/msx/screen_end.c.)
+        sky=b'\x00\x00' if game[0]==1 else terrain_palette[:2]
+        assert (out/f'{name}.palette').read_bytes()[:2]==sky,(name,'sky colour 0',(out/f'{name}.palette').read_bytes()[:2])
         vram=(out/f'{name}.vram').read_bytes()
         # Tile cache: every loaded slot holds its strip's 8 tiles (ROM banks
         # from 32, 256 bytes a strip), as 64 rows of 4 bytes at rows 180..
@@ -159,7 +161,9 @@ def main():
             for col in range(8,256):
                 if spots['pilot_y']<=row<spots['pilot_y']+24 and spots['pilot_x']<=col<spots['pilot_x']+PILOT_WIDTH:continue
                 value=(vram[page*32768+(172+row)*128+col//2]>>(0 if col&1 else 4))&15
-                assert value==hud[row*256+col],(name,'dashboard',col,172+row,value,hud[row*256+col])
+                # The briefing is full screen: its dashboard rows are black.
+                want=0 if game[0]==1 else hud[row*256+col]
+                assert value==want,(name,'dashboard',col,172+row,value,want)
         palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
         # Host reconstruction verifies readable source pixels; it is not raster proof.
         preview=vram_image(vram,palette,int(camera),page,int(heave),fine)
