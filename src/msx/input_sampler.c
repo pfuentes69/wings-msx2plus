@@ -136,6 +136,7 @@ sample_6$:
     __endasm;
 }
 
+#ifdef WINGS_HIGH_SCORES
 volatile u8 g_TypeMode, g_KeyHead, g_KeyTail;
 volatile u8 g_KeyQueue[8], g_KeyDown[9];
 
@@ -207,6 +208,8 @@ static void Input_Keys(void) __naked
     __endasm;
 }
 
+#endif
+
 // The CRT saves registers. No BIOS input function may enable IRQs here.
 void Input_Sample(void)
 {
@@ -216,7 +219,9 @@ void Input_Sample(void)
 #endif
     u16 state=0;
     if (!g_InputEnabled) return;
+#ifdef WINGS_HIGH_SCORES
     if (g_TypeMode) Input_Keys();
+#endif
     if (!Input_Read() && s_Sampled) return;
     s_Sampled=1;
     row3=s_Raw[0]; row4=s_Raw[1]; row6=s_Raw[2];
@@ -229,7 +234,11 @@ void Input_Sample(void)
     if (!(joy&4) || !(row8&16)) state|=ACTION_LEFT;
     if (!(joy&8) || !(row8&128)) state|=ACTION_RIGHT;
     /* While a name is typed the space bar types a space, not fire. */
+#ifdef WINGS_HIGH_SCORES
     if (!(joy&16) || (!(row8&1) && !g_TypeMode)) state|=ACTION_PRIMARY;
+#else
+    if (!(joy&16) || !(row8&1)) state|=ACTION_PRIMARY;
+#endif
     if (!(joy&32) || !(row4&8) || !(row6&4)) state|=ACTION_SECONDARY;
     if (!(row7&128)) state|=ACTION_ENTER;
     if (!(row7&4)) state|=ACTION_ESCAPE;

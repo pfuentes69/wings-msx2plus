@@ -38,7 +38,8 @@ typedef struct GameState {
 
 /* The high-score table (docs/research/amiga-hiscores.md): ten entries,
  * best first; a score of 0 is an empty row. RAM only (the original keeps a
- * `highscore` file). */
+ * `highscore` file). Built with WINGS_HIGH_SCORES only: set aside while it
+ * can't be saved; without it a game's end goes back to rank selection. */
 typedef struct HighScore { uint32_t score; uint8_t rank; char name[GAME_NAME_LENGTH]; } HighScore;
 extern HighScore g_HighScores[GAME_SCORE_COUNT];
 extern char g_Name[GAME_NAME_LENGTH];   /* the name being entered */

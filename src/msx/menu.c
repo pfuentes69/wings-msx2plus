@@ -105,6 +105,7 @@ static const char* Pick(u8 selected, const char* text)
     return s_Text;
 }
 
+#ifdef WINGS_HIGH_SCORES
 /* A high-score row (0x9856: position, score, rank, name; the full rank
  * names do not fit 256 px, so the briefing's short ones). */
 static char s_Row[40];
@@ -161,6 +162,8 @@ u8 Menu_Key(u8 reset) WINGS_BANKED
     return key;
 }
 
+#endif
+
 void Menu_Draw(u8 page, const GameState* game) WINGS_BANKED
 {
     u8 i;
@@ -198,6 +201,7 @@ void Menu_Draw(u8 page, const GameState* game) WINGS_BANKED
         /* The original's plate (world shape gmov) says THE END. */
         Text(page,80,"THE END");
     }
+#ifdef WINGS_HIGH_SCORES
     else if (game->phase==GAME_NAME)
     {
         Text(page,70,"YOUR NAME IS TO BE ENTERED");
@@ -214,6 +218,7 @@ void Menu_Draw(u8 page, const GameState* game) WINGS_BANKED
         for (i=0; i<GAME_SCORE_COUNT; ++i)
             if (g_HighScores[i].score) TextAt(page,10,44+i*11,ScoreRow(i));
     }
+#endif
     else if (game->phase==GAME_PAUSE)
     {
         Text(page,65,"PAUSED"); Text(page,100,"PRESS ESC TO CONTINUE");

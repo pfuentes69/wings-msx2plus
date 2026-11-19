@@ -1,4 +1,4 @@
-set extra_symbols {g_Planes g_NameLength g_Name g_HighScores}
+set extra_symbols {g_Planes}
 source [file join $env(WINGS_ROOT) tools smoke_lib.tcl]
 # Enemy planes have their own verifier (docs/enemy-planes.md); the P0's
 # pixel model does not know them: keep the torpedo-plane timer (g_Planes
@@ -512,15 +512,9 @@ proc mission_two {} {
 proc restart_game {} {
     fly 0
     keymatrixdown 6 2;keymatrixdown 4 136;after time 0.4 {keymatrixup 4 136;keymatrixup 6 2}
-    # Ctrl-R ends the game through the high scores (a name: the score beats
-    # the empty table); R and N still held must not type into it.
-    after time 0.6 {require [expr {[view 0]==9 && [value g_NameLength]==0}] "Ctrl-R: no name entry, or held keys typed"; after_game restarted 1}
+    after time 0.4 {after_game restarted}
 }
 proc restarted {} {
-    # The table's first row: score > 0, rank 0 (Midshipman), name "ACE 1".
-    set row [debug read_block memory $::addr(g_HighScores) 21]
-    binary scan $row iucua16 score rank name
-    require [expr {$score>0 && $rank==0 && [string trimright $name]=="ACE 1"}] "High score entry: $score $rank '$name'"
     require [expr {[view 2]==3 && [view 4]==30 && [view 5]==1 && [stat 30]==0 && [stat 32]==0}] "Ctrl-R game reset or setting retention"
     snap restart engine_new_game
 }

@@ -85,7 +85,11 @@ for 1800 frames or until a fire button; then rank selection. A new entry
 goes below the scores it does not beat. The table starts empty (the
 original saves it as the file `highscore`).
 
-The port (`core/game.c`, `msx/menu.c`):
+**Set aside (2026-11-19):** the port can't save the table, so the name
+entry and the table are built only with `WINGS_HIGH_SCORES` (off). Without
+it "THE END" goes back to rank selection (after 150 frames, or a button
+after 30) and Ctrl-R starts a new game at once; the typing code is not in
+the ROM. `tests/test_game.py` builds the game both ways. With the switch:
 - `GAME_OVER` is "THE END", then `GAME_NAME` (if the score qualifies) and
   `GAME_SCORES`; `Game_Wait` runs their timers (PAL frames, NTSC fields
   6/5 as many). Ctrl-R from play, pause, the menus or the service goes

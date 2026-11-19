@@ -52,9 +52,9 @@ proc pulse {row mask then} {
     after time 0.8 $then
 }
 proc snap {name then} {set ::pending [list $name $then]}
-# After the game ends (last plane, Ctrl-R): "the end" moves on by itself,
-# a name (if any) is left empty with Return, and Return leaves the table
-# (src/core/game.c). Snapshots name_entry and scores once each, if asked.
+# After the game ends (last plane, Ctrl-R): "the end" moves on by itself;
+# with the high-score table built in (WINGS_HIGH_SCORES), a name is typed
+# ("ACE 1" when snaps is set) and Return leaves the table.
 # Keys (row mask pairs) pressed one after another.
 proc type_keys {keys then} {
     if {![llength $keys]} {after time 0.1 $then; return}

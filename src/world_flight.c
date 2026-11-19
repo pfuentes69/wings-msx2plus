@@ -975,7 +975,9 @@ static u8 s_Tapped;
  * plane joins at the hold (0x0122). */
 static u8 s_MissionAdvanced, s_Promotion;
 u8 g_BriefIslands, g_BriefShips;
+#ifdef WINGS_HIGH_SCORES
 static u8 s_Typing;   /* the name entry has scanned the keyboard once */
+#endif
 /* A new mission (game start or the next one): the island restored, no
  * ticker, nothing advanced yet. */
 static void StartMission(void)
@@ -1096,7 +1098,9 @@ void main(void)
     g_InputEnabled=0; g_InputInvert=g_InputOverflow=0;
     Controls_Reset(&g_Controls); s_LastControl=0; s_UiDirty=1;
     Game_Reset(&g_Game);
+#ifdef WINGS_HIGH_SCORES
     Game_ClearScores();
+#endif
     Dashboard_LoadTables();
 #ifdef WINGS_DEBUG_CONTROLS
     g_Game.phase=GAME_PLAY;
@@ -1195,7 +1199,9 @@ void main(void)
     {
         present_ticks=WINGS_PRESENT_TICKS; steps=base_steps;
 #ifdef WINGS_P1_FLIGHT
+#ifdef WINGS_HIGH_SCORES
         if (g_Game.phase==GAME_NAME) present_ticks=1;   /* every key tap */
+#endif
 #endif
 #ifdef WINGS_P1_FLIGHT
         if (g_Game.phase==GAME_PLAY && (g_Carrier.stage==CARRIER_RAISING || g_Carrier.stage==CARRIER_LOWERING))
@@ -1234,6 +1240,7 @@ void main(void)
             /* The briefing closes by itself after 240 PAL frames (0x8590),
              * 4.8 s; 288 NTSC fields. */
             if (Game_Wait(&g_Game,present_ticks,g_VDP_REGSAV[9]&2)) { ConsumeActions(); s_UiDirty=1; }
+#ifdef WINGS_HIGH_SCORES
             /* A high score's name, typed: keys held as it opens are old. */
             if (g_Game.phase==GAME_NAME)
             {
@@ -1241,6 +1248,7 @@ void main(void)
                 while (i) { if (Game_Type(&g_Game,i)) s_UiDirty=1; i=Menu_Key(0); }   /* all queued, one redraw */
             }
             else s_Typing=g_TypeMode=0;
+#endif
 #endif
             if (g_Game.phase==GAME_PLAY)
             {

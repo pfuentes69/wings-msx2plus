@@ -2,6 +2,9 @@
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_GAME)
 #include "engine.h"
 
+static uint16_t s_Wait;      /* VBlanks the current phase has shown (Game_Wait) */
+static uint8_t s_WaitPhase, s_Pal;
+
 uint8_t Game_WeaponStock(uint8_t weapon) WINGS_BANKED
 {
     return weapon==WEAPON_BOMBS ? 30 : weapon==WEAPON_ROCKETS ? 15 : weapon==WEAPON_TORPEDO ? 1 : 0;
@@ -58,6 +61,7 @@ void Game_Reset(GameState* game) WINGS_BANKED
     Game_SetLoadout(game,WEAPON_BOMBS);
     game->sortie.oil=ENGINE_OIL_FULL; game->sortie.fuel=ENGINE_FUEL_FULL;
     game->phase=GAME_RANK; game->cursor=game->invert=game->notice=0;
+    s_WaitPhase=255;   /* RAM is not cleared at boot: no phase timed yet */
 }
 
 uint8_t Game_LosePlane(GameState* game) WINGS_BANKED
@@ -76,12 +80,13 @@ void Game_OpenService(GameState* game) WINGS_BANKED
     game->sortie.oil=ENGINE_OIL_FULL; game->sortie.fuel=ENGINE_FUEL_FULL;
 }
 
+#ifdef WINGS_HIGH_SCORES
 HighScore g_HighScores[GAME_SCORE_COUNT];
 char g_Name[GAME_NAME_LENGTH];
 uint8_t g_NameLength;
-static uint16_t s_Wait;      /* VBlanks the current phase has shown */
-static uint8_t s_WaitPhase, s_Pal;
+#endif
 
+#ifdef WINGS_HIGH_SCORES
 void Game_ClearScores(void) WINGS_BANKED
 {
     uint8_t i, k;
@@ -90,19 +95,26 @@ void Game_ClearScores(void) WINGS_BANKED
         g_HighScores[i].score=0; g_HighScores[i].rank=0;
         for (k=0; k<GAME_NAME_LENGTH; ++k) g_HighScores[i].name[k]=' ';
     }
-    s_WaitPhase=255;
 }
+#endif
 
 /* PAL frames as VBlanks of this machine. */
 static uint16_t Frames(uint16_t pal) { return s_Pal ? pal : pal + pal / 5; }
 
+static void NewGame(GameState* game);
 /* The game ends (the last plane, Ctrl-R): the name if the score beats the
- * tenth (0x9856), then the table. */
+ * tenth (0x9856), then the table. Without the table (it can't be saved),
+ * straight to a new game at rank selection. */
 static void EndGame(GameState* game)
 {
+#ifdef WINGS_HIGH_SCORES
     game->phase=g_HighScores[GAME_SCORE_COUNT-1].score<game->progress.score ? GAME_NAME : GAME_SCORES;
     g_NameLength=0; game->cursor=game->notice=0;
+#else
+    NewGame(game);
+#endif
 }
+#ifdef WINGS_HIGH_SCORES
 
 /* The entry goes in below the scores it does not beat (the original's
  * bubble sort swaps on "less than" only). */
@@ -117,12 +129,14 @@ static void Enter(GameState* game)
     game->phase=GAME_SCORES;
 }
 
+#endif
 static void NewGame(GameState* game)
 {
     uint8_t invert=game->invert;
     Game_Reset(game); game->invert=invert;
 }
 
+#ifdef WINGS_HIGH_SCORES
 uint8_t Game_Type(GameState* game, uint8_t key) WINGS_BANKED
 {
     if (game->phase!=GAME_NAME) return 0;
@@ -132,6 +146,7 @@ uint8_t Game_Type(GameState* game, uint8_t key) WINGS_BANKED
     g_Name[g_NameLength++]=(char)key;
     return 1;
 }
+#endif
 
 uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
 {
@@ -145,6 +160,7 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
         EndGame(game);
         return GAME_CONTEXT_CHANGED|GAME_RESTARTED;
     }
+#ifdef WINGS_HIGH_SCORES
     if (old==GAME_NAME)
     {
         /* Return, a fire button, or up / down end the name (0x9856). */
@@ -152,6 +168,7 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
         Enter(game);
         return GAME_CONTEXT_CHANGED;
     }
+#endif
     if (old==GAME_PLAY && (pressed & (ACTION_LOAD|ACTION_SAVE)))
     {
         game->phase=pressed & ACTION_LOAD ? GAME_LOAD_MENU : GAME_SAVE_MENU;
