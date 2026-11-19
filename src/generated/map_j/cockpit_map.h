@@ -4,16 +4,18 @@
 #pragma once
 #define COCKPIT_LANDS 0
 #define COCKPIT_TREES 0
-#define COCKPIT_OBJECTS 2
-#define COCKPIT_OBJECT_REACH 95u   /* the longest object span */
+#define COCKPIT_OBJECTS 4
+#define COCKPIT_OBJECT_REACH 96u   /* the longest object span */
 #define COCKPIT_CARRIER_FIRST 441u
 #define COCKPIT_CARRIER_LAST 535u
 static const uint16_t s_LandFirst[1] = {0};
 static const uint16_t s_LandLast[1] = {0};
 static const uint16_t s_TreeFirst[1] = {0};
 static const uint16_t s_TreeLast[1] = {0};
-/* kind: 0 hut (index: g_Island.hut), 1 dugout, 2 AA gun, 3 carrier, 4 its tower */
-static const uint16_t s_ObjectFirst[2] = {441, 480};
-static const uint16_t s_ObjectLast[2] = {535, 480};
-static const uint8_t s_ObjectKind[2] = {3, 4};
-static const uint8_t s_ObjectIndex[2] = {0, 0};
+/* kind: 0 hut (index: g_Island.hut), 1 dugout, 2 AA gun, 3 carrier, 4 its tower, 5 enemy ship (index: its g_ShipsGone bit) */
+static const uint16_t s_ObjectFirst[4] = {1, 441, 480, 896};
+static const uint16_t s_ObjectLast[4] = {80, 535, 480, 991};
+static const uint8_t s_ObjectKind[4] = {5, 3, 4, 5};
+static const uint8_t s_ObjectIndex[4] = {0, 0, 0, 1};
+/* Each enemy ship's views (its kind: COCKPIT_DESTROYER, _BATTLESHIP, _CRUISER). */
+static const uint8_t s_ShipView[2] = {COCKPIT_DESTROYER, COCKPIT_BATTLESHIP};

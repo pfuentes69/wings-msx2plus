@@ -4,6 +4,7 @@
 #include "vdp_inl.h"
 #include "../core/island.h"
 #include "../core/planes.h"
+#include "../core/ships.h"
 #include "scenery_load.h"
 #include "cockpit_map.h"   /* the map's features (src/generated/map_<map>) */
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_COCKPIT)
@@ -40,7 +41,7 @@ static u8 s_Left, s_First, s_Last, s_ObjectLo;
 static int16_t s_Hi;
 /* What the scene was last computed from (Cockpit_Draw). */
 static u16 s_InCol;
-static u8 s_InBase, s_InSight, s_InLeft, s_InArrow, s_InWrecked, s_InPlanes[2 * PLANES_MAX], s_PlanesShown;
+static u8 s_InBase, s_InSight, s_InLeft, s_InArrow, s_InWrecked, s_InGone, s_InPlanes[2 * PLANES_MAX], s_PlanesShown;
 /* A scene waiting to be composed (from Cockpit_Draw's inputs), and the
  * renders it has waited. */
 static u8 s_Pending, s_Again, s_Stale, s_PendAltitude;
@@ -210,7 +211,8 @@ static void Scene(u16 x, u8 altitude, u8 left, u8 arrow)
     for (; i < COCKPIT_OBJECTS && s_ObjectFirst[i] <= to; ++i)
     {
         kind = s_ObjectKind[i];
-        if (deck && kind >= 3) continue;   /* over the carrier: the deck view shows it */
+        if (deck && kind >= 3) continue;   /* over the carrier: the deck view shows it (ships hidden) */
+        if (kind == 5 && (g_ShipsGone >> s_ObjectIndex[i]) & 1) continue;   /* sunk */
         if (!Bands(s_ObjectFirst[i], s_ObjectLast[i])) continue;
         for (b = s_First; b <= s_Last; ++b)
         {
@@ -224,6 +226,7 @@ static void Scene(u16 x, u8 altitude, u8 left, u8 arrow)
             case 0: frame = (g_Island.hut[s_ObjectIndex[i]].wrecked ? COCKPIT_WRECK : COCKPIT_HUT) + s_K6[b] - 1; break;
             case 1: frame = COCKPIT_DUGOUT + s_K6[b] - 1; break;
             case 2: frame = COCKPIT_GUN + s_K6[b] - 1; break;
+            case 5: frame = s_ShipView[s_ObjectIndex[i]] + s_K7[b] + (left ? 8 : 0); break;
             default: frame = (kind == 3 ? COCKPIT_CARRIER : COCKPIT_TOWER) + s_K7[b] + (left ? 8 : 0); break;
             }
             s_Next[8 + b] = frame + 1;
@@ -241,7 +244,8 @@ void Cockpit_Load(void) WINGS_BANKED
     for (slot = 1; slot < COCKPIT_SLOTS; ++slot)
         for (row = 0, y = g_CockpitSlotY[slot] - 512; row < 24; ++row, ++y, offset += 24)
         {
-            Scenery_Read(COCKPIT_BANK, offset, line, 24);
+            if (slot == COCKPIT_BANK_SLOTS + 1 && !row) offset = 0;   /* the second bank */
+            Scenery_Read(slot <= COCKPIT_BANK_SLOTS ? COCKPIT_BANK : COCKPIT_BANK2, offset, line, 24);
             VDP_WriteVRAM(line, y * 128 + g_CockpitSlotX[slot] / 2, 1, 24);
         }
 }
@@ -409,21 +413,23 @@ u8 Cockpit_Work(void) WINGS_BANKED
 
 u8 Cockpit_Draw(u8 page, u16 x, u16 y, u8 facing_left) WINGS_BANKED
 {
-    u8 changed = g_Cockpit.generation == 255, altitude, base, sight, wrecked, planes;
+    u8 changed = g_Cockpit.generation == 255, altitude, base, sight, wrecked, gone, planes;
     u8 arrow = g_Planes.live ? Planes_Arrow((int16_t)x) : 0;
     y = WINGS_FLIGHT_MAX_Y - y;
     altitude = y > 255 ? 255 : (u8)y;
     base = altitude > FAR_ALTITUDE ? 255 : altitude >> 4;
     sight = altitude >= 81 ? 17 : ((81 - altitude) >> 2) + 6;
     wrecked = g_IslandWrecks;
+    gone = g_ShipsGone;
     /* The scene only when what it comes from has changed: the plane's
      * place, and the planes' rows and views (they move on their own). */
     /* (None in the air: nothing to look at, unless some were shown.) */
     planes = g_Planes.live || s_PlanesShown ? Planes(base == 255 ? 255 : base + 17 - LIFT, x >> 3, facing_left) : 0;
     s_PlanesShown = g_Planes.live;
     if (changed || planes || (x >> 3) != s_InCol || base != s_InBase || sight != s_InSight ||
-        facing_left != s_InLeft || arrow != s_InArrow || wrecked != s_InWrecked)
+        facing_left != s_InLeft || arrow != s_InArrow || wrecked != s_InWrecked || gone != s_InGone)
     {
+        s_InGone = gone;
         s_InCol = x >> 3; s_InBase = base; s_InSight = sight;
         s_InLeft = facing_left; s_InArrow = arrow; s_InWrecked = wrecked;
         s_PendX = x; s_PendAltitude = altitude;

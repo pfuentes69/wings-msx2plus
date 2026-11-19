@@ -18,6 +18,7 @@ gunsight last. This module holds the port's half of it:
   python tools/convert_cockpit.py --map a     # src/generated/map_a/cockpit_map.h
 """
 import argparse
+import functools
 import re
 from pathlib import Path
 
@@ -58,7 +59,15 @@ SETS = [('TREE', [f'3dl{i}' for i in range(4, 10)]),
         # The enemy planes seen from the cockpit (zr*), three sizes.
         ('PLANE1', [f'zr1{c}' for c in PLANE_VIEWS]),
         ('PLANE2', [f'zr2{c}' for c in PLANE_VIEWS]),
-        ('PLANE3', [f'zr3{c}' for c in PLANE_VIEWS])]
+        ('PLANE3', [f'zr3{c}' for c in PLANE_VIEWS]),
+        # The enemy ships, from their own archives (0x45a6: frames 1..8 of
+        # each view, the first facing right). The tallest (29 rows) lose
+        # their bottom rows: with the horizon at 12 or lower the top of a
+        # near ship is in the window, so no more than 24 rows ever show.
+        ('DESTROYER', [f'destroyer.shp:d{v}{k}' for v in 'bs' for k in '12345678']),
+        ('BATTLESHIP', [f'battleship.shp:b{v}{k}' for v in 'bs' for k in '12345678']),
+        ('CRUISER', [f'cruiseship.shp:c{v}{k}' for v in 'lr' for k in '12345678'])]
+SHIP_SETS = ('DESTROYER', 'BATTLESHIP', 'CRUISER')   # by mission_ships.h kind 0..2
 NAMES = [n for _, names in SETS for n in names]
 FIRST, _count = {}, 0
 for _key, _names in SETS:
@@ -78,22 +87,28 @@ FAR_ALTITUDE = 186                   # above: the distant view, plain sky
 LIFT = 5
 
 # Object kinds in a map's spans.
-KIND_HUT, KIND_DUGOUT, KIND_GUN, KIND_CARRIER, KIND_TOWER = range(5)
+KIND_HUT, KIND_DUGOUT, KIND_GUN, KIND_CARRIER, KIND_TOWER, KIND_SHIP = range(6)
 TOWERS = (0x22, 0xf6)
 SCENE_BYTES = 19 + 2 * PLANE_SLOTS   # ... and per plane slot: its row, its view + 1
 
 
+_RECORDS = {}
+
+
 def shape(name):
-    """A dash.shp shape in dashboard colours (0 transparent), trimmed and
-    scaled 3/8 across about its origin: (pixels, width, height, ox, oy)."""
+    """A shape (dash.shp, or 'archive:name' from a ship's archive) in
+    dashboard colours (0 transparent), trimmed and scaled 3/8 across about
+    its origin, at most 24 rows (its top: see SHIP_SETS): (pixels, width,
+    height, ox, oy)."""
     from unpack_shapes import read_ppkc, unpack_rpck
     from decode_shapes import decode_record
-    global _RECORDS
-    try:
-        records = _RECORDS
-    except NameError:
-        records = _RECORDS = {n: r for n, _, r in read_ppkc(unpack_rpck((SOURCE / 'shapes/dash.shp').read_bytes()))}
-    raw, meta = decode_record(records[name], plane_constants=True)
+    archive, name = name.split(':') if ':' in name else ('dash.shp', name)
+    if archive not in _RECORDS:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')   # the ship archives' trailing padding
+            _RECORDS[archive] = {n.strip(): r for n, _, r in read_ppkc(unpack_rpck((SOURCE / 'shapes' / archive).read_bytes()))}
+    raw, meta = decode_record(_RECORDS[archive][name], plane_constants=True)
     # The dashboard's slots: 0 is the sky (transparent here), 1 the dark sea
     # (the dashboard's blue is 9), opaque black 11.
     px = [0 if not p else 11 if not p & 15 else 9 if p & 15 == 1 else p & 15 for p in raw]
@@ -109,31 +124,34 @@ def shape(name):
         for tx in range(tw):
             sx = min(max(ox + int((t0 + tx + 0.5) * 8 / 3), x0), x1 - 1)
             out[y * tw + tx] = px[y * w + sx]
-    return bytes(out), tw, h, -t0, oy
+    return bytes(out[:tw * min(h, HEIGHT)]), tw, min(h, HEIGHT), -t0, oy
 
 
+@functools.lru_cache(maxsize=None)
 def art():
-    """The shapes packed into slots 1..23 (shelves, tallest first): the 24
-    slot images (48 x 24, slot 0 blank) and each shape's (slot, x, y, w, h,
-    ox, oy)."""
+    """The shapes packed into slots 1..23 (first fit on an occupancy grid,
+    tallest first): the 24 slot images (48 x 24, slot 0 blank: the compose
+    buffer) and each shape's (slot, x, y, w, h, ox, oy)."""
     shapes = [shape(n) for n in NAMES]
-    order = sorted(range(len(shapes)), key=lambda i: (-shapes[i][2], -shapes[i][1]))
+    order = sorted(range(len(shapes)), key=lambda i: (-shapes[i][2], -shapes[i][1], i))
     slots = [bytearray(SLOT * HEIGHT) for _ in range(24)]
+    used = [[bytearray(SLOT) for _ in range(HEIGHT)] for _ in range(24)]
     place = [None] * len(shapes)
-    slot, x, y, shelf = 1, 0, 0, 0
     for i in order:
         px, w, h, ox, oy = shapes[i]
-        if x + w > SLOT: x, y, shelf = 0, y + shelf, 0
-        if y + h > HEIGHT: slot, x, y, shelf = slot + 1, 0, 0, 0
-        assert slot < 24, 'the cockpit shapes overflow the pilot slots'
+        spot = next(((slot, x, y) for slot in range(1, 24) for y in range(HEIGHT - h + 1) for x in range(SLOT - w + 1)
+                     if not any(any(used[slot][y + yy][x:x + w]) for yy in range(h))), None)
+        assert spot, 'the cockpit shapes overflow the pilot slots'
+        slot, x, y = spot
         for yy in range(h):
+            used[slot][y + yy][x:x + w] = bytes([1]) * w
             slots[slot][(y + yy) * SLOT + x:(y + yy) * SLOT + x + w] = px[yy * w:(yy + 1) * w]
         place[i] = (slot, x, y, w, h, ox, oy)
-        x += w; shelf = max(shelf, h)
     return [bytes(s) for s in slots], place
 
 
-COCKPIT_BANK = 52   # the slots' pixels, packed, 24 bytes a row (msx/cockpit.c Cockpit_Load)
+COCKPIT_BANKS = (52, 58)   # the slots' pixels, packed, 24 bytes a row, 14 slots a bank (msx/cockpit.c Cockpit_Load)
+BANK_SLOTS = 8192 // (SLOT * HEIGHT // 2)
 
 
 def art_source(slots_xy, defines=()):
@@ -143,12 +161,14 @@ def art_source(slots_xy, defines=()):
     from convert_hellcat import pack_pixels
     images, place = art()
     used = max(p[0] for p in place) + 1
-    bank = b''.join(pack_pixels(images[s]) for s in range(1, used))
-    assert len(bank) <= 8192
+    packed = [pack_pixels(images[s]) for s in range(1, used)]
+    banks = {b: b''.join(packed[k * BANK_SLOTS:(k + 1) * BANK_SLOTS]) for k, b in enumerate(COCKPIT_BANKS)}
+    assert len(packed) <= BANK_SLOTS * len(COCKPIT_BANKS)
     h = ['/* Generated by tools/convert_cockpit.py (via convert_dashboard.py); do not edit. */', '#pragma once',
          f'#define COCKPIT_SHAPES {len(NAMES)}', f'#define COCKPIT_BUFFER_X {slots_xy[0][0]}u',
          f'#define COCKPIT_BUFFER_Y {slots_xy[0][1]}u', f'#define COCKPIT_SCENE_BYTES {SCENE_BYTES}',
-         f'#define COCKPIT_BANK {COCKPIT_BANK}', f'#define COCKPIT_SLOTS {used}',
+         f'#define COCKPIT_BANK {COCKPIT_BANKS[0]}', f'#define COCKPIT_BANK2 {COCKPIT_BANKS[1]}',
+         f'#define COCKPIT_BANK_SLOTS {BANK_SLOTS}', f'#define COCKPIT_SLOTS {used}',
          'extern const unsigned char g_CockpitSlotX[COCKPIT_SLOTS];', 'extern const unsigned short g_CockpitSlotY[COCKPIT_SLOTS];']
     h += [f'#define COCKPIT_{k} {v}' for k, v in defines]   # the window's and the arrows' places (convert_dashboard)
     h += [f'#define COCKPIT_{k} {FIRST[k]}' for k, _ in SETS]
@@ -188,7 +208,7 @@ def art_source(slots_xy, defines=()):
     c.append(f'const unsigned char g_CockpitLastBand[191] = {{{", ".join(map(str, last))}}};')
     c.append(f'const unsigned char g_CockpitSlotX[COCKPIT_SLOTS] = {{{", ".join(str(x) for x, y in slots_xy[:used])}}};')
     c.append(f'const unsigned short g_CockpitSlotY[COCKPIT_SLOTS] = {{{", ".join(str(y) for x, y in slots_xy[:used])}}};')
-    return '\n'.join(c) + '\n', '\n'.join(h) + '\n', bank
+    return '\n'.join(c) + '\n', '\n'.join(h) + '\n', banks
 
 
 def plane_band(d):
@@ -218,6 +238,7 @@ def runs(columns, gap=0):
     return [tuple(r) for r in out]
 
 
+@functools.lru_cache(maxsize=None)
 def features(map_name):
     """The map's spans in columns: land, jungle, and objects (first, last,
     kind, index). Jungle runs merge across gaps of up to 7 columns: no band
@@ -233,13 +254,25 @@ def features(map_name):
                        (KIND_GUN, lambda i: 15 <= i <= 30)):
         found = runs([c for c in range(len(words)) if cls[c] == 2 and test(ids[c])])
         objects += [(a, b, kind, k) for k, (a, b) in enumerate(found)]
+    # Ships: a run with a tower is a carrier (the Japanese one too, with the
+    # US carrier's art as in the original); the player's (where the mission
+    # starts) has the deck view. The others are the enemy ships, in
+    # mission_ships.h's order (their index is their g_ShipsGone bit).
+    from decode_mission import parse_map
+    start = parse_map((SOURCE / f'maps/{map_name}.map').read_bytes())['reset_x'] >> 3
+    ships = ship_records(map_name)
     carrier = None
     for a, b in runs([c for c in range(len(words)) if cls[c] == 1]):
         towers = [c for c in range(a, b + 1) if ids[c] in TOWERS]
-        if not towers: continue   # an enemy ship (not drawn yet)
-        carrier = (a, b)
+        if not towers:
+            index = [k for k, (left, right, _) in enumerate(ships) if left < (b + 1) * 8 and right >= a * 8]
+            assert len(index) == 1, ('an enemy ship without its record', a, b, ships)
+            objects.append((a, b, KIND_SHIP, index[0]))
+            continue
+        if a <= start <= b: carrier = (a, b)
         objects.append((a, b, KIND_CARRIER, 0))
         objects += [(t0, t1, KIND_TOWER, 0) for t0, t1 in runs(towers)]
+    assert carrier, 'no carrier at the start'
     # Huts in the order of the island's records (src/generated/map_*/mission_island.h).
     island = (ROOT / f'src/generated/map_{map_name}/mission_island.h')
     if island.exists():
@@ -253,8 +286,22 @@ def features(map_name):
     return land, trees, objects, carrier
 
 
+@functools.lru_cache(maxsize=None)
+def ship_records(map_name):
+    """The enemy ships of src/generated/map_*/mission_ships.h: (left, right, kind)."""
+    path = ROOT / f'src/generated/map_{map_name}/mission_ships.h'
+    if not path.exists(): return []
+    text = path.read_text()
+    count = int(re.search(r'#define SHIP_COUNT (\d+)', text).group(1))
+    if not count: return []
+    values = {n: [int(v) for v in re.search(rf'{n}\[\d+\] = \{{([^}}]*)\}}', text).group(1).split(',')]
+              for n in ('s_ShipLeft', 's_ShipRight', 's_ShipKind')}
+    return list(zip(values['s_ShipLeft'], values['s_ShipRight'], values['s_ShipKind']))[:count]
+
+
 def map_header(map_name):
     land, trees, objects, carrier = features(map_name)
+    ships = ship_records(map_name)
     def array(kind, name, values):
         values = values or [0]
         return f'static const {kind} {name}[{len(values)}] = {{{", ".join(map(str, values))}}};'
@@ -268,15 +315,17 @@ def map_header(map_name):
            f'#define COCKPIT_CARRIER_LAST {carrier[1] if carrier else 0}u',
            array('uint16_t', 's_LandFirst', [a for a, b in land]), array('uint16_t', 's_LandLast', [b for a, b in land]),
            array('uint16_t', 's_TreeFirst', [a for a, b in trees]), array('uint16_t', 's_TreeLast', [b for a, b in trees]),
-           '/* kind: 0 hut (index: g_Island.hut), 1 dugout, 2 AA gun, 3 carrier, 4 its tower */',
+           '/* kind: 0 hut (index: g_Island.hut), 1 dugout, 2 AA gun, 3 carrier, 4 its tower, 5 enemy ship (index: its g_ShipsGone bit) */',
            array('uint16_t', 's_ObjectFirst', [o[0] for o in objects]), array('uint16_t', 's_ObjectLast', [o[1] for o in objects]),
-           array('uint8_t', 's_ObjectKind', [o[2] for o in objects]), array('uint8_t', 's_ObjectIndex', [o[3] for o in objects])]
+           array('uint8_t', 's_ObjectKind', [o[2] for o in objects]), array('uint8_t', 's_ObjectIndex', [o[3] for o in objects]),
+           '/* Each enemy ship\'s views (its kind: COCKPIT_DESTROYER, _BATTLESHIP, _CRUISER). */',
+           array('uint8_t', 's_ShipView', [f'COCKPIT_{SHIP_SETS[k]}' if k < 3 else 'COCKPIT_CARRIER' for _, _, k in ships])]
     return '\n'.join(out) + '\n'
 
 
 # The runtime's model (msx/cockpit.c), for the verifiers.
 
-def scene(map_name, x, altitude, facing_left, arrow=0, wrecked=(), planes=()):
+def scene(map_name, x, altitude, facing_left, arrow=0, wrecked=(), planes=(), gone=0):
     """The scene bytes msx/cockpit.c computes (g_Cockpit.scene); planes:
     (state, x, alt, shape) per slot."""
     land, trees, objects, carrier = features(map_name)
@@ -304,8 +353,10 @@ def scene(map_name, x, altitude, facing_left, arrow=0, wrecked=(), planes=()):
             for k in bands(a, b)[0]: mask |= 1 << k
         s[at], s[at + 1] = mask & 255, mask >> 8
     far = [-1] * 11
+    ships = ship_records(map_name)
     for a, b, kind, index in objects:
-        if deck and kind in (KIND_CARRIER, KIND_TOWER): continue
+        if deck and kind in (KIND_CARRIER, KIND_TOWER, KIND_SHIP): continue
+        if kind == KIND_SHIP and gone >> index & 1: continue
         found, hi = bands(a, b)
         for k in found:
             d = min(hi, BAND_FAR[k])
@@ -317,6 +368,8 @@ def scene(map_name, x, altitude, facing_left, arrow=0, wrecked=(), planes=()):
                 frame = (FIRST['WRECK'] if index in wrecked else FIRST['HUT']) + K6[k] - 1
             elif kind == KIND_DUGOUT: frame = FIRST['DUGOUT'] + K6[k] - 1
             elif kind == KIND_GUN: frame = FIRST['GUN'] + K6[k] - 1
+            elif kind == KIND_SHIP:
+                frame = FIRST[SHIP_SETS[ships[index][2]]] + K7[k] + (8 if facing_left else 0)
             else: frame = FIRST['CARRIER' if kind == KIND_CARRIER else 'TOWER'] + K7[k] + (8 if facing_left else 0)
             s[8 + k] = frame + 1
     # The planes, slot by slot: in a band 48..1280 px ahead, and in rows
@@ -333,8 +386,7 @@ def scene(map_name, x, altitude, facing_left, arrow=0, wrecked=(), planes=()):
 def compose(scene_bytes, arrows=None):
     """The window (46 x 24 dashboard colours) msx/cockpit.c draws for these
     scene bytes; arrows: convert_dashboard.arrow_frames()."""
-    _, place = art()
-    slots, _ = art()
+    slots, place = art()
     s = scene_bytes
     win = bytearray([SKY]) * (SLOT * HEIGHT)
     def blit(i, row, top=0):

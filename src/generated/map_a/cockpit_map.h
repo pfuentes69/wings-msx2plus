@@ -12,8 +12,10 @@ static const uint16_t s_LandFirst[1] = {1};
 static const uint16_t s_LandLast[1] = {496};
 static const uint16_t s_TreeFirst[2] = {7, 407};
 static const uint16_t s_TreeLast[2] = {210, 490};
-/* kind: 0 hut (index: g_Island.hut), 1 dugout, 2 AA gun, 3 carrier, 4 its tower */
+/* kind: 0 hut (index: g_Island.hut), 1 dugout, 2 AA gun, 3 carrier, 4 its tower, 5 enemy ship (index: its g_ShipsGone bit) */
 static const uint16_t s_ObjectFirst[6] = {215, 297, 337, 401, 825, 864};
 static const uint16_t s_ObjectLast[6] = {218, 300, 340, 404, 919, 864};
 static const uint8_t s_ObjectKind[6] = {1, 0, 0, 1, 3, 4};
 static const uint8_t s_ObjectIndex[6] = {0, 0, 1, 1, 0, 0};
+/* Each enemy ship's views (its kind: COCKPIT_DESTROYER, _BATTLESHIP, _CRUISER). */
+static const uint8_t s_ShipView[1] = {0};

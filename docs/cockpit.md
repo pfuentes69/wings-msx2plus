@@ -86,16 +86,25 @@ plain sky.
   facing. They are drawn after the targets, the farthest size first. The
   render works out each plane's row and view (cheap; skipped when no plane
   slot is in use) and recomposes only when they change.
-- **Not yet**: the enemy ships (their own archives' views: the destroyer,
-  battleship and cruiser). AA guns are drawn intact (no map played so far
-  has any).
+- **Enemy ships**: their views from their own archives (destroyer `db*`
+  /`ds*`, battleship `bb*`/`bs*`, cruiser `cl*`/`cr*`, frames 1..8 of each
+  facing, 0x45a6), in the band like the carrier, gone once sunk
+  (`g_ShipsGone`). The kind comes from `mission_ships.h`. The tallest views
+  (29 rows) keep their top 24 rows: with the raised horizon a near ship's
+  top is always in the window. A carrier other than the player's (the
+  Japanese one) uses the US carrier's views, as in the original; the deck
+  view is only the player's carrier's. Over that carrier the bands leave
+  out every ship, as the original does.
+- **VRAM**: first-fit packing puts the 199 shapes in 19 of the 24 pilot
+  slots; they load from banks 52 and 58 (14 slots a bank).
+- AA guns are drawn intact (no map played so far has any).
 
 ## Verification
 
 - `tests/test_cockpit_z80.py`: the compiled code on an emulated Z80
   against the converter's model (`scene`, `compose`), its VDP commands
-  logged by a stub and replayed: 168 views on map a, 150 with planes,
-  wrecked huts, no commands for an unchanged scene, the step-by-step
+  logged by a stub and replayed: 168 views on map a, 150 with planes, 88
+  on map j with its ships whole or sunk, wrecked huts, no commands for an unchanged scene, the step-by-step
   fallback.
 - `verify_p0`: the snapshots dump `g_Cockpit`; where the page shown holds
   the buffer's picture, the window is compared pixel for pixel with the

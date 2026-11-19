@@ -27,8 +27,9 @@ for (let segment = 0; segment < Math.ceil(aircraftBytes / 8192); ++segment) {
 }
 
 RawFiles.push({ offset: 7 * 8192, file: "assets_msx/dashboard/bank_7.bin" });
-// The cockpit window's shapes (tools/convert_cockpit.py COCKPIT_BANK).
-RawFiles.push({ offset: 52 * 8192, file: "assets_msx/cockpit/bank_52.bin" });
+// The cockpit window's shapes (tools/convert_cockpit.py COCKPIT_BANKS).
+for (const bank of [52, 58])
+    RawFiles.push({ offset: bank * 8192, file: `assets_msx/cockpit/bank_${bank}.bin` });
 
 RawFiles.push({ offset: 11 * 8192, file: "assets_msx/dashboard/waves.sc5" });
 

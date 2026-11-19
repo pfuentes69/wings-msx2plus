@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 FLAGS = ['-mz80', '--opt-code-speed', '-DTARGET=TARGET_ROM_ASCII8', '-DROM_SIZE=512', '-DMSX_VERSION=MSX_2P',
          f'-I{ROOT}', f'-I{ROOT}/MSXgl/engine/src', f'-I{ROOT}/MSXgl/engine/content', f'-I{ROOT}/MSXgl/tools',
-         f'-I{ROOT}/src', f'-I{ROOT}/src/generated/map_a', '-DWINGS_FLIGHT_MAX_Y=1200u']
+         f'-I{ROOT}/src', '-DWINGS_FLIGHT_MAX_Y=1200u']
 LOG, STACK, SENTINEL = 0xD000, 0xF000, 0x3000
 import convert_cockpit
 SCENE = convert_cockpit.SCENE_BYTES
@@ -31,7 +31,7 @@ SCENE = convert_cockpit.SCENE_BYTES
 STUB = """
     .module stub
     .globl _VDP_CommandSetupR32, _VDP_CommandSetupR36, _VDP_CommandWait, _VDP_WriteVRAM_128K, _Scenery_Read
-    .globl _g_VDP_Command, _g_Planes, _g_Island, _g_IslandWrecks
+    .globl _g_VDP_Command, _g_Planes, _g_Island, _g_IslandWrecks, _g_ShipsGone
     .area _CODE
 _VDP_CommandSetupR32:
 _VDP_CommandSetupR36:
@@ -50,14 +50,16 @@ _g_VDP_Command: .ds 15
 _g_Planes: .ds 512
 _g_Island: .ds 1024
 _g_IslandWrecks: .ds 1
+_g_ShipsGone: .ds 1
 """
 
 
 class Cockpit:
-    def __init__(self, workdir):
+    def __init__(self, workdir, map_name='a'):
         sdcc = shutil.which('sdcc')
         for source in ('src/msx/cockpit.c', 'src/generated/cockpit_art.c'):
-            subprocess.run([sdcc, *FLAGS, '-c', str(ROOT / source), '-o', str(workdir) + '/'], check=True, capture_output=True)
+            subprocess.run([sdcc, *FLAGS, f'-I{ROOT}/src/generated/map_{map_name}', '-c', str(ROOT / source), '-o', str(workdir) + '/'],
+                           check=True, capture_output=True)
         (workdir / 'stub.s').write_text(STUB)
         subprocess.run([shutil.which('sdasz80'), '-o', 'stub.rel', 'stub.s'], cwd=workdir, check=True, capture_output=True)
         subprocess.run([sdcc, '-mz80', '--no-std-crt0', '--code-loc', '0x4000', '--data-loc', '0xC000',
@@ -74,6 +76,10 @@ class Cockpit:
         state = self.symbols['_g_Cockpit']
         self.machine.set_memory_block(state, bytes(SCENE) + b'\xff\xff\xff')   # nothing composed, nothing shown
         self.ticks = []
+
+    def sink(self, gone):
+        """g_ShipsGone: a bit per enemy ship sunk."""
+        self.machine.set_memory_block(self.symbols['_g_ShipsGone'], bytes([gone]))
 
     def wreck(self, huts):
         """The huts' wrecked flags (IslandBuilding: 8 bytes, wrecked at +3)."""
@@ -180,6 +186,25 @@ class CockpitZ80Tests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.temp.cleanup()
+        if hasattr(cls, 'temp_j'): cls.temp_j.cleanup()
+
+    def test_ships_on_map_j_match_the_model(self):
+        """Map j: the destroyer and the battleship (and the carrier), whole or sunk."""
+        temp = self.__class__.temp_j = tempfile.TemporaryDirectory()
+        cockpit = Cockpit(Path(temp.name), 'j')
+        rng = random.Random(4)
+        cases = [(1100, 40, 1, 0), (900, 40, 1, 0), (700, 60, 1, 0), (6500, 40, 0, 0), (6900, 30, 0, 0),
+                 (6900, 30, 0, 2), (1100, 40, 1, 1), (3300, 40, 0, 3)]
+        cases += [(rng.randrange(0, 8000), rng.randrange(0, 187), rng.randrange(2), rng.randrange(4)) for _ in range(80)]
+        for page, (x, altitude, left, gone) in enumerate(cases):
+            cockpit.sink(gone)
+            commands = cockpit.draw(page & 1, x, altitude, left)
+            want = self.model.scene('j', x, altitude, left, 0, (), (), gone)
+            self.assertEqual(cockpit.scene(), want, (x, altitude, left, gone))
+            for c in commands: self.vram.run(c)
+            wx, wy = self.window
+            got = bytes(self.vram.pixels.get((wx + xx, (page & 1) * 256 + 172 + wy + yy), 255) for yy in range(24) for xx in range(46))
+            self.assertEqual(got, self.model.compose(want), (x, altitude, left, gone))
 
     def check(self, page, x, altitude, left, huts=(), planes=()):
         self.cockpit.planes(planes)

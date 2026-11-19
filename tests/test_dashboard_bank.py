@@ -44,8 +44,8 @@ class DashboardBankTests(unittest.TestCase):
         import convert_cockpit
         slots,place=convert_cockpit.art()
         used=max(p[0] for p in place)+1
-        bank=(ROOT/f'assets_msx/cockpit/bank_{convert_cockpit.COCKPIT_BANK}.bin').read_bytes()
-        self.assertLessEqual(len(bank),8192)
+        bank=b''.join((ROOT/f'assets_msx/cockpit/bank_{b}.bin').read_bytes() for b in convert_cockpit.COCKPIT_BANKS)
+        for b in convert_cockpit.COCKPIT_BANKS: self.assertLessEqual((ROOT/f'assets_msx/cockpit/bank_{b}.bin').stat().st_size,8192)
         self.assertEqual(bank,b''.join(pack_pixels(slots[s]) for s in range(1,used)))
         self.assertEqual(slots[0],bytes(48*24))   # the compose buffer
 

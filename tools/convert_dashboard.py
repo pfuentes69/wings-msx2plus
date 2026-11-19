@@ -556,10 +556,10 @@ def artifacts():
     slots, water_backups, ship_slots, tails, weapon_backups, crew_slots, bomb_slots=atlas_slots(27, reserve_water=True, reserve_ship=True, reserve_combat=True, reserve_crew=True); profiles=convert_cockpit.art()[0]   # the cockpit window's shapes; slot 0 its compose buffer
     files[ROOT/'assets_msx/dashboard/pilot.indices']=b''.join(profiles)
     spots=layout(); arrows=arrow_frames()
-    cockpit_c,cockpit_h,cockpit_bank=convert_cockpit.art_source(slots[:24],[('WINDOW_X',spots['pilot_x']),('WINDOW_Y',spots['pilot_y']),
+    cockpit_c,cockpit_h,cockpit_banks=convert_cockpit.art_source(slots[:24],[('WINDOW_X',spots['pilot_x']),('WINDOW_Y',spots['pilot_y']),
         ('ARROW_HEIGHT',ARROW_HEIGHT),('ARROW_LEFT_X',arrows[0][1]),('ARROW_RIGHT_X',arrows[1][1])]+
         [(f'ARROW{i}_ATLAS_{a}',v) for i,(x,y) in enumerate(ARROW_SLOTS) for a,v in (('X',x),('Y',y))])
-    files[ROOT/f'assets_msx/cockpit/bank_{convert_cockpit.COCKPIT_BANK}.bin']=cockpit_bank
+    for bank,data in cockpit_banks.items(): files[ROOT/f'assets_msx/cockpit/bank_{bank}.bin']=data
     files[ROOT/'src/generated/cockpit_art.c']=cockpit_c.encode()
     files[ROOT/'src/generated/cockpit_art.h']=cockpit_h.encode()
     indexed('assets_msx/dashboard/pilot-sheet.png',b''.join(profiles),48,24*24, dashboard=True)
