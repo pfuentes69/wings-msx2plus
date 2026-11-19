@@ -152,3 +152,13 @@ void Game_View(const GameState* game, uint8_t* view) WINGS_BANKED
     view[3]=game->sortie.weapon; view[4]=game->sortie.stock; view[5]=game->invert;
     view[6]=game->cursor; view[7]=game->notice;
 }
+
+static uint16_t s_BriefWait;
+uint8_t Game_Wait(GameState* game, uint8_t ticks, uint8_t pal) WINGS_BANKED
+{
+    if (game->phase != GAME_BRIEFING) { s_BriefWait = 0; return 0; }
+    if ((s_BriefWait += ticks) < (pal ? 240u : 288u)) return 0;
+    s_BriefWait = 0;
+    Game_HandleAction(game, ACTION_ENTER);
+    return 1;
+}

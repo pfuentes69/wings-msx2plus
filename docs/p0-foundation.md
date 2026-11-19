@@ -1,9 +1,9 @@
 # P0: controls, inventory and game state
 
-The release `mission-flight` profile now starts at rank selection. Seven numbered
-rank placeholders lead to an explicitly labelled practice briefing and loadout
-selection. Rank names, mission objectives/order and promotion content remain P6
-work; the rank choice does not claim to change the current practice mission.
+The release `mission-flight` profile now starts at rank selection: the
+original's seven rank names, then the mission briefing (rank, mission number,
+islands and ships: [mission-flow.md](mission-flow.md)) and loadout selection.
+The screens use the menu font until their artwork is done.
 
 | Input | Release action |
 | --- | --- |

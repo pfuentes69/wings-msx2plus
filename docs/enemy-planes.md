@@ -189,7 +189,8 @@ From the pseudo-code for 0xb682, 0xe728, 0xe244, 0xe3e8, 0x0da6 and 0xf178:
   During the chase the script pins the target's altitude and its turn
   countdown, since a chased torpedo plane weaves and breaks after each hit;
   a turn that starts anyway (a pin lost inside the game's update, or the
-  player overtaking it) is undone and the target put back 140 px ahead.
+  player overtaking it) is undone, and a target out of the gun's 160 px box
+  is put back 120 px ahead.
   Placements are re-checked after writing, because a Tcl write can land
   inside the game's own update of the record. Missed deadlines: 22 NTSC,
   4 PAL (limit 30).
@@ -239,9 +240,9 @@ in the same order.
 - **The muzzle flash** (0x0e88): `fc`/`fd` on every other drawn frame,
   close up, from the atlas.
 - **Sound:** an enemy firing drives the gun channel at a fixed level
-  (11/12) with a faster rattle. The enemy engine drone (0x22ce: by the
-  nearest plane's distance, `g_Planes.nearest`) needs a channel of its own
-  and is not played yet.
+  (11/12) with a faster rattle. The enemy engine drone (0x22ce, by the
+  nearest plane's distance, `g_Planes.nearest`): PSG channel B when idle,
+  FM channel 4 with MSX-MUSIC ([sound-effects.md](sound-effects.md)).
 - **Room:** `Smoke_Restore` (the erase) moved from segment 22 to 30
   (`msx/smoke_erase.c`), with its own copy of the box table
   (`smoke_erase_box.c`; `SMOKE_BOX_TABLE` names it for `Box()`).

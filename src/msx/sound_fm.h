@@ -18,4 +18,6 @@ void Sound_InitFM(void) WINGS_BANKED;
 /* The engine drone from the original's Paula period and volume (of 64),
  * once per presented frame. */
 void Sound_FMEngine(u16 period, u8 volume) WINGS_BANKED;
+/* The enemy planes' engine on channel 4, the same way. */
+void Sound_FMDrone(u16 period, u8 volume) WINGS_BANKED;
 #endif

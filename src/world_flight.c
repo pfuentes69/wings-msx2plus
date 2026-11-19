@@ -974,6 +974,7 @@ static u8 s_Tapped;
 /* The mission's last island fell: advanced once (0x5694), its promotion
  * plane joins at the hold (0x0122). */
 static u8 s_MissionAdvanced, s_Promotion;
+u8 g_BriefIslands, g_BriefShips;
 /* A new mission (game start or the next one): the island restored, no
  * ticker, nothing advanced yet. */
 static void StartMission(void)
@@ -1151,6 +1152,7 @@ void main(void)
 #ifdef WINGS_P1_FLIGHT
     Planes_NewGame();
     StartMission(); g_TerrainDirty = 0;
+    g_BriefIslands = g_Island.left; g_BriefShips = g_Ships.left;
     Rope_Reset();
 #endif
     for (page = 0; page < 2; ++page)
@@ -1223,6 +1225,11 @@ void main(void)
         if (!g_HoldFlight)
         {
             reset_weapons=ReadActions();
+#ifdef WINGS_P1_FLIGHT
+            /* The briefing closes by itself after 240 PAL frames (0x8590),
+             * 4.8 s; 288 NTSC fields. */
+            if (Game_Wait(&g_Game,present_ticks,g_VDP_REGSAV[9]&2)) { ConsumeActions(); s_UiDirty=1; }
+#endif
             if (g_Game.phase==GAME_PLAY)
             {
 #ifdef WINGS_P1_FLIGHT

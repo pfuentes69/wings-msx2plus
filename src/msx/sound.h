@@ -8,7 +8,9 @@
  * budget of docs/sound-budget.md) and writes PSG registers 0..10:
  *  A: the engine drone, g_SoundEngineTone / g_SoundEngineVolume;
  *  B: the lift's grind (g_SoundGrind), else gunfire (g_SoundGun volume,
- *     one burst every g_SoundGunRate fields);
+ *     one burst every g_SoundGunRate fields), else the enemy planes' engine
+ *     (g_SoundDroneTone / g_SoundDroneVolume: the original shares their
+ *     Paula channel the same way);
  *  C: the one-shot effects (Sound_Effect).
  * The game sets these once per presented frame (Sound_Update). */
 /* An effect is a list of steps; each holds its tone and volume for
@@ -27,6 +29,8 @@ extern SoundStep g_SoundSteps[SOUND_STEPS];
 extern const SoundStep* g_SoundEffects[SOUND_COUNT];
 extern volatile u16 g_SoundEngineTone;
 extern volatile u8 g_SoundEngineVolume, g_SoundGun, g_SoundGunRate, g_SoundGrind;
+extern volatile u16 g_SoundDroneTone;
+extern volatile u8 g_SoundDroneVolume;
 extern u16 g_SoundListener;   /* the plane's world x */
 extern u8 g_SoundPlaying;     /* the effect on channel C, SOUND_NONE when quiet */
 extern volatile u8 g_SoundRequest, g_SoundRequestAtten;   /* the effect to start next field */

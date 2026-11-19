@@ -411,7 +411,9 @@ proc land_taxi_wait {} {
         if {$b<8} {incr b}
         incr v $b; incr ahead [expr {($v+50)/100}]
     }
-    if {$d>6 && [braking_distance $v]+$ahead < $d-$::taxi_margin} {fly 16} else {fly 0}
+    # Short of the lift and too slow to move at all (whole pixels a tick
+    # from speed 50): power until it rolls; from there it stops 1..5 px on.
+    if {$d>6 && ([braking_distance $v]+$ahead < $d-$::taxi_margin || [speed]<50)} {fly 16} else {fly 0}
     after time 0.01 land_taxi_wait
 }
 

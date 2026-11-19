@@ -7,6 +7,7 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_SOUND)
 /* MSX-MUSIC (docs/sound-effects.md). The YM2413 runs in rhythm mode:
  *  channels 0, 1: the engine, the custom instrument, 3% apart so the two
  *                 beat like a radial engine;
+ *  channel 4:     the enemy planes' engine, the same instrument;
  *  channels 2, 3: the melodic effects (clang, screech, scream);
  *  channels 4, 5: free (music, later);
  *  rhythm:        snare and hi-hat for the guns; bass drum, tom and cymbal
@@ -24,8 +25,9 @@ u8 g_FMDriver[FM_DRIVER_BYTES];
 static u8 s_ScriptData[FM_SCRIPT_BYTES];
 u8* g_FMScripts[SOUND_COUNT];
 /* The engine's registers as (register, value, last written): the driver
- * writes a value when it changed. Sound_FMEngine sets the values. */
-u8 g_FMEngine[18];
+ * writes a value when it changed. Sound_FMEngine sets the first 6 (channels
+ * 0 and 1), Sound_FMDrone the last 3 (channel 4: the enemy planes). */
+u8 g_FMEngine[27];
 static volatile u8 s_FMEngineDirty;   /* values changed since the driver looked */
 static u16 s_FMPeriod;
 static u8* s_FMScript;
@@ -114,7 +116,7 @@ void FM_Driver(void) __naked
         xor a
         ld (_s_FMEngineDirty), a
         ld hl, #_g_FMEngine
-        ld b, #6
+        ld b, #9
     fmd_engine$:
         ld c, (hl)
         inc hl
@@ -399,6 +401,11 @@ void Sound_InitFM(void) WINGS_BANKED
     }
     g_FMEngine[12] = 0x30; g_FMEngine[15] = 0x31;
     g_FMEngine[13] = g_FMEngine[16] = 0x0F;   /* the custom instrument, silent */
+    /* Channel 4, the enemy planes' drone: the same instrument, silent, as
+     * the loop above left the chip (nothing to write until it plays). */
+    g_FMEngine[18] = 0x14; g_FMEngine[21] = 0x24; g_FMEngine[24] = 0x34;
+    g_FMEngine[19] = g_FMEngine[20] = g_FMEngine[22] = g_FMEngine[23] = 0;
+    g_FMEngine[25] = g_FMEngine[26] = 0x0F;
     g_FMScripts[0] = 0;
     for (i = 1; i < SOUND_COUNT; ++i)
     {
@@ -445,5 +452,27 @@ void Sound_FMEngine(u16 period, u8 volume) WINGS_BANKED
         else { g_FMEngine[4] |= 0x10; g_FMEngine[10] |= 0x10; }
         s_FMEngineDirty = 1;
     }
+}
+
+/* The enemy planes' engine (0x22ce): its period and volume of 64, once per
+ * presented frame. */
+static u8 s_FMDroneOn;
+void Sound_FMDrone(u16 period, u8 volume) WINGS_BANKED
+{
+    u16 half, fnum;
+    u8 att;
+    if (!g_SoundFM) return;
+    half = period >> 1;
+    if (half < FM_PITCH_FIRST) half = FM_PITCH_FIRST;
+    if (half > FM_PITCH_FIRST + FM_PITCH_COUNT - 1) half = FM_PITCH_FIRST + FM_PITCH_COUNT - 1;
+    fnum = s_FMPitch[half - FM_PITCH_FIRST];
+    att = volume ? 3 + (u8)((u8)(64 - volume) >> 2) : 15;
+    if (att > 15) att = 15;
+    if (att == g_FMEngine[25] && (u8)fnum == g_FMEngine[19] && s_FMDroneOn == (att != 15)) return;
+    s_FMDroneOn = att != 15;
+    g_FMEngine[19] = (u8)fnum;
+    g_FMEngine[22] = (s_FMDroneOn ? 0x10 : 0) | 0x04 | (u8)(fnum >> 8);
+    g_FMEngine[25] = att;
+    s_FMEngineDirty = 1;
 }
 #endif

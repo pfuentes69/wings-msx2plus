@@ -3,7 +3,7 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCENE)
 #include "vdp.h"
 #include "vdp_inl.h"
 
-static const u8 s_Font[38][21] = {
+static const u8 s_Font[40][21] = {
     {0x1b,0xbb,0x11,0xb1,0x11,0xb1,0xb1,0x11,0xb1,0xbb,0xbb,0xb1,0xb1,0x11,0xb1,0xb1,0x11,0xb1,0xb1,0x11,0xb1},
     {0xbb,0xbb,0x11,0xb1,0x11,0xb1,0xb1,0x11,0xb1,0xbb,0xbb,0x11,0xb1,0x11,0xb1,0xb1,0x11,0xb1,0xbb,0xbb,0x11},
     {0x1b,0xbb,0xb1,0xb1,0x11,0x11,0xb1,0x11,0x11,0xb1,0x11,0x11,0xb1,0x11,0x11,0xb1,0x11,0x11,0x1b,0xbb,0xb1},
@@ -42,7 +42,16 @@ static const u8 s_Font[38][21] = {
     {0x1b,0xbb,0x11,0xb1,0x11,0xb1,0xb1,0x11,0xb1,0x1b,0xbb,0xb1,0x11,0x11,0xb1,0x11,0x11,0xb1,0x1b,0xbb,0x11},
     {0x11,0x11,0x11,0x11,0x11,0x11,0x1b,0x11,0x11,0x11,0xb1,0x11,0x1b,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11},
     {0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11},
+    /* '.' and ':' */
+    {0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0xb1,0x11},
+    {0x11,0x11,0x11,0x11,0x11,0x11,0x11,0xb1,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0x11,0xb1,0x11,0x11,0x11,0x11},
 };
+/* The rank screen's names (shapes/selectrank) and the briefing's (the
+ * executable's table at -$56ee, 0x8590). */
+static const char* const s_RankNames[7] = {
+    "MIDSHIPMAN", "ENSIGN", "LT. JUNIOR GRADE", "LIEUTENANT", "LT. COMMANDER", "COMMANDER", "CAPTAIN"};
+static const char* const s_RankShort[7] = {
+    "MIDSHIPMAN", "ENSIGN", "LT. JR. GR.", "LIEUTENANT", "LT.COMMD", "COMMANDER", "CAPTAIN"};
 static u8 s_Line[128];
 
 static void Text(u8 page, u8 y, const char* text)
@@ -59,7 +68,7 @@ static void Text(u8 page, u8 y, const char* text)
             character=text[i];
             if (character>='A' && character<='Z') character-='A';
             else if (character>='0' && character<='9') character=26+character-'0';
-            else character=character=='>' ? 36 : 37;
+            else character=character=='>' ? 36 : character=='.' ? 38 : character==':' ? 39 : 37;
             source=s_Font[character]+offset;
             *destination++=*source++;
             *destination++=*source++;
@@ -70,30 +79,50 @@ static void Text(u8 page, u8 y, const char* text)
     }
 }
 
+/* "label" and a number (0..255) into s_Text. */
+static char s_Text[24];
+static const char* Number(const char* label, u8 value)
+{
+    char* out = s_Text;
+    while (*label) *out++ = *label++;
+    if (value >= 100) { *out++ = '0' + value / 100; value %= 100; *out++ = '0' + value / 10; }
+    else if (value >= 10) *out++ = '0' + value / 10;
+    *out++ = '0' + value % 10;
+    *out = 0;
+    return s_Text;
+}
+static const char* Pick(u8 selected, const char* text)
+{
+    char* out = s_Text;
+    *out++ = selected ? '>' : ' '; *out++ = ' ';
+    while (*text) *out++ = *text++;
+    *out = 0;
+    return s_Text;
+}
+
 void Menu_Draw(u8 page, const GameState* game) WINGS_BANKED
 {
     u8 i;
-    char rank[]="  RANK 1";
     VDP_CommandHMMV(0,(u16)page*256,256,172,0x11);
     VDP_CommandWait();
     Text(page,12,"WINGS OF FURY");
     if (game->phase==GAME_RANK)
     {
         Text(page,30,"SELECT RANK");
-        for (i=0; i<7; ++i)
-        {
-            rank[0]=game->cursor==i ? '>' : ' ';
-            rank[7]='1'+i; Text(page,48+i*11,rank);
-        }
+        for (i=0; i<7; ++i) Text(page,48+i*11,Pick(game->cursor==i,s_RankNames[i]));
         Text(page,125,game->cursor==7 ? "> RETURN FROM R AND R" : "  RETURN FROM R AND R");
         Text(page,151,"ARROWS TO CHOOSE  ENTER TO CONFIRM");
     }
     else if (game->phase==GAME_BRIEFING)
     {
-        Text(page,42,"MISSION A");
-        Text(page,65,"PRACTICE SORTIE");
-        Text(page,88,"NO MISSION OBJECTIVES");
-        Text(page,145,"ENTER OR BUTTON TO CONTINUE");
+        /* The original's briefing (0x8590, rank.iff): rank, mission, and
+         * the mission's islands and ships. */
+        Text(page,42,"RANK:"); Text(page,53,s_RankShort[game->progress.rank < 7 ? game->progress.rank : 6]);
+        Text(page,70,Number("MISSION: ",game->mission.number));
+        Text(page,95,"MISSION OBJECTIVES:");
+        Text(page,112,Number("ISLANDS: ",g_BriefIslands));
+        Text(page,123,Number("SHIPS: ",g_BriefShips));
+        Text(page,151,"ENTER OR BUTTON TO CONTINUE");
     }
     else if (game->phase==GAME_LOADOUT || game->phase==GAME_SERVICE)
     {

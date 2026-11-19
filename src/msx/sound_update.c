@@ -43,6 +43,7 @@ static const SoundStep s_StepsFM[] = {
     {3, 0xf0, 0, T | N(31), 1800, 40}, {43, 0xf0, -6, N(31), 0, 0}, END};
 typedef char SoundStepsFMFit[sizeof(s_StepsFM) <= sizeof(g_SoundSteps) ? 1 : -1];
 
+#define ENEMY_ENGINE_PERIOD 330   /* the enemy planes' Engine channel (0x1f76) */
 static u16 s_Period;          /* the engine's Paula period (-$5bd0) */
 static u8 s_Volume;           /* its volume of 64 (-$5bd2) */
 static u8 s_Ticks, s_Stage, s_Mode;   /* s_Ticks: flight steps toward the next tick */
@@ -77,9 +78,10 @@ void Sound_Update(const FlightState* f, u16 world, u8 flags, u8 steps) WINGS_BAN
     g_SoundListener = world;
     if (!(flags & SOUND_PLAYING))
     {
-        g_SoundEngineVolume = g_SoundGun = g_SoundGrind = 0;
+        g_SoundEngineVolume = g_SoundGun = g_SoundGrind = g_SoundDroneVolume = 0;
         s_Volume = 0;
         Sound_FMEngine(s_Period, 0);
+        Sound_FMDrone(ENEMY_ENGINE_PERIOD, 0);
         return;
     }
     /* The engine (0xc0e2, 0xc144, 0xc528, 0xc566, 0xc74e): target volume
@@ -129,6 +131,15 @@ void Sound_Update(const FlightState* f, u16 world, u8 flags, u8 steps) WINGS_BAN
     /* An enemy plane firing (0x21c6): the machinegun loop at a fixed
      * volume (57 of 64), faster than the player's (period 160 to 200). */
     if (!g_Combat.flash && g_Planes.firing && g_SoundGun < 11) { g_SoundGun = 11; g_SoundGunRate = 5; }
+    /* The enemy planes' engine (0x22ce): the Engine loop at period 330,
+     * by the nearest plane (flying or falling; |dx| + |dalt|): v = d / 16,
+     * volume 64 - 4v up to v = 5, then 64 - (v + 20), silent from v = 44
+     * (704 px). The PSG plays it on channel B when nothing else does. */
+    v = g_Planes.nearest >= 44u * 16 ? 0 : (u8)(g_Planes.nearest >> 4);
+    v = g_Planes.nearest >= 44u * 16 ? 0 : v <= 5 ? 64 - 4 * v : 64 - (v + 20);
+    g_SoundDroneTone = (ENEMY_ENGINE_PERIOD << 1) + (ENEMY_ENGINE_PERIOD >> 2);
+    g_SoundDroneVolume = g_SoundFM ? 0 : (u8)((v * 11u) >> 6);
+    Sound_FMDrone(ENEMY_ENGINE_PERIOD, v);
     /* The lift: its motor grinds while it moves (0x222a), and it clangs
      * at either stop (0x149e, 0x14ce). */
     g_SoundGrind = g_Carrier.stage == CARRIER_RAISING || g_Carrier.stage == CARRIER_LOWERING;

@@ -47,4 +47,8 @@ uint8_t Game_AdvanceMission(GameState* game) WINGS_BANKED;
  * plane, then the next mission's briefing. */
 void Game_NextMission(GameState* game, uint8_t promoted) WINGS_BANKED;
 void Game_View(const GameState* game, uint8_t* view) WINGS_BANKED;
+/* Once a presented frame: the briefing closes by itself after 240 PAL
+ * frames (0x8590), 4.8 s; 288 NTSC fields. ticks: VBlanks since the last
+ * call; pal: nonzero at 50 Hz. Returns 1 when it moved on (to the loadout). */
+uint8_t Game_Wait(GameState* game, uint8_t ticks, uint8_t pal) WINGS_BANKED;
 #endif

@@ -15,7 +15,7 @@ channel two candidate slots (0x18-byte records from `-$3c96`):
 | --- | --- | --- | --- |
 | 0 | gun | machinegun, 200, looping | the player fires (`-$5c94`) |
 | 0 | engine | engine, looping | always; see below |
-| 1 | enemy gun / engine | machinegun 160, engine 330 | enemy planes (not in the port yet) |
+| 1 | enemy gun / engine | machinegun 160, engine 330 | enemy planes: the gun on channel B; the engine below |
 | 2 | boom | boom, 500, once | bombs bursting on land or deck (0x0c9a, 0x0d8e), via 0x2324 |
 | 2 | splash | splash, 350, once | bombs into the sea (0x0c90), via 0x233e |
 | 3 | AA | machinegun, 320, looping | AA fire (`-$3e9a`, volume `-$3e98`) |
@@ -92,6 +92,16 @@ a cable. The rest are hooked where they happen:
 - a soldier hit (`Island_Kill`).
 
 Everything is silent outside a sortie.
+
+**The enemy planes' engine** (0x21c6, 0x22ce; 2026-11-19). The original
+loops the Engine sample at period 330 on the enemy channel, by the nearest
+plane flying or falling (d = |dx| + |dalt|, v = d / 16): volume 64 − 4v up
+to v = 5, then 64 − (v + 20), silent from v = 44 (704 px). The port plays it
+on PSG channel B when B has no grind and no gun burst (the original shares
+the enemy gun and engine on one channel the same way), a tone of 2.24 × 330,
+at the volume × 11 / 64; with MSX-MUSIC on FM channel 4, the engine's
+instrument at the same pitch (`Sound_FMDrone`), and the PSG drone silent.
+The worst field with MSX-MUSIC stays at 2,997 T-states.
 
 ## MSX-MUSIC (2026-11-16)
 

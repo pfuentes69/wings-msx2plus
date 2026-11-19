@@ -16,6 +16,8 @@ static const u8 s_Priority[SOUND_COUNT] = {0, 1, 2, 2, 3, 4};
 
 volatile u16 g_SoundEngineTone;
 volatile u8 g_SoundEngineVolume, g_SoundGun, g_SoundGunRate, g_SoundGrind;
+volatile u16 g_SoundDroneTone;
+volatile u8 g_SoundDroneVolume;
 u16 g_SoundListener;
 volatile u8 g_SoundRequest, g_SoundRequestAtten;   /* read by the FM driver too */
 static const SoundStep* s_Step;
@@ -26,7 +28,7 @@ static u8 s_Regs[11];
 void Sound_Reset(void)
 {
     g_SoundFM = 0;   /* until Sound_InitFM has loaded the FM driver */
-    g_SoundEngineVolume = g_SoundGun = g_SoundGrind = 0;
+    g_SoundEngineVolume = g_SoundGun = g_SoundGrind = g_SoundDroneVolume = 0;
     g_SoundGunRate = 6;
     g_SoundRequest = g_SoundPlaying = 0;
 }
@@ -79,7 +81,7 @@ void Sound_Field(void) __naked
         jr z, sound_b$
         res 0, d
     sound_b$:
-        ; B: the lift grind, else the guns
+        ; B: the lift grind, else the guns, else the enemy engine
         ld b, #0
         ld a, (_g_SoundGrind)
         or a
@@ -101,7 +103,17 @@ void Sound_Field(void) __naked
     sound_gun$:
         ld a, (_g_SoundGun)
         or a
+        jr nz, sound_gun_go$
+        ; idle: the enemy planes' engine (0x22ce), a tone
+        ld a, (_g_SoundDroneVolume)
+        or a
         jr z, sound_b_done$
+        ld b, a
+        ld hl, (_g_SoundDroneTone)
+        ld (_s_Regs + 2), hl
+        res 1, d                ; tone B on
+        jr sound_b_done$
+    sound_gun_go$:
         ld l, a                 ; l: its volume
         ld a, (_g_SoundGunRate)
         ld h, a

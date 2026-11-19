@@ -55,11 +55,29 @@ port's mission A. Rank selection starts the rank's first mission (0x84d0).
 - **Ctrl-R** now wins over a fire button pressed with it on the elevator.
   Before, the lift took the press and swallowed the restart.
 
+## The briefing (2026-11-19)
+
+The original's briefing (0x8590) draws `rank.iff` (the frame with "Rank:",
+"Mission:", "Mission objectives:", "Islands:", "Ships:") and prints into it:
+- the rank's short name (table `-$56ee`: Midshipman, Ensign, Lt. Jr. Gr.,
+  Lieutenant, Lt.Commd, Commander, Captain);
+- the mission number within the rank (`-$5c3e`, `%d`);
+- the mission's islands (`-$5c7c`) and ships (`-$5c8e`), totals kept beside
+  the counters of those left (`-$5c7b`, `-$5c8d`).
+
+It then waits 240 frames (4.8 s) or a button; Ctrl-R restarts. The port
+shows the same values in the menu font (`msx/menu.c`; the artwork comes
+later): the counts are the map's islands with targets and ships to sink,
+taken at boot from the mission set-up (`g_BriefIslands`, `g_BriefShips`),
+and `Game_Wait` (core/game.c) closes it after 240 PAL frames (288 NTSC
+fields). Rank selection lists the names of the original's screen
+(`selectrank`: Midshipman, Ensign, Lt. Junior Grade, Lieutenant,
+Lt. Commander, Commander, Captain, Return from R&R).
+
 Not yet:
-- only map 0 is decoded, so every mission flies mission A's island again;
+- only maps a and j are built, so every mission flies the ROM's map again;
 - no victory ceremony screen;
-- the briefing doesn't name the mission. The campaign (rank names, mission
-  texts, the other maps) is P6.
+- the briefing's artwork (rank.iff) and the original font.
 
 ## Verification
 
