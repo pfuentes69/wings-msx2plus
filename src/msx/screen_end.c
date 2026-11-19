@@ -28,76 +28,92 @@ void Screens_DrawEnd(u8 page, u16 camera) WINGS_BANKED
 }
 
 
-/* The briefing (0x8590), full screen on black: rank.iff's frame (from
- * banks 51..) at row 58, and the values printed into it in newarmyfont
- * where the original prints them (296, 61), (340, 73), (340, 119),
- * (340, 131) on rank.iff, the frame there at (198, 54). */
-#define BRIEF_Y 58
+/* The briefing (the original's 0x8590 shows rank.iff's frame with the
+ * rank, the mission, and the mission's islands and ships): the port's own
+ * compact panel, centred on black, in the original's layout and colours
+ * (blue labels, the red heading, light grey values on black compartments in
+ * a grey frame) with the menu's small letters. */
+#define BRIEF_X 48      /* even: the fills and the letters are whole bytes */
+#define BRIEF_Y 64
+#define BRIEF_W 160
+#define BRIEF_H 85
+#define BRIEF_LABEL (BRIEF_X + 12)
+#define BRIEF_VALUE (BRIEF_X + 68)
+#define BRIEF_RED 1
+#define BRIEF_BLUE 2
 static const char* const s_BriefRanks[7] = {
-    "Midshipman", "Ensign", "Lt. Jr. Gr.", "Lieutenant", "Lt.Commd", "Commander", "Captain"};
+    "MIDSHIPMAN", "ENSIGN", "LT. JR. GR.", "LIEUTENANT", "LT. COMMANDER", "COMMANDER", "CAPTAIN"};
 static u8 s_Row[128];
-static char s_Values[4][12];
-static const u8 s_ValueX[4] = {98, 142, 142, 142};
-static const u8 s_ValueY[4] = {7, 19, 65, 77};
+static char s_Number[4];
 
-static void Number(char* out, u8 value)
+static const char* Number(u8 value)
 {
-    if (value >= 10) *out++ = '0' + value / 10;
+    char* out = s_Number;
+    if (value >= 100) { *out++ = '0' + value / 100; value %= 100; *out++ = '0' + value / 10; }
+    else if (value >= 10) *out++ = '0' + value / 10;
     *out++ = '0' + value % 10;
     *out = 0;
+    return s_Number;
 }
 
-/* Row r of a value's glyphs into s_Row (ink BRIEF_INK on the frame's black). */
-static void Glyphs(const char* text, u8 x, u8 r)
+/* Text in the small font (6 px a character) at even x, this ink on black. */
+static void Text(u16 base, u8 x, u8 y, const char* text, u8 ink)
 {
-    u8 k, i, width, stride;
-    const u8* bits;
-    for (; *text; ++text)
+    u8 row, i, k, c, bits, length = 0;
+    u8* out;
+    while (text[length]) ++length;
+    for (row = 0; row < 7; ++row)
     {
-        for (k = 0; k < BRIEF_FONT_COUNT && g_BriefFontChars[k] != *text; ++k) {}
-        if (k == BRIEF_FONT_COUNT) continue;
-        width = g_BriefFontWidth[k];
-        stride = (width + 7) >> 3;
-        bits = g_BriefFontBits + g_BriefFontOffset[k] + (u16)r * stride;
-        for (i = 0; i < width; ++i, ++x)
-            if (bits[i >> 3] & (0x80 >> (i & 7)))
-                s_Row[x >> 1] |= x & 1 ? BRIEF_INK : BRIEF_INK << 4;
+        out = s_Row;
+        for (i = 0; i < length; ++i)
+        {
+            c = text[i];
+            c = c >= 'A' && c <= 'Z' ? c - 'A' : c >= '0' && c <= '9' ? c - '0' + 26 : c == '.' ? 38 : c == ':' ? 39 : 37;
+            bits = g_SmallFont[c * 7 + row];
+            for (k = 0; k < 3; ++k, bits <<= 2)
+                *out++ = (bits & 0x80 ? ink << 4 : 0) | (bits & 0x40 ? ink : 0);
+        }
+        VDP_WriteVRAM(s_Row, (base + y + row) * 128 + x / 2, 0, length * 3);
     }
+}
+
+static void Fill(u16 base, u8 x, u8 y, u16 width, u8 height, u8 colour)
+{
+    VDP_CommandHMMV(x, base + y, width, height, colour * 0x11);
+    VDP_CommandWait();
+}
+
+/* A black compartment set into the frame (a dark line above, a light one
+ * below), its top at y. */
+static void Compartment(u16 base, u8 y, u8 height)
+{
+    Fill(base, BRIEF_X + 4, y - 1, BRIEF_W - 8, 1, 3);
+    Fill(base, BRIEF_X + 4, y + height, BRIEF_W - 8, 1, 6);
+    Fill(base, BRIEF_X + 4, y, BRIEF_W - 8, height, 0);
 }
 
 void Screens_Briefing(u8 page, const GameState* game) WINGS_BANKED
 {
-    u8 row, v;
-    u16 offset = 0, base = (u16)page * 256;
-    const char* rank = s_BriefRanks[game->progress.rank < 7 ? game->progress.rank : 6];
-    for (v = 0; rank[v]; ++v) s_Values[0][v] = rank[v];
-    s_Values[0][v] = 0;
-    Number(s_Values[1], game->mission.number);
-    Number(s_Values[2], g_BriefIslands);
-    Number(s_Values[3], g_BriefShips);
-    VDP_CommandHMMV(0, base, 256, 212, 0);    /* black, the dashboard's rows too */
-    VDP_CommandWait();
-    for (row = 0; row < BRIEF_FRAME_HEIGHT; ++row, offset += 128)
-    {
-        Scenery_Read(BRIEF_BANK + (offset >> 13), offset & 8191, s_Row, 128);
-        for (v = 0; v < 4; ++v)
-            if ((u8)(row - s_ValueY[v]) < BRIEF_FONT_HEIGHT) Glyphs(s_Values[v], s_ValueX[v], row - s_ValueY[v]);
-        VDP_WriteVRAM(s_Row, (base + BRIEF_Y + row) * 128, 0, 128);
-    }
-}
-
-/* The play area's palette for the briefing (1), or back (0); colour 0 (the
- * sky, black here) is set directly: the line interrupt leaves it alone. */
-extern u8 g_TopPalette[32];
-void Screens_BriefingColours(u8 on) WINGS_BANKED
-{
-    u8 i;
-    const u8* colours = on ? g_BriefPalette : g_TerrainPalette;
-    for (i = 2; i < 32; ++i) g_TopPalette[i] = colours[i];
-    VDP_SetPaletteEntry(0, colours[0] | ((u16)colours[1] << 8));
-    /* Full screen, unscrolled: all 256 columns show (the play view masks
-     * the left 8, which its scroll exposes). */
-    VDP_EnableMask(!on);
+    u16 base = (u16)page * 256;
+    Fill(base, 0, 0, 256, 212, 0);    /* black, the dashboard's rows too */
+    /* The frame: mid grey, lit top and left, shadowed bottom and right. */
+    Fill(base, BRIEF_X, BRIEF_Y, BRIEF_W, BRIEF_H, 5);
+    Fill(base, BRIEF_X, BRIEF_Y, BRIEF_W, 1, 7);
+    Fill(base, BRIEF_X, BRIEF_Y, 2, BRIEF_H, 6);
+    Fill(base, BRIEF_X, BRIEF_Y + BRIEF_H - 1, BRIEF_W, 1, 3);
+    Fill(base, BRIEF_X + BRIEF_W - 2, BRIEF_Y + 1, 2, BRIEF_H - 1, 3);
+    Compartment(base, BRIEF_Y + 4, 26);
+    Compartment(base, BRIEF_Y + 34, 17);
+    Compartment(base, BRIEF_Y + 55, 26);
+    Text(base, BRIEF_LABEL, BRIEF_Y + 9, "RANK:", BRIEF_BLUE);
+    Text(base, BRIEF_VALUE, BRIEF_Y + 9, s_BriefRanks[game->progress.rank < 7 ? game->progress.rank : 6], BRIEF_INK);
+    Text(base, BRIEF_LABEL, BRIEF_Y + 19, "MISSION:", BRIEF_BLUE);
+    Text(base, BRIEF_VALUE, BRIEF_Y + 19, Number(game->mission.number), BRIEF_INK);
+    Text(base, BRIEF_X + 24, BRIEF_Y + 39, "MISSION OBJECTIVES:", BRIEF_RED);
+    Text(base, BRIEF_LABEL, BRIEF_Y + 60, "ISLANDS:", BRIEF_BLUE);
+    Text(base, BRIEF_VALUE, BRIEF_Y + 60, Number(g_BriefIslands), BRIEF_INK);
+    Text(base, BRIEF_LABEL, BRIEF_Y + 70, "SHIPS:", BRIEF_BLUE);
+    Text(base, BRIEF_VALUE, BRIEF_Y + 70, Number(g_BriefShips), BRIEF_INK);
 }
 
 /* Rank selection (shapes/selectrank, recomposed to 256 wide: banks 53..)
@@ -146,14 +162,33 @@ void Screens_RankLine(u8 page, u8 line) WINGS_BANKED
     s_RankLine = line;
 }
 
-/* Its palette over the whole screen (1: the dashboard's rows too), or the
- * play's and the dashboard's back (0). */
-extern u8 g_BottomPalette[32];
-void Screens_RankColours(u8 on) WINGS_BANKED
+extern u8 g_TopPalette[32], g_BottomPalette[32];   /* world_flight.c */
+static void Load(const u8* colours) __naked
+{
+    colours;   /* HL: all 16 entries (0 too), interrupts off throughout */
+    __asm
+        di
+        xor a
+        out (0x99), a
+        ld a, #0x90
+        out (0x99), a
+        ld bc, #0x209a
+        otir
+        ei
+        ret
+    __endasm;
+}
+
+void Screens_Palette(u8 which) WINGS_BANKED
 {
     u8 i;
-    if (!on) { Dashboard_CopyPalette(g_BottomPalette); Screens_BriefingColours(0); return; }
-    for (i = 2; i < 32; ++i) g_TopPalette[i] = g_BottomPalette[i] = g_RankPalette[i];
-    VDP_SetPaletteEntry(0, g_RankPalette[0] | ((u16)g_RankPalette[1] << 8));
-    VDP_EnableMask(FALSE);   /* all 256 columns, as for the briefing */
+    const u8* top = which == SCREENS_BRIEF ? g_BriefPalette : which == SCREENS_RANK ? g_RankPalette : g_TerrainPalette;
+    for (i = 0; i < 32; ++i) g_TopPalette[i] = top[i];
+    if (which == SCREENS_WEAPON)
+        for (i = 0; i < 8; ++i) g_TopPalette[24 + i] = g_WeaponColours[i];
+    if (which == SCREENS_RANK)
+        for (i = 0; i < 32; ++i) g_BottomPalette[i] = g_RankPalette[i];
+    else Dashboard_CopyPalette(g_BottomPalette);
+    Load(g_TopPalette);
+    VDP_EnableMask(which < SCREENS_BRIEF);
 }

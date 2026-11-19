@@ -13,7 +13,6 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCREENS)
 #define PANEL_BYTES (WEAPON_PANEL_WIDTH / 2)
 static u8 s_PanelRing;   /* ring x of its left edge (even: whole bytes) */
 static u16 s_PanelBase;  /* its page's first row */
-extern u8 g_TopPalette[32];   /* world_flight.c: the play area's palette */
 
 /* Rows of the panel's packed pixels at ring x s_PanelRing, split at the
  * ring's seam. */
@@ -52,12 +51,6 @@ void Screens_WeaponLine(u8 page, u8 from, u8 to) WINGS_BANKED
     Line(to, 1);
 }
 
-void Screens_WeaponColours(u8 lent) WINGS_BANKED
-{
-    u8 i;
-    for (i = 0; i < 8; ++i) g_TopPalette[24 + i] = lent ? g_WeaponColours[i] : g_TerrainPalette[24 + i];
-}
-
 /* Weapon selection on this page (the view already behind it): the whole
  * panel the first time, else the highlight moved; and the dashboard's
  * weapon and stock. */
@@ -65,7 +58,7 @@ static u8 s_Line;
 void Screens_Weapons(u8 page, u16 camera, u8 first, const GameState* game) WINGS_BANKED
 {
     u8 line = GAME_WEAPON_LINE(game->cursor);
-    if (first) { Screens_WeaponPanel(page, camera, line); Screens_WeaponColours(1); }
+    if (first) Screens_WeaponPanel(page, camera, line);
     else Screens_WeaponLine(page, s_Line, line);
     s_Line = line;
     Dashboard_Status(page, game->sortie.weapon, game->sortie.stock, game->progress.lives);

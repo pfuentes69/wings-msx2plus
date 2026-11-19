@@ -225,5 +225,3 @@ const unsigned char g_WeaponLines[1680] = {
 const unsigned char g_WeaponLineRow[3] = {35, 46, 56};
 const unsigned char g_WeaponLineHeight[3] = {12, 11, 12};
 const unsigned short g_WeaponLineOffset[3] = {0, 576, 1104};
-/* Play palette entries 12..15 while the panel shows (0RRR0BBB, 00000GGG). */
-const unsigned char g_WeaponColours[8] = {0x73, 0x07, 0x60, 0x01, 0x71, 0x04, 0x06, 0x01};

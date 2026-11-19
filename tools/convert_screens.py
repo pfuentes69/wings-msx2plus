@@ -10,9 +10,8 @@ So far, both drawn over the play view in the play palette
 - the weapon selection panel (selt, 96 x 72) and its highlighted lines
   (rock, bomb, torp), with four play colours lent while it shows.
 And on their own palettes, full screen:
-- the briefing's frame (world shape rank, 256 x 95: rank.iff's frame pixel
-  for pixel) in data banks 51..52, with the font its values are printed in
-  (newarmyfont);
+- the briefing's palette and small font (the menu's 5 x 7, msx/menu.c, 1 bit
+  a pixel): the port's own compact layout, drawn by msx/screen_end.c;
 - rank selection (shapes/selectrank, 320 x 200, recomposed to 256 wide) in
   banks 53..56 and its seven highlighted lines (selectrank.shp rnk0..rnk6)
   in bank 57. "Return from R&R" (rnk7) is left out."""
@@ -28,18 +27,37 @@ OUT_C = ROOT / 'src/generated/screens_art.c'          # segment 49: the weapon p
 OUT_END = ROOT / 'src/generated/screen_end_art.c'     # segment 50: "THE END"
 OUT_H = ROOT / 'src/generated/screens_art.h'
 OUT_PNG = ROOT / 'assets_msx/screens'
-BRIEF_BANKS = (51, 52)   # the briefing frame's rows, 128 bytes each
 RANK_BANKS = (53, 54, 55, 56)   # rank selection's 200 rows, 128 bytes each
 RANK_LINE_BANK = 57             # its 7 highlighted lines, 9 rows of 92 bytes each
 RANK_INNER = (68, 252)          # the picture's inner columns kept (184): the content is 70..247
 RANK_BAR_CUT = 128              # the bars (rows 0..27, 172..199) lose columns 128..191
 RANK_LINE_Y, RANK_LINE_STEP, RANK_LINE_X = 91, 10, 64   # rnk0..rnk6 (192 x 9)
-# The briefing's palette (0..7 a channel): black, rank.iff's red and blue,
-# its four greys; the values' light grey (the capture: 172,170,173).
-BRIEF_PALETTE = [(0, 0, 0), (6, 1, 0), (0, 1, 6), (2, 2, 2), (3, 3, 3), (4, 4, 4), (5, 5, 5), (6, 6, 6)] + [(0, 0, 0)] * 8
-BRIEF_COLOURS = {24: 0, 26: 1, 27: 2, 28: 3, 29: 4, 30: 5, 31: 6}   # shape colour -> palette (exact: matched on rank.iff)
+# The briefing's palette (0..7 a channel): black, rank.iff's red and blue
+# lifted for small letters, its greys for the frame; the values' light grey
+# (the capture: 172,170,173).
+BRIEF_PALETTE = [(0, 0, 0), (7, 2, 1), (2, 3, 7), (2, 2, 2), (3, 3, 3), (4, 4, 4), (5, 5, 5), (6, 6, 6)] + [(0, 0, 0)] * 8
 BRIEF_INK = 7
-FONT_CHARS = ' .0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+MENU_C = ROOT / 'src/msx/menu.c'
+
+
+def small_font():
+    """The menu's font (msx/menu.c s_Font: A..Z, 0..9, '>', ' ', '.', ':',
+    7 rows of 6 pixels, nibble 0xb ink) as 7 bytes a glyph, bit 7 leftmost."""
+    import re
+    text = MENU_C.read_text()
+    table = text[text.index('s_Font['):text.index('};', text.index('s_Font['))]
+    rows = re.findall(r'\{(0x[0-9a-f]{2}(?:,0x[0-9a-f]{2}){20})\}', table)
+    out = bytearray()
+    for glyph in rows[:40]:
+        data = [int(v, 16) for v in glyph.split(',')]
+        for r in range(7):
+            bits = 0
+            for k, byte in enumerate(data[3 * r:3 * r + 3]):
+                for n, nibble in enumerate((byte >> 4, byte & 15)):
+                    if nibble == 0xb: bits |= 0x80 >> (2 * k + n)
+            out.append(bits)
+    assert len(out) == 280
+    return bytes(out)
 
 
 def world_shapes(names):
@@ -152,43 +170,20 @@ def artifacts():
     c.append(f'const unsigned short g_WeaponLineOffset[3] = {{{", ".join(map(str, offsets))}}};')
     # The lent colours as V9938 palette entries (0RRR0BBB, 00000GGG).
     words = [(r << 4 | b, g) for r, g, b in WEAPON_SLOTS.values()]
-    c.append('/* Play palette entries 12..15 while the panel shows (0RRR0BBB, 00000GGG). */')
-    c.append(f'const unsigned char g_WeaponColours[8] = {{{", ".join(f"0x{v:02x}" for w in words for v in w)}}};')
+    end.append('/* Play palette entries 12..15 while the weapon panel shows (0RRR0BBB, 00000GGG). */')
+    end.append(f'const unsigned char g_WeaponColours[8] = {{{", ".join(f"0x{v:02x}" for w in words for v in w)}}};')
     h += ['extern const unsigned char g_WeaponLines[];', 'extern const unsigned char g_WeaponLineRow[3];',
           'extern const unsigned char g_WeaponLineHeight[3];', 'extern const unsigned short g_WeaponLineOffset[3];',
           'extern const unsigned char g_WeaponColours[8];']
     images['weapon-panel.png'] = preview(bytes(shown), width, height, lent)
-    # The briefing: the frame to banks, its palette and the font in segment 50.
-    brief = world_shapes({'rank'})[0]['rank']
-    pixels, width, height, _ = brief
-    frame = bytes(BRIEF_COLOURS[c] for c in pixels)
-    images['briefing.png'] = preview(frame, width, height, BRIEF_PALETTE)
-    banks = pack(frame, width)
-    assert width == 256 and len(banks) <= 8192 * len(BRIEF_BANKS)
-    binaries = {OUT_PNG / f'bank_{b}.bin': banks[i * 8192:(i + 1) * 8192] for i, b in enumerate(BRIEF_BANKS)}
-    h += [f'#define BRIEF_FRAME_HEIGHT {height}', f'#define BRIEF_BANK {BRIEF_BANKS[0]}', f'#define BRIEF_INK {BRIEF_INK}',
-          'extern const unsigned char g_BriefPalette[32];']
+    # The briefing: its palette and small font in segment 50.
+    binaries = {}
+    h += [f'#define BRIEF_INK {BRIEF_INK}', 'extern const unsigned char g_BriefPalette[32];',
+          'extern const unsigned char g_SmallFont[280];']
     words = [(r << 4 | b, g) for r, g, b in BRIEF_PALETTE]
     end.append('/* The briefing\'s palette (0RRR0BBB, 00000GGG). */')
     end.append(f'const unsigned char g_BriefPalette[32] = {{{", ".join(f"0x{v:02x}" for w in words for v in w)}}};')
-    from convert_font import glyphs
-    fheight, first, last, font = glyphs()
-    bits, offsets, advances = bytearray(), [], []
-    for ch in FONT_CHARS:
-        w, rows = font[ord(ch)]
-        offsets.append(len(bits)); advances.append(w)
-        stride = (w + 7) // 8
-        for row in rows:
-            value = 0
-            for x, b in enumerate(row): value |= b << (stride * 8 - 1 - x)
-            bits += value.to_bytes(stride, 'big')
-    end += c_bytes('g_BriefFontBits', bytes(bits), 'newarmyfont, 1 bit a pixel, rows of (width + 7) / 8 bytes, most significant bit left.')
-    end.append(f'const char g_BriefFontChars[] = "{FONT_CHARS}";')
-    end.append(f'const unsigned char g_BriefFontWidth[{len(FONT_CHARS)}] = {{{", ".join(map(str, advances))}}};')
-    end.append(f'const unsigned short g_BriefFontOffset[{len(FONT_CHARS)}] = {{{", ".join(map(str, offsets))}}};')
-    h += [f'#define BRIEF_FONT_HEIGHT {fheight}', f'#define BRIEF_FONT_COUNT {len(FONT_CHARS)}',
-          'extern const unsigned char g_BriefFontBits[];', 'extern const char g_BriefFontChars[];',
-          'extern const unsigned char g_BriefFontWidth[];', 'extern const unsigned short g_BriefFontOffset[];']
+    end += c_bytes('g_SmallFont', small_font(), "The menu's 5 x 7 font (A..Z, 0..9, '>', ' ', '.', ':'), 7 rows a glyph, bit 7 leftmost.")
     # Rank selection.
     picture, lines, rank_palette = rank_selection()
     images['rank.png'] = preview(picture, 256, 200, rank_palette)

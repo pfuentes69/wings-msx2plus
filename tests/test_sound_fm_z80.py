@@ -234,6 +234,20 @@ class SoundFMZ80Tests(unittest.TestCase):
                     self.assertEqual(got, want + [[], [], []])
                     self.assertGreater(len(want), 10)
 
+    def test_an_effect_cut_short_leaves_no_note_held(self):
+        """A boom replacing a scream mid-way keys the scream's violin off
+        (every script starts by keying off channels 2 and 3)."""
+        s = self.loaded()
+        s.poke('g_SoundRequestAtten', 0)
+        s.poke('g_SoundRequest', SOUND_SCREAM)
+        writes = [w for _ in range(6) for w in s.field()]
+        self.assertTrue(any(r == 0x23 and v & 0x10 for r, v in writes))      # the violin keyed on
+        s.poke('g_SoundRequest', SOUND_BOOM)
+        writes = [w for _ in range(30) for w in s.field()]
+        keys = [v for r, v in writes if r in (0x22, 0x23)]
+        self.assertTrue(keys and not any(v & 0x10 for v in keys), writes[:8])
+        self.assertIn((0x23, 0), writes)
+
     def test_every_write_respects_the_chip_timing_and_the_budget(self):
         s = self.loaded()
         s.poke('g_TestPeriod', 400 & 255, 400 >> 8)

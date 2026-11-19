@@ -10,7 +10,7 @@ selection, the briefing, rank selection. The high-score table is set aside
 | --- | --- | --- | --- |
 | The end | a winged plate over the play view, which keeps moving | `world.shp` gmov, 192 × 22 | done: over the view, frozen |
 | Weapon selection | a panel over the carrier view, top right; a blue band behind the chosen weapon (Rockets, Bombs, Torpedo; Bombs first) | `world.shp` selt (96 × 72), rock, bomb, torp (96 × 11..12) | done: over the carrier view, frozen |
-| Briefing | `rank.iff`'s frame, centred on black; the values in a light grey serif font | `world.shp` rank (256 × 95), newarmyfont | done: full screen on black |
+| Briefing | `rank.iff`'s frame, centred on black; the values in a light grey serif font | `world.shp` rank (256 × 95), newarmyfont | the port's own compact panel (160 × 85, small letters), 2026-11-19 |
 | Rank selection | `selectrank` (320 × 200), a blue band behind the chosen rank | `shapes/selectrank`, `selectrank.shp` rnk0..rnk6 | done: full screen, 256 wide; "Return from R&R" dropped (no saved games) |
 
 `tools/convert_screens.py` decodes the shapes (`decode_shapes.py`, the
@@ -18,9 +18,22 @@ selection, the briefing, rank selection. The high-score table is set aside
 writes `src/generated/screens_art.c` (packed 4 bits a pixel, 0
 transparent) with previews in `assets_msx/screens/`. The art and the code
 that draws it live together: the weapon panel in segment 49
-(`msx/screens.c`, `generated/screens_art.c`); "THE END" and the briefing in
-segment 50 (`msx/screen_end.c`, `generated/screen_end_art.c`), the
-briefing's frame in data banks 51..52, rank selection in banks 53..57.
+(`msx/screens.c`, `generated/screens_art.c`); "THE END", the briefing and
+the palettes in segment 50 (`msx/screen_end.c`, `generated/screen_end_art.c`),
+rank selection in banks 53..57.
+
+## Colours
+
+Each screen has its colours (`Screens_Palette`: the play's, the play's with
+the weapon panel's lent, the briefing's, rank selection's), and they change
+when the page with that screen is published, never before: the play area's
+palette (which the line interrupt reloads each frame) and the VDP's at once,
+the dashboard's, and the column mask. Switching them while a screen was
+being drawn on the hidden page showed the old screen in the new colours
+for the frames the drawing took (play-tested 2026-11-19: rank selection and
+the briefing "going off in colour", the weapon panel greenish as it went).
+The one screen drawn on the page shown, the weapon panel in the hold after
+a landing, takes its colours just before it is drawn.
 
 ## The end
 
@@ -68,6 +81,15 @@ down), as in the original at game start and in the hold after a landing.
 
 ## The briefing
 
+**The port's own layout** (2026-11-19, the user: the original's frame was
+too big for its contents): a 160 × 85 panel centred on black, in the
+original's arrangement and colours: a grey bevelled frame (fills), three
+black compartments (rank and mission; "MISSION OBJECTIVES:" in red;
+islands and ships), blue labels and light grey values, in the menu's 5 × 7
+letters (`g_SmallFont`, taken from `msx/menu.c` by the generator). The red
+and blue are lifted a little for letters this small. Banks 51..52 (the
+original's frame) are free again. The original's, for the record:
+
 The original (0x8590) shows `rank.iff`: a 640-pixel high-resolution picture,
 its frame at (198, 54), and prints into it in `newarmyfont`, the font the
 frame's own labels are drawn in: the rank's short name at (296, 61), the
@@ -84,10 +106,9 @@ own size.
   and four greys, and the values' light grey. Leaving gives back the play
   palette and the sky; a page whose dashboard rows were drawn over gets them
   back (`Dashboard_Restore`) before it is drawn on again.
-- **Drawing** (`Screens_Briefing`): the frame's rows stream from banks
-  51..52 (packed, 128 bytes a row, `Scenery_Read`), centred at row 58; the
-  values' glyphs (1 bit a pixel, in segment 50) are set into each row before
-  it is written, so the frame stays whole.
+- **Drawing** (first version, replaced): the frame's rows streamed from
+  banks 51..52, centred at row 58, the values' newarmyfont glyphs set into
+  each row before it was written.
 - The verification (`verify_p0`) expects colour 0 black and the dashboard's
   rows black on the briefing.
 

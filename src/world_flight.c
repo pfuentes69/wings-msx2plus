@@ -958,7 +958,7 @@ u8 g_BriefIslands, g_BriefShips;
 static u8 s_Panel, s_PanelRendered, s_LastPhase;
 /* The briefing's palette is up; a page's dashboard rows were drawn over (a
  * full-screen menu: restored before the page is drawn on again). */
-static u8 s_BriefColours, s_DashGone[2], s_RankShown;
+static u8 s_BriefColours, s_DashGone[2], s_RankShown, s_PaletteShown;
 #ifdef WINGS_HIGH_SCORES
 static u8 s_Typing;   /* the name entry has scanned the keyboard once */
 #endif
@@ -1085,6 +1085,7 @@ void main(void)
 #ifdef WINGS_P1_FLIGHT
     /* RAM is not cleared at boot: no front-end screen is up yet. */
     s_Panel=s_PanelRendered=s_LastPhase=s_BriefColours=s_RankShown=s_DashGone[0]=s_DashGone[1]=0;
+    s_PaletteShown=SCREENS_PLAY;
 #endif
 #ifdef WINGS_HIGH_SCORES
     Game_ClearScores();
@@ -1455,13 +1456,11 @@ advance_clocks:
             &g_Engine, &g_Game.sortie, &g_Combat) : 0;
 #endif
 #ifdef WINGS_P1_FLIGHT
-        /* The panel goes: the play colours back, both pages rebuilt. */
-        if (s_Panel && g_Game.phase!=GAME_LOADOUT && g_Game.phase!=GAME_SERVICE)
-        {
-            Screens_WeaponColours(0); s_Panel=0; s_PageScale[0]=s_PageScale[1]=255;
-        }
-        if (s_RankShown && g_Game.phase!=GAME_RANK) { Screens_RankColours(0); s_RankShown=0; }
-        if (s_BriefColours && g_Game.phase!=GAME_BRIEFING) { Screens_BriefingColours(0); s_BriefColours=0; }
+        /* A front-end screen goes (its colours stay until the next page is
+         * published); after the panel both pages are rebuilt. */
+        if (s_Panel && g_Game.phase!=GAME_LOADOUT && g_Game.phase!=GAME_SERVICE) { s_Panel=0; s_PageScale[0]=s_PageScale[1]=255; }
+        if (g_Game.phase!=GAME_RANK) s_RankShown=0;
+        if (g_Game.phase!=GAME_BRIEFING) s_BriefColours=0;
         if (s_DashGone[page] && g_Game.phase!=GAME_BRIEFING && g_Game.phase!=GAME_RANK) { Dashboard_Restore(page); s_DashGone[page]=0; }
 #endif
         if (g_Game.phase!=GAME_PLAY)
@@ -1480,7 +1479,7 @@ advance_clocks:
                     if (s_RankShown) Screens_RankLine(page,g_Game.cursor);
                     else
                     {
-                        page^=1; Screens_Rank(page,g_Game.cursor); Screens_RankColours(1);
+                        page^=1; Screens_Rank(page,g_Game.cursor);
                         s_DashGone[page]=1; s_PageScale[page]=255; s_RankShown=1;
                     }
                     s_UiDirty=0;
@@ -1494,8 +1493,7 @@ advance_clocks:
                 else
                 {
                     Screens_Briefing(page,&g_Game);
-                    if (!s_BriefColours) { Screens_BriefingColours(1); s_BriefColours=1; }
-                    s_DashGone[page]=1; s_PageScale[page]=255; s_UiDirty=0;
+                    s_BriefColours=s_DashGone[page]=1; s_PageScale[page]=255; s_UiDirty=0;
                 }
             }
             else
@@ -1507,6 +1505,8 @@ advance_clocks:
                 if (s_UiDirty)
                 {
                     if (!s_Panel && s_PageScale[page]==255) { page^=1; Render(page,camera,world,y,frame); s_PanelRendered=1; }
+                    /* Drawn on the page shown: its colours first. */
+                    else if (s_PaletteShown!=SCREENS_WEAPON) Screens_Palette(s_PaletteShown=SCREENS_WEAPON);
                     Screens_Weapons(page,s_PanelRendered ? camera : g_DisplayCamera,!s_Panel,&g_Game);
                     s_Panel=1; s_UiDirty=0;
                 }
@@ -1590,6 +1590,13 @@ advance_clocks:
         else if (g_Game.phase==GAME_OVER || s_Panel) { camera=g_DisplayCamera; s_RenderHeave=g_DisplayHeave; s_RenderFine=g_DisplayFine; }
         else if (g_Game.phase!=GAME_PLAY) { camera=0; s_RenderHeave=0; s_RenderFine=0; }
         VDP_SetPage(page);
+#ifdef WINGS_P1_FLIGHT
+        /* The colours of the screen now shown, with it (msx/screen_end.c). */
+        {
+            u8 want = s_RankShown ? SCREENS_RANK : s_BriefColours ? SCREENS_BRIEF : s_Panel ? SCREENS_WEAPON : SCREENS_PLAY;
+            if (want!=s_PaletteShown) Screens_Palette(s_PaletteShown=want);
+        }
+#endif
         PublishScroll(page, camera);
         g_DisplayPage = page;
         g_DisplayCamera = camera;

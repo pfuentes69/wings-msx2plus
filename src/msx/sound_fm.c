@@ -53,11 +53,15 @@ __sfr __at 0x7D s_OPLLData;
  * 0x20 rhythm mode, 0x10 bass drum, 8 snare, 4 tom, 2 cymbal, 1 hi-hat;
  * a drum sounds when its bit goes from 0 to 1. */
 
+/* Every script starts by keying off both effect channels (2 and 3): an
+ * effect that replaces another before its end (a boom over a scream) must
+ * not leave the other's note held (2026-11-19: a scream's violin rang on
+ * after a bomb's boom cut it short). */
 /* A soldier hit: a violin wavering 600..900 Hz, then falling to 400 Hz
  * (the PSG version's contour, 0x23ac), at full volume: its slow bow
  * attack makes it quieter than the other effects. */
 static const u8 s_Scream[] = {
-    W(0x23, 0), W(0x33, 0x10), NOTE(3, 230, 5), WAIT(2),
+    W(0x22, 0), W(0x23, 0), W(0x33, 0x10), NOTE(3, 230, 5), WAIT(2),
     NOTE(3, 252, 5), WAIT(2), NOTE(3, 275, 5), WAIT(2), NOTE(3, 297, 5), WAIT(2),
     NOTE(3, 265, 5), WAIT(2), NOTE(3, 232, 5), WAIT(2), NOTE(3, 200, 5), WAIT(2),
     NOTE(3, 224, 5), WAIT(2), NOTE(3, 247, 5), WAIT(2), NOTE(3, 271, 5), WAIT(2),
@@ -69,7 +73,7 @@ static const u8 s_Scream[] = {
 /* The hook catching a cable, a bounce: an oboe squealing ~1.7 kHz,
  * wobbling and fading over 0.67 s; the PSG adds the scrape's noise. */
 static const u8 s_Screech[] = {
-    W(0x22, 0), W(0x32, 0x62), NOTE(2, 280, 6), WAIT(3),
+    W(0x22, 0), W(0x23, 0), W(0x32, 0x62), NOTE(2, 280, 6), WAIT(3),
     NOTE(2, 287, 6), WAIT(3), NOTE(2, 274, 6), W(0x32, 0x63), WAIT(3),
     NOTE(2, 286, 6), WAIT(3), NOTE(2, 276, 6), W(0x32, 0x65), WAIT(4),
     NOTE(2, 284, 6), W(0x32, 0x67), WAIT(5), NOTE(2, 278, 6), W(0x32, 0x69), WAIT(6),
@@ -84,12 +88,12 @@ static const u8 s_Clang[] = {
 /* Into the sea: the cymbal's crash and the hi-hat's spray, twice, over the
  * PSG's hiss. */
 static const u8 s_Splash[] = {
-    W(0x38, 0xF0), W(0x37, 0x1F), W(0x0E, 0x20), W(0x0E, 0x23), WAIT(12),
+    W(0x22, 0), W(0x23, 0), W(0x38, 0xF0), W(0x37, 0x1F), W(0x0E, 0x20), W(0x0E, 0x23), WAIT(12),
     W(0x37, 0x4F), W(0x0E, 0x20), W(0x0E, 0x21), WAIT(12), W(0x0E, 0x20), END};
 /* A burst: bass drum (tuned down at init), tom and cymbal, then a second
  * thump, over the PSG's low rumble. */
 static const u8 s_Boom[] = {
-    W(0x36, 0x00), W(0x38, 0x01), W(0x0E, 0x20), W(0x0E, 0x36), WAIT(6),
+    W(0x22, 0), W(0x23, 0), W(0x36, 0x00), W(0x38, 0x01), W(0x0E, 0x20), W(0x0E, 0x36), WAIT(6),
     W(0x36, 0x03), W(0x0E, 0x20), W(0x0E, 0x30), WAIT(10), W(0x0E, 0x20), END};
 
 static const u8* const s_Sources[SOUND_COUNT] = {0, s_Scream, s_Screech, s_Clang, s_Splash, s_Boom};
