@@ -207,6 +207,43 @@ The island-clear frames on NTSC were within a few ms of the deadline:
   of missing a frame. It starts two updates after the clear, after both
   pages have redrawn the score.
 
+## Simulation over the ships (2026-11-19)
+
+With the enemy ships and planes, map j's scripted runs (`tools/profile_p0.py
+--map j --script tools/fighters_smoke.tcl`) showed simulation, not drawing,
+as the larger cost: 62 ms per frame on average and about 90 ms in the
+heaviest frames (low over the destroyer, where the weapons allowance makes a
+frame 10-12 VBlanks, 25-30 steps). The profiler now takes `--map` and
+`--script`, and splits the simulation of heavy frames out ("sim heavy").
+
+- **The parked planes' list** (`Fighters_Launch`) was rebuilt every tick at
+  ~5 ms; it changes only with a launch, a reset or a sinking ship's step,
+  and is now rebuilt only then.
+- **Quiet steps.** The step loop runs 20-24 steps a frame at roughly 2,000+
+  T-states each in SDCC C (IX-frame locals, int promotions), though between
+  a tick's events a step only adds `vx`/`vy` and a ±1 remainder. Runs of
+  such steps now go through one call (`Step_Batch`, msx/step_batch.c, and
+  `Flight_StepMany` in Z80, core/flight_steps.c: at most 1,486 T-states for
+  up to 11 steps). A run stops before any step with work: a tick's first
+  (the flight model), the engine's and the original's tick, a weapon tick
+  while weapons are busy, and the frame's last step (pose and camera). It
+  is skipped when the plane may touch the surface: each step moves at most
+  |vy| + 1 Q8 units and the contact gate only opens lower down, so the
+  lowest position the run could reach bounds it. In flight the counters'
+  phases leave one run of 9 steps a tick. `tests/test_flight_step_z80.py`
+  checks `Flight_StepMany(n)` against n single steps.
+
+| Fighters run (map j, NTSC) | before | after |
+| --- | --- | --- |
+| Simulation, mean per frame | 61.7 ms | 46.5 ms |
+| Missed deadlines | 38 | 16 |
+
+The ships run went 23 → 21 missed, P0 simulation averages 26 ms. Left in
+the heavy frames: ~19 signed divisions a frame by small constants in the
+plane and flight models (`__divsint`, ~1,250 T-states each), the plane
+updates themselves, and on the render side the tile streaming (column runs,
+tile repaints, strip uploads: ~15 ms in a heavy frame).
+
 ## Candidates, in order of expected value
 
 1. **Schedule render work to overlap CPU with VDP** (the largest item over
@@ -235,3 +272,4 @@ The island-clear frames on NTSC were within a few ms of the deadline:
 | Flight model rebuilt from the original | step 0.475 → 0.21 ms; faster flight adds terrain columns; 2-VBlank reservation for fast carrier frames |
 | `Column_Runs` in Z80; dial redraws held in fast carrier frames | worst carrier frame 148 → 117 ms at the original's speed; reservation removed |
 | `Scenery_Read` copies with LDIR (was a C byte loop, ~80 T-states a byte) | a dial patch or streamed shape: ~8 ms → ~2 ms of ROM reads |
+| `Fighters_Launch` parked list cached; quiet steps batched (`Step_Batch`, Z80 `Flight_StepMany`) | fighters run: simulation 61.7 → 46.5 ms a frame, misses 38 → 16 |

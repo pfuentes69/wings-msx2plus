@@ -98,6 +98,11 @@ typedef struct FlightState {
 } FlightState;
 
 #ifdef WINGS_P1_FLIGHT
+/* Steps that only move the plane, batched (msx/step_batch.c): n steps of
+ * Flight_StepWorldSample at once (core/flight_steps.c). None of them may
+ * be a tick's first: state->step >= 1, state->step + n <=
+ * FLIGHT_TICK_STEPS, n >= 1. */
+void Flight_StepMany(FlightState* state, uint32_t* x, uint8_t n);
 /* Gear: always on deck; in the air within FLIGHT_GEAR_RANGE of the carrier,
  * in either direction; up after an engine failure (0xb45a). */
 uint8_t Flight_GearDown(const FlightState* state, uint16_t world);

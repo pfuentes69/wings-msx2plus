@@ -31,6 +31,7 @@ volatile u8 g_DisplayElevator;
 #include "msx/weapons.h"
 #include "core/combat.h"
 #include "core/engine.h"
+#include "msx/step_batch.h"
 #include "core/landing.h"
 #include "core/game.h"
 #include "msx/input_sampler.h"
@@ -46,7 +47,7 @@ EngineState g_Engine;
 static u8 s_CrashSteps;          /* 1-second hold after a crash */
 u8 g_LastContact;                /* latest LANDING_* contact, for verification */
 static u8 s_CrashSplash;         /* crash art: 0 explosion (deck, island), 1 sea splash */
-static u8 s_ContactBottom, s_ContactSurface; /* per-frame contact gate (Landing_Prepare) */
+u8 s_ContactBottom, s_ContactSurface; /* per-frame contact gate (Landing_Prepare; msx/step_batch.c) */
 #endif
 /* Crash art frame drawn instead of the plane (255 = none); the frame shown
  * on the published page, and the frame loaded into the host atlas slot. */
@@ -70,7 +71,7 @@ static u8 s_RenderRope = 255;
 volatile u8 g_DisplayWheel = 255, g_DisplayGear = 5;
 #endif
 #ifdef WINGS_P1_FLIGHT
-static u8 s_EngineSteps;         /* simulation steps into the current original tick */
+u8 s_EngineSteps;         /* simulation steps into the current original tick (msx/step_batch.c reads it) */
 #endif
 /* Oil needle, fuel needle and lamps drawn on the rendered/published page.
  * A new plane reads oil frame 16 and fuel frame 22 (amiga-fuel-oil.md). */
@@ -111,7 +112,8 @@ volatile u8 g_DashboardSplit;
 volatile u16 g_DisplaySurfaceWord;
 volatile u8 g_DisplayScale, g_DisplayWave, g_DisplayPilot, g_ViewChange;
 volatile u8 g_DisplayHeave, g_DisplayShipFrame;
-static u8 s_PageScale[2], s_Wave = 11, s_AnimTick, s_RenderPilot;
+static u8 s_PageScale[2], s_Wave = 11, s_RenderPilot;
+u8 s_AnimTick;   /* steps into the original tick (msx/step_batch.c reads it) */
 static u16 s_RenderSurface;
 #include "input.h"
 
@@ -1239,6 +1241,10 @@ void main(void)
                 for (step=0; step<steps; ++step)
                 {
 #ifdef WINGS_P1_FLIGHT
+                    /* Not at a tick's first or last step: no run starts there. */
+                    if ((u8)(s_World.flight.step-1)<FLIGHT_TICK_STEPS-2 && g_Carrier.stage==CARRIER_DECK &&
+                        !s_CrashSteps && !g_Engine.failed &&
+                        (i=Step_Batch(steps-1-step,weapons))) { step+=i-1; continue; }
                     if (g_Carrier.stage!=CARRIER_DECK)
                     {
                         if (Carrier_Step(&g_Carrier)) {ConsumeActions();break;}

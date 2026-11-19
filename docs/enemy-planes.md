@@ -275,7 +275,8 @@ fighter attacks or sits on the tail.
   The ships' guns are set destroyed and torpedo planes kept off. During the
   chase the target's evasions are pinned, and the oil is kept full against
   the other fighter. Missed deadlines: 27 NTSC, 13 PAL (limit 30); with the camera's lead
-  38 NTSC, 14 PAL (limit 45: the ships' guns are in view on the approach).
+  38 NTSC, 14 PAL; after the optimisation pass 16 NTSC, 5 PAL
+  (docs/frame-budget.md, "Simulation over the ships").
 - The P0 smoke and the ships gate keep all enemy planes off
   (`no_enemy_planes`).
 

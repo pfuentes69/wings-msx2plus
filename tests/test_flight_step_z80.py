@@ -96,16 +96,18 @@ class Z80Step:
     def __init__(self, workdir):
         workdir.mkdir()
         sdcc = shutil.which('sdcc')
-        subprocess.run([sdcc, '-mz80', '--opt-code-speed', *DEFINES, '-I', str(ROOT / 'src/core'),
-                        '-c', str(ROOT / 'src/core/flight.c'), '-o', str(workdir) + '/'],
-                       check=True, capture_output=True)
+        for source in ('flight.c', 'flight_steps.c'):
+            subprocess.run([sdcc, '-mz80', '--opt-code-speed', *DEFINES, '-I', str(ROOT / 'src/core'),
+                            '-c', str(ROOT / 'src/core' / source), '-o', str(workdir) + '/'],
+                           check=True, capture_output=True)
         (workdir / 'stub.s').write_text(STUB)
         subprocess.run([shutil.which('sdasz80'), '-o', 'stub.rel', 'stub.s'], cwd=workdir, check=True, capture_output=True)
         subprocess.run([sdcc, '-mz80', '--no-std-crt0', '--code-loc', '0x4000', '--data-loc', '0xC000',
-                        'flight.rel', 'stub.rel', '-o', 'flight.ihx'], cwd=workdir, check=True, capture_output=True)
+                        'flight.rel', 'flight_steps.rel', 'stub.rel', '-o', 'flight.ihx'], cwd=workdir, check=True, capture_output=True)
         symbols = dict((n, int(a, 16)) for a, n in
                        re.findall(r'^\s+([0-9A-F]{8})\s+(_\w+)', (workdir / 'flight.map').read_text(), re.M))
         self.entry = symbols['_Flight_StepWorldSample']
+        self.many_entry = symbols['_Flight_StepMany']
         self.machine = z80.Z80Machine()
         for line in (workdir / 'flight.ihx').read_text().split():
             count, address, kind = int(line[1:3], 16), int(line[3:7], 16), int(line[7:9], 16)
@@ -133,6 +135,20 @@ class Z80Step:
         assert m.ix == 0x1234 and m.iy == 0x5678, 'IX/IY not preserved'
         self.ticks.setdefault(tick, []).append(budget - m.ticks_to_stop)
 
+    def many(self, n):
+        """Flight_StepMany(state, x, n): sdcccall(1), n on the stack."""
+        m = self.machine
+        m.set_memory_block(STACK - 3, bytes([SENTINEL & 255, SENTINEL >> 8, n]))
+        m.sp, m.pc, m.hl, m.de, m.ix, m.iy = STACK - 3, self.many_entry, STATE, XPTR, 0x1234, 0x5678
+        budget = 100000
+        m.ticks_to_stop = budget
+        while m.pc != SENTINEL:
+            assert not m.run() & m._TICKS_LIMIT_HIT, 'did not return'
+        # SDCC C code keeps IX (its frame pointer); IY is the caller's to save.
+        assert m.ix == 0x1234, 'IX not preserved'
+        self.ticks.setdefault('many', []).append(budget - m.ticks_to_stop)
+        return m.sp
+
     def x(self):
         return int.from_bytes(bytes(self.machine.memory[XPTR:XPTR + 4]), 'little')
 
@@ -149,7 +165,7 @@ class FlightStepZ80Tests(unittest.TestCase):
         (temp / 'stub.c').write_text(NATIVE_STUB)
         library = temp / 'flight.so'
         subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
-                        *DEFINES, str(ROOT / 'src/core/flight.c'), str(temp / 'stub.c'), '-o', str(library)], check=True)
+                        *DEFINES, str(ROOT / 'src/core/flight.c'), str(ROOT / 'src/core/flight_steps.c'), str(temp / 'stub.c'), '-o', str(library)], check=True)
         cls.native = ctypes.CDLL(str(library))
         cls.asm = Z80Step(temp / 'asm')
 
@@ -184,6 +200,32 @@ class FlightStepZ80Tests(unittest.TestCase):
                 done += 1
         print(f"\nZ80 flight step: {max(self.asm.ticks[False])} T-states per step, "
               f"{max(self.asm.ticks.get(True, [0]))} with the (stubbed) tick call")
+
+    def test_many_steps_match_single_steps(self):
+        """Flight_StepMany(n) (world_flight.c batches quiet steps with it)
+        equals n single steps inside a tick, on the Z80 and natively."""
+        rng = random.Random(2)
+        for done in range(int(os.environ.get('WINGS_FLIGHT_STEP_Z80_STEPS', 30000)) // 3):
+            rem = lambda: rng.choice([0, rng.randrange(-11, 12)])
+            c = rng.randrange(1, 12)
+            n = rng.randrange(1, 13 - c)
+            fields = dict(x=rng.randrange(65536), y=rng.randrange(100 * 256, 1200 * 256),
+                          vx=rng.randrange(-300, 301), vy=rng.randrange(-520, 521), step=c,
+                          xrem=rem(), yrem=rem(), speed=rng.randrange(1401), mode=rng.randrange(3))
+            x = rng.randrange(200 * 256, 7400 * 256)
+            single, batched = Flight(**fields), Flight(**fields)
+            single_x, batched_x = ctypes.c_uint32(x), ctypes.c_uint32(x)
+            for _ in range(n):
+                self.native.Flight_StepWorldSample(ctypes.byref(single), ctypes.byref(single_x), 0, 0)
+            self.native.Flight_StepMany(ctypes.byref(batched), ctypes.byref(batched_x), n)
+            self.assertEqual(snapshot(batched), snapshot(single), (done, c, n))
+            self.assertEqual(batched_x.value, single_x.value, (done, c, n))
+            self.asm.load(Flight(**fields), x)
+            sp = self.asm.many(n)
+            self.assertEqual(unpack(self.asm.machine.memory), snapshot(single), (done, c, n))
+            self.assertEqual(self.asm.x(), single_x.value, (done, c, n))
+        self.sp_after_many = sp
+        print(f"\nFlight_StepMany: up to {max(self.asm.ticks['many'])} T-states for up to 11 steps")
 
 
 if __name__ == '__main__':

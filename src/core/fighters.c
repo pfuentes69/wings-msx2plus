@@ -21,9 +21,14 @@ static uint8_t Rand(uint8_t n)
     return (uint8_t)(Xorshift(&g_PlanesRandom) % n);
 }
 
+/* The parked list changes only with a launch, a reset or a listed ship's
+ * sinking step: rebuilt then, not every tick (it cost ~5 ms a tick). */
+static uint8_t s_ParkedDirty, s_ParkedStep[PLANES_LISTS_MAX];
+
 void Fighters_Reset(void) WINGS_BANKED
 {
     uint8_t i;
+    s_ParkedDirty = 1;
     g_Planes.cooldown = 0;
     for (i = 0; i < PLANE_LISTS; ++i) g_Planes.left[i] = s_ListFirst[i + 1] - s_ListFirst[i];
     g_Planes.parked = 0;
@@ -140,14 +145,22 @@ void Fighters_Launch(int16_t px) WINGS_BANKED
         n = s_ListFirst[i] + --g_Planes.left[i];
         Planes_Spawn(PLANE_KIND_FIGHTER, s_ParkedX[n], s_ParkedAlt[n], -1);
         g_Planes.cooldown = PLANES_LAUNCH_COOLDOWN;
+        s_ParkedDirty = 1;
     }
 parked:
-    /* The planes still on deck, sinking with their ship (0x391e). */
-    g_Planes.parked = 0;
     g_Planes.lists = g_Planes.cooldown ? 1 : 0;
     for (i = 0; i < PLANE_LISTS; ++i)
     {
         if (g_Planes.left[i]) ++g_Planes.lists;
+        if (g_Ships.step[s_ListShip[i]] != s_ParkedStep[i]) s_ParkedDirty = 1;
+    }
+    if (!s_ParkedDirty) return;
+    s_ParkedDirty = 0;
+    /* The planes still on deck, sinking with their ship (0x391e). */
+    g_Planes.parked = 0;
+    for (i = 0; i < PLANE_LISTS; ++i)
+    {
+        s_ParkedStep[i] = g_Ships.step[s_ListShip[i]];
         for (n = s_ListFirst[i]; n < s_ListFirst[i] + g_Planes.left[i]; ++n)
         {
             uint8_t k = g_Planes.parked++;

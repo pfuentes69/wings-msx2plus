@@ -5,7 +5,7 @@
 # Emulated time is frozen while Tcl runs, so sampling does not perturb timing.
 set prof_period $env(WINGS_PROFILE_PERIOD)
 set prof_file [file join $env(WINGS_TEST_OUT) profile.txt]
-set prof_noi [open [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi] r]
+set prof_noi [open [expr {[info exists env(WINGS_PROFILE_NOI)] ? $env(WINGS_PROFILE_NOI) : [file join $env(WINGS_ROOT) out mission-flight mission-flight.noi]}] r]
 set prof_syms [read $prof_noi];close $prof_noi
 foreach n {g_Bank3Segment g_Rendering g_GameView g_Combat g_FramePublished VDP_InterruptHandler g_ViewChange g_DisplayWorld g_DisplayY} {
     if {![regexp "DEF _$n (0x\[0-9A-Fa-f\]+)" $prof_syms -> a]} {error "Missing $n"}
@@ -13,6 +13,7 @@ foreach n {g_Bank3Segment g_Rendering g_GameView g_Combat g_FramePublished VDP_I
 }
 array set prof_hist {}
 set prof_render_samples {}
+set prof_sim_samples {}
 array set prof_calls {}
 proc prof_guns {} {
     expr {[debug read memory [expr {$::prof_addr(g_Combat)+145}]] || [debug read memory [expr {$::prof_addr(g_Combat)+159}]]}
@@ -71,6 +72,13 @@ proc prof_rendering {} {
             incr ::prof_hist($key)
         }
         set ::prof_render_samples {}
+        # This frame's simulation (and the idle wait before it): carrier
+        # tag 3 when the frame is heavy, so its simulation can be broken down.
+        foreach key $::prof_sim_samples {
+            if {$heavy} {lset key 6 3}
+            incr ::prof_hist($key)
+        }
+        set ::prof_sim_samples {}
         if {$kind eq "frame" && $sim + $draw > 110} {
             set wx [expr {[debug read memory $::prof_addr(g_DisplayWorld)]+256*[debug read memory [expr {$::prof_addr(g_DisplayWorld)+1}]]}]
             set wy [expr {[debug read memory $::prof_addr(g_DisplayY)]+256*[debug read memory [expr {$::prof_addr(g_DisplayY)+1}]]}]
@@ -98,12 +106,14 @@ proc prof_sample {} {
         set wx [expr {[debug read memory $::prof_addr(g_DisplayWorld)]+256*[debug read memory [expr {$::prof_addr(g_DisplayWorld)+1}]]}]
         set carrier [expr {$wx >= 6500 && $wx <= 7450}]
         if {$render} {lappend ::prof_render_samples [list $pc $bank $render $guns $ret $vdp $carrier $ret2]} else {
-            incr ::prof_hist([list $pc $bank $render $guns $ret $vdp $carrier $ret2])
+            lappend ::prof_sim_samples [list $pc $bank $render $guns $ret $vdp $carrier $ret2]
         }
     }
     after time $::prof_period prof_sample
 }
 proc prof_dump {} {
+    foreach key $::prof_sim_samples {incr ::prof_hist($key)}
+    set ::prof_sim_samples {}
     set f [open $::prof_file w]
     foreach {k v} [array get ::prof_hist] {puts $f "$k $v"}
     foreach {k v} [array get ::prof_calls] {puts $f "call $k $v"}

@@ -1,6 +1,7 @@
 """Sample-profile the release mission ROM during the P0/P1 smoke run on openMSX.
 
-Runs tools/p0_smoke.tcl with tools/profile_sampler.tcl and prints where gameplay
+Runs tools/p0_smoke.tcl (or --script, on --map's ROM: e.g. --map j --script
+tools/fighters_smoke.tcl) with tools/profile_sampler.tcl and prints where gameplay
 CPU time goes, split by simulation/render and guns idle/active. Samples are in
 emulated time, so the profile does not change the game's timing.
 """
@@ -19,7 +20,7 @@ LEAF_HELPERS = {'BIOS', '_VDP_CommandWait', '_VDP_CommandSetupR32', '_VDP_Comman
 BUILD = ROOT / 'out/mission-flight'
 
 
-def symbols():
+def symbols(BUILD=BUILD):
     """Code addresses: map globals plus module statics rebased from .sym files."""
     table, modules = {}, collections.defaultdict(dict)
     for addr, name, module in re.findall(r'^\s+([0-9A-F]{8})\s+(_\w+)\s+(\w*)\s*$',
@@ -67,16 +68,20 @@ def main():
     parser.add_argument('--top', type=int, default=25)
     parser.add_argument('--reuse', action='store_true', help='analyse an existing profile.txt')
     parser.add_argument('--count', nargs='*', default=[], help='resident functions whose calls to count')
+    parser.add_argument('--map', default='a', help='the map ROM to profile (a: out/mission-flight, j: out/mission-flight-j)')
+    parser.add_argument('--script', default='tools/p0_smoke.tcl', help='the scenario to run')
     args = parser.parse_args()
+    build = BUILD if args.map == 'a' else ROOT / f'out/mission-flight-{args.map}'
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    rom = BUILD / 'mission-flight.rom'
-    keys, names = symbols()
+    rom = build / 'mission-flight.rom'
+    keys, names = symbols(build)
     if not args.reuse:
         where = {n: k for k, n in zip(keys, names)}
         calls = ' '.join(f'{n}:{where["_" + n]}' for n in args.count)
         env = dict(os.environ, WINGS_PROFILE_CALLS=calls, WINGS_ROOT=str(ROOT), WINGS_TEST_OUT=str(out), WINGS_HEADLESS='1',
-                   WINGS_PROFILE_PERIOD=str(args.period), OPENMSX_HOME=str(out / 'openmsx-home'),
+                   WINGS_PROFILE_PERIOD=str(args.period), WINGS_ROM=str(rom), WINGS_ALLOW_MISSED='1',
+                   WINGS_PROFILE_NOI=str(build / 'mission-flight.noi'), OPENMSX_HOME=str(out / 'openmsx-home'),
                    SDL_AUDIODRIVER='dummy')
         env.setdefault('OPENMSX_USER_DATA', str(Path.home() / '.openMSX/share'))
         config = out / 'headless.xml'
@@ -85,7 +90,7 @@ def main():
                           '</settings></settings>')
         with (out / 'openmsx.log').open('w') as log:
             subprocess.run([shutil.which('openmsx'), '-control', 'stdio', '-setting', str(config), '-machine', args.machine,
-                            '-cart', str(rom), '-romtype', 'ASCII8', '-script', str(ROOT / 'tools/p0_smoke.tcl'),
+                            '-cart', str(rom), '-romtype', 'ASCII8', '-script', str(ROOT / args.script),
                             '-script', str(ROOT / 'tools/profile_sampler.tcl')],
                            cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.PIPE,
                            timeout=1800, check=True)
@@ -108,7 +113,8 @@ def main():
         if len(fields) == 8: fields.insert(7, 0)       # profiles from before ret2
         pc, bank, render, guns, ret, vdp, carrier, ret2, count = fields
         group = ('render' if render else 'sim/idle') + (' +guns' if guns else '')
-        if carrier == 2 and render: group = 'render heavy (>85 ms)'
+        if carrier == 3: group = 'sim heavy (render >85 ms)'
+        elif carrier == 2 and render: group = 'render heavy (>85 ms)'
         elif carrier and render: group = 'render over carrier'
         elif carrier: group = 'sim/idle over carrier'
         name = resolve(keys, names, pc, bank)
@@ -118,7 +124,12 @@ def main():
         if render and vdp:
             busy_in[name] += count
         if name.startswith('__') or name in LEAF_HELPERS:
-            callers[(group, name)][resolve(keys, names, ret, bank)] += count
+            caller = resolve(keys, names, ret, bank)
+            # A helper called from a helper (__divuint <- __divsint): name
+            # the code above it too (the word at SP+2; a guess, the inner
+            # helper may have pushed registers).
+            if caller.startswith('__'): caller += '<' + resolve(keys, names, ret2, bank)
+            callers[(group, name)][caller] += count
         # Waiting for the VDP: charge the function that issued the command.
         if render and name == '_VDP_CommandWait':
             caller = resolve(keys, names, ret, bank)
@@ -127,7 +138,7 @@ def main():
             waits[group][caller] += count
     carrier_frames = sum(c for (n, g), c in counted.items() if n == 'carrier_frames')
     heavy_frames = sum(c for (n, g), c in counted.items() if n == 'heavyrender_frames')
-    per_frame = {'render over carrier': carrier_frames, 'render heavy (>85 ms)': heavy_frames}
+    per_frame = {'render over carrier': carrier_frames, 'render heavy (>85 ms)': heavy_frames, 'sim heavy (render >85 ms)': heavy_frames}
     for group in sorted(groups):
         total = totals[group]
         if per_frame.get(group):

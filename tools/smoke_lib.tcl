@@ -402,9 +402,16 @@ proc land_taxi_wait {} {
         return
     }
     require [expr {$d>-6 && [machine_info time]<$::wait_deadline}] "Taxi overshot or timed out: x=[world_x]"
-    set v [expr {[speed]+8}]
+    # Power holds for up to 3 more ticks before a release lands (a PAL frame
+    # is 2 ticks): each adds the growing boost (+29, 1 more a tick, at most
+    # 8) to the speed. Power only if the plane still stops short after them.
     # Below speed 50 the plane does not move (whole pixels per tick).
-    if {$d>6 && [braking_distance $v]+($v+50)/100 < $d-$::taxi_margin} {fly 16} else {fly 0}
+    set v [speed]; set b [world_s16 29]; set ahead 0
+    for {set i 0} {$i<3} {incr i} {
+        if {$b<8} {incr b}
+        incr v $b; incr ahead [expr {($v+50)/100}]
+    }
+    if {$d>6 && [braking_distance $v]+$ahead < $d-$::taxi_margin} {fly 16} else {fly 0}
     after time 0.01 land_taxi_wait
 }
 
