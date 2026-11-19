@@ -16,6 +16,7 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_COCKPIT)
 #define SEA 0x99
 #define LAND 0x55
 #define FAR_ALTITUDE 186     /* above: the distant view, plain sky */
+#define LIFT 5               /* the port's picture sits higher: the near bands show */
 #define KIND_TOWER 4
 
 CockpitState g_Cockpit;
@@ -146,7 +147,7 @@ static void Scene(u16 x, u8 altitude, u8 left, u8 arrow)
     s_Next[2] = arrow;
     if (altitude > FAR_ALTITUDE) { s_Next[0] = 255; return; }
     s_Col = x >> 3; s_Left = left;
-    s_Next[0] = (altitude >> 4) + 17;
+    s_Next[0] = (altitude >> 4) + 17 - LIFT;
     s_Next[3] = altitude >= 81 ? 17 : ((81 - altitude) >> 2) + 6;
     s_Next[1] = left;
     deck = s_Col >= COCKPIT_CARRIER_FIRST && s_Col <= COCKPIT_CARRIER_LAST;
@@ -284,39 +285,33 @@ static const u8 s_Tree[11] = {
     COCKPIT_TREE + 5, COCKPIT_TREE + 5, COCKPIT_TREE + 4, COCKPIT_TREE + 4, COCKPIT_TREE + 3, COCKPIT_TREE + 3,
     COCKPIT_TREE + 2, COCKPIT_TREE + 2, COCKPIT_TREE + 1, COCKPIT_TREE + 1, COCKPIT_TREE};
 
-/* The bands from `from` (10: the farthest) down to `to`, far to near, a row
- * lower each. */
-static void Bands_(u8 from, u8 to)
-{
-    u8 b = from + 1, row = s_Next[0] + 10 - from;
-    u16 bit = 1 << from;
-    u16 land = s_Next[4] | (u16)s_Next[5] << 8, trees = s_Next[6] | (u16)s_Next[7] << 8;
-    const u8* object = s_Next + 8 + from;
-    for (; b > to; --b, bit >>= 1, ++row, --object)
-    {
-        if (land & bit && row < ROWS) Fill(row, 1, LAND);
-        if (trees & bit) Blit(s_Tree[b - 1], row, 0);
-        if (*object) Blit(*object - 1, row, 0);
-    }
-}
-
-/* The picture in two halves: the sky, the sea and the far bands; then the
- * near bands, the deck view and the sight. */
+/* The picture in two halves: the sky, the sea and the ground, far to near
+ * a row lower each band; then the targets on it (the port draws them after
+ * the ground, so a nearer band's jungle does not hide them), the deck view
+ * and the sight. */
 static void ComposeFar(void)
 {
-    u8 base = s_Next[0];
+    u8 base = s_Next[0], b, row;
+    u16 bit = 1 << 10;
+    u16 land = s_Next[4] | (u16)s_Next[5] << 8, trees = s_Next[6] | (u16)s_Next[7] << 8;
     Fill(0, ROWS, SKY);
     if (base == 255) return;
     if (base < ROWS) Fill(base, ROWS - base, SEA);
-    Bands_(10, 5);
+    for (b = 11, row = base; b; --b, bit >>= 1, ++row)
+    {
+        if (land & bit && row < ROWS) Fill(row, 1, LAND);
+        if (trees & bit) Blit(s_Tree[b - 1], row, 0);
+    }
 }
 
 static void ComposeNear(void)
 {
     u8 base = s_Next[0], row, step, top, shape;
+    const u8* object = s_Next + 8 + 10;
     if (base != 255)
     {
-        Bands_(4, 0);
+        for (row = base; object >= s_Next + 8; ++row, --object)
+            if (*object) Blit(*object - 1, row, 0);
         if (s_Next[1] & 2)
         {
             /* The deck view (0x4430): it slides down a row every 6 columns

@@ -356,9 +356,11 @@ proc torpedo_release_left {} {
     keymatrixdown 4 8
     after time 0.1 {keymatrixup 4 8}
     set ::hull_hits [expr {[ships 223]+256*[ships 224]}]
-    # Climb a second, then turn back east: away from the guns ahead (a
-    # hit starts an oil leak, and the engine seizes below 96).
-    wait_for {[torpedo 14]==2} {pilot 16 1060;after time 1.0 {pilot 128 1000};uplevel #0 $::release_then} "torpedo in the water" 3
+    # Climb, then turn back east: away from the guns ahead (a hit starts
+    # an oil leak, and the engine seizes below 96), and above altitude 200
+    # before passing back over the torpedo: the guns' shell splashes near a
+    # low plane destroy a torpedo within 10 px (0x1ae2).
+    wait_for {[torpedo 14]==2} {pilot 16 960;after time 1.5 {pilot 128 960};uplevel #0 $::release_then} "torpedo in the water" 3
 }
 proc destroyer_hit {} {
     wait_for {[hull 0]==0} {

@@ -191,4 +191,8 @@ void Screens_Palette(u8 which) WINGS_BANKED
     else Dashboard_CopyPalette(g_BottomPalette);
     Load(g_TopPalette);
     VDP_EnableMask(which < SCREENS_BRIEF);
+    /* The border is colour 1: the play's dark sea, the same in the play's and
+     * the dashboard's palettes. The full-screen ones give colour 1 other
+     * uses (the briefing's red): their border is colour 0, black there. */
+    VDP_SetColor(which < SCREENS_BRIEF ? 1 : 0);
 }

@@ -55,6 +55,9 @@ BAND_FAR = [2 * EDGE[b + 2] - EDGE[b + 1] for b in range(11)]
 K6 = [6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1]
 K7 = [7, 7, 6, 6, 5, 4, 3, 2, 1, 0, 0]
 FAR_ALTITUDE = 186                   # above: the distant view, plain sky
+# The port's picture sits LIFT rows higher than the original's (horizon
+# altitude / 16 + 17 in the window): the near bands stay in the window.
+LIFT = 5
 
 # Object kinds in a map's spans.
 KIND_HUT, KIND_DUGOUT, KIND_GUN, KIND_CARRIER, KIND_TOWER = range(5)
@@ -248,7 +251,7 @@ def scene(map_name, x, altitude, facing_left, arrow=0, wrecked=()):
         s[0] = 255
         return bytes(s)
     col = x >> 3
-    s[0] = altitude // 16 + 17
+    s[0] = altitude // 16 + 17 - LIFT
     s[3] = 17 if altitude >= 81 else (81 - altitude) // 4 + 6
     deck = carrier and carrier[0] <= col <= carrier[1]
     s[1] = facing_left
@@ -302,11 +305,14 @@ def compose(scene_bytes, arrows=None):
     if base != 255:
         for y in range(base, HEIGHT): win[y * SLOT:(y + 1) * SLOT] = bytes([SEA]) * SLOT
         land = s[4] | s[5] << 8; trees = s[6] | s[7] << 8
+        # The ground, far to near, then the targets on it: the port draws
+        # them last, so a nearer band's jungle does not hide them.
         for k in range(10, -1, -1):
             row = base + 10 - k
             if land >> k & 1 and row < HEIGHT: win[row * SLOT:(row + 1) * SLOT] = bytes([LAND]) * SLOT
             if trees >> k & 1: blit(FIRST['TREE'] + K6[k] - 1, row)
-            if s[8 + k]: blit(s[8 + k] - 1, row)
+        for k in range(10, -1, -1):
+            if s[8 + k]: blit(s[8 + k] - 1, base + 10 - k)
         if s[1] & 2:
             step = s[1] >> 4; y = base + step + 9; top = base + max(0, step - 7)
             left = s[1] & 1

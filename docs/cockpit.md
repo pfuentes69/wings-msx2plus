@@ -45,6 +45,16 @@ plain sky.
   from `g_Island`; dugouts; AA guns; the carrier and its tower). The
   original's scan lets any other non-empty map word in a band hide its
   object; the port does not: each band shows its farthest object.
+- **Two adaptations after play-testing** (2026-11-19, the user: arriving at
+  the island, the first dugout showed, then only jungle): with the
+  original's arithmetic, a nearer band's jungle strip (4..7 rows, full
+  width, one row lower) covers the targets in the bands behind it, and at
+  usual altitudes the near bands fall below the window (horizon at
+  `altitude / 16 + 17`: at 40, only the bands 500 px and more ahead show),
+  so a target was seen far off and then vanished instead of growing. The
+  port draws the targets after all the ground, and its picture sits 5 rows
+  higher (horizon at `altitude / 16 + 12`), so targets stay in view as they
+  approach, and the carrier and deck show more on landing.
 - **Scene** (`msx/cockpit.c`, segment 51): from the plane's column,
   altitude, facing, the torpedo plane's arrow and the huts, 19 bytes: the
   horizon, the deck step, the sight's row, the land and jungle bands, each
@@ -52,13 +62,13 @@ plain sky.
   falls in (`Bands`, in Z80); only objects within reach are looked at (a
   window over the sorted list moves with the plane).
 - **Composing**: when the scene changes, it is drawn into the buffer (VDP
-  fills and transparent copies), then each page copies the buffer (one
+  fills and transparent copies: the sky, sea and ground; then the targets,
+  the deck view and the sight), then each page copies the buffer (one
   HMMM) the next time it is rendered, the arrow on top. The work (about
   30,000 T-states) is done in the idle time before a VBlank, like the
   terrain prefetch (`Cockpit_Work`); a render costs about 2,700. Without
   idle time (the heaviest frames), renders that have waited two frames do
-  it a step at a time: the scene, then the far half of the picture, then
-  the near half. A page never copies a half-drawn buffer, and a change
+  it a step at a time: the scene, then the ground, then the rest. A page never copies a half-drawn buffer, and a change
   meanwhile waits for the picture under way, so a run of changes still
   shows.
 - **Not yet**: the enemy planes (`zr1*`/`zr2*`, from 48 to 1280 px ahead,

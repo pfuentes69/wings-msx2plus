@@ -87,6 +87,9 @@ def main():
         # (Black on rank selection and the briefing: full screen, src/msx/screen_end.c.)
         sky=b'\x00\x00' if game[0] in (0,1) else terrain_palette[:2]
         assert (out/f'{name}.palette').read_bytes()[:2]==sky,(name,'sky colour 0',(out/f'{name}.palette').read_bytes()[:2])
+        # The border (R7): colour 0, black, on the full-screen ones; else the
+        # dark sea, colour 1 (msx/screen_end.c Screens_Palette).
+        assert (out/f'{name}.regs').read_bytes()[7]==(0 if game[0] in (0,1) else 1),(name,'border',(out/f'{name}.regs').read_bytes()[7])
         vram=(out/f'{name}.vram').read_bytes()
         # Tile cache: every loaded slot holds its strip's 8 tiles (ROM banks
         # from 32, 256 bytes a strip), as 64 rows of 4 bytes at rows 180..

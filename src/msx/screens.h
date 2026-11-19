@@ -34,8 +34,9 @@ void Screens_RankLine(u8 page, u8 line) WINGS_BANKED;
 /* msx/screen_end.c: the colours a screen is shown in. Set as its page is
  * published (or before drawing on the page shown), so no screen is ever
  * seen in another's colours: the play area's palette (the line interrupt
- * reloads it each frame) and the VDP's at once, the dashboard's, and the
- * column mask (off for the full-screen ones, which are not scrolled). */
+ * reloads it each frame) and the VDP's at once, the dashboard's, the
+ * column mask (off for the full-screen ones, which are not scrolled) and the
+ * border's colour. */
 #define SCREENS_PLAY   0   /* the play's palettes, the mask on */
 #define SCREENS_WEAPON 1   /* the play's, colours 12..15 lent to the weapon panel */
 #define SCREENS_BRIEF  2   /* the briefing's over the play area, black */
