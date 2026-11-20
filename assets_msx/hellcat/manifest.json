@@ -1755,7 +1755,7 @@
         "streamed": true
       }
     ],
-    "pixel_bytes": 39697,
+    "pixel_bytes": 38634,
     "reference_pivot": [
       25,
       16
@@ -2004,7 +2004,7 @@
         "height": 4,
         "atlas_x": 250,
         "atlas_y": 524,
-        "data_offset": 28079,
+        "data_offset": 27016,
         "bytes": 12,
         "packed_sha256": "da87f172170f72a85774b6f4a6b50132e3ec30a8d36f01a4151cb5a2ea1f81ef"
       },
@@ -2016,7 +2016,7 @@
         "height": 4,
         "atlas_x": 206,
         "atlas_y": 525,
-        "data_offset": 28091,
+        "data_offset": 27028,
         "bytes": 4,
         "packed_sha256": "75a1470a31d7cb890eb93211db821218d8dabb20b04218a718e06355656b7f96"
       },
@@ -2028,7 +2028,7 @@
         "height": 4,
         "atlas_x": 82,
         "atlas_y": 533,
-        "data_offset": 28095,
+        "data_offset": 27032,
         "bytes": 12,
         "packed_sha256": "dcf9171db1e22c13ee436df7e4ca4e77bb00721ef523844d55d5762fba9fdafb"
       },
@@ -2040,7 +2040,7 @@
         "height": 3,
         "atlas_x": 210,
         "atlas_y": 536,
-        "data_offset": 28107,
+        "data_offset": 27044,
         "bytes": 6,
         "packed_sha256": "937bd601a5bafc078d21745836c6ce4a86769c3040ddd7dfe00c3f5a686797c3"
       },
@@ -2052,7 +2052,7 @@
         "height": 4,
         "atlas_x": 88,
         "atlas_y": 533,
-        "data_offset": 28113,
+        "data_offset": 27050,
         "bytes": 12,
         "packed_sha256": "877bda3028ab4b32f300e0cf73b4e1fd286aeb41e54ef1edc1fb05ad6feeaaab"
       },
@@ -2064,7 +2064,7 @@
         "height": 3,
         "atlas_x": 214,
         "atlas_y": 536,
-        "data_offset": 28125,
+        "data_offset": 27062,
         "bytes": 6,
         "packed_sha256": "4683d015a38fa2b3c8904c34bc05258ee6d8861ad579e7052f29c230f16c1619"
       },
@@ -2076,7 +2076,7 @@
         "height": 5,
         "atlas_x": 112,
         "atlas_y": 533,
-        "data_offset": 28131,
+        "data_offset": 27068,
         "bytes": 10,
         "packed_sha256": "224b1df6049d90ebaffba84c03811b53281208499543bb951fc1dde13f4fb08a"
       },
@@ -2088,7 +2088,7 @@
         "height": 3,
         "atlas_x": 218,
         "atlas_y": 536,
-        "data_offset": 28141,
+        "data_offset": 27078,
         "bytes": 6,
         "packed_sha256": "c7399860c4bc6f69b30d0dd7776d9300195b3a19ad092eb92c13519fb90f0f99"
       },
@@ -2100,7 +2100,7 @@
         "height": 3,
         "atlas_x": 124,
         "atlas_y": 535,
-        "data_offset": 28147,
+        "data_offset": 27084,
         "bytes": 9,
         "packed_sha256": "d9c32c69159d02d711856b747906b5fde2e71de6521659d5fad2b4c529b225e8"
       },
@@ -2112,7 +2112,7 @@
         "height": 5,
         "atlas_x": 116,
         "atlas_y": 533,
-        "data_offset": 28156,
+        "data_offset": 27093,
         "bytes": 10,
         "packed_sha256": "22afaaa70b20339622b46cd33debce6b694e65b414d01df398aaab19ebdcf916"
       },
@@ -2124,7 +2124,7 @@
         "height": 2,
         "atlas_x": 160,
         "atlas_y": 539,
-        "data_offset": 28166,
+        "data_offset": 27103,
         "bytes": 4,
         "packed_sha256": "13ec0bad49672490ae2f174c0bbcf786e45a5ef718873b48457f100ec9c87a03"
       },
@@ -2136,7 +2136,7 @@
         "height": 4,
         "atlas_x": 156,
         "atlas_y": 536,
-        "data_offset": 28170,
+        "data_offset": 27107,
         "bytes": 8,
         "packed_sha256": "5aacdfe4c2d6fb454bf5ce96a96e2d7b531c33164d59249f7882d856c832b4a6"
       },
@@ -2148,7 +2148,7 @@
         "height": 3,
         "atlas_x": 222,
         "atlas_y": 536,
-        "data_offset": 28178,
+        "data_offset": 27115,
         "bytes": 6,
         "packed_sha256": "f16ef4b548eda54fb622e2b3e38f77c018679117d542c9d378b1caba7fc8b174"
       },
@@ -2160,7 +2160,7 @@
         "height": 5,
         "atlas_x": 120,
         "atlas_y": 533,
-        "data_offset": 28184,
+        "data_offset": 27121,
         "bytes": 10,
         "packed_sha256": "2899d9ad6d13a025065ffb7d9d314f5ddd25c00bac8fd5cc4154ab11ce3b278d"
       },
@@ -2172,7 +2172,7 @@
         "height": 2,
         "atlas_x": 160,
         "atlas_y": 536,
-        "data_offset": 28194,
+        "data_offset": 27131,
         "bytes": 2,
         "packed_sha256": "450a76b3d2fdb24bca7cec592a748a5cf4ab4bac28f4c43a28d40c8435ef4e83"
       },
@@ -2184,7 +2184,7 @@
         "height": 1,
         "atlas_x": 250,
         "atlas_y": 528,
-        "data_offset": 28196,
+        "data_offset": 27133,
         "bytes": 1,
         "packed_sha256": "c19a797fa1fd590cd2e5b42d1cf5f246e29b91684e2f87404b81dc345c7a56a0"
       },
@@ -2196,7 +2196,7 @@
         "height": 5,
         "atlas_x": 162,
         "atlas_y": 534,
-        "data_offset": 28197,
+        "data_offset": 27134,
         "bytes": 10,
         "packed_sha256": "63d2ed550483950ca20b43573831f66a4f7e155a34927cfd226ab39ac46a5e4c"
       },
@@ -2208,7 +2208,7 @@
         "height": 2,
         "atlas_x": 210,
         "atlas_y": 539,
-        "data_offset": 28207,
+        "data_offset": 27144,
         "bytes": 4,
         "packed_sha256": "65da2eea30cd4d4746bb15173845c794e7a4ea56a62b5908c7fa2f2ca5010bf6"
       },
@@ -2220,7 +2220,7 @@
         "height": 6,
         "atlas_x": 162,
         "atlas_y": 528,
-        "data_offset": 28211,
+        "data_offset": 27148,
         "bytes": 12,
         "packed_sha256": "1c4b07ff55a0e65b74d16c9fbb5b25ccd522e2f602777a7127ddda06b8718cf1"
       },
@@ -2232,7 +2232,7 @@
         "height": 2,
         "atlas_x": 214,
         "atlas_y": 539,
-        "data_offset": 28223,
+        "data_offset": 27160,
         "bytes": 4,
         "packed_sha256": "c027ba15f78c9e53cf50be4d611273cfe9caa39952c395e0bbcf0ae4e4aa9fbd"
       },
@@ -2244,7 +2244,7 @@
         "height": 6,
         "atlas_x": 250,
         "atlas_y": 512,
-        "data_offset": 28227,
+        "data_offset": 27164,
         "bytes": 18,
         "packed_sha256": "001e3e7021278347c5a5f34277aa6966173326af05c72eb4e4e270877cdecd9e"
       },
@@ -2256,7 +2256,7 @@
         "height": 4,
         "atlas_x": 94,
         "atlas_y": 533,
-        "data_offset": 28245,
+        "data_offset": 27182,
         "bytes": 12,
         "packed_sha256": "378c35b08ae3eb93ec87dfca754d0aa00fe01d3985ab6b1a5b9ae54d53b739f0"
       },
@@ -2268,7 +2268,7 @@
         "height": 4,
         "atlas_x": 234,
         "atlas_y": 537,
-        "data_offset": 28257,
+        "data_offset": 27194,
         "bytes": 4,
         "packed_sha256": "ab95ced5cc7963ec7ccb7cbb89253c28e2e9cb0968ee461bfcb0bb9ab7a8a9e5"
       },
@@ -2280,7 +2280,7 @@
         "height": 4,
         "atlas_x": 100,
         "atlas_y": 533,
-        "data_offset": 28261,
+        "data_offset": 27198,
         "bytes": 12,
         "packed_sha256": "3492da6c0b408c05ec281792ef03e35edb298e9413e9ec564df48abb87af8093"
       },
@@ -2292,7 +2292,7 @@
         "height": 3,
         "atlas_x": 226,
         "atlas_y": 537,
-        "data_offset": 28273,
+        "data_offset": 27210,
         "bytes": 6,
         "packed_sha256": "9586ebed846634d991bf6d2b39d76212e9b2307ffa81734551fbca8fc3794ca9"
       },
@@ -2304,7 +2304,7 @@
         "height": 4,
         "atlas_x": 106,
         "atlas_y": 533,
-        "data_offset": 28279,
+        "data_offset": 27216,
         "bytes": 12,
         "packed_sha256": "f495e2b4a56a9ff2ca88817679a42da8796d9aa4cb7d1bfa5f00247724b301a4"
       },
@@ -2316,7 +2316,7 @@
         "height": 3,
         "atlas_x": 230,
         "atlas_y": 537,
-        "data_offset": 28291,
+        "data_offset": 27228,
         "bytes": 6,
         "packed_sha256": "b9d6ebea1f206bee57ff5859207600aa235e7b3b3105f22bd49e46ebcc9f1ab0"
       },
@@ -2328,7 +2328,7 @@
         "height": 5,
         "atlas_x": 252,
         "atlas_y": 534,
-        "data_offset": 28297,
+        "data_offset": 27234,
         "bytes": 10,
         "packed_sha256": "d382f676b3b8a98f6ead63265b349adf8594ad2cfe77a3ffa4dbe41c703ffe89"
       },
@@ -2340,7 +2340,7 @@
         "height": 3,
         "atlas_x": 252,
         "atlas_y": 539,
-        "data_offset": 28307,
+        "data_offset": 27244,
         "bytes": 6,
         "packed_sha256": "13587ae80ddcf97a4ffb57ae66e7b283185819050e00d623b58dd80aecb26ec9"
       },
@@ -2352,7 +2352,7 @@
         "height": 3,
         "atlas_x": 130,
         "atlas_y": 535,
-        "data_offset": 28313,
+        "data_offset": 27250,
         "bytes": 9,
         "packed_sha256": "14f373f401d4ba62b86bd6a273abb44d8b5100961a87be1b9de91ab36de85dc5"
       },
@@ -2364,7 +2364,7 @@
         "height": 5,
         "atlas_x": 144,
         "atlas_y": 536,
-        "data_offset": 28322,
+        "data_offset": 27259,
         "bytes": 10,
         "packed_sha256": "467a158a6b7fed8b3fd5d9d13301729f2fa3efc9c0d57fe76a7d6eafddf88ebe"
       },
@@ -2376,7 +2376,7 @@
         "height": 2,
         "atlas_x": 218,
         "atlas_y": 539,
-        "data_offset": 28332,
+        "data_offset": 27269,
         "bytes": 4,
         "packed_sha256": "957e498d84c080676edb168cbdd083dd68b7128bcd8a4ae26ebeb545ada00b1b"
       },
@@ -2388,7 +2388,7 @@
         "height": 4,
         "atlas_x": 206,
         "atlas_y": 536,
-        "data_offset": 28336,
+        "data_offset": 27273,
         "bytes": 8,
         "packed_sha256": "368e804bcc75d41a7f05f8026c6431fd82dbd00d42c3cbd3f38db50bd6c6eec5"
       },
@@ -2400,7 +2400,7 @@
         "height": 3,
         "atlas_x": 252,
         "atlas_y": 542,
-        "data_offset": 28344,
+        "data_offset": 27281,
         "bytes": 6,
         "packed_sha256": "a56cd3a0a4c6bf6e8139e88cd0716f149520eda008a6b01aa2bb33e920540ffc"
       },
@@ -2412,7 +2412,7 @@
         "height": 5,
         "atlas_x": 148,
         "atlas_y": 536,
-        "data_offset": 28350,
+        "data_offset": 27287,
         "bytes": 10,
         "packed_sha256": "e50fcb85355fb38e78124cc4e710d1147321d10da1d1948935cec0acb2331d51"
       },
@@ -2424,7 +2424,7 @@
         "height": 2,
         "atlas_x": 164,
         "atlas_y": 539,
-        "data_offset": 28360,
+        "data_offset": 27297,
         "bytes": 2,
         "packed_sha256": "c62cbc48d650a0a16d80bbe372ba28ab4e41f17460e920622016fc2cbb731a9d"
       },
@@ -2436,7 +2436,7 @@
         "height": 1,
         "atlas_x": 250,
         "atlas_y": 528,
-        "data_offset": 28196,
+        "data_offset": 27133,
         "bytes": 1,
         "packed_sha256": "c19a797fa1fd590cd2e5b42d1cf5f246e29b91684e2f87404b81dc345c7a56a0"
       },
@@ -2448,7 +2448,7 @@
         "height": 5,
         "atlas_x": 152,
         "atlas_y": 536,
-        "data_offset": 28362,
+        "data_offset": 27299,
         "bytes": 10,
         "packed_sha256": "ef1dbbcbea8dd36e6460d0354ab063ec5856dcb87138dcbf462ef1566db2da49"
       },
@@ -2460,7 +2460,7 @@
         "height": 2,
         "atlas_x": 222,
         "atlas_y": 539,
-        "data_offset": 28372,
+        "data_offset": 27309,
         "bytes": 4,
         "packed_sha256": "1b8b14858d82fc2d32a05d8b4b888ab91e401e828d623e11ad4b7751a8104c20"
       },
@@ -2472,7 +2472,7 @@
         "height": 6,
         "atlas_x": 252,
         "atlas_y": 528,
-        "data_offset": 28376,
+        "data_offset": 27313,
         "bytes": 12,
         "packed_sha256": "113fcc9fe64e37bee0ba7cd9ad4f8ae99e56d4055cb71207f56a06ce95b40b1b"
       },
@@ -2484,7 +2484,7 @@
         "height": 2,
         "atlas_x": 252,
         "atlas_y": 545,
-        "data_offset": 28388,
+        "data_offset": 27325,
         "bytes": 4,
         "packed_sha256": "b4a8621aa9e17091a16dd53893a6d208daa4827741ee51f64e5fa0d7cfbccd5a"
       },
@@ -2496,7 +2496,7 @@
         "height": 6,
         "atlas_x": 250,
         "atlas_y": 518,
-        "data_offset": 28392,
+        "data_offset": 27329,
         "bytes": 18,
         "packed_sha256": "c4606c63154ece3ff0138a21aa37c5b3d1e7aeff4009a3d281bef152f9ea6cb8"
       }
@@ -2548,7 +2548,7 @@
         "height": 3,
         "atlas_x": 252,
         "atlas_y": 554,
-        "data_offset": 28410,
+        "data_offset": 27347,
         "bytes": 6,
         "packed_sha256": "2ad4685f0f7c692eb26e6f6ae126e4793d2f124473e6c5c8880d73f73ed6538e"
       },
@@ -2561,7 +2561,7 @@
         "height": 4,
         "atlas_x": 36,
         "atlas_y": 564,
-        "data_offset": 28416,
+        "data_offset": 27353,
         "bytes": 12,
         "packed_sha256": "eda5b5c2131462c16d332911892c7bdeb8505a67bfd616f38f1cbcffa45a2577"
       },
@@ -2574,7 +2574,7 @@
         "height": 6,
         "atlas_x": 116,
         "atlas_y": 626,
-        "data_offset": 28428,
+        "data_offset": 27365,
         "bytes": 30,
         "packed_sha256": "a7753422411641acf27ac2643dee7a828b638f81d1ea77807b54b5088dab33a9"
       },
@@ -2587,7 +2587,7 @@
         "height": 4,
         "atlas_x": 22,
         "atlas_y": 564,
-        "data_offset": 28458,
+        "data_offset": 27395,
         "bytes": 28,
         "packed_sha256": "3b13f0fb710c87c7a8648c4714b2eb23d9fcac493fc58327162455dbdf7abc04"
       },
@@ -2600,7 +2600,7 @@
         "height": 4,
         "atlas_x": 82,
         "atlas_y": 573,
-        "data_offset": 28486,
+        "data_offset": 27423,
         "bytes": 28,
         "packed_sha256": "5df141e02edfc0e3630edf8e6400c1ea1fa9215c3f3a3ecc9a3932db4acec0d3"
       },
@@ -2613,7 +2613,7 @@
         "height": 5,
         "atlas_x": 224,
         "atlas_y": 564,
-        "data_offset": 28514,
+        "data_offset": 27451,
         "bytes": 35,
         "packed_sha256": "b0e6e8fc316aaaac69c69d5391decfe6c8c52486b6d82761ecc99fe14dfa2bbf"
       },
@@ -2626,7 +2626,7 @@
         "height": 5,
         "atlas_x": 32,
         "atlas_y": 599,
-        "data_offset": 28549,
+        "data_offset": 27486,
         "bytes": 35,
         "packed_sha256": "e014f60182fdaba551f9d4cf70da4c98020520018523286eb6eb725975f56d72"
       },
@@ -2639,7 +2639,7 @@
         "height": 1,
         "atlas_x": 82,
         "atlas_y": 537,
-        "data_offset": 28584,
+        "data_offset": 27521,
         "bytes": 2,
         "packed_sha256": "82e0e8c0da71d9b9ef5ae84ff4d8f35eee5f01a107cf77e04223124becffa218"
       },
@@ -2652,7 +2652,7 @@
         "height": 2,
         "atlas_x": 16,
         "atlas_y": 571,
-        "data_offset": 28586,
+        "data_offset": 27523,
         "bytes": 4,
         "packed_sha256": "522b3e89b4fbf9a80ed61bd366144055beb73c982d238439415f04d1f8636c36"
       },
@@ -2665,7 +2665,7 @@
         "height": 5,
         "atlas_x": 46,
         "atlas_y": 599,
-        "data_offset": 28590,
+        "data_offset": 27527,
         "bytes": 35,
         "packed_sha256": "ff03511e2f1d6b7a0f72fd1ffb46f45d5bb653e00987bc7ceaec6a720c9ff3f4"
       },
@@ -2678,7 +2678,7 @@
         "height": 5,
         "atlas_x": 60,
         "atlas_y": 599,
-        "data_offset": 28625,
+        "data_offset": 27562,
         "bytes": 35,
         "packed_sha256": "3d29057cd3d6f2e945104d16b357428a6f7453b1fc0fdc3f258d3352fee60932"
       },
@@ -2691,7 +2691,7 @@
         "height": 5,
         "atlas_x": 238,
         "atlas_y": 564,
-        "data_offset": 28660,
+        "data_offset": 27597,
         "bytes": 20,
         "packed_sha256": "af3af9592c8c9ee935203127078ce1a8d726d3e77d22dc1b4cee044e293c8e2d"
       },
@@ -2704,7 +2704,7 @@
         "height": 6,
         "atlas_x": 192,
         "atlas_y": 785,
-        "data_offset": 28680,
+        "data_offset": 27617,
         "bytes": 24,
         "packed_sha256": "532375140df9b46cf5a2d0c4ccfd9b83aad2a0a3bec296ab53cb228097a9e9c0"
       },
@@ -2717,7 +2717,7 @@
         "height": 7,
         "atlas_x": 248,
         "atlas_y": 1011,
-        "data_offset": 28704,
+        "data_offset": 27641,
         "bytes": 21,
         "packed_sha256": "0e82af773b8ddc901c32129a2e275c9a33215bf8c59d7c5a1e770025c7388777"
       },
@@ -2730,7 +2730,7 @@
         "height": 7,
         "atlas_x": 252,
         "atlas_y": 547,
-        "data_offset": 28725,
+        "data_offset": 27662,
         "bytes": 7,
         "packed_sha256": "e46240714b5db3a23eee60479a623efba4d633d27fe4f03c904b9e219a7fbe60"
       },
@@ -2743,7 +2743,7 @@
         "height": 7,
         "atlas_x": 236,
         "atlas_y": 1013,
-        "data_offset": 28732,
+        "data_offset": 27669,
         "bytes": 21,
         "packed_sha256": "b51977adb8683ee7529f49312619d8af7610d0e3fba9b53f7e8db0337cbe83b5"
       },
@@ -2756,7 +2756,7 @@
         "height": 6,
         "atlas_x": 200,
         "atlas_y": 785,
-        "data_offset": 28753,
+        "data_offset": 27690,
         "bytes": 24,
         "packed_sha256": "d379ce3ac8e19e859149ade4d96d8b08e68f2a2d37a710d94024521d8fda056a"
       },
@@ -2769,7 +2769,7 @@
         "height": 5,
         "atlas_x": 84,
         "atlas_y": 599,
-        "data_offset": 28777,
+        "data_offset": 27714,
         "bytes": 20,
         "packed_sha256": "79ea6d2362d24e1f620784e9548916ecd147e09dfb7b2385e0a570ffefce928f"
       },
@@ -2782,7 +2782,7 @@
         "height": 12,
         "atlas_x": 160,
         "atlas_y": 960,
-        "data_offset": 28797,
+        "data_offset": 27734,
         "bytes": 132,
         "packed_sha256": "2c6eedb1ebe78e2237cf495ef68abfae8cf87f529a1acdf6066ffb4435beeff7"
       },
@@ -2795,7 +2795,7 @@
         "height": 8,
         "atlas_x": 22,
         "atlas_y": 756,
-        "data_offset": 28929,
+        "data_offset": 27866,
         "bytes": 72,
         "packed_sha256": "35b9c8247eb8575a62768460db658bc2415b08dde02d3dc52ddc263e3f443df0"
       },
@@ -2808,7 +2808,7 @@
         "height": 9,
         "atlas_x": 64,
         "atlas_y": 1005,
-        "data_offset": 29001,
+        "data_offset": 27938,
         "bytes": 81,
         "packed_sha256": "49b564252b61ce108b2c5b553a1fb47d0be87eef8f5e7bea89f9743f107d565f"
       },
@@ -2821,7 +2821,7 @@
         "height": 19,
         "atlas_x": 182,
         "atlas_y": 973,
-        "data_offset": 29082,
+        "data_offset": 28019,
         "bytes": 114,
         "packed_sha256": "ad8b4c5a76b6599a5b82b16b56111dc48d4aacfd89d763c2a691b284d23282cd"
       },
@@ -2834,7 +2834,7 @@
         "height": 22,
         "atlas_x": 138,
         "atlas_y": 1000,
-        "data_offset": 29196,
+        "data_offset": 28133,
         "bytes": 88,
         "packed_sha256": "1aeece2e3b1672841c24e40a4aad2e4947c58a30b11e7e403caa9742dd21048c"
       },
@@ -2847,7 +2847,7 @@
         "height": 19,
         "atlas_x": 160,
         "atlas_y": 984,
-        "data_offset": 29284,
+        "data_offset": 28221,
         "bytes": 114,
         "packed_sha256": "b28f926dde589884d90ca3f7ba6e3399daca434eed326c5d08344123989af080"
       },
@@ -2860,7 +2860,7 @@
         "height": 17,
         "atlas_x": 172,
         "atlas_y": 943,
-        "data_offset": 29398,
+        "data_offset": 28335,
         "bytes": 153,
         "packed_sha256": "02ef8fde4c3b888fa87fc9ca67fa4656236655d91eebfa759b6633967369dbf6"
       },
@@ -2873,7 +2873,7 @@
         "height": 12,
         "atlas_x": 160,
         "atlas_y": 972,
-        "data_offset": 29551,
+        "data_offset": 28488,
         "bytes": 132,
         "packed_sha256": "119d2a47da69a34d660eedaf8c16d1b3618bf69b106693205c0c38ac9fc2ad6a"
       },
@@ -2886,7 +2886,7 @@
         "height": 2,
         "atlas_x": 16,
         "atlas_y": 573,
-        "data_offset": 29683,
+        "data_offset": 28620,
         "bytes": 4,
         "packed_sha256": "70bc3066b7f6f7dcbd7599b457c24018280c8a64b19547600fefbd09117c52cc"
       },
@@ -2899,7 +2899,7 @@
         "height": 8,
         "atlas_x": 236,
         "atlas_y": 1005,
-        "data_offset": 29687,
+        "data_offset": 28624,
         "bytes": 24,
         "packed_sha256": "0bd337d548f06a593731fd55f36b225a5b9b4ec7526c9dd54bc6f9540dab6475"
       },
@@ -2912,7 +2912,7 @@
         "height": 9,
         "atlas_x": 250,
         "atlas_y": 606,
-        "data_offset": 29711,
+        "data_offset": 28648,
         "bytes": 27,
         "packed_sha256": "41c9e8b20e8dcd4cc26a0551270f8432eb6ead968f3a48af93347677eab411c3"
       },
@@ -2925,7 +2925,7 @@
         "height": 9,
         "atlas_x": 250,
         "atlas_y": 615,
-        "data_offset": 29738,
+        "data_offset": 28675,
         "bytes": 27,
         "packed_sha256": "f7ccc519165fd1f745752544d10458481915121ae156551a17e415b8c4f6abde"
       },
@@ -2938,7 +2938,7 @@
         "height": 9,
         "atlas_x": 250,
         "atlas_y": 768,
-        "data_offset": 29765,
+        "data_offset": 28702,
         "bytes": 27,
         "packed_sha256": "f1a59389f87d58939da148e67601f5f2abdc865df7d4754e5e5fbc14cb80ae45"
       },
@@ -2951,7 +2951,7 @@
         "height": 4,
         "atlas_x": 74,
         "atlas_y": 600,
-        "data_offset": 29792,
+        "data_offset": 28729,
         "bytes": 16,
         "packed_sha256": "547f00851e8266a9dcaba9a8de29a51330dd842e084c910492affee2e9d98521"
       },
@@ -2964,7 +2964,7 @@
         "height": 5,
         "atlas_x": 92,
         "atlas_y": 599,
-        "data_offset": 29808,
+        "data_offset": 28745,
         "bytes": 20,
         "packed_sha256": "bdf537d3882bc5c7b0b99401ad9edadc1b2886fc5b65ca7807c313e721e043fc"
       },
@@ -2977,7 +2977,7 @@
         "height": 4,
         "atlas_x": 96,
         "atlas_y": 573,
-        "data_offset": 29828,
+        "data_offset": 28765,
         "bytes": 20,
         "packed_sha256": "966ba75caace5223fa67e8e9f118d63dc7531f58b57dc351abab959925d42e9e"
       },
@@ -2990,7 +2990,7 @@
         "height": 4,
         "atlas_x": 106,
         "atlas_y": 573,
-        "data_offset": 29848,
+        "data_offset": 28785,
         "bytes": 20,
         "packed_sha256": "2d059b7529b27e3576c5fb44ee253ef2197b33ad8be75816fe39d951d8e5f113"
       },
@@ -3003,7 +3003,7 @@
         "height": 3,
         "atlas_x": 224,
         "atlas_y": 554,
-        "data_offset": 29868,
+        "data_offset": 28805,
         "bytes": 18,
         "packed_sha256": "0e178a1ec8bc8df8882a72dd3cdb1175844dbf6cd2a37174e969ba92ded091a0"
       },
@@ -3016,7 +3016,7 @@
         "height": 3,
         "atlas_x": 232,
         "atlas_y": 573,
-        "data_offset": 29886,
+        "data_offset": 28823,
         "bytes": 18,
         "packed_sha256": "60bc77f7f46ae8ecf1d8efdad1a15a7295a4149c047fd495ccceaf2f8a60ccef"
       },
@@ -3029,7 +3029,7 @@
         "height": 6,
         "atlas_x": 172,
         "atlas_y": 785,
-        "data_offset": 29904,
+        "data_offset": 28841,
         "bytes": 30,
         "packed_sha256": "fbdb90fbb3a3aa8960b68f8c353c9ae2c64d1c3d60c83afc4383d685e0ad0bd7"
       },
@@ -3042,7 +3042,7 @@
         "height": 3,
         "atlas_x": 244,
         "atlas_y": 573,
-        "data_offset": 29934,
+        "data_offset": 28871,
         "bytes": 18,
         "packed_sha256": "b92ff599b31b13a5dcb65caeb74cc5c83cc45a368bfeb7d0e1b5aba6a580a0a4"
       },
@@ -3055,7 +3055,7 @@
         "height": 8,
         "atlas_x": 242,
         "atlas_y": 1011,
-        "data_offset": 29952,
+        "data_offset": 28889,
         "bytes": 24,
         "packed_sha256": "012a932b4f8318c8e90005f37b995da62a468488a1b021991b3a6dde9a4c3d35"
       },
@@ -3068,7 +3068,7 @@
         "height": 9,
         "atlas_x": 250,
         "atlas_y": 777,
-        "data_offset": 29976,
+        "data_offset": 28913,
         "bytes": 27,
         "packed_sha256": "903dfb423e0775385c9d65003786e246db101b2985ec02845d5a186ad27bbd6b"
       },
@@ -3081,7 +3081,7 @@
         "height": 9,
         "atlas_x": 118,
         "atlas_y": 797,
-        "data_offset": 30003,
+        "data_offset": 28940,
         "bytes": 27,
         "packed_sha256": "0b99cc725b4bf3985991e0ae22045726f9271e68f5f04b66ae25d6f707828b1a"
       },
@@ -3094,7 +3094,7 @@
         "height": 9,
         "atlas_x": 250,
         "atlas_y": 805,
-        "data_offset": 30030,
+        "data_offset": 28967,
         "bytes": 27,
         "packed_sha256": "f9c015145936fdb3a5b8b77395da94f4a0170e08391b858c829fc1b93d81191a"
       },
@@ -3107,7 +3107,7 @@
         "height": 4,
         "atlas_x": 72,
         "atlas_y": 627,
-        "data_offset": 30057,
+        "data_offset": 28994,
         "bytes": 16,
         "packed_sha256": "6981024f4ff61f1878b3604071bf8320cb79ca357d7c8aac2b2e59eb09741f81"
       },
@@ -3120,7 +3120,7 @@
         "height": 5,
         "atlas_x": 100,
         "atlas_y": 599,
-        "data_offset": 30073,
+        "data_offset": 29010,
         "bytes": 20,
         "packed_sha256": "45b73f262ebd0c48bdb323c4a8b3176297c1a124aad09d15204d769c9712c9f7"
       },
@@ -3133,7 +3133,7 @@
         "height": 4,
         "atlas_x": 152,
         "atlas_y": 573,
-        "data_offset": 30093,
+        "data_offset": 29030,
         "bytes": 20,
         "packed_sha256": "f54e43d0923d1d6ae5051d3fbc8c6995c0a380348d8bf079e83332b43020c3a5"
       },
@@ -3146,7 +3146,7 @@
         "height": 4,
         "atlas_x": 162,
         "atlas_y": 573,
-        "data_offset": 30113,
+        "data_offset": 29050,
         "bytes": 20,
         "packed_sha256": "086c543a7df95543493a0b68268c7b59031f80c59105da911e7ecbb0f4379fdc"
       },
@@ -3159,7 +3159,7 @@
         "height": 6,
         "atlas_x": 244,
         "atlas_y": 654,
-        "data_offset": 30133,
+        "data_offset": 29070,
         "bytes": 36,
         "packed_sha256": "129c82d75366f946bdf9ac41712de3d1bf634e5362a5da9caabaf77f34429a19"
       },
@@ -3172,7 +3172,7 @@
         "height": 6,
         "atlas_x": 182,
         "atlas_y": 785,
-        "data_offset": 30169,
+        "data_offset": 29106,
         "bytes": 30,
         "packed_sha256": "9fc74c88f1e85290fd7c248ff2e3df9f9fbaff26c4bdfabd2c91fe939bdfdad3"
       },
@@ -3185,7 +3185,7 @@
         "height": 3,
         "atlas_x": 108,
         "atlas_y": 599,
-        "data_offset": 30199,
+        "data_offset": 29136,
         "bytes": 18,
         "packed_sha256": "4c65f3c573a4215cec2398b8db84afa22e1eb24637aacc9514c4442235d5db53"
       },
@@ -3198,7 +3198,7 @@
         "height": 2,
         "atlas_x": 254,
         "atlas_y": 547,
-        "data_offset": 30217,
+        "data_offset": 29154,
         "bytes": 2,
         "packed_sha256": "6589bd089cc4501c574e47440519ab743146a8a89a29feaa55c9fbabe4ead7c4"
       },
@@ -3211,7 +3211,7 @@
         "height": 2,
         "atlas_x": 254,
         "atlas_y": 549,
-        "data_offset": 30219,
+        "data_offset": 29156,
         "bytes": 2,
         "packed_sha256": "b6e427cf9997eece08fe840e0d14a3dcdb2ea90f0abfb43b70e9fdc4db35ef30"
       },
@@ -3224,7 +3224,7 @@
         "height": 4,
         "atlas_x": 172,
         "atlas_y": 573,
-        "data_offset": 30221,
+        "data_offset": 29158,
         "bytes": 20,
         "packed_sha256": "e7da91cc73d692a10dfad11c0be7f5e506f55c637c82803341458384454b7951"
       },
@@ -3237,7 +3237,7 @@
         "height": 4,
         "atlas_x": 182,
         "atlas_y": 573,
-        "data_offset": 30241,
+        "data_offset": 29178,
         "bytes": 20,
         "packed_sha256": "3844e532bde0a6582ac98adaaa22b2740c14bc47c37e3baff0ffd6e8798ee8cb"
       },
@@ -3250,7 +3250,7 @@
         "height": 4,
         "atlas_x": 192,
         "atlas_y": 573,
-        "data_offset": 30261,
+        "data_offset": 29198,
         "bytes": 20,
         "packed_sha256": "0805951875b3680df99283a13e5f5947f33f8003c4a4e6aa27704cda1ed9e317"
       },
@@ -3263,7 +3263,7 @@
         "height": 4,
         "atlas_x": 202,
         "atlas_y": 573,
-        "data_offset": 30281,
+        "data_offset": 29218,
         "bytes": 20,
         "packed_sha256": "15df7804d6fd4db44df3689ccd674655b2c7de05a54f6c90121b776581bff244"
       },
@@ -3276,7 +3276,7 @@
         "height": 4,
         "atlas_x": 212,
         "atlas_y": 573,
-        "data_offset": 30301,
+        "data_offset": 29238,
         "bytes": 20,
         "packed_sha256": "97548e899a276843392199e5e71dc1e171de40f9427893f845480ca809482ef8"
       },
@@ -3289,7 +3289,7 @@
         "height": 4,
         "atlas_x": 222,
         "atlas_y": 573,
-        "data_offset": 30321,
+        "data_offset": 29258,
         "bytes": 20,
         "packed_sha256": "be4549a216ed45c82599e9dfa786266fce8617ce7f4a33159b03ed427231f54c"
       },
@@ -3302,7 +3302,7 @@
         "height": 11,
         "atlas_x": 82,
         "atlas_y": 1005,
-        "data_offset": 30341,
+        "data_offset": 29278,
         "bytes": 77,
         "packed_sha256": "b54a4f46dc9cb67c5fe45f5d50fced4649da089dd7d2f70a6727efe9dfb85496"
       },
@@ -3315,7 +3315,7 @@
         "height": 9,
         "atlas_x": 0,
         "atlas_y": 1012,
-        "data_offset": 30418,
+        "data_offset": 29355,
         "bytes": 72,
         "packed_sha256": "f0ab6333dff218ee867162884bdeff58bde3e7eaeb4dd660c9b615075761f495"
       },
@@ -3328,7 +3328,7 @@
         "height": 7,
         "atlas_x": 110,
         "atlas_y": 756,
-        "data_offset": 30490,
+        "data_offset": 29427,
         "bytes": 56,
         "packed_sha256": "1077833e132fed61a6c498428939e12c0efe29a029d878fe439ff5f18f5afd13"
       },
@@ -3341,7 +3341,7 @@
         "height": 4,
         "atlas_x": 162,
         "atlas_y": 756,
-        "data_offset": 30546,
+        "data_offset": 29483,
         "bytes": 36,
         "packed_sha256": "fc764c72f0de601f25a06a0efe6ef1d0dae1961539915588ce538d350795dc7e"
       },
@@ -3354,7 +3354,7 @@
         "height": 3,
         "atlas_x": 176,
         "atlas_y": 760,
-        "data_offset": 30582,
+        "data_offset": 29519,
         "bytes": 27,
         "packed_sha256": "a65acc27c55793260471ea56001487a78bb60960215d93fe2701589a61e2f425"
       },
@@ -3367,7 +3367,7 @@
         "height": 5,
         "atlas_x": 126,
         "atlas_y": 756,
-        "data_offset": 30609,
+        "data_offset": 29546,
         "bytes": 45,
         "packed_sha256": "4d959e3e3df02d9cc21f8b387f0221995d98e3803ea7f53a56bf17df983d9d23"
       },
@@ -3380,7 +3380,7 @@
         "height": 7,
         "atlas_x": 56,
         "atlas_y": 756,
-        "data_offset": 30654,
+        "data_offset": 29591,
         "bytes": 63,
         "packed_sha256": "30c6939abb365ac036d03de6b72cf727196df04002f05ab80fbb0ba54ea92740"
       },
@@ -3393,7 +3393,7 @@
         "height": 9,
         "atlas_x": 16,
         "atlas_y": 1012,
-        "data_offset": 30717,
+        "data_offset": 29654,
         "bytes": 72,
         "packed_sha256": "d09b04e033d8d859c97fd700dfd9894d2594958b1e894b6d746cd0afc6d46245"
       },
@@ -3406,7 +3406,7 @@
         "height": 12,
         "atlas_x": 146,
         "atlas_y": 1000,
-        "data_offset": 30789,
+        "data_offset": 29726,
         "bytes": 84,
         "packed_sha256": "45ed9497e59fd66324dd7fcdf359cb2189e5c3a4f95ee9103370caf5c2e443a1"
       },
@@ -3419,7 +3419,7 @@
         "height": 13,
         "atlas_x": 96,
         "atlas_y": 1000,
-        "data_offset": 30873,
+        "data_offset": 29810,
         "bytes": 91,
         "packed_sha256": "d88bd3b10faf7c94458db3d2dc53f50923eaac51233499cea298e46c706209d1"
       },
@@ -3432,7 +3432,7 @@
         "height": 11,
         "atlas_x": 172,
         "atlas_y": 1002,
-        "data_offset": 30964,
+        "data_offset": 29901,
         "bytes": 88,
         "packed_sha256": "19df78dcf5c55d3d2f72951047b6e877e3985a68419c6c255ec437e1d7ebd9e8"
       },
@@ -3445,7 +3445,7 @@
         "height": 9,
         "atlas_x": 32,
         "atlas_y": 1012,
-        "data_offset": 31052,
+        "data_offset": 29989,
         "bytes": 72,
         "packed_sha256": "be5c33d67871dd2bf285f9c7aa3723b9ee48c45d1fa1d0904658604d49d851a2"
       },
@@ -3458,7 +3458,7 @@
         "height": 7,
         "atlas_x": 74,
         "atlas_y": 756,
-        "data_offset": 31124,
+        "data_offset": 30061,
         "bytes": 63,
         "packed_sha256": "4072a81eb4846406266d01d09f6c2933399efcfc25077195a5cad28bc921e5fe"
       },
@@ -3471,7 +3471,7 @@
         "height": 4,
         "atlas_x": 180,
         "atlas_y": 756,
-        "data_offset": 31187,
+        "data_offset": 30124,
         "bytes": 36,
         "packed_sha256": "a0f969dd9bf75e65b9ec5b213fb43f3dbb4ed09e6641d7c76c4841750d720ea9"
       },
@@ -3484,7 +3484,7 @@
         "height": 3,
         "atlas_x": 126,
         "atlas_y": 761,
-        "data_offset": 31223,
+        "data_offset": 30160,
         "bytes": 27,
         "packed_sha256": "37be5bde7db51e4cfa2bd27328b82f9bce1603afbbe1fced46b1230122d113ad"
       },
@@ -3497,7 +3497,7 @@
         "height": 5,
         "atlas_x": 144,
         "atlas_y": 756,
-        "data_offset": 31250,
+        "data_offset": 30187,
         "bytes": 45,
         "packed_sha256": "89da958c1051fc205c38c6b545fe941e97a727a7f0fde9e3124e09d5a388c330"
       },
@@ -3510,7 +3510,7 @@
         "height": 7,
         "atlas_x": 92,
         "atlas_y": 756,
-        "data_offset": 31295,
+        "data_offset": 30232,
         "bytes": 63,
         "packed_sha256": "ea565962fe327d9d704c30aa019ae0612cdc34addbd54ee2d3355b87d5234e99"
       },
@@ -3523,7 +3523,7 @@
         "height": 9,
         "atlas_x": 48,
         "atlas_y": 1012,
-        "data_offset": 31358,
+        "data_offset": 30295,
         "bytes": 72,
         "packed_sha256": "feff7659fc3655bb894baac97ae84a138b1b214d0c7182df2224c83b35a69ac3"
       },
@@ -3536,7 +3536,7 @@
         "height": 13,
         "atlas_x": 110,
         "atlas_y": 1000,
-        "data_offset": 31430,
+        "data_offset": 30367,
         "bytes": 91,
         "packed_sha256": "587e5f0ee9241e84891d93cffa5a87da9c99a2f94dd6f3b35be86a807c736029"
       },
@@ -3549,7 +3549,7 @@
         "height": 13,
         "atlas_x": 124,
         "atlas_y": 1000,
-        "data_offset": 31521,
+        "data_offset": 30458,
         "bytes": 91,
         "packed_sha256": "8c40b7b6a325f453566833848c3250d859c8104dc8e810eebe07ec91c8b6d2b2"
       },
@@ -3562,7 +3562,7 @@
         "height": 6,
         "atlas_x": 244,
         "atlas_y": 756,
-        "data_offset": 31612,
+        "data_offset": 30549,
         "bytes": 24,
         "packed_sha256": "6d1913b12a596e51e14626881e1ead1172e252b2b63226174332cd085dc7503a"
       },
@@ -3575,7 +3575,7 @@
         "height": 5,
         "atlas_x": 0,
         "atlas_y": 824,
-        "data_offset": 31636,
+        "data_offset": 30573,
         "bytes": 20,
         "packed_sha256": "e374a8795a991ed0d1027685229f9fe9653100663a8fff3984a3b1ce312b0db1"
       },
@@ -3588,7 +3588,7 @@
         "height": 5,
         "atlas_x": 8,
         "atlas_y": 824,
-        "data_offset": 31656,
+        "data_offset": 30593,
         "bytes": 20,
         "packed_sha256": "5647a8ee0147fbd948f999f61c759a057191791c458266ac487fc196e6d050c8"
       },
@@ -3601,7 +3601,7 @@
         "height": 3,
         "atlas_x": 144,
         "atlas_y": 761,
-        "data_offset": 31676,
+        "data_offset": 30613,
         "bytes": 12,
         "packed_sha256": "4a88c1bfa3ad197a7c2a13ce06c31b87bb85327d513e1f510d713ebdb7583bff"
       },
@@ -3614,7 +3614,7 @@
         "height": 3,
         "atlas_x": 152,
         "atlas_y": 761,
-        "data_offset": 31688,
+        "data_offset": 30625,
         "bytes": 12,
         "packed_sha256": "44e46ea6f07e0d9c07f6e9325b03b43e48fe003a9ba3c142a5f072096f3b7b76"
       },
@@ -3627,7 +3627,7 @@
         "height": 3,
         "atlas_x": 40,
         "atlas_y": 794,
-        "data_offset": 31700,
+        "data_offset": 30637,
         "bytes": 12,
         "packed_sha256": "f5a896b764d0f3d9765d504b4e974e502ee70ebb171ab36de51c275778d6ea1d"
       },
@@ -3640,7 +3640,7 @@
         "height": 4,
         "atlas_x": 110,
         "atlas_y": 805,
-        "data_offset": 31712,
+        "data_offset": 30649,
         "bytes": 16,
         "packed_sha256": "873a766a567bd9939d46d26c8a8c9f03c286c5e19baff21c7c86afcfbd38947c"
       },
@@ -3653,7 +3653,7 @@
         "height": 5,
         "atlas_x": 16,
         "atlas_y": 824,
-        "data_offset": 31728,
+        "data_offset": 30665,
         "bytes": 20,
         "packed_sha256": "b0791c07fa0476198c6e79d3c7236381444755f26d8e5312d702af81beafed13"
       },
@@ -3666,7 +3666,7 @@
         "height": 7,
         "atlas_x": 228,
         "atlas_y": 756,
-        "data_offset": 31748,
+        "data_offset": 30685,
         "bytes": 28,
         "packed_sha256": "70806cccd300542ca906153d56fd6cad7367670dfbd37324dd299c43dbdc961c"
       },
@@ -3679,7 +3679,7 @@
         "height": 6,
         "atlas_x": 158,
         "atlas_y": 809,
-        "data_offset": 31776,
+        "data_offset": 30713,
         "bytes": 24,
         "packed_sha256": "5977cfae827b3867bfe7d8bdf5ddd6195954281549b785aa8e8493b2dc2f851d"
       },
@@ -3692,7 +3692,7 @@
         "height": 6,
         "atlas_x": 144,
         "atlas_y": 833,
-        "data_offset": 31800,
+        "data_offset": 30737,
         "bytes": 24,
         "packed_sha256": "7c924d088a3e915fd08899bf11ae934993ab435be2495a8401fa2148b0cfecd9"
       },
@@ -3705,7 +3705,7 @@
         "height": 5,
         "atlas_x": 24,
         "atlas_y": 824,
-        "data_offset": 31824,
+        "data_offset": 30761,
         "bytes": 20,
         "packed_sha256": "53df76ec72cf56c64fdec74a659910bb83dd2afdc52506b4c3d34baf6cf86daf"
       },
@@ -3718,7 +3718,7 @@
         "height": 5,
         "atlas_x": 32,
         "atlas_y": 824,
-        "data_offset": 31844,
+        "data_offset": 30781,
         "bytes": 20,
         "packed_sha256": "755c7cbe681e2e99bf17151d1f5a5133cc5c23445cead06be0f3cc4a57103a06"
       },
@@ -3731,7 +3731,7 @@
         "height": 3,
         "atlas_x": 48,
         "atlas_y": 794,
-        "data_offset": 31864,
+        "data_offset": 30801,
         "bytes": 12,
         "packed_sha256": "19f6ffc5b3a37ccaf8d5b67aa5816b2868282e1917739db721ea251d77eae18a"
       },
@@ -3744,7 +3744,7 @@
         "height": 3,
         "atlas_x": 56,
         "atlas_y": 794,
-        "data_offset": 31876,
+        "data_offset": 30813,
         "bytes": 12,
         "packed_sha256": "90a692129c1fd192c044aa417d43b2621b658ef8ba7ff90b638f45a10ab05344"
       },
@@ -3757,7 +3757,7 @@
         "height": 3,
         "atlas_x": 64,
         "atlas_y": 794,
-        "data_offset": 31888,
+        "data_offset": 30825,
         "bytes": 12,
         "packed_sha256": "077b5fa5e46be150c4b2b7df25f036069a45fb0ce0178e08b9488a7acae05eca"
       },
@@ -3770,7 +3770,7 @@
         "height": 4,
         "atlas_x": 48,
         "atlas_y": 829,
-        "data_offset": 31900,
+        "data_offset": 30837,
         "bytes": 16,
         "packed_sha256": "af05ae0d8ab251267f04984e44c083ace15df5ac4256900c3da808bb0c39feac"
       },
@@ -3783,7 +3783,7 @@
         "height": 5,
         "atlas_x": 190,
         "atlas_y": 943,
-        "data_offset": 31916,
+        "data_offset": 30853,
         "bytes": 20,
         "packed_sha256": "58968b30ebc7af4a7e60f6b5ed270c9f468680ce9a4655ff03d99efd7b394700"
       },
@@ -3796,7 +3796,7 @@
         "height": 7,
         "atlas_x": 236,
         "atlas_y": 756,
-        "data_offset": 31936,
+        "data_offset": 30873,
         "bytes": 28,
         "packed_sha256": "b07f03b827fbd3decdacb38b726b623bcb5453421f193f4ba92aaa72ffce3afa"
       },
@@ -3809,7 +3809,7 @@
         "height": 6,
         "atlas_x": 136,
         "atlas_y": 929,
-        "data_offset": 31964,
+        "data_offset": 30901,
         "bytes": 24,
         "packed_sha256": "5154926c3e36f42d3be7ef25da5c974faf0e376470a18d348a69e152d2f56e9b"
       },
@@ -3822,7 +3822,7 @@
         "height": 1,
         "atlas_x": 144,
         "atlas_y": 535,
-        "data_offset": 31988,
+        "data_offset": 30925,
         "bytes": 1,
         "packed_sha256": "281c93990bac2c69cf372c9a3b66c406c86cca826d6407b68e644da22eef8186"
       },
@@ -3835,7 +3835,7 @@
         "height": 7,
         "atlas_x": 198,
         "atlas_y": 756,
-        "data_offset": 31989,
+        "data_offset": 30926,
         "bytes": 35,
         "packed_sha256": "aea4fe0928e96e56bc8667ca69b8f80d0f087c586a27f5ee4ee6ea3d6aa7358b"
       },
@@ -3848,7 +3848,7 @@
         "height": 8,
         "atlas_x": 40,
         "atlas_y": 756,
-        "data_offset": 32024,
+        "data_offset": 30961,
         "bytes": 64,
         "packed_sha256": "9802517ff0cbdb92e2eef04ac6b50ed3fa819ed03e4aea873fc199889889b46b"
       },
@@ -3861,7 +3861,7 @@
         "height": 13,
         "atlas_x": 182,
         "atlas_y": 960,
-        "data_offset": 32088,
+        "data_offset": 31025,
         "bytes": 117,
         "packed_sha256": "ce5bc1fe2248e7ee479fdc4667ea2cadaf1ea7c90e7c970573f719500d295007"
       },
@@ -3874,7 +3874,7 @@
         "height": 10,
         "atlas_x": 172,
         "atlas_y": 992,
-        "data_offset": 32205,
+        "data_offset": 31142,
         "bytes": 100,
         "packed_sha256": "2c75e7f65a2a89d1043ecf96ac11efdca4cf9d830d3a710a11cdd4b0eafa85ac"
       },
@@ -3887,7 +3887,7 @@
         "height": 8,
         "atlas_x": 0,
         "atlas_y": 756,
-        "data_offset": 32305,
+        "data_offset": 31242,
         "bytes": 88,
         "packed_sha256": "87926b226f64c3708be928a6896a918dba943784188f570ee8bf6852e68706c6"
       },
@@ -3900,7 +3900,7 @@
         "height": 3,
         "atlas_x": 208,
         "atlas_y": 756,
-        "data_offset": 32393,
+        "data_offset": 31330,
         "bytes": 30,
         "packed_sha256": "e9a2a5f56e296966b86f049d51eb5c1236163e0242d8673f1cef04190f68e47e"
       },
@@ -3913,7 +3913,7 @@
         "height": 5,
         "atlas_x": 120,
         "atlas_y": 599,
-        "data_offset": 32423,
+        "data_offset": 31360,
         "bytes": 15,
         "packed_sha256": "68e86f927fbb7911700d2c6205a0c4bbba4cb176ce4d65d246b96ea5dd61a30c"
       },
@@ -3926,7 +3926,7 @@
         "height": 4,
         "atlas_x": 116,
         "atlas_y": 573,
-        "data_offset": 32438,
+        "data_offset": 31375,
         "bytes": 8,
         "packed_sha256": "808e21be360ffa39ec18a86975f2e48d46ef32788f4cb43223fd959ea3c789aa"
       },
@@ -3939,7 +3939,7 @@
         "height": 3,
         "atlas_x": 252,
         "atlas_y": 581,
-        "data_offset": 32446,
+        "data_offset": 31383,
         "bytes": 6,
         "packed_sha256": "cea1183d2131c65d57c129ef9b32b23afb84b67dbdb11d7d6e910e058e855b2c"
       },
@@ -3952,7 +3952,7 @@
         "height": 1,
         "atlas_x": 86,
         "atlas_y": 537,
-        "data_offset": 32452,
+        "data_offset": 31389,
         "bytes": 2,
         "packed_sha256": "ba9757a37eb9a4f0c430832ee4005b451aba2a6d7025c630ebfab834b715679a"
       },
@@ -3965,7 +3965,7 @@
         "height": 2,
         "atlas_x": 16,
         "atlas_y": 575,
-        "data_offset": 32454,
+        "data_offset": 31391,
         "bytes": 22,
         "packed_sha256": "f35ed4665b5a5a79318097439248b54bc62dd96fe541e5ae8ef65ffddcade670"
       },
@@ -3978,7 +3978,7 @@
         "height": 2,
         "atlas_x": 38,
         "atlas_y": 575,
-        "data_offset": 32476,
+        "data_offset": 31413,
         "bytes": 22,
         "packed_sha256": "bf4954ad56ed0ea1c5483c1e69b8dc249ac1062c883e498d6d792160d270deee"
       },
@@ -3991,7 +3991,7 @@
         "height": 3,
         "atlas_x": 72,
         "atlas_y": 794,
-        "data_offset": 32498,
+        "data_offset": 31435,
         "bytes": 12,
         "packed_sha256": "86c0779e61490b8f8b2fa9462d5b563eff60ae7e0efb44780dbe501a495839f5"
       },
@@ -4004,7 +4004,7 @@
         "height": 4,
         "atlas_x": 208,
         "atlas_y": 759,
-        "data_offset": 32510,
+        "data_offset": 31447,
         "bytes": 28,
         "packed_sha256": "2f2016d7e36ee856cd65207e94303c6327515775902c0c5b39a7bca8a90d4eaa"
       },
@@ -4017,7 +4017,7 @@
         "height": 3,
         "atlas_x": 220,
         "atlas_y": 812,
-        "data_offset": 32538,
+        "data_offset": 31475,
         "bytes": 12,
         "packed_sha256": "9d33833d3ba4a77f2e52fccdb057caea87adbd3ae238389f7bc345a6d02ae000"
       },
@@ -4030,7 +4030,7 @@
         "height": 4,
         "atlas_x": 162,
         "atlas_y": 760,
-        "data_offset": 32550,
+        "data_offset": 31487,
         "bytes": 28,
         "packed_sha256": "240e235cd60f6cf9fa5f93208035bdc7bbe3aab410c7ce1761d3683eaeddedd3"
       },
@@ -4043,7 +4043,7 @@
         "height": 2,
         "atlas_x": 60,
         "atlas_y": 575,
-        "data_offset": 32578,
+        "data_offset": 31515,
         "bytes": 6,
         "packed_sha256": "642ad0f980c465e80e154ed4be7cf0b0fba767d8d0a2bbb89072e08d7f2e1b70"
       },
@@ -4056,7 +4056,7 @@
         "height": 3,
         "atlas_x": 118,
         "atlas_y": 806,
-        "data_offset": 32584,
+        "data_offset": 31521,
         "bytes": 9,
         "packed_sha256": "7d130677e529b8bc810f9e6367dbf2c0ddfaf14ed2a9f331dc1183081e8884ab"
       },
@@ -4069,7 +4069,7 @@
         "height": 5,
         "atlas_x": 250,
         "atlas_y": 624,
-        "data_offset": 32593,
+        "data_offset": 31530,
         "bytes": 15,
         "packed_sha256": "a298b5ff5e420c2496d1a7e22378e075e74fb8da76c884c46b829c3385ad8808"
       },
@@ -4082,7 +4082,7 @@
         "height": 5,
         "atlas_x": 222,
         "atlas_y": 759,
-        "data_offset": 32608,
+        "data_offset": 31545,
         "bytes": 15,
         "packed_sha256": "2f1f1d4d8b54fc3eaf105e70d86530f770ac059ac221cb421de3a729f35df411"
       },
@@ -4095,7 +4095,7 @@
         "height": 5,
         "atlas_x": 250,
         "atlas_y": 786,
-        "data_offset": 32623,
+        "data_offset": 31560,
         "bytes": 15,
         "packed_sha256": "fc75701772d9113a8d24ab50a34bd6534d6a36afa1b50306f5899103b9c9cdde"
       },
@@ -4108,7 +4108,7 @@
         "height": 5,
         "atlas_x": 166,
         "atlas_y": 809,
-        "data_offset": 32638,
+        "data_offset": 31575,
         "bytes": 15,
         "packed_sha256": "a2342de30d968e9a250aa7a17187a164d1b09bb6a5f253838f59aedc8b39cdca"
       },
@@ -4121,7 +4121,7 @@
         "height": 5,
         "atlas_x": 152,
         "atlas_y": 833,
-        "data_offset": 32653,
+        "data_offset": 31590,
         "bytes": 15,
         "packed_sha256": "fb4cd40473e519814c12a233d4f99296d88460ef16ba8e901928a2cd30ca5711"
       },
@@ -4134,7 +4134,7 @@
         "height": 5,
         "atlas_x": 160,
         "atlas_y": 947,
-        "data_offset": 32668,
+        "data_offset": 31605,
         "bytes": 15,
         "packed_sha256": "053433710ce11179132f4c827897ef60288517bddbebfb4d989744a0c924e76e"
       },
@@ -4147,7 +4147,7 @@
         "height": 2,
         "atlas_x": 32,
         "atlas_y": 590,
-        "data_offset": 32683,
+        "data_offset": 31620,
         "bytes": 6,
         "packed_sha256": "28f0fe0e5ee23e17173f1141b70ad5d150de1e2a3358a0e24a3c59c5279f68bd"
       },
@@ -4160,7 +4160,7 @@
         "height": 3,
         "atlas_x": 228,
         "atlas_y": 812,
-        "data_offset": 32689,
+        "data_offset": 31626,
         "bytes": 9,
         "packed_sha256": "cdcb1d30d1a3efe4de0edf035f3cd5f5b24f9395a689138759f2f77409504110"
       },
@@ -4173,7 +4173,7 @@
         "height": 5,
         "atlas_x": 166,
         "atlas_y": 947,
-        "data_offset": 32698,
+        "data_offset": 31635,
         "bytes": 15,
         "packed_sha256": "d024b29ff6a4228527154b08a9bca719f01a723879db68270a6e21e8884bad10"
       },
@@ -4186,7 +4186,7 @@
         "height": 5,
         "atlas_x": 190,
         "atlas_y": 948,
-        "data_offset": 32713,
+        "data_offset": 31650,
         "bytes": 15,
         "packed_sha256": "5ad1eabf98c45c72f6603b9c82440202967f40aff11b43b863fd048dfd7fe9c8"
       },
@@ -4199,7 +4199,7 @@
         "height": 5,
         "atlas_x": 160,
         "atlas_y": 952,
-        "data_offset": 32728,
+        "data_offset": 31665,
         "bytes": 15,
         "packed_sha256": "f271100f74420e00bfde931483e1f46179129c3ee5abde19cbabc2caf0c4d269"
       },
@@ -4212,7 +4212,7 @@
         "height": 5,
         "atlas_x": 252,
         "atlas_y": 576,
-        "data_offset": 32743,
+        "data_offset": 31680,
         "bytes": 10,
         "packed_sha256": "35400aff068eddc8b809f6c68f365b2906f14c57657c7e84d1a4c681dcf18d5b"
       },
@@ -4225,7 +4225,7 @@
         "height": 5,
         "atlas_x": 166,
         "atlas_y": 952,
-        "data_offset": 32753,
+        "data_offset": 31690,
         "bytes": 15,
         "packed_sha256": "4a8dcc690fe294343360184c7b0aedbe05da23e2180392762b859c17523ce8fc"
       },
@@ -4238,7 +4238,7 @@
         "height": 5,
         "atlas_x": 190,
         "atlas_y": 953,
-        "data_offset": 32768,
+        "data_offset": 31705,
         "bytes": 15,
         "packed_sha256": "9bfc28a77f2bd8963881b969a5fcfe7fb7bf31e4a6a3a6baacbdef80bada0892"
       }
@@ -4397,7 +4397,7 @@
         "height": 11,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 32783,
+        "data_offset": 31720,
         "bytes": 231,
         "packed_sha256": "b74af5ac7d77ac57567a522d42f33c5c5fa0aeaef8bbc1cd305ef128031f4160"
       },
@@ -4410,7 +4410,7 @@
         "height": 12,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 33014,
+        "data_offset": 31951,
         "bytes": 252,
         "packed_sha256": "594f7488eaf4ca0092c6c35617eec7ac6368f9216217a6c841be0cf919f5a605"
       },
@@ -4423,7 +4423,7 @@
         "height": 25,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 33266,
+        "data_offset": 32203,
         "bytes": 525,
         "packed_sha256": "605148ed83c5b66d748b6971a7c4beccbd0127563f84ad5c4b5a91e111b9848c"
       },
@@ -4436,7 +4436,7 @@
         "height": 25,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 33791,
+        "data_offset": 32728,
         "bytes": 450,
         "packed_sha256": "e6d03aa11c4da44f9210f371947a11491578c045e2240ca04c37bb2c3caeb5fb"
       },
@@ -4449,7 +4449,7 @@
         "height": 24,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 34241,
+        "data_offset": 33178,
         "bytes": 312,
         "packed_sha256": "261d1a9714fa85e9188798e0b052f6a43fd61e7bc66930cdb604d875f4b69d10"
       },
@@ -4462,7 +4462,7 @@
         "height": 23,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 34553,
+        "data_offset": 33490,
         "bytes": 276,
         "packed_sha256": "17dbbbc943c443db9ec90e52add47deaf329260df6f0c3edb18c119016bbdbea"
       },
@@ -4475,7 +4475,7 @@
         "height": 23,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 34829,
+        "data_offset": 33766,
         "bytes": 230,
         "packed_sha256": "39cb0ec6c795183dcb8a7d4cfe90eae9dfbe61236cf8c13a4b797a3ba69ed01b"
       },
@@ -4488,7 +4488,7 @@
         "height": 25,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 35059,
+        "data_offset": 33996,
         "bytes": 375,
         "packed_sha256": "4d11661d1aa2cf949622f4b80a43307f4b1990c57a9040d1337075e12e653dfb"
       },
@@ -4501,7 +4501,7 @@
         "height": 25,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 35434,
+        "data_offset": 34371,
         "bytes": 525,
         "packed_sha256": "ae3d2022810e33d7baa1661d88a362fb6ce96339b99e6059889375e8a00ded37"
       },
@@ -4514,7 +4514,7 @@
         "height": 13,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 35959,
+        "data_offset": 34896,
         "bytes": 273,
         "packed_sha256": "3f70779095fdc9b8ebefbee47cc6b1133ec0eddb5d439af10b5107d84e904533"
       },
@@ -4527,7 +4527,7 @@
         "height": 11,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 36232,
+        "data_offset": 35169,
         "bytes": 231,
         "packed_sha256": "58b9534f6969b3ac58f07b29266079779e05e2a96f0a0915e5adb3e5ff88422c"
       },
@@ -4540,7 +4540,7 @@
         "height": 26,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 36463,
+        "data_offset": 35400,
         "bytes": 442,
         "packed_sha256": "8dbd0b6be6791dd7d8df87aaf77476a7a085c473869c09c7ecafdfaa9ee7083c"
       },
@@ -4553,7 +4553,7 @@
         "height": 24,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 36905,
+        "data_offset": 35842,
         "bytes": 288,
         "packed_sha256": "7dc0736e31870c37debae3dc3320d2c68256f851469143d1366dfb039701948f"
       },
@@ -4566,7 +4566,7 @@
         "height": 24,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 37193,
+        "data_offset": 36130,
         "bytes": 312,
         "packed_sha256": "d2bb36b0253fd1aae06d9cfe179e9d65a9206b2da35d74b81d7a1eb63ddae3fd"
       },
@@ -4579,7 +4579,7 @@
         "height": 24,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 37505,
+        "data_offset": 36442,
         "bytes": 288,
         "packed_sha256": "d4c18763ae5bdfe6a8ab4440df605dddff06563d76043d182ecfe245360bc4b8"
       },
@@ -4592,7 +4592,7 @@
         "height": 25,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 37793,
+        "data_offset": 36730,
         "bytes": 350,
         "packed_sha256": "c43bd64a3e9fdeab3e158936cf068c57de84430cc12ca5e87dd5e1d31bd93d53"
       },
@@ -4605,7 +4605,7 @@
         "height": 13,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 38143,
+        "data_offset": 37080,
         "bytes": 273,
         "packed_sha256": "ead3870202cbdf42703162ff90e7e7687e1d7a53da381504d761fdf47397f572"
       },
@@ -4618,7 +4618,7 @@
         "height": 13,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 38416,
+        "data_offset": 37353,
         "bytes": 273,
         "packed_sha256": "637507cf2334a3867280db37055991853fa7b79afbdcc5178acd4c6655a5d2a2"
       },
@@ -4631,7 +4631,7 @@
         "height": 10,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 38689,
+        "data_offset": 37626,
         "bytes": 210,
         "packed_sha256": "f917d0053306c5813117aae3c60b0a3927784bef01c8e5926dae06fc652d76ba"
       },
@@ -4644,7 +4644,7 @@
         "height": 10,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 38899,
+        "data_offset": 37836,
         "bytes": 210,
         "packed_sha256": "11cf5001bd4afc963323f13cffbf3ac9504c9fb3f47f78fc285a6fbcf5b4d12b"
       },
@@ -4657,7 +4657,7 @@
         "height": 14,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 39109,
+        "data_offset": 38046,
         "bytes": 294,
         "packed_sha256": "863b24dd9d699e9cc04438fc719a94d99ab22d88b1b7c506e21a75367a699d00"
       },
@@ -4670,7 +4670,7 @@
         "height": 14,
         "atlas_x": 0,
         "atlas_y": 0,
-        "data_offset": 39403,
+        "data_offset": 38340,
         "bytes": 294,
         "packed_sha256": "561162737f74e13641cf76ddbc2bc825ceafe9709a05f19646eead88645deae5"
       }
@@ -5413,242 +5413,44 @@
     ],
     "crash": [
       {
-        "name": "exp0",
-        "source": "reference_assets/unpacked_shapes/world/013_exp0.bin",
-        "source_sha256": "8080c9c74a6e40ffe1186fd89feb145b4af41ff08cdd2042cb203117515a72b0",
+        "name": "hcr5",
+        "source": "reference_assets/unpacked_shapes/hellcat/090_hcr5.bin",
+        "source_sha256": "9e0dcdf6d37691819b1ca2a7bb7d749586268e05795a54ff4bf297175343a27f",
         "drawing_origin": [
-          9,
-          9
-        ],
-        "dx": 18,
-        "dy": 7,
-        "width": 14,
-        "height": 10,
-        "atlas_x": 82,
-        "atlas_y": 512,
-        "data_offset": 26554,
-        "bytes": 70,
-        "packed_sha256": "d891161b827105222228ef869c3706b75c0f8015a019133e5504a38cb01f010d"
-      },
-      {
-        "name": "exp1",
-        "source": "reference_assets/unpacked_shapes/world/014_exp1.bin",
-        "source_sha256": "12e8a4318e986f69fe2aa99f747ded8471f55c14a0f19ecb742c6e88c69cce00",
-        "drawing_origin": [
-          10,
-          12
-        ],
-        "dx": 17,
-        "dy": 4,
-        "width": 18,
-        "height": 13,
-        "atlas_x": 82,
-        "atlas_y": 512,
-        "data_offset": 26624,
-        "bytes": 117,
-        "packed_sha256": "1a15452d9e72cd4a596cc277499faa1ce4317ce8cca3abe7c1d2fb4c6d132591"
-      },
-      {
-        "name": "exp2",
-        "source": "reference_assets/unpacked_shapes/world/015_exp2.bin",
-        "source_sha256": "3a868dced60bd357fee87ea45027784126aff28ad407e418b33afba3f69602d9",
-        "drawing_origin": [
-          15,
-          16
-        ],
-        "dx": 14,
-        "dy": 0,
-        "width": 24,
-        "height": 17,
-        "atlas_x": 82,
-        "atlas_y": 512,
-        "data_offset": 26741,
-        "bytes": 204,
-        "packed_sha256": "9297a973fd3d6b34415a2597ac08af466adbb6b12bbf568ef87594ea81612475"
-      },
-      {
-        "name": "exp3",
-        "source": "reference_assets/unpacked_shapes/world/016_exp3.bin",
-        "source_sha256": "67d858c92b02d3069256fdc3c949157ff0592a7c00985b56880edb33422c202b",
-        "drawing_origin": [
-          11,
-          17
-        ],
-        "dx": 14,
-        "dy": -1,
-        "width": 24,
-        "height": 18,
-        "atlas_x": 82,
-        "atlas_y": 512,
-        "data_offset": 26945,
-        "bytes": 216,
-        "packed_sha256": "0a733a51c20cb8f0c741feac59bb7d06c4c6833046183797648908990f47c500"
-      },
-      {
-        "name": "exp4",
-        "source": "reference_assets/unpacked_shapes/world/017_exp4.bin",
-        "source_sha256": "7832e395ebe58a27271a3d0195873acd1a8a80b5f568aac971fee9966ef550ca",
-        "drawing_origin": [
-          14,
-          18
-        ],
-        "dx": 12,
-        "dy": -2,
-        "width": 26,
-        "height": 19,
-        "atlas_x": 82,
-        "atlas_y": 512,
-        "data_offset": 27161,
-        "bytes": 247,
-        "packed_sha256": "488854635d6272c3f3d617c24ab4ad0880649143b3341fab4a71bba711912f8d"
-      },
-      {
-        "name": "exp5",
-        "source": "reference_assets/unpacked_shapes/world/018_exp5.bin",
-        "source_sha256": "f8a47f87f710ff9c4a3a9b2ab607ee967012ed29c14688ac848b9c7fad5f404e",
-        "drawing_origin": [
-          13,
-          17
-        ],
-        "dx": 13,
-        "dy": -1,
-        "width": 24,
-        "height": 18,
-        "atlas_x": 82,
-        "atlas_y": 512,
-        "data_offset": 27408,
-        "bytes": 216,
-        "packed_sha256": "68c81fd77a758b49515960f7d378345d59636a18c720184ca42aa0c603036f77"
-      },
-      {
-        "name": "spl0",
-        "source": "reference_assets/unpacked_shapes/world/116_spl0.bin",
-        "source_sha256": "8b5039d4a4befcff7651257a4c4f86f61f5608edbd338690aad13466d916e822",
-        "drawing_origin": [
-          15,
-          2
-        ],
-        "dx": 23,
-        "dy": 14,
-        "width": 6,
-        "height": 7,
-        "atlas_x": 82,
-        "atlas_y": 512,
-        "data_offset": 27624,
-        "bytes": 21,
-        "packed_sha256": "8bd5b048bf0330f9b9944449889be9b6c1c921166d34a67a2ce18bf432553da7"
-      },
-      {
-        "name": "spl1",
-        "source": "reference_assets/unpacked_shapes/world/117_spl1.bin",
-        "source_sha256": "0befec0f33f50f26f28fb5fddd9e48567b6c6c43768e92e930342c9f5cdca30d",
-        "drawing_origin": [
-          15,
-          2
-        ],
-        "dx": 21,
-        "dy": 14,
-        "width": 10,
-        "height": 7,
-        "atlas_x": 82,
-        "atlas_y": 512,
-        "data_offset": 27645,
-        "bytes": 35,
-        "packed_sha256": "aea4fe0928e96e56bc8667ca69b8f80d0f087c586a27f5ee4ee6ea3d6aa7358b"
-      },
-      {
-        "name": "spl2",
-        "source": "reference_assets/unpacked_shapes/world/118_spl2.bin",
-        "source_sha256": "13e7338e9a13ef842380e43f4023a6999d85c09b5deab758f1c64becb392db04",
-        "drawing_origin": [
-          16,
-          3
-        ],
-        "dx": 17,
-        "dy": 13,
-        "width": 16,
-        "height": 8,
-        "atlas_x": 82,
-        "atlas_y": 512,
-        "data_offset": 27680,
-        "bytes": 64,
-        "packed_sha256": "9802517ff0cbdb92e2eef04ac6b50ed3fa819ed03e4aea873fc199889889b46b"
-      },
-      {
-        "name": "spl3",
-        "source": "reference_assets/unpacked_shapes/world/119_spl3.bin",
-        "source_sha256": "96492948b7ad0441e4e5ae103dfabece46e50a38401a3ebaddfd0a8a848547d5",
-        "drawing_origin": [
-          16,
+          25,
           8
         ],
-        "dx": 16,
+        "dx": 4,
         "dy": 8,
-        "width": 18,
-        "height": 13,
-        "atlas_x": 82,
+        "width": 42,
+        "height": 11,
+        "atlas_x": 166,
         "atlas_y": 512,
-        "data_offset": 27744,
-        "bytes": 117,
-        "packed_sha256": "ce5bc1fe2248e7ee479fdc4667ea2cadaf1ea7c90e7c970573f719500d295007"
+        "data_offset": 26554,
+        "bytes": 231,
+        "packed_sha256": "a3ec00ee91bc88de12bf75b5d081b10a6fb56161e36d76614f59b7d2fbc3077d"
       },
       {
-        "name": "spl4",
-        "source": "reference_assets/unpacked_shapes/world/120_spl4.bin",
-        "source_sha256": "882ffc599b42f3fd75b0a4601adbe7671b530f1acbc0ac5cdac11ba68f2e8088",
+        "name": "hcrf",
+        "source": "reference_assets/unpacked_shapes/hellcat/091_hcrf.bin",
+        "source_sha256": "e63386d212422116ebb604b3332d84c1f71736bfc5269a6df32c050ce1509aa8",
         "drawing_origin": [
-          16,
-          5
+          23,
+          8
         ],
-        "dx": 15,
-        "dy": 11,
-        "width": 20,
-        "height": 10,
-        "atlas_x": 82,
+        "dx": 5,
+        "dy": 8,
+        "width": 42,
+        "height": 11,
+        "atlas_x": 166,
         "atlas_y": 512,
-        "data_offset": 27861,
-        "bytes": 100,
-        "packed_sha256": "2c75e7f65a2a89d1043ecf96ac11efdca4cf9d830d3a710a11cdd4b0eafa85ac"
-      },
-      {
-        "name": "spl5",
-        "source": "reference_assets/unpacked_shapes/world/121_spl5.bin",
-        "source_sha256": "2fd04a42abdc5e3c948388869082b5c67620b5086799d245a5c32af0869546c9",
-        "drawing_origin": [
-          16,
-          3
-        ],
-        "dx": 14,
-        "dy": 13,
-        "width": 22,
-        "height": 8,
-        "atlas_x": 82,
-        "atlas_y": 512,
-        "data_offset": 27961,
-        "bytes": 88,
-        "packed_sha256": "87926b226f64c3708be928a6896a918dba943784188f570ee8bf6852e68706c6"
-      },
-      {
-        "name": "spl6",
-        "source": "reference_assets/unpacked_shapes/world/122_spl6.bin",
-        "source_sha256": "43be8104a1884917011148cad9e67d06fb186a514a02184955ea2daea180ba72",
-        "drawing_origin": [
-          14,
-          -2
-        ],
-        "dx": 17,
-        "dy": 18,
-        "width": 20,
-        "height": 3,
-        "atlas_x": 82,
-        "atlas_y": 512,
-        "data_offset": 28049,
-        "bytes": 30,
-        "packed_sha256": "e9a2a5f56e296966b86f049d51eb5c1236163e0242d8673f1cef04190f68e47e"
+        "data_offset": 26785,
+        "bytes": 231,
+        "packed_sha256": "88e5896e63d90b9f5d6f16c8d89c1fe4a9e608b63936dbd8c382dc4ea6816628"
       }
     ],
-    "crash_host_shape": 2,
-    "crash_evidence": "world.shp exp0..exp5 / spl0..spl6; crash outcome by surface at 0xafba (docs/research/amiga-fuel-oil.md)",
+    "crash_host_shape": 4,
+    "crash_evidence": "hellcat.shp hcr5 / hcrf: the mode-8 wreck (0xc7c6, docs/research/amiga-player-crash.md)",
     "gun_flash_order": "variant (fa, fb) * 20 + (left ? 10 : 0) + pitch pose 0..9",
     "gun_flash_evidence": "executable player renderer draws hellcat shape pose-5+0x43/0x57 (+10 left) while firing; pattern [0,1,0,2]"
   }

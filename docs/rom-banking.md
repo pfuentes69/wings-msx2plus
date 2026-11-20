@@ -29,7 +29,7 @@ now banks code. It was 256 KiB; the terrain tile cache
 | 24 | Free (was the mission map; now in banks 40+) |
 | 25 | Banked code: `WINGS_SEGMENT_MISSION` (island soldiers, island cleared, the message ticker and its font) |
 | 26 | Banked code: `WINGS_SEGMENT_SOUND` (MSX-MUSIC detection, its driver and effect scripts, copied into RAM at boot; the engine's pitch table; the sound effects' game side and steps, `sound_update.c`) |
-| 27 | Banked code: `WINGS_SEGMENT_GAME` (the game state: phases, rank, missions and lives, `core/game.c`) |
+| 27 | Banked code: `WINGS_SEGMENT_GAME` (the game state: phases, rank, missions and lives, `core/game.c`; the player's crash, `core/crash.c`) |
 | 28 | Banked code: `WINGS_SEGMENT_SHIPS` (enemy ships, `core/ships.c`) |
 | 29 | Banked code: `WINGS_SEGMENT_ROCKETS` (rockets and their tables, `core/rockets.c`, `core/rocket_move.c`) |
 | 30 | Banked code: `WINGS_SEGMENT_PATCH` (terrain column remap and band repaint, `msx/terrain_patch.c`) |

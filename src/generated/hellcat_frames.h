@@ -30,15 +30,13 @@ extern const unsigned char g_TurnRightToLeft[AIRCRAFT_TURN_STEPS];
 #ifdef MISSION_TERRAIN
 extern const AircraftShape g_GunFlash[GUN_FLASH_COUNT];
 #endif
-/* Original crash art: explosion then sea splash frames, streamed into the
- * atlas rectangle of static shape CRASH_HOST_SHAPE during the crash hold. */
-#define CRASH_EXPLOSION_FIRST 0
-#define CRASH_EXPLOSION_COUNT 6
-#define CRASH_SPLASH_FIRST 6
-#define CRASH_SPLASH_COUNT 7
-#define CRASH_HOST_SHAPE 2
+/* The player's wreck (hcr5 right, hcrf left), streamed into the atlas
+ * rectangle of static shape CRASH_HOST_SHAPE while it is shown. */
+#define CRASH_WRECK_RIGHT 0
+#define CRASH_WRECK_LEFT 1
+#define CRASH_HOST_SHAPE 4
 #ifdef MISSION_TERRAIN
-extern const AircraftShape g_CrashShapes[13];
+extern const AircraftShape g_CrashShapes[2];
 #endif
 /* Original landing-gear overlays (wh01..wh14) as small static atlas pieces:
  * sprite = (left ? 10 : 0) + pitch pose 0..9; its pieces are

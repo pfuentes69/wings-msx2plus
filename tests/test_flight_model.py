@@ -15,6 +15,13 @@ TICK = 12
 DECK_LEFT, DECK_RIGHT, DECK_Y, CARRIER_X = 6593, 7361, 1160, 7032
 
 
+# The flight model and the crash (src/core/crash.c) with the world it calls
+# (tests/stubs/crash_world.c records the ship, island and smoke calls).
+CRASH_SOURCES = ('core/flight.c', 'core/flight_model.c', 'core/world.c', 'core/aircraft.c',
+                 'generated/hellcat_frames.c', 'core/crash.c', 'core/landing.c', 'core/mission.c',
+                 'generated/map_a/mission_surfaces.c', '../tests/stubs/crash_world.c')
+
+
 class Flight(C.Structure):
     _fields_ = [('x', C.c_uint16), ('y', C.c_uint32), ('vx', C.c_int16), ('vy', C.c_int16),
                 ('frame', C.c_uint8), ('facing_left', C.c_uint8), ('mode', C.c_uint8),
@@ -38,11 +45,11 @@ class FlightModelTests(unittest.TestCase):
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()
         lib = Path(cls.temp.name) / 'flight.so'
-        subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
+        subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-I' + str(ROOT / 'src/generated/map_a'),
+                        '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
                         '-DWINGS_P1_FLIGHT', '-DMISSION_TERRAIN', '-DWINGS_FLIGHT_MAX_Y=1200u',
                         '-DWINGS_WORLD_WIDTH=7608u', '-DWINGS_WORLD_START=7032u',
-                        *[str(ROOT / 'src' / p) for p in ('core/flight.c', 'core/flight_model.c', 'core/world.c',
-                          'core/aircraft.c', 'generated/hellcat_frames.c')], '-o', str(lib)],
+                        *[str(ROOT / 'src' / p) for p in CRASH_SOURCES], '-o', str(lib)],
                        check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))
         cls.core.World_Reset.argtypes = [C.POINTER(World)]

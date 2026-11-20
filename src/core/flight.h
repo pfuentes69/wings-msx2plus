@@ -48,7 +48,9 @@
 #define FLIGHT_GROUND 0   /* on deck: taxi, takeoff roll [1] */
 #define FLIGHT_AIRBORNE 1 /* [0] */
 #define FLIGHT_ARREST 2   /* caught by a cable, braking to a stop [7] */
-#define FLIGHT_DEAD 3     /* engine failed: falling, no control [4] */
+#define FLIGHT_DEAD 3     /* engine failed or crashed: falling, sliding, no control [4] */
+#define FLIGHT_SINKING 4  /* at rest in the sea, going under [6] (core/crash.c) */
+#define FLIGHT_WRECK 5    /* at rest on land or a deck, burning [8] */
 #define FLIGHT_ON_DECK(f) ((f)->mode == FLIGHT_GROUND || (f)->mode == FLIGHT_ARREST)
 
 #define FLIGHT_UP 1

@@ -26,7 +26,7 @@ class SmokeTests(unittest.TestCase):
         subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
                         '-DWINGS_P1_FLIGHT', '-DMISSION_TERRAIN', '-DWINGS_FLIGHT_MAX_Y=1200u',
                         '-DWINGS_WORLD_WIDTH=7608u', '-DWINGS_WORLD_START=7032u',
-                        *[str(ROOT / 'src' / p) for p in ('core/smoke.c', 'core/flight.c', 'core/flight_model.c')],
+                        *[str(ROOT / 'src' / p) for p in ('core/smoke.c', 'core/flight.c', 'core/flight_model.c', '../tests/stubs/crash_stub.c')],
                         '-o', str(lib)], check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))
         cls.core.Smoke_Tick.argtypes = [C.POINTER(Flight), C.c_uint16, C.c_uint8, C.c_uint8]

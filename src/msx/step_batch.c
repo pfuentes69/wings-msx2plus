@@ -13,7 +13,6 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_FLIGHT)
 extern WorldState s_World;
 extern uint8_t s_EngineSteps, s_AnimTick, s_ContactBottom, s_ContactSurface;
 extern CombatState g_Combat;
-extern uint8_t s_CrashSteps;
 extern CarrierState g_Carrier;
 extern EngineState g_Engine;
 extern GameState g_Game;
@@ -64,7 +63,8 @@ void Step_Planes(uint8_t weapons) WINGS_BANKED
     player.x = (int16_t)(s_World.x >> 8);
     player.alt = (int16_t)(WINGS_FLIGHT_MAX_Y - (s_World.flight.y >> 8));
     player.facing = s_World.flight.facing_left ? -1 : 1;
-    player.mode = s_CrashSteps ? PLANES_PLAYER_CRASHED :
+    player.mode = s_World.flight.mode == FLIGHT_WRECK ? PLANES_PLAYER_CRASHED :
+                  s_World.flight.mode == FLIGHT_SINKING ? PLANES_PLAYER_SINKING :
                   s_World.flight.mode == FLIGHT_DEAD ? PLANES_PLAYER_ENGINE_OUT :
                   FLIGHT_ON_DECK(&s_World.flight) || g_Carrier.stage != CARRIER_DECK ? PLANES_PLAYER_DECK :
                   PLANES_PLAYER_FLYING;

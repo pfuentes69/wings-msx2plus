@@ -113,7 +113,7 @@ class IslandTests(unittest.TestCase):
                         *[str(ROOT / 'src' / p) for p in ('core/island.c', 'core/soldiers.c', 'core/smoke.c', 'core/engine.c', 'core/mission.c',
                                                           'generated/map_a/mission_surfaces.c', 'core/flight.c', 'core/ships.c',
                                                           'core/rockets.c', 'core/rocket_move.c',
-                                                          'core/flight_model.c')],
+                                                          'core/flight_model.c')], str(ROOT / 'tests/stubs/crash_stub.c'),
                         str(work / 'stub.c'), '-o', str(lib)], check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))
         cls.core.Island_Bombed.argtypes = [C.c_uint16]

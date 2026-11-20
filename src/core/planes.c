@@ -239,7 +239,7 @@ static void Motion(Plane* e, const PlanesPlayer* p)
     int16_t d, q;
     uint8_t k;
     if (!(e->state & 0x14) &&
-        (p->mode == PLANES_PLAYER_ENGINE_OUT || p->mode == PLANES_PLAYER_CRASHED || p->mode == 6))
+        (p->mode == PLANES_PLAYER_ENGINE_OUT || p->mode == PLANES_PLAYER_CRASHED || p->mode == PLANES_PLAYER_SINKING))
         e->tspeed = 1700;
     /* x += trunc(turn factor x trunc(speed / 100) x facing). */
     q = (e->speed / 100) * e->facing;

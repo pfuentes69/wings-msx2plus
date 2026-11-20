@@ -1,5 +1,7 @@
-set extra_symbols {g_Planes}
+set extra_symbols {g_Planes g_Crash}
 source [file join $env(WINGS_ROOT) tools smoke_lib.tcl]
+# The sinking plane's depth (g_Crash +7, src/core/crash.h): drawn lower.
+proc snapshot_extra {name} {dump $name.sink [debug read_block memory [expr {$::addr(g_Crash)+7}] 1]}
 # Enemy planes have their own verifier (docs/enemy-planes.md); the P0's
 # pixel model does not know them: keep the torpedo-plane timer (g_Planes
 # +152) at 0, so none comes.
@@ -549,15 +551,17 @@ proc engine_dry {} {
     after time 0.3 {require [expr {[engine_byte 3]==1}] "Dry tank did not fail the engine"; snap engine_failed engine_crash_wait}
 }
 proc engine_crash_wait {} {
-    set ::crash_deadline [expr {[machine_info time]+12}]
+    # The fall, the slide, then 12 s sinking (docs/crash.md).
+    set ::crash_deadline [expr {[machine_info time]+40}]
     debug write memory $::addr(g_LastContact) 0
     engine_wait_splash
 }
 proc engine_wait_splash {} {
     require [expr {[machine_info time]<$::crash_deadline}] "Dead plane never reached the sea"
     if {[value g_LastContact]!=3} {after time 0.01 engine_wait_splash;return}
+    # At rest in the sea (g_LastContact is set then): it sinks.
     after time 0.5 {
-        require [expr {[value g_DisplayCrash]>=6 && [value g_DisplayCrash]!=255}] "Sea crash must show the splash art: frame=[value g_DisplayCrash]"
+        require [expr {[world_byte 12]==4 && [value g_DisplayCrash]==255}] "The dead plane must sink in the sea: mode=[world_byte 12] crash=[value g_DisplayCrash]"
         snap engine_splash engine_wait_respawn
     }
 }
@@ -606,7 +610,7 @@ proc engine_last_plane {} {
     game_byte 7 1
     game_byte 15 0
     debug write memory $::addr(g_Engine) 1
-    set ::crash_deadline [expr {[machine_info time]+12}]
+    set ::crash_deadline [expr {[machine_info time]+40}]
     engine_wait_game_over
 }
 proc engine_wait_game_over {} {

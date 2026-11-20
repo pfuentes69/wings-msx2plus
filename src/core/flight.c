@@ -204,7 +204,7 @@ void Flight_StepWorldSample(FlightState* state, uint32_t* x, uint8_t input, uint
 uint8_t Flight_GearDown(const FlightState* state, uint16_t world)
 {
     if (FLIGHT_ON_DECK(state)) return 1;
-    if (state->mode == FLIGHT_DEAD) return 0;
+    if (state->mode >= FLIGHT_DEAD) return 0;
     return world > FLIGHT_CARRIER_X - FLIGHT_GEAR_RANGE && world < FLIGHT_CARRIER_X + FLIGHT_GEAR_RANGE;
 }
 #else

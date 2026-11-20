@@ -113,7 +113,7 @@ def vram_row(row, fine, heave):
     return (row - heave) % 256 if row < scroll - early else (row - scroll) % 256
 
 
-def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True, smoke=(), score=0, fine=None, band=0):
+def expected_pixels(scene, frame, world, y, camera, background, background_width, scale=1, wave=0, pilot=0, heave=0, ship_frame=0, projectiles=(), stock=30, weapon=0, lives=3, crew_phase=None, on_deck=False, elevator_depth=None, elevator_active=False, flash=0, gauges=(16, 22, 0), crash=255, wheel=255, gear=5, deck_level=False, rope=255, facing_left=True, smoke=(), score=0, fine=None, band=0, sink=None):
     # World x is a 16-bit ring read as signed; beyond the map the MSX draws a
     # column of open sea (map x 5000 near, far x 624 in the distant view).
     signed = lambda v: v - 65536 if v >= 32768 else v
@@ -241,6 +241,11 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
                     if pixel: pixels[dy][dx] = pixel
     for sy in range(shape['height'] if crash == 255 else 0):
         dy = (129 - shape['height'] + sy + heave + (elevator_depth or 0)) if on_deck and not deck_level else pivot + shape['dy'] + sy
+        if sink is not None:
+            # Sinking (src/core/crash.c): sink px lower, hidden from the
+            # wave strip's third row (VRAM 163 - heave).
+            dy += sink
+            if dy >= 163 + fine: continue
         if elevator_active and dy>=142+heave:continue
         if not overlay_top <= dy < 172: continue
         for sx in range(shape['width']):

@@ -14,6 +14,7 @@
 #include "core/planes.h"
 #include "core/rockets.h"
 #include "core/flight_model.h"
+#include "core/crash.h"
 #include "msx/elevator.h"
 CarrierState g_Carrier;
 volatile u8 g_DisplayElevator;
@@ -46,12 +47,10 @@ static u8 s_UiDirty;
 CombatState g_Combat;
 #ifdef WINGS_P1_FLIGHT
 EngineState g_Engine;
-u8 s_CrashSteps;          /* 1-second hold after a crash (msx/step_batch.c reads it) */
 u8 g_LastContact;                /* latest LANDING_* contact, for verification */
-static u8 s_CrashSplash;         /* crash art: 0 explosion (deck, island), 1 sea splash */
 u8 s_ContactBottom, s_ContactSurface; /* per-frame contact gate (Landing_Prepare; msx/step_batch.c) */
 #endif
-/* Crash art frame drawn instead of the plane (255 = none); the frame shown
+/* The wreck's frame drawn instead of the plane (255 = none); the frame shown
  * on the published page, and the frame loaded into the host atlas slot. */
 static u8 s_CrashFrame = 255, s_RenderCrash = 255, s_CrashLoaded = 255;
 volatile u8 g_DisplayCrash = 255;
@@ -670,6 +669,9 @@ static void DrawAircraft(u8 page, u8 frame, u16 world, u16 y, u16 camera)
     dy -= s_RenderHeave + (int8_t)s_RenderFine;
 #ifdef WINGS_P1_FLIGHT
     if (g_Carrier.stage != CARRIER_DECK) limit = CARRIER_WELL_BOTTOM;
+    /* Sinking (mode 6): drawn lower each 3 ticks; the opaque waves (from
+     * the strip's third row) cover it, as the original draws them after it. */
+    if (s_World.flight.mode == FLIGHT_SINKING) { dy += g_Crash.depth; limit = 163 - s_RenderHeave; }
 #endif
     left = dx; right = dx + shape->width;
     top = dy; bottom = dy + shape->height;
@@ -898,7 +900,7 @@ static void NewPlane(void)
     Carrier_Reset(&g_Carrier);
     Aircraft_SyncFlight(&s_Aircraft,&s_World.flight,s_World.x>>8);
     Engine_Reset(&g_Engine,&g_Game.sortie);
-    s_CrashSteps=s_EngineSteps=0;
+    s_EngineSteps=0;
     s_GearPos=5; s_Wheel=255;
     Smoke_Reset(); Smoke_ClearPages();
     Planes_NewPlane();
@@ -909,20 +911,6 @@ static void NewPlane(void)
 }
 
 #ifdef WINGS_P1_FLIGHT
-/* Contact crash: hold the scene for one second while the original crash art
- * plays at the plane - the sea splash over water, the explosion elsewhere
- * (the original picks its crash outcome by surface, 0xafba). */
-static void StartCrash(void)
-{
-    s_CrashSplash = Mission_Surface(s_World.x >> 8) == MISSION_SEA;
-    Sound_Effect(s_CrashSplash ? SOUND_SPLASH : SOUND_BOOM, s_World.x >> 8);
-    Island_Kill((int16_t)(s_World.x >> 8), 8);   /* 0xb338 */
-    s_CrashSteps = 150;
-    /* 0xafba clamps the altitude to the surface: the art plays there, not
-     * where the plane's lowest point first touched. */
-    s_World.flight.y = (FlightVertical)(WINGS_FLIGHT_MAX_Y - s_ContactSurface) << 8;
-}
-
 /* The crashed plane is lost: the next one waits in the hold, where the
  * service arms it (the weapon is the player's choice again) and the lift
  * brings it up, as after a landing (0xd2); the island and the ships keep
@@ -938,7 +926,28 @@ static u8 CarrierLost(void)
 static void LosePlane(void)
 {
     if (Game_LosePlane(&g_Game) && !CarrierLost()) { NewPlane(); g_Carrier.stage=CARRIER_HOLD; }
-    s_CrashSteps=0; s_UiDirty=1;
+    s_UiDirty=1;
+}
+
+/* A flying plane's contact this step: a landing, a bounce or a crash. Out
+ * of the step loop: inline there, SDCC spilled its arithmetic to the stack
+ * (some hundreds of T-states a step). Contact needs the plane near the
+ * surface: the cheap gate on the frame's cached bottom and surface skips
+ * the exact (banked) check on nearly every step. */
+static void StepContact(void)
+{
+    int16_t base;
+    u8 contact;
+    if (s_World.flight.mode!=FLIGHT_AIRBORNE) return;
+    base=(int16_t)WINGS_FLIGHT_MAX_Y-(int16_t)(s_World.flight.y>>8)-s_ContactBottom;
+    if (base>=(int16_t)s_ContactSurface+1 && base>0) return;
+    contact=Landing_Contact(&s_World.flight,s_World.x>>8,g_Engine.failed,
+        s_ContactBottom,Landing_Height(s_World.x>>8));
+    if (!contact) return;
+    g_LastContact=contact;
+    if (contact==LANDING_CRASH) { Crash_Contact(&s_World.flight,s_World.x>>8); return; }
+    if (contact==LANDING_BOUNCE) Sound_Effect(SOUND_SCREECH,s_World.x>>8);   /* 0xbb7e */
+    Landing_Apply(&s_World.flight,contact);
 }
 #endif
 
@@ -1064,9 +1073,6 @@ void main(void)
     u16 camera, world, y;
     u16 surface;
     u8 weapons, reset_weapons, i;
-#ifdef WINGS_P1_FLIGHT
-    u8 contact;
-#endif
     u8 page, frame, steps, step, input, tick, turn, held = 0;
     u8 base_steps, present_ticks, core_phase = 0;
 #ifdef WINGS_P1_FLIGHT
@@ -1110,7 +1116,7 @@ void main(void)
     Carrier_Reset(&g_Carrier);
     /* The boot render reads the instruments before any sortie starts. */
     Engine_Reset(&g_Engine,&g_Game.sortie);
-    s_CrashSteps=s_EngineSteps=0;
+    s_EngineSteps=0;
     /* RAM is not cleared at boot: the smoke state must be. */
     Smoke_Reset(); Smoke_ClearPages();
 #endif
@@ -1264,7 +1270,7 @@ void main(void)
 #ifdef WINGS_P1_FLIGHT
                     /* Not at a tick's first or last step: no run starts there. */
                     if ((u8)(s_World.flight.step-1)<FLIGHT_TICK_STEPS-2 && g_Carrier.stage==CARRIER_DECK &&
-                        !s_CrashSteps && !g_Engine.failed &&
+                        s_World.flight.mode<FLIGHT_DEAD && !g_Engine.failed &&
                         (i=Step_Batch(steps-1-step,weapons))) { step+=i-1; continue; }
                     if (g_Carrier.stage!=CARRIER_DECK)
                     {
@@ -1274,22 +1280,20 @@ void main(void)
 #endif
                     {
 #ifdef WINGS_P1_FLIGHT
-                        if (s_CrashSteps)
-                        {
-                            if (!--s_CrashSteps) { LosePlane(); ConsumeActions(); reset_weapons=1; break; }
-                            s_CrashFrame = s_CrashSplash ?
-                                CRASH_SPLASH_FIRST + (u8)((150u - s_CrashSteps) * CRASH_SPLASH_COUNT / 150u) :
-                                CRASH_EXPLOSION_FIRST + (u8)((150u - s_CrashSteps) * CRASH_EXPLOSION_COUNT / 150u);
-                            goto advance_clocks;
-                        }
-                        /* Throttle (the flight model's flag): oil reads higher. */
+                        /* Sunk or burning (modes 6, 8): 12 s, or fire held after
+                         * 2.4 s (0xaf7c), and the plane is lost. */
+                        if (s_World.flight.mode>=FLIGHT_SINKING &&
+                            (g_Crash.clock>=CRASH_TICKS || (g_Crash.clock>CRASH_SKIP_TICKS && weapons)))
+                        { LosePlane(); ConsumeActions(); reset_weapons=1; break; }
+                        /* Throttle (the flight model's flag): oil reads higher.
+                         * Fuel burns in flight; no warnings once crashed (0xee38). */
                         if (++s_EngineSteps==ENGINE_TICK_STEPS)
                         {
                             s_EngineSteps=0;
-                            Engine_Tick(&g_Engine,&g_Game.sortie,!FLIGHT_ON_DECK(&s_World.flight),
-                                s_World.flight.throttle,1);
+                            Engine_Tick(&g_Engine,&g_Game.sortie,s_World.flight.mode==FLIGHT_AIRBORNE,
+                                s_World.flight.throttle,s_World.flight.mode<FLIGHT_DEAD);
                         }
-                        if (g_Engine.failed)
+                        if (g_Engine.failed || s_World.flight.mode>=FLIGHT_DEAD)
                         {
                             /* No power and no guns (original mode 4): the plane falls. */
                             if (s_World.flight.mode==FLIGHT_AIRBORNE) Flight_EngineOut(&s_World.flight);
@@ -1299,22 +1303,7 @@ void main(void)
 #endif
                         World_StepSample(&s_World,input,step==steps-1);
 #ifdef WINGS_P1_FLIGHT
-                        /* Contact needs the plane near the surface; skip the call otherwise
-                         * (nearly every step), which keeps it off the frame budget. */
-                        contact=LANDING_NONE;
-                        if (!FLIGHT_ON_DECK(&s_World.flight))
-                        {
-                            /* Cheap gate on the frame's cached bottom/surface; the exact
-                             * (banked) check runs only when the plane may be touching. */
-                            int16_t base=(int16_t)WINGS_FLIGHT_MAX_Y-(int16_t)(s_World.flight.y>>8)-s_ContactBottom;
-                            if (base<(int16_t)s_ContactSurface+1 || base<=0)
-                                contact=Landing_Contact(&s_World.flight,s_World.x>>8,g_Engine.failed,
-                                    s_ContactBottom,Landing_Height(s_World.x>>8));
-                        }
-                        if (contact) g_LastContact=contact;
-                        if (contact==LANDING_CRASH) { StartCrash(); goto advance_clocks; }
-                        if (contact==LANDING_BOUNCE) Sound_Effect(SOUND_SCREECH,s_World.x>>8);   /* 0xbb7e */
-                        if (contact) Landing_Apply(&s_World.flight,contact);
+                        StepContact();
 #endif
                     if (Combat_Tick(&g_Combat)
 #ifdef WINGS_P1_FLIGHT
@@ -1354,24 +1343,21 @@ void main(void)
 #endif
                     }
                     }
-#ifdef WINGS_P1_FLIGHT
-advance_clocks:
-#endif
                     if (++s_AnimTick==12)
                     {
                         s_AnimTick=0; s_Wave=s_Wave ? s_Wave-1 : 11;
 #ifdef WINGS_P1_FLIGHT
                         /* One original tick: smoke drifts on through a crash; only
                          * a running sortie puts out new puffs. */
-                        Smoke_Tick(&s_World.flight, s_World.x >> 8, g_Game.sortie.oil, !s_CrashSteps);
+                        Smoke_Tick(&s_World.flight, s_World.x >> 8, g_Game.sortie.oil, s_World.flight.mode < FLIGHT_SINKING);
                         Island_Tick();
                         /* The ships' sinking clocks, and destroyed guns' smoke. */
                         if (g_Ships.smoking || g_Ships.sinking)
-                            Ships_Tick(s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps, &g_Game.progress.score);
+                            Ships_Tick(s_World.flight.mode == FLIGHT_AIRBORNE, &g_Game.progress.score);
                         /* The dugout guns (the original updates them once per
                          * drawn frame, probably at this rate). */
                         s_GunsDrawn = Island_Guns(&s_World.flight, s_World.x >> 8,
-                            s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps &&
+                            s_World.flight.mode == FLIGHT_AIRBORNE &&
                             g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
                             &g_Engine, &g_Game.sortie);
                         s_SoldiersMoving = Island_Soldiers(&g_Game.progress.score);
@@ -1408,7 +1394,7 @@ advance_clocks:
             if (s_Promotion && g_Island.message == ISLAND_MESSAGE_MISSION) g_Island.message = ISLAND_MESSAGE_PROMOTION;
         }
         Sound_Update(&s_World.flight, s_World.x >> 8,
-                     (g_Game.phase == GAME_PLAY ? SOUND_PLAYING : 0) | (s_CrashSteps ? SOUND_CRASHED : 0), steps);
+                     (g_Game.phase == GAME_PLAY ? SOUND_PLAYING : 0) | (s_World.flight.mode >= FLIGHT_SINKING ? SOUND_CRASHED : 0), steps);
         /* The ticker moves 2 px a VBlank (msx/message.c). */
         if (g_Game.phase==GAME_PLAY && (g_Island.message || g_MessageActive)) Message_Update(present_ticks);
 #endif
@@ -1422,7 +1408,7 @@ advance_clocks:
         i = g_TerrainFar ? CAMERA_FAR : 0;
         if (s_World.flight.facing_left) i |= CAMERA_LEFT;
         if (g_Game.phase != GAME_PLAY) i |= CAMERA_RESET;
-        else if (!s_CrashSteps && g_Carrier.stage == CARRIER_DECK && !FLIGHT_ON_DECK(&s_World.flight)) i |= CAMERA_MOVE;
+        else if (s_World.flight.mode < FLIGHT_SINKING && g_Carrier.stage == CARRIER_DECK && !FLIGHT_ON_DECK(&s_World.flight)) i |= CAMERA_MOVE;
         camera = Camera_Follow(world, i, present_ticks);
 #else
         camera = g_TerrainFar ? world >> 3 : world;
@@ -1444,12 +1430,15 @@ advance_clocks:
         s_CarrierView = !g_TerrainFar && (u16)(camera + 256) > CARRIER_X - 440u && camera < CARRIER_X + 336u;
 #endif
         frame = s_Aircraft.shape;
+#ifdef WINGS_P1_FLIGHT
+        s_CrashFrame = s_World.flight.mode == FLIGHT_WRECK ? CRASH_WRECK_RIGHT + s_World.flight.facing_left : 255;
+#endif
         page = g_DisplayPage ^ 1;
 #ifdef WINGS_P1_FLIGHT
         /* The ships' guns (0x4c3e) run in the original's render loop (from
          * 0x38d2): once a presented frame, before it is drawn. */
         s_ShipGuns = g_Ships.present || g_Ships.splashes || g_Combat.torpedo.live || g_Combat.enemy.live ? Ships_Guns(&s_World.flight, s_World.x >> 8,
-            s_World.flight.mode == FLIGHT_AIRBORNE && !s_CrashSteps &&
+            s_World.flight.mode == FLIGHT_AIRBORNE &&
             g_Carrier.stage == CARRIER_DECK && g_Game.phase == GAME_PLAY,
             &g_Engine, &g_Game.sortie, &g_Combat) : 0;
 #endif

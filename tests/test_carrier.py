@@ -20,7 +20,7 @@ class CarrierTests(unittest.TestCase):
         cls.temp=tempfile.TemporaryDirectory();lib=Path(cls.temp.name)/'carrier.so'
         subprocess.run([shutil.which('cc') or 'cc','-std=c99','-Wall','-Wextra','-Werror','-shared','-fPIC',
             '-DWINGS_P1_FLIGHT','-DWINGS_FLIGHT_MAX_Y=1200u',
-            str(ROOT/'src/core/carrier.c'),str(ROOT/'src/core/flight.c'),str(ROOT/'src/core/flight_model.c'),'-o',str(lib)],check=True,capture_output=True)
+            str(ROOT/'src/core/carrier.c'),str(ROOT/'src/core/flight.c'),str(ROOT/'src/core/flight_model.c'),str(ROOT/'tests/stubs/crash_stub.c'),'-o',str(lib)],check=True,capture_output=True)
         cls.core=C.CDLL(str(lib))
         cls.core.Carrier_Reset.argtypes=[C.POINTER(Carrier)]
         cls.core.Carrier_Raise.argtypes=[C.POINTER(Carrier)]

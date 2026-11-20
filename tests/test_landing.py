@@ -30,7 +30,7 @@ class LandingTests(unittest.TestCase):
         subprocess.run([shutil.which('cc') or 'cc', '-std=c99', '-I'+str(ROOT/'src/generated/map_a'), '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
                         '-DWINGS_P1_FLIGHT', '-DMISSION_TERRAIN', '-DWINGS_FLIGHT_MAX_Y=1200u',
                         '-DWINGS_WORLD_WIDTH=7608u', '-DWINGS_WORLD_START=7032u',
-                        *[str(ROOT / 'src' / p) for p in ('core/landing.c', 'core/flight.c', 'core/flight_model.c',
+                        *[str(ROOT / 'src' / p) for p in ('core/landing.c', 'core/flight.c', 'core/flight_model.c', '../tests/stubs/crash_stub.c',
                           'core/aircraft.c', 'generated/hellcat_frames.c')], '-o', str(lib)],
                        check=True, capture_output=True)
         cls.core = C.CDLL(str(lib))
@@ -58,13 +58,19 @@ class LandingTests(unittest.TestCase):
                          (GROUND, DECK_Y * 256, 0, 0, 1, 1000))
 
     def test_other_deck_contact_bounces(self):
-        # Powered or diving (no flare flag), heading right (the hook cannot
-        # catch), or mid-turn.
-        for left, landing, turn in ((1, 0, 0), (0, 1, 0), (0, 0, 0), (1, 1, 3)):
-            result, flight = self.contact(7000, DECK_Y + 2, left=left, landing=landing, turn=turn)
-            self.assertEqual(result, BOUNCE, (left, landing, turn))
+        # Powered or diving (no flare flag), or heading right (the hook
+        # cannot catch).
+        for left, landing in ((1, 0), (0, 1), (0, 0)):
+            result, flight = self.contact(7000, DECK_Y + 2, left=left, landing=landing)
+            self.assertEqual(result, BOUNCE, (left, landing))
             self.core.Landing_Apply(C.byref(flight), result)
             self.assertEqual((flight.vy, flight.yrem, flight.climb, flight.y), (0, 0, -600, (DECK_Y + 2 - 6) * 256))
+
+    def test_deck_contact_mid_turn_crashes(self):
+        # 0xba80: a landing candidate needs turn frame 0
+        # (docs/research/amiga-player-crash.md).
+        for landing in (0, 1):
+            self.assertEqual(self.contact(7000, DECK_Y + 2, landing=landing, turn=3)[0], CRASH)
 
     def test_resting_at_deck_height_or_above_is_not_contact(self):
         self.assertEqual(self.contact(7000, DECK_Y)[0], NONE)   # takeoff from the deck

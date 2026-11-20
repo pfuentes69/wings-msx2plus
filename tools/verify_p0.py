@@ -142,7 +142,8 @@ def main():
                 gauges=tuple((out/f'{name}.gauges').read_bytes()),crash=(out/f'{name}.crash').read_bytes()[0],
                 wheel=wheel,gear=gear,deck_level=deck_level,rope=rope,facing_left=bool(flight[11]),
                 smoke=[(x & 0xFFFF,row,frame) for x,row,frame in smoke],
-                score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0],fine=fine,band=band)
+                score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0],fine=fine,band=band,
+                sink=(out/f'{name}.sink').read_bytes()[0] if flight[12]==4 else None)
             for row in range(212):
                 for col in range(8,256):
                     if row<band:

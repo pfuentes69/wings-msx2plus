@@ -165,7 +165,8 @@ void Sound_Bursts(void) WINGS_BANKED
     const CombatProjectile* p = g_Combat.projectile + COMBAT_GUN_COUNT;
     u8 i;
     for (i = COMBAT_GUN_COUNT; i < g_Combat.count; ++i, ++p)
-        if (p->kind >= COMBAT_IMPACT && p->life == 6 && p->vx != COMBAT_TORPEDO_DUD)
+        if (p->kind >= COMBAT_IMPACT && p->life == 6 && p->vx != COMBAT_TORPEDO_DUD &&
+            !(p->vx == COMBAT_CRASH_BURST && p->kind == COMBAT_SPLASH))   /* the crash's water: silent */
             Sound_Effect(p->kind == COMBAT_SPLASH && p->vx != COMBAT_TORPEDO_HIT ? SOUND_SPLASH : SOUND_BOOM,
                          (u16)Combat_WorldX(&g_Combat, p->x));
     if (g_Combat.torpedo.sound)

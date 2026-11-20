@@ -1,4 +1,5 @@
 #include "flight_model.h"
+#include "crash.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_FLIGHT)
 
 /* The original flight model, one call per original 12.5 Hz tick. Recovered
@@ -23,8 +24,6 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_FLIGHT)
 #define DECK_ROLL_FAST 600
 #define DECK_BRAKE 8
 #define ARREST_BRAKE 110
-#define DEAD_CLIMB_MIN (-3100)  /* the falling plane's nose settles at -31 degrees */
-#define DEAD_FALL_MAX (-10)     /* terminal vertical step, px per tick */
 
 /* sin(degree) x 10000, 0..90 (-$548a). Entries 1..4 are all sin 4 degrees. */
 static const uint16_t s_Sin[91] = {
@@ -329,35 +328,14 @@ void Flight_EngineOut(FlightState* f) WINGS_BANKED
     f->landing = f->throttle = 0;
 }
 
-/* 0xafba while falling: the nose drops 6 degrees a tick to -31, an
- * unfinished turn resolves 2 frames a tick, gravity takes 1 px a tick off
- * the vertical step down to -10, and the horizontal step stays. */
-static void Fall(FlightState* f, uint16_t world)
-{
-    int16_t hstep = f->speed / 100;
-    f->climb -= ACCEL;
-    if (f->climb < DEAD_CLIMB_MIN) f->climb = DEAD_CLIMB_MIN;
-    if (f->turn)
-    {
-        if (f->turn < 14) f->turn = f->turn > 2 ? f->turn - 2 : 0;
-        else
-        {
-            if (f->turn == 14) f->facing_left ^= 1;
-            f->turn += 2;
-            if (f->turn > 25) f->turn = 0;
-        }
-    }
-    if (--f->path < DEAD_FALL_MAX) f->path = DEAD_FALL_MAX;
-    SetMotion(f, world, f->facing_left ? -hstep : hstep, -f->path);
-}
-
 void Flight_Tick(FlightState* f, uint16_t world, uint8_t input) WINGS_BANKED
 {
     if ((input & (FLIGHT_UP | FLIGHT_DOWN)) == (FLIGHT_UP | FLIGHT_DOWN)) input &= ~FLIGHT_UP; /* DOWN wins */
     if (!(input & FLIGHT_DOWN) || f->mode != FLIGHT_AIRBORNE) g_FlightDiveHold = 0;
-    if (f->mode == FLIGHT_AIRBORNE || f->mode == FLIGHT_DEAD)
+    if (f->mode == FLIGHT_AIRBORNE || f->mode >= FLIGHT_DEAD)
     {
-        if (f->mode == FLIGHT_DEAD) Fall(f, world);
+        /* Modes 4, 6, 8: the crash routine (core/crash.c) moves the plane. */
+        if (f->mode >= FLIGHT_DEAD) { Crash_Tick(f, world); SetMotion(f, world, g_Crash.dx, g_Crash.dy); }
         else { AirControls(f, input); Integrate(f, input, world); }
         f->frame = f->turn ? 4 : Pose(f->climb) - 1;
         return;

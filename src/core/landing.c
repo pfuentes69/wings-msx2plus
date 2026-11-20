@@ -42,11 +42,11 @@ uint8_t Landing_Contact(const FlightState* flight, uint16_t world, uint8_t engin
             return base < (int32_t)(LANDING_DECK_HEIGHT - LANDING_DEPTH) * 256 ? LANDING_CRASH : LANDING_NONE;
         if (base < (int32_t)(LANDING_DECK_HEIGHT - LANDING_DEPTH) * 256 ||
             world < FLIGHT_DECK_LEFT + LANDING_EDGE || world > FLIGHT_DECK_RIGHT - LANDING_EDGE ||
-            engine_failed)
-            return LANDING_CRASH;   /* hull, deck end, or no power */
-        /* 0xba80: holding the stall flare facing left, not turning. Any other
-         * deck contact bounces: heading right, the hook cannot catch. */
-        return flight->landing && flight->facing_left && !flight->turn ? LANDING_LANDED : LANDING_BOUNCE;
+            engine_failed || flight->turn)
+            return LANDING_CRASH;   /* hull, deck end, no power, or turning (0xba80) */
+        /* 0xba80: holding the stall flare facing left lands. Any other deck
+         * contact bounces: heading right, the hook cannot catch. */
+        return flight->landing && flight->facing_left ? LANDING_LANDED : LANDING_BOUNCE;
     }
     /* Sea or scenery: below its static height, or the bottom at the sea. */
     return base < (int32_t)height * 256 || base <= 0 ? LANDING_CRASH : LANDING_NONE;

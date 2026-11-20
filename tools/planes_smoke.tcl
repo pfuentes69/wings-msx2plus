@@ -86,7 +86,8 @@ proc place_target {} {
 }
 proc chase {} {
     set i $::target
-    require [expr {[world_x] > 3400}] "The chase reached the island: health=[pw $i 4]"
+    # Shot down first: the kill may come on the poll that crosses 3400.
+    if {[pb $i 0]==2} {require [expr {[world_x] > 3400}] "The chase reached the island: health=[pw $i 4]"}
     if {[pb $i 0]!=2} {
         set ::joy 63
         log "shot down x=[pw $i 24] alt=[pw $i 30] score=[expr {[debug read memory $::addr(g_Game)]+256*[debug read memory [expr {$::addr(g_Game)+1}]]}]"
@@ -195,7 +196,7 @@ proc sunk {} {
         pilot_off
         debug write memory $::addr(g_LastContact) 0
         fly 80
-        wait_for {[view 0]==8} {snap game_over done} "game over after the crash" 20
+        wait_for {[view 0]==8} {snap game_over done} "game over after the crash" 30
     }
 }
 after time 1 {guard ready}

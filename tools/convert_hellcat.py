@@ -395,32 +395,39 @@ def smoke_assets(pixels, color_map, frames, wheel_sizes):
     return records, first, boxes, planes
 
 
-CRASH_SOURCE = Path('reference_assets/unpacked_shapes/world')
-CRASH_EXPLOSION = tuple(f'exp{n}' for n in range(6))
-CRASH_SPLASH = tuple(f'spl{n}' for n in range(7))
+CRASH_SOURCE = Path('reference_assets/unpacked_shapes/hellcat')
+# The wreck (mode 8, 0xc7c6): hcr5 facing right, hcrf facing left
+# (docs/research/amiga-player-crash.md).
+CRASH_WRECK = ('hcr5', 'hcrf')
 
 
 def crash_assets(pixels, frames):
-    """Original crash art (world.shp): explosion exp0..exp5, sea splash spl0..spl6.
+    """The player's wreck (hellcat.shp hcr5 / hcrf), drawn instead of the plane.
 
-    During the one-second crash hold the plane is not drawn, so each frame
-    streams into the atlas rectangle of one large static aircraft frame (the
-    host); the runtime reloads the host when the next plane launches.
-    Positions use the same object point as the aircraft and gun flash: with
-    the plane at sea level the source origin lands on the water line.
+    The burning wreck replaces the plane, so its frame streams into the atlas
+    rectangle of one large static aircraft frame (the host); the runtime
+    reloads the host when the next plane launches. Positions use the same
+    object point as the aircraft: origin (25, 8) or (23, 8) at the plane's.
+    The crash's explosions and splashes are ordinary bursts (weapons art).
     """
     from decode_shapes import decode_record
     root = Path(__file__).resolve().parents[1]
     mapping = {int(k): v for k, v in json.loads(
         (root / 'assets_msx/terrain/manifest.json').read_text())['source_to_msx_index'].items()}
     decoded = []
-    for name in CRASH_EXPLOSION + CRASH_SPLASH:
+    for name in CRASH_WRECK:
         path = next((root / CRASH_SOURCE).glob(f'*_{name}.bin'))
         raw = path.read_bytes()
-        indices, meta = decode_record(raw, plane_constants=True)
+        indices, meta = decode_record(raw)
         decoded.append((name, path, raw, indices, meta))
-    need_w = max(m['width'] for *_, m in decoded)
-    need_h = max(m['height'] for *_, m in decoded)
+    def inked(indices, meta):
+        width = meta['width']
+        opaque = [(i % width, i // width) for i, v in enumerate(indices) if v]
+        x0, x1 = min(p[0] for p in opaque), max(p[0] for p in opaque) + 1
+        y0, y1 = min(p[1] for p in opaque), max(p[1] for p in opaque) + 1
+        return (x1 - x0 + 1) // 2 * 2, y1 - y0
+    need_w = max(inked(i, m)[0] for _, _, _, i, m in decoded)
+    need_h = max(inked(i, m)[1] for _, _, _, i, m in decoded)
     hosts = [(i, f) for i, f in enumerate(frames[:53]) if not f.get('streamed') and not f.get('unused')]
     host_index, host = min(((i, f) for i, f in hosts if f['width'] >= need_w and f['height'] >= need_h),
                            key=lambda item: item[1]['width'] * item[1]['height'])
@@ -585,12 +592,10 @@ extern const unsigned char g_TurnRightToLeft[AIRCRAFT_TURN_STEPS];
 #ifdef MISSION_TERRAIN
 extern const AircraftShape g_GunFlash[GUN_FLASH_COUNT];
 #endif
-/* Original crash art: explosion then sea splash frames, streamed into the
- * atlas rectangle of static shape CRASH_HOST_SHAPE during the crash hold. */
-#define CRASH_EXPLOSION_FIRST 0
-#define CRASH_EXPLOSION_COUNT {len(CRASH_EXPLOSION)}
-#define CRASH_SPLASH_FIRST {len(CRASH_EXPLOSION)}
-#define CRASH_SPLASH_COUNT {len(CRASH_SPLASH)}
+/* The player's wreck (hcr5 right, hcrf left), streamed into the atlas
+ * rectangle of static shape CRASH_HOST_SHAPE while it is shown. */
+#define CRASH_WRECK_RIGHT 0
+#define CRASH_WRECK_LEFT 1
 #define CRASH_HOST_SHAPE {crash_host}
 #ifdef MISSION_TERRAIN
 extern const AircraftShape g_CrashShapes[{len(crashes)}];
@@ -694,7 +699,7 @@ extern const AircraftShape g_PlaneFrames[PLANE_STREAMED_FRAMES];   /* in ROM; dr
         wheels=wheels, wheel_first=wheel_first, wheel_cell=WHEEL_CELL, rope_backups=rope_backups,
         smoke=smoke, smoke_first=smoke_first, plane_frames=planes,
         gun_flash=flashes, gun_flash_slots=FLASH_SLOTS, gun_flash_slot_size=FLASH_SLOT_SIZE,
-        crash=crashes, crash_host_shape=crash_host, crash_evidence='world.shp exp0..exp5 / spl0..spl6; crash outcome by surface at 0xafba (docs/research/amiga-fuel-oil.md)',
+        crash=crashes, crash_host_shape=crash_host, crash_evidence='hellcat.shp hcr5 / hcrf: the mode-8 wreck (0xc7c6, docs/research/amiga-player-crash.md)',
         gun_flash_order='variant (fa, fb) * 20 + (left ? 10 : 0) + pitch pose 0..9',
         gun_flash_evidence='executable player renderer draws hellcat shape pose-5+0x43/0x57 (+10 left) while firing; pattern [0,1,0,2]')
     files[destination / 'animation/mapping.json'] = (json.dumps(facts, indent=2) + '\n').encode()

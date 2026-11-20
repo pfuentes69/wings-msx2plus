@@ -226,7 +226,7 @@ void Island_Impacts(CombatState* combat, uint32_t* score) WINGS_BANKED
     {
         if (p->life != 6 || p->kind < COMBAT_IMPACT) continue;
         source = (uint8_t)p->vx;
-        if (source == COMBAT_TORPEDO_DUD) continue;   /* destroyed: no effect */
+        if (source == COMBAT_TORPEDO_DUD || source == COMBAT_CRASH_BURST) continue;   /* no effect */
         x = (uint16_t)Combat_WorldX(combat, p->x);
         s_Struck = 0;
         if (i >= COMBAT_GUN_COUNT && p->kind == COMBAT_IMPACT) points += Island_Bombed(x);

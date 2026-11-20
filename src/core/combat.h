@@ -114,6 +114,9 @@ static inline int16_t Combat_WorldX(const CombatState* state, uint16_t qx)
 #define COMBAT_TORPEDO_HIT 3
 /* A torpedo destroyed by a shell splash or a burst: drawn, no effect. */
 #define COMBAT_TORPEDO_DUD 4
+/* The player's crash (core/crash.c, 0x0820): an explosion with a boom, or
+ * a silent water burst; it hurts nothing. */
+#define COMBAT_CRASH_BURST 5
 #define COMBAT_SKY_WHITE 1
 #define COMBAT_SKY_RED 2
 
