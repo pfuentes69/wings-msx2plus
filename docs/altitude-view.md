@@ -137,6 +137,20 @@ Single fields still show 1-line slips when an interrupt is 3+ lines late: the
 top row of a puff near the split, or part of the dashboard's top border line
 in the flight colours.
 
+**Row fine stays sky too (2026-11-20).** The user still saw small glitches
+in the smoke and the plane coming down from the high view. Screenshots of
+every field of a smoky descent showed it on whole pages at fine 7: screen
+line 7 repeated a puff's top row (VRAM row 7). The split ran only about one
+line late, as usual. But the interrupt's entry (crt0 saves every register
+and reads two status registers) and the handler's first writes take about
+1.5 lines more. So the new scroll takes effect only during line fine, and
+that line still shows its VRAM row at the top band's scroll. Requesting the
+split a line earlier would show VRAM row 253, which holds a wave frame. So
+the overlays now keep VRAM row fine sky as well: `g_TopClip` is fine + 1
+(the plane, smoke, weapons and rope clip there). The harness's top-band
+check and the pixel model use fine + 1 too. In the same descent, 21 fields
+with the stray row went to none.
+
 **The top split, made timing-proof (2026-11-15).** The top lines show VRAM
 rows −heave .. fine − 1 of the page. While smoke and the plane could be drawn
 there, they appeared in the top band, displaced up by `fine`. A late split

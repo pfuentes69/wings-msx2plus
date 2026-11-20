@@ -737,7 +737,12 @@ static void Render(u8 page, u16 camera, u16 world, u16 y, u8 frame)
 {
     u16 previous, next;
     g_RenderPage = page;
-    g_TopClip = !g_TerrainFar && (int8_t)s_RenderFine > 0 ? s_RenderFine : 0;
+    /* In the close-view pan the top band shows VRAM rows up to fine - 1 at
+     * the heave-only scroll, and the split's new scroll takes effect only
+     * during line fine (the interrupt's entry and the handler's first
+     * writes take that long): row fine stays sky too (2026-11-20, smoke
+     * puffs showed their top row twice). */
+    g_TopClip = !g_TerrainFar && (int8_t)s_RenderFine > 0 ? s_RenderFine + 1 : 0;
 #ifdef WINGS_P1_FLIGHT
     /* The message band shows VRAM rows 0 .. band + 1 (a late split) at its
      * own scroll: no overlays there. */

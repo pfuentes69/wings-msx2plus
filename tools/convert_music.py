@@ -64,6 +64,38 @@ ARRANGEMENT = {
 }
 
 
+# The port's edits (docs/music.md): ticks cut from a song, (from, to). The
+# story's song (2) holds its drone alone for 38.8 s before the brass comes in;
+# the original's story scrolls for 75 s, the port's pages are read sooner
+# (the user, 2026-11-20): 4 bars of drone, then the tune.
+CUTS = {2: (384, 1920)}
+
+
+def edited(result, song):
+    """A decoded song's notes per track and its loop, with CUTS applied: a
+    note across the cut goes on after it, one inside it is dropped unless it
+    lasts past it (then it starts where the cut ends), later ones come
+    earlier."""
+    loop = result['loop_ticks'][0]
+    if song not in CUTS:
+        return [[e for e in evs if e['type'] == 'note'] for evs in result['events']], loop
+    a, b = CUTS[song]
+    gone, tracks = b - a, []
+    for evs in result['events']:
+        out = []
+        for e in evs:
+            if e['type'] != 'note': continue
+            start, end = e['tick'], e['end_tick']
+            if end <= a: out.append(e); continue
+            if start >= b: out.append(dict(e, tick=start - gone, end_tick=end - gone)); continue
+            if end <= b:
+                if start < a: out.append(dict(e, end_tick=a))
+                continue
+            out.append(dict(e, tick=min(start, a), end_tick=end - gone))
+        tracks.append(out)
+    return tracks, loop - gone
+
+
 def attenuation(volume):
     """Paula volume 0..64 as 3 dB steps (0 loudest, 15 silent)."""
     if volume <= 0: return 15
@@ -77,7 +109,7 @@ def number(value):
 def track_stream(events, song, track, loop, instruments):
     """A track's byte stream from its decoded notes (ticks from 0)."""
     out, at, inst, att = bytearray(), 0, None, None
-    notes = [e for e in events if e['type'] == 'note']
+    notes = events
     for i, e in enumerate(notes):
         start, end = e['tick'], e['end_tick']
         if start > at:
@@ -134,10 +166,10 @@ def artifacts():
     texts, songs, total = {}, [], 0
     for k, song in enumerate(SONGS):
         r = decode(module, song)
-        loop = r['loop_ticks'][0]
-        assert all(t == loop for t in r['loop_ticks']), r['loop_ticks']
+        assert all(t == r['loop_ticks'][0] for t in r['loop_ticks']), r['loop_ticks']
+        tracks, loop = edited(r, song)
         instruments = {}
-        streams = [track_stream(r['events'][t], song, t, loop, instruments) for t in range(4)]
+        streams = [track_stream(tracks[t], song, t, loop, instruments) for t in range(4)]
         for t, s in enumerate(streams):
             c.append(f'static const unsigned char s_Song{song}Track{t}[{len(s)}] = {{{", ".join(str(b) for b in s)}}};')
             total += len(s)

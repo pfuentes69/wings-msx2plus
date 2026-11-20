@@ -11,10 +11,18 @@ machine has it and on the PSG otherwise.
 | Screen | Subsong | Loop |
 | --- | --- | --- |
 | Intro: title, credits | 1 (brass melody and harmony, synth bass, kick and snare; C major) | 23.3 s |
-| Intro: the story | 2 (a C drone, a brass fanfare from bar 21) | 54.3 s |
+| Intro: the story | 2 (a C drone, then a brass fanfare), shortened | 23.3 s (the original's 54.3 s) |
 | Rank selection | 4 (the C drone, a military snare) | 27.2 s |
 | Briefing, weapon selection, play, "THE END" | none | — |
 
+- **The story's song is shortened** (the user, 2026-11-20). The original
+  holds its C drone alone for 38.8 s before the brass comes in at bar 21,
+  over a 75 s scroll. The port's story is three pages, read sooner. So the
+  converter cuts ticks 384..1920 from all four tracks (`CUTS`):
+  - 4 bars of drone (7.8 s), then the original's bars 21..28;
+  - the drones carry on across the cut;
+  - the two hits come earlier with the fanfare;
+  - the song loops every 23.3 s.
 - Subsong 0 (high scores) is converted too, but nothing plays it: the
   high-score table is set aside.
 - A change of song fades the old one out first: a 3 dB step every 8

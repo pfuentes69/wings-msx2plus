@@ -153,7 +153,8 @@ proc top_split_check {} {
     set base [expr {[value g_DisplayPage]*32768}]
     # The split comes up to 2 lines early: rows 254..255 show too.
     set first [expr {$fine>0 && $heave<2 ? -2 : -$heave}]
-    for {set r $first} {$r<$fine} {incr r} {
+    # Row fine too: the split's new scroll takes effect only during line fine.
+    for {set r $first} {$r<=$fine && $fine>0} {incr r} {
         binary scan [debug read_block VRAM [expr {$base+(($r+256)%256)*128}] 128] cu* bytes
         set x 0
         foreach b $bytes {

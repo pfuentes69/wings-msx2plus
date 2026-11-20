@@ -139,9 +139,9 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
     if fine is None: fine = pan & 7
     scroll = heave + fine
     # Overlays (plane, wheels, flash, weapons, rope) stay at VRAM rows from
-    # g_TopClip (fine in the close-view pan, else 0): screen rows from here.
+    # g_TopClip (fine + 1 in the close-view pan, else 0): screen rows from here.
     # The message band (rows 0 .. band + 1 shown unscrolled): band + 2.
-    clip = band + 2 if band else max(0, fine) if scale == 1 else 0
+    clip = band + 2 if band else (fine + 1 if fine > 0 else 0) if scale == 1 else 0
     overlay_top = scroll + clip
     panned = pan - fine >= 8   # whole tile rows of pan: the wave strip is below the view
     def background_row(row):   # rows above the image are sky

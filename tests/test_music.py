@@ -47,13 +47,13 @@ class MusicTests(unittest.TestCase):
 
     def test_streams_replay_the_decoded_notes(self):
         for song, r in self.songs.items():
-            loop = r['loop_ticks'][0]
+            tracks, loop = self.convert.edited(r, song)
             instruments = {}
             for t in range(4):
-                stream = self.convert.track_stream(r['events'][t], song, t, loop, instruments)
+                stream = self.convert.track_stream(tracks[t], song, t, loop, instruments)
                 notes, length = play(stream)
                 self.assertEqual(length, loop, (song, t))   # the track loops with the song
-                want = [e for e in r['events'][t] if e['type'] == 'note']
+                want = tracks[t]
                 self.assertEqual(len(notes), len(want), (song, t))
                 for (tick, pitch, gate, inst, att), e in zip(notes, want):
                     self.assertEqual(tick, e['tick'])
@@ -62,6 +62,19 @@ class MusicTests(unittest.TestCase):
                     name = next(n for (tt, n), (k, _) in instruments.items() if tt == t and k == inst)
                     self.assertEqual(name, e['instrument'])
                     self.assertEqual(att, self.convert.attenuation(e['volume']))
+
+    def test_the_story_song_comes_to_its_tune_after_4_bars(self):
+        # The cut (CUTS): the drone 384 ticks, then the original's bar 21 on.
+        r = self.songs[2]
+        tracks, loop = self.convert.edited(r, 2)
+        self.assertEqual(loop, 2688 - 1536)
+        brass = tracks[3]
+        self.assertEqual(brass[0]['tick'], 384)
+        original = [e for e in r['events'][3] if e['type'] == 'note']
+        self.assertEqual([(e['tick'] + 1536, round(e['midi'])) for e in brass], [(e['tick'], round(e['midi'])) for e in original])
+        for t in range(3):   # the drones go on across the cut, to the song's end
+            self.assertEqual((tracks[t][0]['tick'], tracks[t][-1]['end_tick']), (0, loop), t)
+        self.assertEqual([e['tick'] for e in tracks[2] if e['midi'] is None], [2112 - 1536, 2496 - 1536])
 
     def test_every_note_fits_the_pitch_tables(self):
         psg, fm = self.convert.tables()
