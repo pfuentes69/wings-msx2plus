@@ -240,6 +240,11 @@ void Screens_BootTitle(void) WINGS_BANKED
     Screens_Intro(0, GAME_INTRO_TITLE);
     Screens_Palette(SCREENS_TITLE);
     VDP_SetPage(0);
+    /* No scroll from the first field: the V-blank handler then keeps it at
+     * g_ScrollFine/g_ScrollCoarse, which boot zeroes (the user, 2026-11-20:
+     * the title showed displaced, then moved). */
+    VDP_SetVerticalOffset(0);
+    VDP_SetHorizontalOffset(0);
     VDP_EnableDisplay(TRUE);
     VDP_FillVRAM(0, 0x8000, 0, 0x8000);
     VDP_FillVRAM(0, 0, 1, 0);

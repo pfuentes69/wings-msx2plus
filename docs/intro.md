@@ -29,7 +29,13 @@ original's sequence and music are researched in
 The title is the first thing on screen (the user, 2026-11-20: the carrier
 showed first). Right after the screen mode is set, `Screens_BootTitle`
 clears page 0's rows below the screen, draws the title there, sets its
-palette and turns the display on. That is about 0.7 s after the game
+palette, zeroes the scroll and turns the display on. The scroll matters:
+the V-blank handler writes R27, R26 and R23 each field from
+`g_ScrollFine`, `g_ScrollCoarse` and `g_VerticalOffset`, and RAM is not
+cleared at boot. 0.1.1 left the first two unset until the main loop's
+first publish, so the title showed displaced until loading ended (the
+user, 2026-11-20: R26 = 63, R27 = 7 on the Panasonic). Boot now zeroes
+them, and `verify_p0` checks R23, R26 and R27 at the first title. That is about 0.7 s after the game
 starts, against 3.7 s before. Everything else loads behind it, out of
 sight:
 

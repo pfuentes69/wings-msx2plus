@@ -79,6 +79,9 @@ def main():
     *_,intro_palette,pages=convert_screens.intro_pages()
     intro_screens=[(packed(bytes(6*256)+title+bytes(6*256)),words(title_palette))]+[(packed(p),words(intro_palette)) for p in pages]
     assert (out/'boot_first.vram').read_bytes()==intro_screens[0][0],'the first screen shown is not the title'
+    # ... and unscrolled: R23 (vertical), R26/R27 (horizontal) 0. 0.1.1 showed it at the BIOS logo's R26/R27 (63, 7).
+    boot_regs=(out/'boot_first.regs').read_bytes()
+    assert boot_regs[23]==0 and boot_regs[26]==0 and boot_regs[27]==0,('the title shown scrolled',boot_regs[23],boot_regs[26],boot_regs[27])
     waves_source=(ROOT/'assets_msx/dashboard/waves.sc5').read_bytes()
     scene=AircraftScene()
     terrain=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())

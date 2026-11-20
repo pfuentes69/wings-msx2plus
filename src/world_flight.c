@@ -1114,7 +1114,10 @@ void main(void)
     Combat_Reset(&g_Combat);
     Weapons_Init();
     g_TerrainFar = g_ViewChange = s_PageScale[0] = s_PageScale[1] = 0;
-    g_VerticalOffset = s_RenderHeave = 0; g_LineSplit = 170;
+    /* The V-blank handler writes R27/R26/R23 from these each field: unset
+     * (RAM is not cleared) they scrolled the boot title until the first
+     * publish (the user, 2026-11-20). */
+    g_ScrollFine = g_ScrollCoarse = g_VerticalOffset = s_RenderHeave = 0; g_LineSplit = 170;
     g_PlayOffset = g_FirstState = s_RenderFine = s_ViewKey = g_PanRows = 0; g_FirstSplit = 170;
 #ifdef WINGS_P1_FLIGHT
     g_MessageActive = g_MessageWait = s_Band[0] = s_Band[1] = 0;

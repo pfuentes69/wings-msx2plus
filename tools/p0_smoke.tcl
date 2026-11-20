@@ -12,6 +12,7 @@ proc boot_poll {} {if {[boot_on]} {after time 0.02 boot_confirm} else {after tim
 proc boot_confirm {} {
     if {![boot_on]} {after time 0.002 boot_poll;return}
     dump boot_first.vram [debug read_block VRAM [expr {(([debug read {VDP regs} 2]>>5)&3)*32768}] [expr {212*128}]]
+    dump boot_first.regs [debug read_block {VDP regs} 0 32]
 }
 # From the game's start (the BIOS has its own screens, C-BIOS's logo in
 # SCREEN 5 too).
