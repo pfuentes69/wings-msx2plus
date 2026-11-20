@@ -38,7 +38,30 @@ proc view {i} {debug read memory [expr {$::addr(g_GameView)+$i}]}
 proc stat {offset} {incr offset 122;expr {[debug read memory [expr {$::addr(g_Combat)+$offset}]]+256*[debug read memory [expr {$::addr(g_Combat)+$offset+1}]]}}
 proc require {ok message} {if {!$ok} {error $message}}
 proc bgerror {m} {puts $::report "FAIL $m\n$::errorInfo";flush $::report;close $::report;catch {record stop};exit}
-proc guard {code} {if {[catch {uplevel #0 $code} m]} {bgerror $m}}
+proc guard {code} {
+    # A scenario starts at rank selection: the intro (docs/intro.md) is
+    # gone through first.
+    if {$code eq "ready" && ![info exists ::intro_done]} {intro_skip;return}
+    if {[catch {uplevel #0 $code} m]} {bgerror $m}
+}
+# The intro (GAME_INTRO, phase 11; its screen in the cursor, view 6): on
+# each new screen intro_screen runs (a scenario may snap it), then Return
+# moves on; at rank selection the scenario's ready runs.
+set intro_last -1
+proc intro_screen {screen then} {uplevel #0 $then}
+proc intro_skip {} {if {[catch intro_step m]==1} {bgerror $m}}
+proc intro_step {} {
+    if {[value g_Ready]!=1} {after time 0.05 intro_skip;return}
+    if {[view 0]==11} {
+        if {[view 6]!=$::intro_last} {
+            set ::intro_last [view 6]
+            intro_screen $::intro_last {keymatrixdown 7 128;after time 0.05 {keymatrixup 7 128};after time 0.3 intro_skip}
+        } else {after time 0.05 intro_skip}
+        return
+    }
+    set ::intro_done 1
+    after time 0.3 {guard ready}
+}
 proc dump {name bytes} {set f [open [file join $::out $name] wb];puts -nonewline $f $bytes;close $f}
 proc phase {wanted then} {
     if {[view 0]==$wanted} {after time 0.05 $then} else {after time 0.025 [list phase $wanted $then]}

@@ -30,6 +30,10 @@ extern u8 g_BriefIslands, g_BriefShips;
  * moved. */
 void Screens_Rank(u8 page, u8 line) WINGS_BANKED;
 void Screens_RankLine(u8 page, u8 line) WINGS_BANKED;
+/* msx/screen_end.c: the intro's screen (GAME_INTRO_*: the title, the
+ * credits, the story's pages) full screen on this page (its colours:
+ * SCREENS_TITLE for the title, else SCREENS_INTRO). */
+void Screens_Intro(u8 page, u8 screen) WINGS_BANKED;
 
 /* msx/screen_end.c: the colours a screen is shown in. Set as its page is
  * published (or before drawing on the page shown), so no screen is ever
@@ -41,4 +45,6 @@ void Screens_RankLine(u8 page, u8 line) WINGS_BANKED;
 #define SCREENS_WEAPON 1   /* the play's, colours 12..15 lent to the weapon panel */
 #define SCREENS_BRIEF  2   /* the briefing's over the play area, black */
 #define SCREENS_RANK   3   /* rank selection's over the whole screen */
+#define SCREENS_TITLE  4   /* the intro's title over the whole screen */
+#define SCREENS_INTRO  5   /* the intro's credits and story */
 void Screens_Palette(u8 which) WINGS_BANKED;

@@ -13,7 +13,8 @@ extern const unsigned short g_WeaponLineOffset[3];
 extern const unsigned char g_WeaponColours[8];
 #define BRIEF_INK 7
 extern const unsigned char g_BriefPalette[32];
-extern const unsigned char g_SmallFont[280];
+extern const unsigned char g_SmallFont[336];
+#define SMALL_FONT_EXTRA ",'!-()&?"
 #define RANK_BANK 53
 #define RANK_LINE_BANK 57
 #define RANK_LINE_Y 91
@@ -22,3 +23,20 @@ extern const unsigned char g_SmallFont[280];
 #define RANK_LINE_BYTES 92
 #define RANK_LINE_HEIGHT 9
 extern const unsigned char g_RankPalette[32];
+#define TITLE_BANK 59
+#define TITLE_TOP 6
+extern const unsigned char g_TitlePalette[32];
+#define INTRO_BANK 63
+#define INTRO_PIECES 8
+#define INTRO_PIECE_HEADING 7
+#define INTRO_TEXT 1
+#define INTRO_ROLE 2
+#define STORY_PAGES 3
+#define STORY_LINE 42
+#define STORY_BANK 24
+#define STORY_OFFSET 5589
+#define STORY_COLUMNS 40
+extern const unsigned char g_IntroPalette[32];
+extern const unsigned short g_IntroPieceOffset[];
+extern const unsigned char g_IntroPieceBank[], g_IntroPieceBytes[], g_IntroPieceHeight[], g_IntroPieceX[], g_IntroPieceY[];
+extern const unsigned char g_StoryPageFirst[], g_StoryPageCount[], g_StoryPageTop[];

@@ -966,6 +966,8 @@ static u8 s_Panel, s_PanelRendered, s_LastPhase;
 /* The briefing's palette is up; a page's dashboard rows were drawn over (a
  * full-screen menu: restored before the page is drawn on again). */
 static u8 s_BriefColours, s_DashGone[2], s_RankShown, s_PaletteShown;
+/* The intro's screen shown: 0 none, else its colours (SCREENS_TITLE, SCREENS_INTRO). */
+static u8 s_IntroShown;
 #ifdef WINGS_HIGH_SCORES
 static u8 s_Typing;   /* the name entry has scanned the keyboard once */
 #endif
@@ -1088,8 +1090,10 @@ void main(void)
     Game_Reset(&g_Game);
 #ifdef WINGS_P1_FLIGHT
     /* RAM is not cleared at boot: no front-end screen is up yet. */
-    s_Panel=s_PanelRendered=s_LastPhase=s_BriefColours=s_RankShown=s_DashGone[0]=s_DashGone[1]=0;
+    s_Panel=s_PanelRendered=s_LastPhase=s_BriefColours=s_RankShown=s_IntroShown=s_DashGone[0]=s_DashGone[1]=0;
     s_PaletteShown=SCREENS_PLAY;
+    /* At boot the intro (docs/intro.md), then rank selection. */
+    Game_Intro(&g_Game);
 #endif
 #ifdef WINGS_HIGH_SCORES
     Game_ClearScores();
@@ -1449,8 +1453,9 @@ void main(void)
          * published); after the panel both pages are rebuilt. */
         if (s_Panel && g_Game.phase!=GAME_LOADOUT && g_Game.phase!=GAME_SERVICE) { s_Panel=0; s_PageScale[0]=s_PageScale[1]=255; }
         if (g_Game.phase!=GAME_RANK) s_RankShown=0;
+        if (g_Game.phase!=GAME_INTRO) s_IntroShown=0;
         if (g_Game.phase!=GAME_BRIEFING) s_BriefColours=0;
-        if (s_DashGone[page] && g_Game.phase!=GAME_BRIEFING && g_Game.phase!=GAME_RANK) { Dashboard_Restore(page); s_DashGone[page]=0; }
+        if (s_DashGone[page] && g_Game.phase!=GAME_BRIEFING && g_Game.phase!=GAME_RANK && g_Game.phase!=GAME_INTRO) { Dashboard_Restore(page); s_DashGone[page]=0; }
 #endif
         if (g_Game.phase!=GAME_PLAY)
         {
@@ -1460,6 +1465,19 @@ void main(void)
 #ifdef WINGS_P1_FLIGHT
             /* Rank selection, full screen; then the highlight moves on the
              * page shown (msx/screen_end.c). */
+            /* The intro's screens, full screen, each drawn on the hidden page. */
+            if (g_Game.phase==GAME_INTRO)
+            {
+                page=g_DisplayPage;
+                if (s_UiDirty)
+                {
+                    page^=1; Screens_Intro(page,g_Game.cursor);
+                    s_DashGone[page]=1; s_PageScale[page]=255;
+                    s_IntroShown=g_Game.cursor==GAME_INTRO_TITLE ? SCREENS_TITLE : SCREENS_INTRO;
+                    s_UiDirty=0;
+                }
+            }
+            else
             if (g_Game.phase==GAME_RANK)
             {
                 page=g_DisplayPage;
@@ -1584,7 +1602,7 @@ void main(void)
 #ifdef WINGS_P1_FLIGHT
         /* The colours of the screen now shown, with it (msx/screen_end.c). */
         {
-            u8 want = s_RankShown ? SCREENS_RANK : s_BriefColours ? SCREENS_BRIEF : s_Panel ? SCREENS_WEAPON : SCREENS_PLAY;
+            u8 want = s_IntroShown ? s_IntroShown : s_RankShown ? SCREENS_RANK : s_BriefColours ? SCREENS_BRIEF : s_Panel ? SCREENS_WEAPON : SCREENS_PLAY;
             if (want!=s_PaletteShown) Screens_Palette(s_PaletteShown=want);
         }
 #endif

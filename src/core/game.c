@@ -2,8 +2,15 @@
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_GAME)
 #include "engine.h"
 
+/* The intro's screens stay this many PAL frames (50 a second) unless a
+ * button moves on (docs/intro.md): the title 300 frames and the next
+ * picture's load, the credits 600 (0x8022); the story's three pages
+ * together the original's scroll, 75 s. */
+#define INTRO_TITLE_FRAMES 400
+#define INTRO_CREDITS_FRAMES 600
+#define INTRO_STORY_FRAMES 1250
 static uint16_t s_Wait;      /* VBlanks the current phase has shown (Game_Wait) */
-static uint8_t s_WaitPhase, s_Pal;
+static uint8_t s_WaitPhase, s_WaitCursor, s_Pal;
 
 uint8_t Game_WeaponStock(uint8_t weapon) WINGS_BANKED
 {
@@ -62,6 +69,18 @@ void Game_Reset(GameState* game) WINGS_BANKED
     game->sortie.oil=ENGINE_OIL_FULL; game->sortie.fuel=ENGINE_FUEL_FULL;
     game->phase=GAME_RANK; game->cursor=game->invert=game->notice=0;
     s_WaitPhase=255;   /* RAM is not cleared at boot: no phase timed yet */
+}
+
+void Game_Intro(GameState* game) WINGS_BANKED
+{
+    game->phase=GAME_INTRO; game->cursor=0;
+}
+
+/* The intro's next screen; after the last, rank selection. */
+static void NextIntro(GameState* game)
+{
+    if (++game->cursor<GAME_INTRO_SCREENS) return;
+    game->phase=GAME_RANK; game->cursor=0;
 }
 
 uint8_t Game_LosePlane(GameState* game) WINGS_BANKED
@@ -156,7 +175,7 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
         /* Ctrl-R ends the game through the high scores, as the last plane
          * does (0x01c6); on their own screens and at rank selection it does
          * nothing. */
-        if (old==GAME_RANK || old==GAME_NAME || old==GAME_SCORES) return 0;
+        if (old==GAME_RANK || old==GAME_NAME || old==GAME_SCORES || old==GAME_INTRO) return 0;
         EndGame(game);
         return GAME_CONTEXT_CHANGED|GAME_RESTARTED;
     }
@@ -189,7 +208,15 @@ uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED
         else if (old==GAME_PAUSE) game->phase=GAME_PLAY;
         else if (old==GAME_LOAD_MENU || old==GAME_SAVE_MENU)
         { game->phase=game->cursor; game->cursor=game->progress.rank; }
+        else if (old==GAME_INTRO) { game->phase=GAME_RANK; game->cursor=0; }   /* skips the intro */
         return game->phase!=old ? GAME_CONTEXT_CHANGED : 0;
+    }
+    if (old==GAME_INTRO)
+    {
+        /* A button: the next screen. */
+        if (!(pressed & ACTION_BUTTONS)) return 0;
+        NextIntro(game);
+        return GAME_CONTEXT_CHANGED;
     }
     if (old==GAME_PAUSE || old==GAME_PLAY) return 0;
     /* Seven ranks: the original's "Return from R&R" is left out (no saved
@@ -258,11 +285,14 @@ uint8_t Game_Wait(GameState* game, uint8_t ticks, uint8_t pal) WINGS_BANKED
 {
     uint16_t limit;
     s_Pal=pal;
-    if (game->phase!=s_WaitPhase) { s_WaitPhase=game->phase; s_Wait=0; }
+    if (game->phase!=s_WaitPhase || game->cursor!=s_WaitCursor) { s_WaitPhase=game->phase; s_WaitCursor=game->cursor; s_Wait=0; }
     s_Wait+=ticks;
-    limit=game->phase==GAME_BRIEFING ? 240 : game->phase==GAME_OVER ? 150 : game->phase==GAME_SCORES ? 1800 : 0;
+    limit=game->phase==GAME_BRIEFING ? 240 : game->phase==GAME_OVER ? 150 : game->phase==GAME_SCORES ? 1800 :
+          game->phase==GAME_INTRO ? (game->cursor==GAME_INTRO_TITLE ? INTRO_TITLE_FRAMES :
+                                     game->cursor==GAME_INTRO_CREDITS ? INTRO_CREDITS_FRAMES : INTRO_STORY_FRAMES) : 0;
     if (!limit || s_Wait<Frames(limit)) return 0;
-    if (game->phase==GAME_BRIEFING) Game_HandleAction(game, ACTION_ENTER);
+    if (game->phase==GAME_INTRO) NextIntro(game);
+    else if (game->phase==GAME_BRIEFING) Game_HandleAction(game, ACTION_ENTER);
     else if (game->phase==GAME_OVER) EndGame(game);
     else NewGame(game);
     return 1;

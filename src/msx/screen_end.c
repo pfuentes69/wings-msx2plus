@@ -56,6 +56,21 @@ static const char* Number(u8 value)
     return s_Number;
 }
 
+/* The small font's glyph for a character (lower case as upper; unknown: a
+ * space). */
+static u8 Glyph(u8 c)
+{
+    const char* extra = SMALL_FONT_EXTRA;
+    u8 k;
+    if (c >= 'a' && c <= 'z') c -= 32;
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= '0' && c <= '9') return c - '0' + 26;
+    if (c == '.') return 38;
+    if (c == ':') return 39;
+    for (k = 0; extra[k]; ++k) if (extra[k] == c) return 40 + k;
+    return 37;
+}
+
 /* Text in the small font (6 px a character) at even x, this ink on black. */
 static void Text(u16 base, u8 x, u8 y, const char* text, u8 ink)
 {
@@ -67,8 +82,7 @@ static void Text(u16 base, u8 x, u8 y, const char* text, u8 ink)
         out = s_Row;
         for (i = 0; i < length; ++i)
         {
-            c = text[i];
-            c = c >= 'A' && c <= 'Z' ? c - 'A' : c >= '0' && c <= '9' ? c - '0' + 26 : c == '.' ? 38 : c == ':' ? 39 : 37;
+            c = Glyph(text[i]);
             bits = g_SmallFont[c * 7 + row];
             for (k = 0; k < 3; ++k, bits <<= 2)
                 *out++ = (bits & 0x80 ? ink << 4 : 0) | (bits & 0x40 ? ink : 0);
@@ -164,6 +178,59 @@ void Screens_RankLine(u8 page, u8 line) WINGS_BANKED
     s_RankLine = line;
 }
 
+/* The intro (docs/intro.md): screen 0 the title (wingstitle, banks 59..),
+ * 1 the credits, 2.. the story's pages, full screen on black. */
+typedef char IntroScreens[(STORY_PAGES + 2 == GAME_INTRO_SCREENS) ? 1 : -1];
+static char s_Line[STORY_LINE + 1];
+static void Piece(u16 base, u8 i)
+{
+    u8 row;
+    u16 offset = g_IntroPieceOffset[i];
+    for (row = 0; row < g_IntroPieceHeight[i]; ++row, offset += g_IntroPieceBytes[i])
+    {
+        Scenery_Read(g_IntroPieceBank[i], offset, s_Row, g_IntroPieceBytes[i]);
+        VDP_WriteVRAM(s_Row, (base + g_IntroPieceY[i] + row) * 128 + g_IntroPieceX[i] / 2, 0, g_IntroPieceBytes[i]);
+    }
+}
+static void Centred(u16 base, u8 y, const char* text)
+{
+    u8 length = 0;
+    while (text[length]) ++length;
+    Text(base, (u8)((256 - 6 * length) / 2) & 0xfe, y, text, INTRO_TEXT);
+}
+
+void Screens_Intro(u8 page, u8 screen) WINGS_BANKED
+{
+    u8 row, i;
+    u16 offset = 0, base = (u16)page * 256;
+    Fill(base, 0, 0, 256, 212, 0);
+    if (screen == GAME_INTRO_TITLE)
+    {
+        for (row = 0; row < 200; ++row, offset += 128)
+        {
+            Scenery_Read(TITLE_BANK + (offset >> 13), offset & 8191, s_Row, 128);
+            VDP_WriteVRAM(s_Row, (base + TITLE_TOP + row) * 128, 0, 128);
+        }
+        return;
+    }
+    if (screen == GAME_INTRO_CREDITS)
+    {
+        Centred(base, 8, "ADAPTED FROM THE AMIGA VERSION");
+        for (i = 0; i < INTRO_PIECE_HEADING; ++i) Piece(base, i);
+        Centred(base, 200, "PORTED BY PFUENTES69 (& CLAUDE)");
+        return;
+    }
+    screen -= GAME_INTRO_STORY;
+    if (!screen) Piece(base, INTRO_PIECE_HEADING);
+    offset = STORY_OFFSET + (u16)g_StoryPageFirst[screen] * STORY_LINE;
+    for (i = 0; i < g_StoryPageCount[screen]; ++i, offset += STORY_LINE)
+    {
+        Scenery_Read(STORY_BANK, offset, (u8*)s_Line, STORY_LINE);
+        s_Line[STORY_LINE] = 0;
+        Text(base, (256 - 6 * STORY_COLUMNS) / 2, g_StoryPageTop[screen] + 9 * i, s_Line, INTRO_TEXT);
+    }
+}
+
 extern u8 g_TopPalette[32], g_BottomPalette[32];   /* world_flight.c */
 static void Load(const u8* colours) __naked
 {
@@ -184,12 +251,13 @@ static void Load(const u8* colours) __naked
 void Screens_Palette(u8 which) WINGS_BANKED
 {
     u8 i;
-    const u8* top = which == SCREENS_BRIEF ? g_BriefPalette : which == SCREENS_RANK ? g_RankPalette : g_TerrainPalette;
+    const u8* top = which == SCREENS_BRIEF ? g_BriefPalette : which == SCREENS_RANK ? g_RankPalette :
+                    which == SCREENS_TITLE ? g_TitlePalette : which == SCREENS_INTRO ? g_IntroPalette : g_TerrainPalette;
     for (i = 0; i < 32; ++i) g_TopPalette[i] = top[i];
     if (which == SCREENS_WEAPON)
         for (i = 0; i < 8; ++i) g_TopPalette[24 + i] = g_WeaponColours[i];
-    if (which == SCREENS_RANK)
-        for (i = 0; i < 32; ++i) g_BottomPalette[i] = g_RankPalette[i];
+    if (which >= SCREENS_RANK)   /* the whole screen's */
+        for (i = 0; i < 32; ++i) g_BottomPalette[i] = top[i];
     else Dashboard_CopyPalette(g_BottomPalette);
     Load(g_TopPalette);
     VDP_EnableMask(which < SCREENS_BRIEF);

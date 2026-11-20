@@ -12,6 +12,7 @@ selection, the briefing, rank selection. The high-score table is set aside
 | Weapon selection | a panel over the carrier view, top right; a blue band behind the chosen weapon (Rockets, Bombs, Torpedo; Bombs first) | `world.shp` selt (96 × 72), rock, bomb, torp (96 × 11..12) | done: over the carrier view, frozen |
 | Briefing | `rank.iff`'s frame, centred on black; the values in a light grey serif font | `world.shp` rank (256 × 95), newarmyfont | the port's own compact panel (160 × 85, small letters), 2026-11-19 |
 | Rank selection | `selectrank` (320 × 200), a blue band behind the chosen rank | `shapes/selectrank`, `selectrank.shp` rnk0..rnk6 | done: full screen, 256 wide; "Return from R&R" dropped (no saved games) |
+| The intro | story scroll, Brøderbund, title, credits ([research](research/amiga-intro.md)) | `shapes/wingstitle`, `creditscreen`, the executable's story | done 2026-11-20: title, credits, story pages ([intro.md](intro.md)) |
 
 `tools/convert_screens.py` decodes the shapes (`decode_shapes.py`, the
 `wingspalette` colours), maps their colours to the port's palette, and

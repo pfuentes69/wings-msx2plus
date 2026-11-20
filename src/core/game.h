@@ -14,6 +14,12 @@
 #define GAME_OVER 8      /* "The end" (0xaf7c): 150 frames, or a button after 30 */
 #define GAME_NAME 9      /* a high score's name (0x9856): typed, 16 at most */
 #define GAME_SCORES 10   /* the ten best (0x9856): 1800 frames or a button */
+#define GAME_INTRO 11    /* the intro at boot (docs/intro.md): the cursor is the screen */
+/* The intro's screens: the title, the credits, the story's pages. */
+#define GAME_INTRO_SCREENS 5
+#define GAME_INTRO_TITLE 0
+#define GAME_INTRO_CREDITS 1
+#define GAME_INTRO_STORY 2
 #define GAME_SCORE_COUNT 10
 #define GAME_NAME_LENGTH 16
 #define WEAPON_BOMBS 0
@@ -57,6 +63,8 @@ uint8_t Game_Type(GameState* game, uint8_t key) WINGS_BANKED;
 void Game_SetLoadout(GameState* game, uint8_t weapon) WINGS_BANKED;
 void Game_OpenService(GameState* game) WINGS_BANKED;
 void Game_Reset(GameState* game) WINGS_BANKED;
+/* The intro, as at boot: its first screen. */
+void Game_Intro(GameState* game) WINGS_BANKED;
 /* A crash costs one plane. Returns 1 while planes remain, else enters GAME_OVER. */
 uint8_t Game_LosePlane(GameState* game) WINGS_BANKED;
 uint8_t Game_HandleAction(GameState* game, uint16_t pressed) WINGS_BANKED;

@@ -14,7 +14,12 @@ And on their own palettes, full screen:
   a pixel): the port's own compact layout, drawn by msx/screen_end.c;
 - rank selection (shapes/selectrank, 320 x 200, recomposed to 256 wide) in
   banks 53..56 and its seven highlighted lines (selectrank.shp rnk0..rnk6)
-  in bank 57. "Return from R&R" (rnk7) is left out."""
+  in bank 57. "Return from R&R" (rnk7) is left out.
+And the intro (docs/intro.md), before rank selection:
+- the title (shapes/wingstitle, 320 x 200, scaled to 256 wide), banks 59..62;
+- the credits and the story ("A Time of Fury", the executable's text): the
+  port's own pages, in the menu's font (drawn at run time) with the
+  original's names in newarmyfont and the USI logo (creditscreen), bank 63."""
 import argparse
 from pathlib import Path
 from PIL import Image
@@ -32,6 +37,35 @@ RANK_LINE_BANK = 57             # its 7 highlighted lines, 9 rows of 92 bytes ea
 RANK_INNER = (68, 252)          # the picture's inner columns kept (184): the content is 70..247
 RANK_BAR_CUT = 128              # the bars (rows 0..27, 172..199) lose columns 128..191
 RANK_LINE_Y, RANK_LINE_STEP, RANK_LINE_X = 91, 10, 64   # rnk0..rnk6 (192 x 9)
+TITLE_BANKS = (59, 60, 61, 62)   # the title's 200 rows, 128 bytes each
+INTRO_BANK = 63                  # the credits' and story's bitmaps
+STORY_BANK = 24                  # the story's lines, STORY_LINE bytes each
+TITLE_TOP = 6                    # the title's first row of the 212
+STORY_COLUMNS = 40               # characters a story line (6 px each)
+STORY_LINE = 42                  # bytes a stored line (the Text routine's most)
+EXE = ROOT / 'reference_assets/original_files/Wings_of_Fury/wings'
+# The intro pages' colours (0..7 a channel): black; the text's light grey;
+# the roles' grey; the names' oranges (creditscreen: each line lighter at
+# the top); the heading's golds (wingstitle); the USI logo's blues.
+INTRO_FIXED = [(0, 0, 0), (6, 6, 6), (4, 4, 5), (7, 4, 0), (6, 3, 0), (5, 2, 0), (4, 1, 0), (7, 6, 2), (6, 4, 0)]
+INTRO_TEXT, INTRO_ROLE = 1, 2
+HEADING_SHADES = (7, 7)
+# creditscreen's lines (rows), each cut in its role (to the colon) and its
+# name: (rows, role's columns, name's columns), and where the page puts them.
+CREDIT_LINES = (((13, 28), (38, 191), (198, 303)), ((45, 60), (38, 141), (146, 304)), ((76, 87), (39, 106), (114, 254)))
+CREDIT_ROWS = ((22, 38), (58, 74), (94, 106))   # role's, name's first row
+# The menu font's extra glyphs for the intro's text (5 x 7 in 6 px, bit 7
+# leftmost): , ' ! - ( ) & ?
+EXTRA_GLYPHS = {
+    ',': ('......', '......', '......', '......', '......', '..#...', '.#....'),
+    "'": ('..#...', '..#...', '.#....', '......', '......', '......', '......'),
+    '!': ('..#...', '..#...', '..#...', '..#...', '..#...', '......', '..#...'),
+    '-': ('......', '......', '......', '.###..', '......', '......', '......'),
+    '(': ('...#..', '..#...', '.#....', '.#....', '.#....', '..#...', '...#..'),
+    ')': ('.#....', '..#...', '...#..', '...#..', '...#..', '..#...', '.#....'),
+    '&': ('.##...', '#..#..', '#.#...', '.#....', '#.#.#.', '#..#..', '.##.#.'),
+    '?': ('.###..', '#...#.', '....#.', '...#..', '..#...', '......', '..#...'),
+}
 # The briefing's palette (0..7 a channel): black, rank.iff's red and blue
 # lifted for small letters, its greys for the frame; the values' light grey
 # (the capture: 172,170,173).
@@ -57,6 +91,8 @@ def small_font():
                     if nibble == 0xb: bits |= 0x80 >> (2 * k + n)
             out.append(bits)
     assert len(out) == 280
+    for glyph in EXTRA_GLYPHS.values():
+        out += bytes(sum(0x80 >> i for i, v in enumerate(row) if v == '#') for row in glyph)
     return bytes(out)
 
 
@@ -179,11 +215,12 @@ def artifacts():
     # The briefing: its palette and small font in segment 50.
     binaries = {}
     h += [f'#define BRIEF_INK {BRIEF_INK}', 'extern const unsigned char g_BriefPalette[32];',
-          'extern const unsigned char g_SmallFont[280];']
+          f'extern const unsigned char g_SmallFont[{280 + 7 * len(EXTRA_GLYPHS)}];',
+          f'#define SMALL_FONT_EXTRA "{"".join(EXTRA_GLYPHS)}"']
     words = [(r << 4 | b, g) for r, g, b in BRIEF_PALETTE]
     end.append('/* The briefing\'s palette (0RRR0BBB, 00000GGG). */')
     end.append(f'const unsigned char g_BriefPalette[32] = {{{", ".join(f"0x{v:02x}" for w in words for v in w)}}};')
-    end += c_bytes('g_SmallFont', small_font(), "The menu's 5 x 7 font (A..Z, 0..9, '>', ' ', '.', ':'), 7 rows a glyph, bit 7 leftmost.")
+    end += c_bytes('g_SmallFont', small_font(), "The menu's 5 x 7 font (A..Z, 0..9, '>', ' ', '.', ':', then SMALL_FONT_EXTRA), 7 rows a glyph, bit 7 leftmost.")
     # Rank selection.
     picture, lines, rank_palette = rank_selection()
     images['rank.png'] = preview(picture, 256, 200, rank_palette)
@@ -197,8 +234,193 @@ def artifacts():
           f'#define RANK_LINE_Y {RANK_LINE_Y}', f'#define RANK_LINE_STEP {RANK_LINE_STEP}',
           f'#define RANK_LINE_X {RANK_INNER[0] - 32}', '#define RANK_LINE_BYTES 92', '#define RANK_LINE_HEIGHT 9',
           'extern const unsigned char g_RankPalette[32];']
+    # The intro: the title, then the credits' and the story's pieces.
+    title, title_palette = intro_title()
+    images['title.png'] = preview(title, 256, 200, title_palette)
+    data = pack(title, 256)
+    binaries.update({OUT_PNG / f'bank_{b}.bin': data[i * 8192:(i + 1) * 8192] for i, b in enumerate(TITLE_BANKS)})
+    words = [(r << 4 | b, g) for r, g, b in title_palette]
+    end.append('/* The title\'s palette (0RRR0BBB, 00000GGG). */')
+    end.append(f'const unsigned char g_TitlePalette[32] = {{{", ".join(f"0x{v:02x}" for w in words for v in w)}}};')
+    h += [f'#define TITLE_BANK {TITLE_BANKS[0]}', f'#define TITLE_TOP {TITLE_TOP}',
+          'extern const unsigned char g_TitlePalette[32];']
+    bank, story, story_offset, pieces, pages, intro_palette, page_images = intro_pages()
+    binaries[OUT_PNG / f'bank_{INTRO_BANK}.bin'] = bank
+    binaries[OUT_PNG / f'bank_{STORY_BANK}.bin'] = story
+    for i, page in enumerate(page_images):
+        images[f'intro-{i}.png'] = preview(page, 256, 212, intro_palette)
+    words = [(r << 4 | b, g) for r, g, b in intro_palette]
+    end.append('/* The credits\' and story\'s palette (0RRR0BBB, 00000GGG). */')
+    end.append(f'const unsigned char g_IntroPalette[32] = {{{", ".join(f"0x{v:02x}" for w in words for v in w)}}};')
+    end.append('/* The bitmaps: bank, offset, bytes a row, rows, x (even), y. */')
+    end.append(f'const unsigned char g_IntroPieceBank[{len(pieces)}] = {{{", ".join(str(p["bank"]) for p in pieces)}}};')
+    end.append(f'const unsigned short g_IntroPieceOffset[{len(pieces)}] = {{{", ".join(str(p["offset"]) for p in pieces)}}};')
+    for key, ctype in (('bytes', 'char'), ('height', 'char'), ('x', 'char'), ('y', 'char')):
+        end.append(f'const unsigned {ctype} g_IntroPiece{key.title()}[{len(pieces)}] = {{{", ".join(str(p[key]) for p in pieces)}}};')
+    end.append('/* The story\'s pages: their first line (STORY_LINE bytes each from')
+    end.append(' * STORY_OFFSET in STORY_BANK), how many, and the first row. */')
+    for key in ('first', 'count', 'top'):
+        end.append(f'const unsigned char g_StoryPage{key.title()}[{len(pages)}] = {{{", ".join(str(p[key]) for p in pages)}}};')
+    h += [f'#define INTRO_BANK {INTRO_BANK}', f'#define INTRO_PIECES {len(pieces)}',
+          f'#define INTRO_PIECE_HEADING {len(pieces) - 1}', f'#define INTRO_TEXT {INTRO_TEXT}', f'#define INTRO_ROLE {INTRO_ROLE}',
+          f'#define STORY_PAGES {len(pages)}', f'#define STORY_LINE {STORY_LINE}', f'#define STORY_BANK {STORY_BANK}', f'#define STORY_OFFSET {story_offset}',
+          f'#define STORY_COLUMNS {STORY_COLUMNS}',
+          'extern const unsigned char g_IntroPalette[32];', 'extern const unsigned short g_IntroPieceOffset[];',
+          'extern const unsigned char g_IntroPieceBank[], g_IntroPieceBytes[], g_IntroPieceHeight[], g_IntroPieceX[], g_IntroPieceY[];',
+          'extern const unsigned char g_StoryPageFirst[], g_StoryPageCount[], g_StoryPageTop[];']
     texts = {OUT_C: '\n'.join(c) + '\n', OUT_END: '\n'.join(end) + '\n', OUT_H: '\n'.join(h) + '\n'}
     return texts, images, binaries
+
+
+def quantize(colours, count, fixed=((0, 0, 0),)):
+    """count colours (0..7 a channel) for a Counter of colours: the fixed
+    ones, then each next the one that most lowers the weighted error."""
+    d = lambda a, b: (a[0] - b[0]) ** 2 * 3 + (a[1] - b[1]) ** 2 * 4 + (a[2] - b[2]) ** 2 * 2
+    palette = list(fixed)
+    while len(palette) < count:
+        best = max((c for c in colours if c not in palette),
+                   key=lambda k: sum(w * max(0, min(d(q, p) for p in palette) - d(q, k)) for q, w in colours.items()),
+                   default=None)
+        if best is None: break
+        palette.append(best)
+    palette += [(0, 0, 0)] * (count - len(palette))
+    return palette, lambda c: min(range(count), key=lambda k: d(palette[k], c))
+
+
+def intro_title():
+    """wingstitle, box-scaled from 320 to 256 wide (the whole picture kept;
+    its texts stay legible), in its 16 most telling colours."""
+    from extract_iff import iff_img
+    from collections import Counter
+    image, meta = iff_img(SHAPES / 'wingstitle')
+    scaled = image.convert('RGB').resize((256, 200), Image.BOX)
+    rgb = [tuple(round(v * 7 / 255) for v in scaled.getpixel((x, y))) for y in range(200) for x in range(256)]
+    palette, near = quantize(Counter(rgb), 16)
+    index = {c: near(c) for c in set(rgb)}
+    return bytes(index[c] for c in rgb), palette
+
+
+def story_lines():
+    """The executable's story (0x...: "A Time of Fury", NUL-separated lines,
+    justified with spaces for 48 columns): its heading and its paragraphs,
+    wrapped again for STORY_COLUMNS, a blank line between paragraphs."""
+    data = EXE.read_bytes()
+    start = data.index(b'A Time of Fury')
+    end = data.index(b'from above...', start) + len(b'from above...')
+    lines = [l.decode('latin-1') for l in data[start:end].split(b'\0')]
+    heading, paragraphs, words = lines[0], [], []
+    for line in lines[1:]:
+        if not line.strip() or line.startswith('    '):
+            if words: paragraphs.append(words); words = []
+        words += line.split()
+    if words: paragraphs.append(words)
+    out = []
+    for words in paragraphs:
+        line = ''
+        for w in words:
+            if line and len(line) + 1 + len(w) > STORY_COLUMNS:
+                out.append(line); line = w
+            else:
+                line = f'{line} {w}' if line else w
+        out += [line, '']
+    return heading, out[:-1]
+
+
+def newarmy_text(text, top, bottom, transparent=0):
+    """text in newarmyfont (12 rows), its upper half in colour top, the
+    lower in bottom, as width-even pixel rows."""
+    from convert_font import glyphs
+    height, first, last, font = glyphs()
+    rows = [[] for _ in range(height)]
+    for ch in text.encode('latin-1'):
+        width, bits = font[ch if first <= ch <= last else first]
+        for r in range(height):
+            rows[r] += [(top if r < height // 2 else bottom) if v else transparent for v in bits[r]] + [transparent]
+    width = (len(rows[0]) + 1) // 2 * 2
+    return [row + [transparent] * (width - len(row)) for row in rows], width
+
+
+def intro_pages():
+    """The credits' and story's pieces in INTRO_BANK and the pages' layout,
+    with previews of the pages as drawn (msx/screen_end.c)."""
+    from extract_iff import iff_img
+    from collections import Counter
+    from convert_font import glyphs
+    # The USI logo: creditscreen's rows 131..199, columns 0..161.
+    image, meta = iff_img(SHAPES / 'creditscreen')
+    cmap = image.getpalette()[:3 * meta['colors']]
+    rgb = [tuple(round(v * 7 / 255) for v in cmap[3 * i:3 * i + 3]) for i in range(meta['colors'])]
+    pixels = image.tobytes()
+    logo = [[rgb[pixels[y * 320 + x]] for x in range(162)] for y in range(131, 200)]
+    blues, _ = quantize(Counter(c for row in logo for c in row if c not in INTRO_FIXED), 16 - len(INTRO_FIXED) + 1)
+    palette = INTRO_FIXED + [b for b in blues if b != (0, 0, 0)][:16 - len(INTRO_FIXED)]
+    palette += [(0, 0, 0)] * (16 - len(palette))
+    _, near = quantize(Counter(), 16, palette)
+    logo_index = [[near(c) for c in row] for row in logo]
+    pieces, bank, story = [], bytearray(), bytearray()
+    def add(rows, width, x, y, into=bank):
+        pieces.append(dict(offset=len(into), bank=INTRO_BANK if into is bank else STORY_BANK,
+                           bytes=width // 2, height=len(rows), x=x, y=y, rows=rows, width=width))
+        for row in rows: into.extend(pack(bytes(row), width))
+    # The credits page: the original's roles and names, cut from its lines
+    # (msx/screen_end.c draws the texts at CREDIT_TEXTS' rows).
+    for ((top, bottom), *parts), rows_at in zip(CREDIT_LINES, CREDIT_ROWS):
+        for (left, right), y in zip(parts, rows_at):
+            width = (right - left + 1) // 2 * 2
+            rows = [[near(rgb[pixels[yy * 320 + x]]) for x in range(left, left + width)] for yy in range(top, bottom)]
+            add(rows, width, (256 - width) // 2 // 2 * 2, y)
+    add(logo_index, 162, 46, 124, story)
+    heading, lines = story_lines()
+    rows, width = newarmy_text(heading, *HEADING_SHADES)
+    add(rows, width, (256 - width) // 2 // 2 * 2, 8)
+    # The story's lines, fixed records in STORY_BANK; pages of as many as fit
+    # below the heading (page 1) or the top margin.
+    offset = len(story)
+    for line in lines:
+        record = line.upper().encode('latin-1')
+        assert len(record) <= STORY_LINE and all(chr(b) in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .:' + ''.join(EXTRA_GLYPHS) for b in record), line
+        story.extend(record + bytes(STORY_LINE - len(record)))
+    pages, at = [], 0
+    while at < len(lines):
+        top = 28 if not pages else 12
+        count = min((204 - top) // 9, len(lines) - at)
+        pages.append(dict(first=at, count=count, top=top))
+        at += count
+        while at < len(lines) and not lines[at]: at += 1
+    assert len(bank) <= 8192 and len(story) <= 8192, (len(bank), len(story))
+    # Previews, as the run time draws them.
+    font = small_font()
+    order = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789> .:' + ''.join(EXTRA_GLYPHS)
+    def text(page, x, y, string, ink):
+        for i, ch in enumerate(string.upper()):
+            g = order.index(ch) if ch in order else order.index(' ')
+            for r in range(7):
+                bits = font[g * 7 + r]
+                for k in range(6):
+                    if bits & (0x80 >> k): page[(y + r) * 256 + x + 6 * i + k] = ink
+    def blit(page, p):
+        for r, row in enumerate(p['rows']):
+            for k, v in enumerate(row):
+                if v: page[(p['y'] + r) * 256 + p['x'] + k] = v
+    def centred(string): return (256 - 6 * len(string)) // 2 // 2 * 2
+    credits = bytearray(256 * 212)
+    for string, y, ink in CREDIT_TEXTS:
+        text(credits, centred(string), y, string, ink)
+    for p in pieces[:-1]: blit(credits, p)
+    previews = [bytes(credits)]
+    for n, page in enumerate(pages):
+        image = bytearray(256 * 212)
+        if not n: blit(image, pieces[-1])
+        for i in range(page['count']):
+            text(image, (256 - 6 * STORY_COLUMNS) // 2, page['top'] + 9 * i, lines[page['first'] + i], INTRO_TEXT)
+        previews.append(bytes(image))
+    return bytes(bank) + bytes(8192 - len(bank)), bytes(story), offset, pieces, pages, palette, previews
+
+
+# The credits page's texts: (text, row, ink); msx/screen_end.c draws them
+# centred.
+CREDIT_TEXTS = (('ADAPTED FROM THE AMIGA VERSION', 8, INTRO_TEXT),
+                ('PORTED BY PFUENTES69 (& CLAUDE)', 200, INTRO_TEXT))
 
 
 def rank_selection():

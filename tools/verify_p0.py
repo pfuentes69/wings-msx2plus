@@ -71,6 +71,13 @@ def main():
     assert rom.read_bytes()==data,'ROM changed during verification'
     report=(out/'emulator-report.txt').read_text();assert report.rstrip().endswith('PASS'),report[-3000:]
     snapshots={}
+    # The intro's screens as the converter composes them (tools/convert_screens.py).
+    import convert_screens
+    def packed(pixels): return bytes((pixels[i]<<4)|pixels[i+1] for i in range(0,len(pixels),2))
+    def words(palette): return bytes(v for r,g,b in palette for v in ((r<<4)|b,g))
+    title,title_palette=convert_screens.intro_title()
+    *_,intro_palette,pages=convert_screens.intro_pages()
+    intro_screens=[(packed(bytes(6*256)+title+bytes(6*256)),words(title_palette))]+[(packed(p),words(intro_palette)) for p in pages]
     waves_source=(ROOT/'assets_msx/dashboard/waves.sc5').read_bytes()
     scene=AircraftScene()
     terrain=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())
@@ -88,12 +95,19 @@ def main():
         # Colour 0 (the sky) is set once at boot and never by the ISR.
         terrain_palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
         # (Black on rank selection and the briefing: full screen, src/msx/screen_end.c.)
-        sky=b'\x00\x00' if game[0] in (0,1) else terrain_palette[:2]
+        sky=b'\x00\x00' if game[0] in (0,1,11) else terrain_palette[:2]
         assert (out/f'{name}.palette').read_bytes()[:2]==sky,(name,'sky colour 0',(out/f'{name}.palette').read_bytes()[:2])
         # The border (R7): colour 0, black, on the full-screen ones; else the
         # dark sea, colour 1 (msx/screen_end.c Screens_Palette).
-        assert (out/f'{name}.regs').read_bytes()[7]==(0 if game[0] in (0,1) else 1),(name,'border',(out/f'{name}.regs').read_bytes()[7])
+        assert (out/f'{name}.regs').read_bytes()[7]==(0 if game[0] in (0,1,11) else 1),(name,'border',(out/f'{name}.regs').read_bytes()[7])
         vram=(out/f'{name}.vram').read_bytes()
+        if game[0]==11:
+            # The intro (docs/intro.md): the screen shown is the converter's
+            # picture, in its palette, the whole screen.
+            want_pixels,want_palette=intro_screens[game[6]]
+            assert (out/f'{name}.palette').read_bytes()==want_palette,(name,'intro palette')
+            shown=bytes(vram[page*32768:page*32768+212*128])
+            assert shown==want_pixels,(name,'intro screen',game[6],next(i for i in range(len(shown)) if shown[i]!=want_pixels[i])//128)
         # The wave strip's frames (rows 212.. of pages 0 and 1, x 48 and
         # 144: src/msx/dashboard.c Dashboard_LoadWaves) are intact in play:
         # "THE END" stages its plate there and the rank screen reloads them.
@@ -186,7 +200,7 @@ def main():
                 value=(vram[page*32768+(172+row)*128+col//2]>>(0 if col&1 else 4))&15
                 # Rank selection and the briefing are full screen: no dashboard
                 # (the briefing's rows are black, rank selection's picture).
-                if game[0]==0: continue
+                if game[0] in (0,11): continue
                 want=0 if game[0]==1 else hud[row*256+col]
                 assert value==want,(name,'dashboard',col,172+row,value,want)
         palette=(ROOT/'assets_msx/mission_a/palette.bin').read_bytes()
@@ -201,7 +215,7 @@ def main():
                             rope=(out/f'{name}.wheel').read_bytes()[2],smoke=(out/f'{name}.smoke').read_bytes()[0])
         if not args.headless:
             assert Image.open(out/f'{name}.png').size==(320,240)
-    required={'lift_paused','lift_pause_wait','lift_start','lift_rise_24','lift_rise_16','lift_rise_8','lift_left_down_8','lift_left_down_16','lift_left_down_24','lift_left_inside','service_left','lift_left_return','lift_right_down_8','lift_right_down_24','lift_right_inside','service_right','lift_right_return','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','approach','open_sea_right','rank','briefing','rockets','torpedo','loadout','start','guns','aliases','short_press','paused',
+    required={'intro_0','intro_1','intro_2','intro_3','intro_4','lift_paused','lift_pause_wait','lift_start','lift_rise_24','lift_rise_16','lift_rise_8','lift_left_down_8','lift_left_down_16','lift_left_down_24','lift_left_inside','service_left','lift_left_return','lift_right_down_8','lift_right_down_24','lift_right_inside','service_right','lift_right_return','accelerating_roll','slow_roll','deck_0','deck_1','deck_2','approach','open_sea_right','rank','briefing','rockets','torpedo','loadout','start','guns','aliases','short_press','paused',
               'pause_wait','inverted','resumed','no_debug','restart','ground_roll','takeoff','turn','turn_complete','compensated_turn','joystick_guns','joystick_secondary','joystick_inverted','in_game_load','in_game_save'}
     required|={f'cannon_{pitch}_{heading}' for pitch in ('climb','level','dive') for heading in ('left','right')}
     required|={'stall_held','stall_released','dive_released','dive_persistent','dive_recovered'}

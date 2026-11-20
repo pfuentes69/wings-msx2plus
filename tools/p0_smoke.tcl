@@ -2,6 +2,8 @@ set extra_symbols {g_Planes g_Crash}
 source [file join $env(WINGS_ROOT) tools smoke_lib.tcl]
 # The sinking plane's depth (g_Crash +7, src/core/crash.h): drawn lower.
 proc snapshot_extra {name} {dump $name.sink [debug read_block memory [expr {$::addr(g_Crash)+7}] 1]}
+# Each intro screen (docs/intro.md) is captured before Return moves on.
+proc intro_screen {screen then} {set ::armed 1;snap intro_$screen $then}
 # Enemy planes have their own verifier (docs/enemy-planes.md); the P0's
 # pixel model does not know them: keep the torpedo-plane timer (g_Planes
 # +152) at 0, so none comes.
