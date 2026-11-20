@@ -34,6 +34,9 @@ void Screens_RankLine(u8 page, u8 line) WINGS_BANKED;
  * credits, the story's pages) full screen on this page (its colours:
  * SCREENS_TITLE for the title, else SCREENS_INTRO). */
 void Screens_Intro(u8 page, u8 screen) WINGS_BANKED;
+/* At boot: the title on page 0 shown at once (its colours set), then the
+ * rest of VRAM cleared. */
+void Screens_BootTitle(void) WINGS_BANKED;
 
 /* msx/screen_end.c: the colours a screen is shown in. Set as its page is
  * published (or before drawing on the page shown), so no screen is ever

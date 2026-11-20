@@ -78,6 +78,7 @@ def main():
     title,title_palette=convert_screens.intro_title()
     *_,intro_palette,pages=convert_screens.intro_pages()
     intro_screens=[(packed(bytes(6*256)+title+bytes(6*256)),words(title_palette))]+[(packed(p),words(intro_palette)) for p in pages]
+    assert (out/'boot_first.vram').read_bytes()==intro_screens[0][0],'the first screen shown is not the title'
     waves_source=(ROOT/'assets_msx/dashboard/waves.sc5').read_bytes()
     scene=AircraftScene()
     terrain=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())

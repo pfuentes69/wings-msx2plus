@@ -1077,6 +1077,7 @@ void main(void)
     u8 weapons, reset_weapons, i;
     u8 page, frame, steps, step, input, tick, turn, held = 0;
     u8 base_steps, present_ticks, core_phase = 0;
+    u8 intro;
 #ifdef WINGS_P1_FLIGHT
     /* RAM is not cleared at boot: before any line interrupt runs the driver. */
     Sound_Reset();
@@ -1143,10 +1144,23 @@ void main(void)
      * pointer wrapped to 0, so the rest of this write lands on colour 0
      * (the sky), which the ISR never rewrites. Set colour 0 atomically. */
     VDP_SetPaletteEntry(0, g_TerrainPalette[0] | ((u16)g_TerrainPalette[1] << 8));
-    VDP_FillVRAM(0, 0, 0, 0);
-    VDP_FillVRAM(0, 0, 1, 0);
+    intro = g_Game.phase == GAME_INTRO;
+#ifdef WINGS_P1_FLIGHT
+    if (intro)
+    {
+        /* The title first (docs/intro.md); everything else loads behind
+         * it, out of sight: page 1, the atlas pages, rows 212.., RAM. */
+        Screens_BootTitle();
+        s_PaletteShown = s_IntroShown = SCREENS_TITLE; s_DashGone[0] = 1; s_UiDirty = 0;
+    }
+    else
+#endif
+    {
+        VDP_FillVRAM(0, 0, 0, 0);
+        VDP_FillVRAM(0, 0, 1, 0);
+    }
+    Dashboard_Load(intro);
     LoadCaches();
-    Dashboard_Load();
     Ship_Load();
 #ifdef WINGS_P1_FLIGHT
     Elevator_Load();
@@ -1158,15 +1172,25 @@ void main(void)
     g_BriefIslands = g_Island.left; g_BriefShips = g_Ships.left;
     Rope_Reset();
 #endif
-    for (page = 0; page < 2; ++page)
+    /* The view is drawn at boot only without the intro: after it, rank
+     * selection and the briefing leave both pages to be rebuilt. */
+    if (!intro)
     {
-        Terrain_InitPage(page);
-        DrawView(camera, page);
+        for (page = 0; page < 2; ++page)
+        {
+            Terrain_InitPage(page);
+            DrawView(camera, page);
+        }
+        Render(0, camera, world, s_World.flight.y >> 8, s_Aircraft.shape);
     }
-    Render(0, camera, world, s_World.flight.y >> 8, s_Aircraft.shape);
+    else
+    {
+        s_PageScale[0] = s_PageScale[1] = 255;
+        camera = 0;   /* the intro's scroll; the loop sets the menus' */
+    }
     VDP_SetPage(0);
     VDP_SetHorizontalMode(VDP_HSCROLL_SINGLE);
-    VDP_EnableMask(TRUE);
+    VDP_EnableMask(!intro);
     VDP_SetHorizontalOffset(camera & 255);
     g_ScrollFine = (-camera) & 7;
     g_ScrollCoarse = ((camera & 255) + 7) >> 3;

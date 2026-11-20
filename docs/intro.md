@@ -24,6 +24,27 @@ original's sequence and music are researched in
   screen and is set when its page is published (`SCREENS_TITLE`,
   `SCREENS_INTRO`).
 
+## Boot
+
+The title is the first thing on screen (the user, 2026-11-20: the carrier
+showed first). Right after the screen mode is set, `Screens_BootTitle`
+clears page 0's rows below the screen, draws the title there, sets its
+palette and turns the display on. That is about 0.7 s after the game
+starts, against 3.7 s before. Everything else loads behind it, out of
+sight:
+
+- the rest of VRAM is cleared;
+- the dashboard is drawn on page 1 only (page 0's comes back with
+  `Dashboard_Restore` before play);
+- the atlas, the ship, the elevator and the terrain are loaded;
+- the mission is set up.
+
+That takes about 4.5 s on the Panasonic. With the intro, the carrier view
+is not drawn at boot: rank selection and the briefing leave both pages to
+be rebuilt before play. The title's 8 s count from the end of loading.
+`verify_p0` checks that the first page held on screen for a whole frame
+is the title.
+
 ## Differences from the original
 
 | Original | Port | Why |

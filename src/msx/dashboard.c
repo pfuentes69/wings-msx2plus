@@ -80,21 +80,15 @@ void Dashboard_Restore(u8 page) WINGS_BANKED
     Expand(0, (u16)page * 256 + 172, 256, 40);
 }
 
-void Dashboard_Load(void) WINGS_BANKED
+void Dashboard_Load(u8 first) WINGS_BANKED
 {
-    u8 page, frame;
+    u8 frame;
     Waves_Init();
-    s_FieldValid = 0;
     g_Cockpit.generation = 255;   /* RAM is not cleared at boot */
-    for (page = 0; page < 2; ++page)
-    {
-        g_Cockpit.shown[page] = 255;
-        for (frame = 0; frame < HUD_ELEMENT_COUNT; ++frame) s_Hud[page][frame] = s_HudDefault[frame];
-        s_Status[page][0] = s_Status[page][1] = s_Status[page][2] = 255;
-        g_HudScore[page] = 0;
-        Input(DASHBOARDPANEL_OFFSET);
-        Expand(0, (u16)page * 256 + 172, 256, 40);
-    }
+    g_Cockpit.shown[0] = 255;
+    /* Page 0 waits (first 1) while the intro's title shows on it: its
+     * dashboard comes back with Dashboard_Restore. */
+    for (; first < 2; ++first) Dashboard_Restore(first);
     Cockpit_Load();
     Input(FARPLANERLE_OFFSET);
     for (frame = 0; frame < FAR_PLANE_COUNT; ++frame)

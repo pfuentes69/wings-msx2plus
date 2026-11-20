@@ -2,6 +2,18 @@ set extra_symbols {g_Planes g_Crash}
 source [file join $env(WINGS_ROOT) tools smoke_lib.tcl]
 # The sinking plane's depth (g_Crash +7, src/core/crash.h): drawn lower.
 proc snapshot_extra {name} {dump $name.sink [debug read_block memory [expr {$::addr(g_Crash)+7}] 1]}
+# The first page the game holds on screen (SCREEN 5, display on for a whole
+# frame) must be the intro's title (docs/intro.md): nothing loads in view.
+proc boot_on {} {expr {([debug read {VDP regs} 1] & 64) && ([debug read {VDP regs} 0] & 14)==6}}
+proc boot_poll {} {if {[boot_on]} {after time 0.02 boot_confirm} else {after time 0.002 boot_poll}}
+proc boot_confirm {} {
+    if {![boot_on]} {after time 0.002 boot_poll;return}
+    dump boot_first.vram [debug read_block VRAM [expr {(([debug read {VDP regs} 2]>>5)&3)*32768}] [expr {212*128}]]
+}
+# From the game's start (the BIOS has its own screens, C-BIOS's logo in
+# SCREEN 5 too).
+regexp {DEF _main (0x[0-9A-Fa-f]+)} $symbols -> main_addr
+set boot_bp [debug set_bp $main_addr {} {debug remove_bp $::boot_bp;boot_poll}]
 # Each intro screen (docs/intro.md) is captured before Return moves on.
 proc intro_screen {screen then} {set ::armed 1;snap intro_$screen $then}
 # Enemy planes have their own verifier (docs/enemy-planes.md); the P0's

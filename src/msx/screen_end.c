@@ -231,6 +231,20 @@ void Screens_Intro(u8 page, u8 screen) WINGS_BANKED
     }
 }
 
+/* At boot (docs/intro.md): the title on page 0 shown at once, its rows
+ * 212.. cleared; then the rest of VRAM cleared behind it (the screen mode
+ * is set, the display off). */
+void Screens_BootTitle(void) WINGS_BANKED
+{
+    VDP_FillVRAM(0, 212 * 128, 0, 44 * 128);
+    Screens_Intro(0, GAME_INTRO_TITLE);
+    Screens_Palette(SCREENS_TITLE);
+    VDP_SetPage(0);
+    VDP_EnableDisplay(TRUE);
+    VDP_FillVRAM(0, 0x8000, 0, 0x8000);
+    VDP_FillVRAM(0, 0, 1, 0);
+}
+
 extern u8 g_TopPalette[32], g_BottomPalette[32];   /* world_flight.c */
 static void Load(const u8* colours) __naked
 {
