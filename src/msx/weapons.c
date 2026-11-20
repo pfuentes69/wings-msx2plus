@@ -88,9 +88,13 @@ void Weapons_Draw(u8 page, u16 camera, u8 far, u8 heave, const CombatState* stat
         if (far) { left=x&~1; right=left+2; top=y; bottom=y+(kind>=COMBAT_IMPACT ? 2 : 1); }
         else if (kind==COMBAT_FALLING_BOMB)
         {
-            /* The original tumble (0x07f2, 0x0cca): bom3 moving left, bom9
-             * moving right, one frame on every 2 original ticks. */
-            s_BombPose = ((p->vx < 0 ? 3 : 9) + ((COMBAT_BOMB_LIFE - p->life) >> 2)) % BOMB_FRAMES;
+            /* Released level (bom3 moving left, bom9 moving right, 0x07f2),
+             * the nose goes down a frame every 2 original ticks to bom6,
+             * vertical, and stays (the user, from the original, 2026-11-20:
+             * the bombs no longer spin). */
+            { u8 turn = (COMBAT_BOMB_LIFE - p->life) >> 2;
+              if (turn > 3) turn = 3;
+              s_BombPose = p->vx < 0 ? 3 + turn : 9 - turn; }
             x -= g_BombPivotX[s_BombPose]; y -= g_BombPivotY[s_BombPose];
             left=x&~1; right=left+8; top=y; bottom=y+BOMB_HEIGHT;
         }

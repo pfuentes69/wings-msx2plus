@@ -85,15 +85,16 @@ transparency and drawing pivot, cropped into an 8×6 cell (every frame fits
 7×6, so the 8-px byte-aligned backup covers it), with the pivot recorded per
 frame (`g_BombPivotX/Y`, `bomb_pivots` in `assets_src/dashboard/manifest.json`).
 
-As in the original (0x07f2, 0x0cca), a bomb released moving left starts at
-`bom3` (nose left), one moving right at `bom9` (nose right). It steps one
-frame on every second original tick, wrapping after `bomb`. A leftward bomb
-noses down through `bom4`..`bom6` (vertical after about half a second) and
-keeps turning on a long fall. A rightward one turns nose up first, as the
-original's frame order dictates. The original advances the frame only when a
-frame has been drawn since its last tick and its draw counter is odd, so its
-pace follows its render rate. The port assumes 12.5 Hz drawing: one frame
-per 4 weapon ticks.
+As in the original (0x07f2), a bomb released moving left starts at `bom3`
+(nose left), one moving right at `bom9` (nose right). The frames are a turn
+in 30-degree steps. Every second original tick the nose goes one frame
+further down: `bom4`, `bom5`, `bom6` moving left, or `bom8`, `bom7`, `bom6`
+moving right. At `bom6`, vertical (after about half a second), it stays.
+
+That is how the original looks (the user, 2026-11-20). Until then the port
+followed a reading of 0x0cca, which steps the frame on round through all 12
+and wraps, so the bombs spun all the way down; the reading misses what stops
+it. The port assumes 12.5 Hz drawing: one frame per 4 weapon ticks.
 
 Clipped transparent VDP copies draw the cached sprites. Per-projectile backups preserve all opaque pixels and byte alignment.
 Ammo and lives digit data move to dashboard bank 12, read only when changed,

@@ -5191,7 +5191,7 @@
       2
     ]
   ],
-  "bomb_timing": "original tumble: start bom3 (moving left) or bom9, one frame every 4 weapon ticks (2 original ticks)",
+  "bomb_timing": "released level: bom3 (moving left) or bom9, the nose down one frame every 4 weapon ticks (2 original ticks) to bom6 (vertical), then held",
   "pilot_slots": [
     [
       124,

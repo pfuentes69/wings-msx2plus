@@ -401,9 +401,10 @@ def waves():
     mapping = wave_mapping()
     return [bytes(mapping[v] for v in frame) for frame in frames]
 
-# The original's 12 tumble frames (shapes 0x40..0x4b, torpedo.shp bom0..bomb):
-# a bomb starts at bom3 (nose left) moving left or bom9 moving right and steps
-# one frame every second original tick (0x07f2, 0x0cca).
+# The original's 12 tumble frames (shapes 0x40..0x4b, torpedo.shp bom0..bomb),
+# a turn in 30-degree steps: a bomb starts at bom3 (nose left) moving left or
+# bom9 moving right, and its nose goes down one frame every second original
+# tick to bom6 (vertical), where it stays (src/msx/weapons.c).
 BOMB_NAMES = tuple(f'bom{n:x}' for n in range(12))
 BOMB_HEIGHT = 6   # every frame fits 7 x 6
 
@@ -698,7 +699,7 @@ def artifacts():
         asset_bank=dict(bank=12,bytes=len(bundle),offsets=offsets,sha256=hashlib.sha256(bundle).hexdigest()),
         bomb_slots=bomb_slots,bomb_names=BOMB_NAMES,
         bomb_source='torpedo.shp',bomb_source_sha256=hashlib.sha256((SOURCE/'torpedo.shp').read_bytes()).hexdigest(),
-        bomb_pivots=bomb_frames()[1],bomb_timing='original tumble: start bom3 (moving left) or bom9, one frame every 4 weapon ticks (2 original ticks)',pilot_slots=slots[:24],far_poses=poses,far_pose_for_frame=list(pose_ids),
+        bomb_pivots=bomb_frames()[1],bomb_timing='released level: bom3 (moving left) or bom9, the nose down one frame every 4 weapon ticks (2 original ticks) to bom6 (vertical), then held',pilot_slots=slots[:24],far_poses=poses,far_pose_for_frame=list(pose_ids),
         dashboard_palette='original iff-dash RGB4 quantized to RGB3; shared flight border/sea slots 0/1; dashboard blue relocated to 9',
         hud_layout=dict(layout(), removed_columns=sorted(PANEL_REMOVE), dropped_row=PANEL_DROP_ROW,
                         needles=list(NEEDLES), new_plane_needles=dict(oil=NEEDLE_NEW_OIL, fuel=NEEDLE_FULL),

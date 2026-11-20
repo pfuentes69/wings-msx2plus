@@ -318,9 +318,11 @@ def expected_pixels(scene, frame, world, y, camera, background, background_width
         elif kind == 2:
             from convert_dashboard import bomb_frames
             bomb_art,pivots=bomb_frames()
-            # The original tumble: bom3 moving left, bom9 right, a frame per
-            # 4 weapon ticks of age (COMBAT_BOMB_LIFE 255).
-            pose=((3 if p['vx']<0 else 9)+((255-p['life'])>>2))%12
+            # Released level (bom3 moving left, bom9 right), the nose down a
+            # frame per 4 weapon ticks of age (COMBAT_BOMB_LIFE 255) to bom6,
+            # vertical, then held (src/msx/weapons.c).
+            turn=min(3,(255-p['life'])>>2)
+            pose=3+turn if p['vx']<0 else 9-turn
             source=bomb_art[pose*48:(pose+1)*48]   # 8 x 6 cells
             px,py=pivots[pose]
             for row in range(6):
