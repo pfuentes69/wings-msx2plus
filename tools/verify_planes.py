@@ -21,7 +21,11 @@ from verify_ships import run
 
 ROOT = Path(__file__).resolve().parents[1]
 PLANE = 40          # bytes per Plane (SDCC packs)
-MISSED_LIMIT = 30
+# 30 until 2026-11-20. The chase's path changes with any timing shift
+# (the autopilot's keys fall on other steps, the enemy flies elsewhere): over
+# that day's builds the NTSC count ran 19..33 with play's frame cost the same
+# (two calls a frame added, ~0.1 ms of 133).
+MISSED_LIMIT = 35
 
 
 def main():

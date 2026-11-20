@@ -248,14 +248,17 @@ static u16 ColumnOffset(u16 world)
 
 /* Decode a column's runs from the map bank, mapped into window 3 for the
  * moment (this code is resident; the caller's banked segment comes back
- * before we return; the interrupt handlers never use window 3). */
+ * before we return; the music's interrupt maps window 3 for itself and
+ * puts back the segment the shadow names: the shadow is written first). */
 static void Decode(u16 offset, u16* out)
 {
     u8 segment = g_Bank3Segment;
     /* No column record crosses a bank (tools/convert_mission.py). */
-    *(volatile u8*)0x7800 = g_Bank3Segment = TERRAIN_MAP_BANK + (offset >> 13);
+    g_Bank3Segment = TERRAIN_MAP_BANK + (offset >> 13);   /* the shadow first (banking.c) */
+    *(volatile u8*)0x7800 = g_Bank3Segment;
     Column_Decode((const u8*)0xA000 + (offset & 8191), out);
-    *(volatile u8*)0x7800 = g_Bank3Segment = segment;
+    g_Bank3Segment = segment;
+    *(volatile u8*)0x7800 = segment;
 }
 
 /* Spare time before a VBlank: load one strip that the next columns ahead

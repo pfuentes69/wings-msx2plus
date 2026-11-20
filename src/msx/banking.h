@@ -31,6 +31,7 @@
 #define WINGS_SEGMENT_SCREENS 49 /* the weapon panel's artwork and its drawing (msx/screens.c, generated/screens_art.c) */
 #define WINGS_SEGMENT_SCREEN_END 50 /* "THE END": its artwork and drawing (msx/screen_end.c, generated/screen_end_art.c) */
 #define WINGS_SEGMENT_COCKPIT 51 /* the pilot's window (msx/cockpit.c, generated/cockpit_art.c) */
+#define WINGS_SEGMENT_MUSIC 47  /* the music player and its songs (msx/music.c, generated/music_data.c) */
 
 #if defined(WINGS_BANKED_CODE) && defined(__SDCC)
 #define WINGS_BANKED __banked

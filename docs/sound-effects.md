@@ -4,7 +4,8 @@ The original plays 8-bit samples on the Amiga's four Paula channels. The
 MSX can't afford sample playback during gameplay
 ([sound-budget.md](sound-budget.md)), so each effect is resynthesized from
 what the executable does with it: on the PSG, and with MSX-MUSIC when the
-machine has it ([below](#msx-music-2026-11-16)). Music is a later step.
+machine has it ([below](#msx-music-2026-11-16)). The music is in
+[music.md](music.md).
 
 ## What the original plays
 

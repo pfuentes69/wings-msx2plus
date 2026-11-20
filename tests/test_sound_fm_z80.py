@@ -29,6 +29,10 @@ HELPER = """
 unsigned short g_TestPeriod;
 unsigned char g_TestVolume;
 void Test_Engine(void) { Sound_FMEngine(g_TestPeriod, g_TestVolume); }
+/* The music (msx/music.c) and crt0's window-3 shadow: off, so the field
+ * runs the effects. */
+unsigned char g_Music, g_Bank3Segment;
+void Music_Field(void) {}
 """
 
 

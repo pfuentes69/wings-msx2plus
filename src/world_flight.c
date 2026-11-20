@@ -15,6 +15,7 @@
 #include "core/rockets.h"
 #include "core/flight_model.h"
 #include "core/crash.h"
+#include "msx/music.h"
 #include "msx/elevator.h"
 CarrierState g_Carrier;
 volatile u8 g_DisplayElevator;
@@ -1415,6 +1416,8 @@ void main(void)
 #ifdef WINGS_P1_FLIGHT
         /* The deck shows the spare planes (0x3abc). */
         Island_Parked(g_Game.progress.lives);
+        /* The music for this screen (docs/music.md). */
+        Music_Update(g_Game.phase, g_Game.cursor);
         /* The last island fell this frame: the next mission number, and the
          * rank's last mission promotes (its ticker says so). */
         if (g_Island.complete && !s_MissionAdvanced)

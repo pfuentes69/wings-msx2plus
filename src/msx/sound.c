@@ -1,6 +1,7 @@
 #include "sound.h"
 #include "../core/flight.h"
 #include "sound_fm.h"
+#include "music.h"
 
 /* The PSG driver (docs/sound-effects.md). Resident: it runs inside the
  * line interrupt, which never maps window 3, and Sound_Effect is called
@@ -51,6 +52,23 @@ typedef char SoundStepLayout[sizeof(SoundStep) == 7 ? 1 : -1];
 void Sound_Field(void) __naked
 {
     __asm
+        ; The music (msx/music.c): its segment in window 3 for the field,
+        ; then the segment the shadow names (written first by every
+        ; switch, msx/banking.c). Held: nothing this field.
+        ld a, (_g_Music)
+        or a
+        jr z, sound_effects$
+        dec a
+        ret nz
+        ld a, (_g_Bank3Segment)
+        push af
+        ld a, #WINGS_SEGMENT_MUSIC
+        ld (0x7800), a
+        call _Music_Field
+        pop af
+        ld (0x7800), a
+        ret
+    sound_effects$:
         ; MSX-MUSIC, when found: its driver, copied into RAM (sound_fm.c)
         ld a, (_g_SoundFM)
         or a

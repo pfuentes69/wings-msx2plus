@@ -109,9 +109,10 @@ The extracted HUNK symbol table names four song definitions. The first five
 | 4 | `0x9c` | song4 |
 
 Each definition begins with four track pointers and is followed by voice
-references. Note/effect command semantics, full timing transcription, song
-names and which game situations select each slot have not been established.
-Do not rename these slots to “intro”, “victory”, etc. without runtime evidence.
+references. The command format, timing and every note are decoded in
+[research/amiga-music.md](research/amiga-music.md) (`tools/decode_songs.py`),
+and which screen plays each slot is in
+[research/amiga-intro.md](research/amiga-intro.md) §4.
 
 `music/previews/subsong-{0,1,2,4}.wav` contain the first 10 seconds of each
 unique definition. Slot 3 shares preview 1 because it references the same

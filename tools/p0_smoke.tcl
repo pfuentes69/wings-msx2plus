@@ -1,7 +1,10 @@
-set extra_symbols {g_Planes g_Crash}
+set extra_symbols {g_Planes g_Crash g_Music}
 source [file join $env(WINGS_ROOT) tools smoke_lib.tcl]
 # The sinking plane's depth (g_Crash +7, src/core/crash.h): drawn lower.
-proc snapshot_extra {name} {dump $name.sink [debug read_block memory [expr {$::addr(g_Crash)+7}] 1]}
+proc snapshot_extra {name} {
+    dump $name.sink [debug read_block memory [expr {$::addr(g_Crash)+7}] 1]
+    dump $name.music [debug read_block memory $::addr(g_Music) 1]
+}
 # The first page the game holds on screen (SCREEN 5, display on for a whole
 # frame) must be the intro's title (docs/intro.md): nothing loads in view.
 proc boot_on {} {expr {([debug read {VDP regs} 1] & 64) && ([debug read {VDP regs} 0] & 14)==6}}

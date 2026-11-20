@@ -180,7 +180,13 @@ def main():
         # joysticks, port B output; no engine or guns outside a sortie.
         psg=(out/f'{name}.psg').read_bytes()
         assert psg[7]&0xc0==0x80,(name,'PSG mixer port bits',hex(psg[7]))
-        if game[0]!=3: assert psg[8]==0 and psg[9]==0,(name,'sound outside a sortie',list(psg[8:11]))
+        # The music (docs/music.md): on the intro and rank selection, never
+        # in play; elsewhere, once faded, silence.
+        music=(out/f'{name}.music').read_bytes()[0]
+        assert music in (0,1),(name,'music state',music)
+        if game[0] in (0,11): assert music==1,(name,'no music on a front-end screen')
+        if game[0]==3: assert music==0,(name,'music in play')
+        if game[0]!=3 and not music: assert psg[8]==0 and psg[9]==0,(name,'sound outside a sortie',list(psg[8:11]))
         # MSX-MUSIC: both test machines have it, so the driver runs unless
         # turned off; the engine then plays there (silent outside a sortie)
         # and the PSG's engine channel stays quiet.
@@ -188,7 +194,9 @@ def main():
         assert fm[0]==(0 if args.no_fm else 1),(name,'FM driver',fm[0])
         if fm[0]:
             assert psg[8]==0,(name,'PSG engine with FM',psg[8])
-            if game[0]!=3: assert fm[1+0x30]&15==15 and fm[1+0x31]&15==15,(name,'FM engine outside a sortie',fm[1+0x30:1+0x32].hex())
+            if game[0]!=3 and not music: assert fm[1+0x30]&15==15 and fm[1+0x31]&15==15,(name,'FM engine outside a sortie',fm[1+0x30:1+0x32].hex())
+            # With MSX-MUSIC the music is all FM: the PSG quiet.
+            if music: assert psg[8]==psg[9]==psg[10]==0,(name,'PSG with the FM music',list(psg[8:11]))
         gauges=tuple((out/f'{name}.gauges').read_bytes())
         assert all(g<=22 for g in gauges[:2]) and gauges[2]<=3,(name,'gauge state',gauges)
         score=struct.unpack('<I',(out/f'{name}.score').read_bytes())[0]

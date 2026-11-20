@@ -2,6 +2,7 @@
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_SOUND)
 #include "sound.h"
 #include "sound_fm.h"
+#include "music.h"
 #include "../core/carrier.h"
 #include "../core/island.h"
 #include "../core/ships.h"
@@ -54,6 +55,7 @@ void Sound_LoadEffects(void) WINGS_BANKED
     u8 i, id = SOUND_SCREAM, count;
     const SoundStep* steps;
     Sound_InitFM();
+    Music_Init();
     steps = g_SoundFM ? s_StepsFM : s_Steps;
     count = g_SoundFM ? sizeof(s_StepsFM) / sizeof(SoundStep) : sizeof(s_Steps) / sizeof(SoundStep);
     g_SoundEffects[0] = 0;

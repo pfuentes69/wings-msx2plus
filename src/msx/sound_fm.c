@@ -382,14 +382,11 @@ static u8 Detect(void)
     return 0;
 }
 
-void Sound_InitFM(void) WINGS_BANKED
+/* Silence, the engine's instrument, the drums' pitches (the bass drum an
+ * octave below the BIOS's, for bursts), rhythm mode. */
+static void Setup(void)
 {
-    u8 i, *data = s_ScriptData;
-    u16 size = (u16)FM_DriverEnd - (u16)FM_Driver;
-    g_SoundFM = 0;
-    if (size > FM_DRIVER_BYTES || !Detect()) return;
-    /* Silence, the engine's instrument, the drums' pitches (the bass drum
-     * an octave below the BIOS's, for bursts), rhythm mode. */
+    u8 i;
     for (i = 0; i < 9; ++i) { Write(0x20 + i, 0); Write(0x10 + i, 0); Write(0x30 + i, 0x0F); }
     Write(0x37, 0xFF); Write(0x38, 0xFF);
     for (i = 0; i < 8; ++i) Write(i, s_EnginePatch[i]);
@@ -397,6 +394,15 @@ void Sound_InitFM(void) WINGS_BANKED
     Write(0x17, 0x50); Write(0x27, 0x05);
     Write(0x18, 0xC0); Write(0x28, 0x01);
     Write(0x0E, 0x20);
+}
+
+void Sound_InitFM(void) WINGS_BANKED
+{
+    u8 i, *data = s_ScriptData;
+    u16 size = (u16)FM_DriverEnd - (u16)FM_Driver;
+    g_SoundFM = 0;
+    if (size > FM_DRIVER_BYTES || !Detect()) return;
+    Setup();
     for (i = 0; i < 6; ++i)
     {
         g_FMEngine[i * 3] = (i & 1 ? 0x20 : 0x10) + (i >> 1);   /* 0x10 0x20 0x11 0x21 */
@@ -421,6 +427,13 @@ void Sound_InitFM(void) WINGS_BANKED
     s_FMScript = 0; s_FMWait = s_FMGunPhase = 0; s_FMKeys = 0x20;
     s_FMEngineDirty = 1; s_FMPeriod = 0;
     g_SoundFM = 1;   /* last: the interrupt starts calling the driver */
+}
+
+void Sound_FMSetup(void) WINGS_BANKED
+{
+    Setup();
+    s_FMScript = 0; s_FMWait = s_FMGunPhase = 0; s_FMKeys = 0x20;
+    s_FMEngineDirty = 1; s_FMPeriod = 0;
 }
 
 void Sound_FMEngine(u16 period, u8 volume) WINGS_BANKED
