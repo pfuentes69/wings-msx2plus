@@ -54,6 +54,23 @@ static void Wreck(uint8_t hut, uint8_t wrecked)
                       wrecked ? s_HutFarVariant[hut] + i : TERRAIN_FAR_COLUMN + s_HutFarFirst[hut] + i);
 }
 
+/* The spare planes parked on the deck (0x3abc): planes left - 1, at most
+ * PARKED_MAX (the original draws up to 8). The map's columns show
+ * PARKED_MAX; fewer are the converter's variant columns. The column table
+ * is loaded once, at boot, with the map's. */
+static uint8_t s_Parked = PARKED_MAX;
+void Island_Parked(uint8_t lives) WINGS_BANKED
+{
+    uint8_t i, shown = lives > PARKED_MAX ? PARKED_MAX : lives ? lives - 1 : 0;
+    uint16_t near, far;
+    if (shown == s_Parked) return;
+    s_Parked = shown;
+    near = shown == PARKED_MAX ? PARKED_NEAR_FIRST : s_ParkedNear[PARKED_MAX - 1 - shown];
+    far = shown == PARKED_MAX ? TERRAIN_FAR_COLUMN + PARKED_FAR_FIRST : s_ParkedFar[PARKED_MAX - 1 - shown];
+    for (i = 0; i < PARKED_NEAR_COUNT; ++i) Terrain_Remap(PARKED_NEAR_FIRST + i, near + i);
+    for (i = 0; i < PARKED_FAR_COUNT; ++i) Terrain_Remap(TERRAIN_FAR_COLUMN + PARKED_FAR_FIRST + i, far + i);
+}
+
 void Island_Reset(void) WINGS_BANKED
 {
     uint8_t i;

@@ -110,13 +110,20 @@ def parse_map(blob):
                 reset_x=spawn, width=width, columns=len(cells), cells=cells, surface_runs=runs)
 
 
-def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False, ships=False, sink=None):
+# The spare planes parked on the carrier's deck (0x3abc): planes left - 1
+# Cpln shapes from the elevator (the map's reset_x) toward the bow, the
+# first 200 px from it, 30 px apart, on the deck (world altitude 11).
+PARKED_FIRST, PARKED_SPACING = 200, 30
+
+
+def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False, ships=False, sink=None, parked=0):
     """Return a static side-view adaptation; report every unresolved flagged entry.
 
     Object X/depth/shape/origins follow the source. Baseline translation, ground
     fill and static carrier treatment are explicit MSX rendering choices.
     sink: {ship archive: pixels} draws that ship's pieces lower, as the
     sinking clock does (0x1cd8: 1 px a step; an eighth in the distant view).
+    parked: spare planes drawn on the carrier's deck (0x3abc).
     """
     sink = sink or {}
     records = {name: (offset, record) for name, offset, record in read_ppkc(
@@ -225,6 +232,17 @@ def reconstruct(map_data, evidence, baseline=201, height=212, reduced=False, shi
         placed.append(dict(**cell, name=name, drawing_x=x, drawing_y=y,
                            shape_offset=offset, shape_sha256=hashlib.sha256(raw).hexdigest(),
                            width=meta['width'], height=meta['height'], visible_pixels=visible))
+    if parked:
+        data, meta = decode_record(records['Cpln'][1], allow_reduced_flag=reduced, plane_constants=True)
+        ox, oy = meta['origin_candidate']
+        for k in range(parked):
+            wx = map_data['reset_x'] - PARKED_FIRST - PARKED_SPACING * k
+            x, y = (wx // 8 if reduced else wx) - ox, baseline - oy
+            for sy in range(meta['height']):
+                for sx in range(meta['width']):
+                    color = data[sy * meta['width'] + sx]
+                    if color and 0 <= x + sx < width and 0 <= y + sy < height:
+                        pixels[(y + sy) * width + x + sx] = color
     for pos, color in enumerate(ground):
         if color:
             pixels[pos] = color

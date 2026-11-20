@@ -458,9 +458,15 @@ def arrow_frames():
     return out
 
 
+# The atlas is laid out around the cells map a's 510 static tiles filled
+# before the tile cache (docs/tile-cache.md); the cache's slots lie in them.
+# Fixed, so that new tiles in a map do not move the atlas.
+STATIC_TILE_FOOTPRINT = 510
+
+
 def atlas_slots(count, reserve_water=False, reserve_ship=False, reserve_combat=False, reserve_crew=False, frames=None, reserve_wheels=(), reserve_rope=False, reserve_smoke=(), reserve_rockets=()):
     if frames is None: frames=json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
-    tiles=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']
+    tiles=STATIC_TILE_FOOTPRINT
     occupied=[bytearray(256) for _ in range(512)]
     # VRAM row 1023 (page 3's last) is overwritten at run time: never allocate it.
     occupied[511][:]=bytes([1])*256

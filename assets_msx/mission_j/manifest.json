@@ -394,42 +394,42 @@
   "comparisons": [
     {
       "size": 8,
-      "tile_count": 823,
-      "tile_bytes": 26336,
+      "tile_count": 837,
+      "tile_bytes": 26784,
       "columns": 994,
       "rows": 19,
       "unique_columns": 268,
       "dense_map_bytes": 37772,
-      "compressed_map_bytes": 8333,
-      "total_bytes": 34669
+      "compressed_map_bytes": 8375,
+      "total_bytes": 35159
     },
     {
       "size": 16,
-      "tile_count": 327,
-      "tile_bytes": 41856,
+      "tile_count": 331,
+      "tile_bytes": 42368,
       "columns": 497,
       "rows": 10,
       "unique_columns": 137,
       "dense_map_bytes": 9940,
-      "compressed_map_bytes": 3208,
-      "total_bytes": 45064
+      "compressed_map_bytes": 3220,
+      "total_bytes": 45588
     }
   ],
   "selected": {
     "size": 8,
-    "tile_count": 1013,
-    "tile_bytes": 32416,
-    "columns": 1120,
+    "tile_count": 1035,
+    "tile_bytes": 33120,
+    "columns": 1138,
     "rows": 19,
-    "unique_columns": 396,
-    "dense_map_bytes": 55670,
-    "compressed_map_bytes": 10772,
-    "total_bytes": 43188,
+    "unique_columns": 406,
+    "dense_map_bytes": 56354,
+    "compressed_map_bytes": 11042,
+    "total_bytes": 44162,
     "sink_columns": 345
   },
-  "bundle_bytes": 43206,
-  "tile_map_offset": 32416,
-  "bundle_sha256": "1141eb8ab03b0e62abad648aef389d1a4b87eb0353478e0243d892b421afe118",
+  "bundle_bytes": 44162,
+  "tile_map_offset": 33120,
+  "bundle_sha256": "99cb6a2318b1af3c0a0938ae78c3e1fa6c9b26b62f0bbfd2d106707e7a3f94e7",
   "palette_sha256": "0b37b14c0c7d721406951e121885f75479ae3d439bd8429cee8bb2986e7715f9",
   "ocean_palette_sha256": "701a351ccfbae78c8285f9d7ffab0d532dcaf6716395930b7055e2bfc4d70902",
   "palette_rgb3": [
@@ -518,26 +518,27 @@
     32,
     33,
     34,
-    35
+    35,
+    36
   ],
   "map_banks": [
     40,
     41
   ],
   "map_bank": 40,
-  "map_table_bytes": 2240,
+  "map_table_bytes": 2276,
   "tile_cache": {
     "strip_tiles": 8,
-    "strips": 127,
+    "strips": 130,
     "slots": 40,
     "uniform": 2,
-    "worst_view_strips": 32,
+    "worst_view_strips": 31,
     "first_page": 2,
     "first_row": 180,
     "ordering": "uniform tiles first, then first-seen; strips of 8 ids, 8 x 64 px"
   },
   "map_format": "u16le column offsets, deduplicated count:u8/tile:u16le runs, no run crossing an 8 KiB bank; exactly 19 tile rows",
-  "map_and_cache_ram_bytes": 5261,
+  "map_and_cache_ram_bytes": 5300,
   "island": {
     "islands": [],
     "huts": [],
@@ -546,6 +547,21 @@
     "flags": []
   },
   "hut_variants": [],
+  "parked": {
+    "near_first": 464,
+    "near_count": 8,
+    "far_first": 58,
+    "far_count": 1,
+    "max": 2,
+    "near_variants": [
+      1120,
+      1128
+    ],
+    "far_variants": [
+      1136,
+      1137
+    ]
+  },
   "sinking": [
     {
       "name": "destroyer",

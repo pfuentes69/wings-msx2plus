@@ -98,6 +98,9 @@ extern uint8_t g_IslandWrecks;
 
 /* Banked (segment 23). */
 void Island_Reset(void) WINGS_BANKED;
+/* The deck's spare planes for lives planes left (0x3abc): lives - 1, at
+ * most 2; their columns change only when that does. */
+void Island_Parked(uint8_t lives) WINGS_BANKED;
 /* A bomb (or rocket) detonating on the ground at world x: wrecks a hut or
  * empties a manned dugout whose 32 px it falls in. Returns the points. */
 uint16_t Island_Bombed(uint16_t x) WINGS_BANKED;

@@ -111,10 +111,12 @@ class MissionTests(unittest.TestCase):
         mapping = self.files[folder / 'map.bin']
         expected = self.files[folder / 'scene.indices']
         variants = self.metadata['hut_variants']
-        stripes = [8 * v['near_count'] for v in variants] + [8 * v['far_count'] for v in variants]
+        parked = self.metadata['parked']
+        stripes = ([8 * v['near_count'] for v in variants] + [8 * v['far_count'] for v in variants] +
+                   [8 * parked['near_count']] * parked['max'] + [8 * parked['far_count']] * parked['max'])
         width, height = self.metadata['width'] + self.metadata['far_width'] + sum(stripes), self.metadata['height']
         far = self.files[folder / 'far.indices']
-        wrecked, at = self.files[folder / 'hut-variants.indices'], []
+        wrecked, at = self.files[folder / 'hut-variants.indices'] + self.files[folder / 'parked-variants.indices'], []
         for w in stripes:
             at.append(wrecked[:w * height]); wrecked = wrecked[w * height:]
         self.assertEqual(wrecked, b'')
@@ -157,6 +159,26 @@ class MissionTests(unittest.TestCase):
             for x in (-32768, -1, self.mission['width'], 32767):
                 self.assertEqual(core.Mission_Query(x), 0, x)
 
+    def test_the_deck_shows_two_spare_planes_and_variants_fewer(self):
+        # 0x3abc: Cpln 200 and 230 px bow-ward of the elevator (reset_x),
+        # inked 0..25 from its origin's 14; variants with 1 and 0 planes.
+        m, folder = self.metadata, ROOT / 'assets_msx/mission_a'
+        parked, width, height = m['parked'], m['width'], m['height']
+        scene = (folder / 'scene.indices').read_bytes()
+        data = (folder / 'parked-variants.indices').read_bytes()
+        w = 8 * parked['near_count']
+        one, none = data[:w * height], data[w * height:2 * w * height]
+        first = parked['near_first'] * 8
+        def window(image, stride, x0, x1, origin=0):
+            return [image[y * stride + x - origin] for y in range(150, 170) for x in range(x0, x1)]
+        near_plane, far_plane = (m['reset_x'] - 200 - 14, m['reset_x'] - 200 + 12), (m['reset_x'] - 230 - 14, m['reset_x'] - 230 + 12)
+        self.assertEqual((parked['max'], first <= far_plane[0], near_plane[1] <= first + w), (2, True, True))
+        # The plane nearer the elevator stays with one left; none shows on the bare deck.
+        self.assertEqual(window(one, w, *near_plane, origin=first), window(scene, width, *near_plane))
+        self.assertNotEqual(window(one, w, *far_plane, origin=first), window(scene, width, *far_plane))
+        self.assertEqual(window(none, w, *far_plane, origin=first), window(one, w, *far_plane, origin=first))
+        self.assertNotEqual(window(none, w, *near_plane, origin=first), window(scene, width, *near_plane))
+
     def test_malformed_column_rle_is_rejected(self):
         for data in (b'', b'\x00\x00', b'\x02\x00\x00\x00\x00',
                      b'\x02\x00\x14\x00\x00', b'\x02\x00\x13\xff\xff'):
@@ -167,8 +189,9 @@ class MissionTests(unittest.TestCase):
         frames = json.loads((ROOT / 'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']
         plane = {y * 128 + x for f in frames for y in range(f['atlas_y'], f['atlas_y'] + f['height'])
                  for x in range(f['atlas_x'] // 2, (f['atlas_x'] + f['width']) // 2)}
+        from convert_dashboard import STATIC_TILE_FOOTPRINT
         occupied = set()
-        for tile in range(self.metadata['selected']['tile_count']):
+        for tile in range(STATIC_TILE_FOOTPRINT):   # the old static tile cells (the cache's slots lie there)
             y = (tile // 288 + 2) * 256 + 180 + (tile % 9) * 8
             x = (tile % 288 // 9) * 4
             addresses = {r * 128 + c for r in range(y, y + 8) for c in range(x, x + 4)}
@@ -177,7 +200,7 @@ class MissionTests(unittest.TestCase):
             self.assertGreaterEqual(min(addresses), 65536)
             self.assertLess(max(addresses), 131072)
             occupied.update(addresses)
-        self.assertEqual(len(occupied), self.metadata['selected']['tile_bytes'])
+        self.assertEqual(len(occupied), STATIC_TILE_FOOTPRINT * 32)
 
     def test_original_dashboard_assets_and_backups_are_disjoint(self):
         from convert_dashboard import artifacts as dashboard_artifacts, panel, original
@@ -253,7 +276,8 @@ class MissionTests(unittest.TestCase):
         for f in frames:
             occupied.update(y*128+x for y in range(f['atlas_y'],f['atlas_y']+f['height'])
                             for x in range(f['atlas_x']//2,(f['atlas_x']+f['width'])//2))
-        for tile in range(self.metadata['selected']['tile_count']):
+        from convert_dashboard import STATIC_TILE_FOOTPRINT
+        for tile in range(STATIC_TILE_FOOTPRINT):
             x=tile%288//9*4;y=tile//288*256+692+tile%9*8
             addresses={yy*128+xx for yy in range(y,y+8) for xx in range(x,x+4)}
             self.assertTrue(occupied.isdisjoint(addresses));occupied.update(addresses)

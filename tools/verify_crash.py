@@ -55,17 +55,21 @@ def composite(out, name, page, world, y, pose, wave, heave, ship, camera, scene,
     projectiles = [dict(zip(('x', 'y', 'vx', 'vy', 'life', 'kind'), struct.unpack_from('<HHbbBB', combat, i * 8))) for i in range(18)]
     flight = (out / f'{name}.flight').read_bytes()
     wheel, gear, rope = (out / f'{name}.wheel').read_bytes()
+    # On the deck (flight +12: 0 deck, 2 cable) or the elevator; level on the
+    # deck rolling fast (+17) or held by a cable (as verify_p0).
+    ground = stage != 1 or flight[12] in (0, 2)
+    deck_level = stage == 1 and (flight[12] == 2 or (flight[12] == 0 and flight[17] != 0))
     band, ticker = struct.unpack('<BH', (out / f'{name}.band').read_bytes())
     assert band == 0, (name, 'ticker shown')
     raw = (out / f'{name}.smoke').read_bytes()
     smoke = [struct.unpack_from('<HhB', raw, 1 + 5 * i) for i in range(raw[0])]
     expected = expected_pixels(scene, pose, world, y, camera,
         island_background((ROOT / 'assets_msx/mission_a' / ('far.indices' if scale == 8 else 'scene.indices')).read_bytes(),
-                          scale, (out / f'{name}.island').read_bytes()),
+                          scale, (out / f'{name}.island').read_bytes(), game[2]),
         terrain['far_width'] if scale == 8 else terrain['width'], scale, wave, pilot, heave, ship,
-        projectiles, game[4], game[3], game[2], crew, False, depth, stage != 1, flash=combat[158],
+        projectiles, game[4], game[3], game[2], crew, ground, depth, stage != 1, flash=combat[158],
         gauges=tuple((out / f'{name}.gauges').read_bytes()), crash=(out / f'{name}.crash').read_bytes()[0],
-        wheel=wheel, gear=gear, deck_level=False, rope=rope, facing_left=bool(flight[11]),
+        wheel=wheel, gear=gear, deck_level=deck_level, rope=rope, facing_left=bool(flight[11]),
         smoke=[(x & 0xFFFF, row, frame) for x, row, frame in smoke],
         score=struct.unpack('<I', (out / f'{name}.score').read_bytes())[0], fine=fine, band=band,
         sink=(out / f'{name}.sink').read_bytes()[0] if flight[12] == SINKING else None)
@@ -117,7 +121,8 @@ def main():
     t = lambda key: m[key]['t']
     # 1. The sea: a slide of about a second, then 12 s sinking; the next plane.
     assert 0.5 < t('sea_sinking') - t('sea_contact') < 1.6, (t('sea_contact'), t('sea_sinking'))
-    assert 12.0 <= t('sea_next_plane') - t('sea_sinking') < 13.0, t('sea_next_plane') - t('sea_sinking')
+    # 150 ticks (12 s), plus a frame to see it and any snapshot's hold.
+    assert 12.0 <= t('sea_next_plane') - t('sea_sinking') < 13.4, t('sea_next_plane') - t('sea_sinking')
     assert m['sea_next_plane']['lives'] == 2
     sinking = [r for r in rows if r['mode'] == SINKING and t('sea_sinking') <= r['t'] < t('sea_next_plane')]
     assert all(r['y'] == 1198 and r['depth'] == r['clock'] // 3 for r in sinking), 'altitude 2, a pixel every 3 ticks'
@@ -133,8 +138,10 @@ def main():
     assert m['island_next_plane']['lives'] == 1
     # 3. The last plane: dead engine, onto the deck (35 = 33 + 2), burns 12 s, game over.
     assert m['deck_wreck']['y'] == 1165 and snaps['deck_wreck']['crash'] == 0
-    assert 12.0 <= t('game_over') - t('deck_wreck') < 13.0, t('game_over') - t('deck_wreck')
+    assert 12.0 <= t('game_over') - t('deck_wreck') < 13.4, t('game_over') - t('deck_wreck')
     assert m['game_over']['lives'] == 0
+    # The deck's spare planes (checked against the model's variants above).
+    assert {'parked_one', 'parked_none'} <= snaps.keys()
     print(f'PASS: the crash: sea (slide {t("sea_sinking") - t("sea_contact"):.1f} s, next plane '
           f'{t("sea_next_plane") - t("sea_sinking"):.1f} s), island wreck (fire: {t("island_next_plane") - t("island_wreck"):.1f} s), '
           f'deck wreck, game over; {len(snaps)} snapshots against the model; {args.machine}')

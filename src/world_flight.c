@@ -1385,6 +1385,8 @@ void main(void)
             }
         }
 #ifdef WINGS_P1_FLIGHT
+        /* The deck shows the spare planes (0x3abc). */
+        Island_Parked(g_Game.progress.lives);
         /* The last island fell this frame: the next mission number, and the
          * rank's last mission promotes (its ticker says so). */
         if (g_Island.complete && !s_MissionAdvanced)

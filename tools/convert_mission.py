@@ -9,6 +9,9 @@ import struct
 from PIL import Image
 from convert_hellcat import c_array, pack_pixels
 from decode_mission import artifacts as mission_artifacts, reconstruct, ROOT
+# The spare planes drawn on the deck at most (0x3abc draws up to 8; the
+# port's cheats can give more planes, but the deck shows 2).
+PARKED_MAX = 2
 from extract_iff import iff_img
 
 
@@ -81,7 +84,7 @@ def island_layout(mission, map_name='a.map'):
     return dict(islands=islands, huts=huts, dugouts=dugouts, guns=guns, flags=flags)
 
 
-def island_header(island, variants):
+def island_header(island, variants, parked):
     huts, dugouts, isl = island['huts'], island['dugouts'], island['islands']
     def table(kind, name, values):
         return f'static const {kind} {name}[{max(1, len(values))}] = {{{", ".join(str(v) for v in values) or "0"}}};\n'
@@ -108,7 +111,14 @@ def island_header(island, variants):
             + table('uint16_t', 's_HutNearVariant', [v['near_variant'] for v in variants])
             + table('uint16_t', 's_HutFarFirst', [v['far_first'] for v in variants])
             + table('uint8_t', 's_HutFarCount', [v['far_count'] for v in variants])
-            + table('uint16_t', 's_HutFarVariant', [v['far_variant'] for v in variants]))
+            + table('uint16_t', 's_HutFarVariant', [v['far_variant'] for v in variants])
+            + '/* The deck\'s spare planes (0x3abc): the map shows PARKED_MAX; with\n'
+            + ' * fewer, its columns show variants (index PARKED_MAX - 1 - count). */\n'
+            + f'#define PARKED_MAX {parked["max"]}\n'
+            + f'#define PARKED_NEAR_FIRST {parked["near_first"]}\n#define PARKED_NEAR_COUNT {parked["near_count"]}\n'
+            + f'#define PARKED_FAR_FIRST {parked["far_first"]}\n#define PARKED_FAR_COUNT {parked["far_count"]}\n'
+            + table('uint16_t', 's_ParkedNear', parked['near_variants'])
+            + table('uint16_t', 's_ParkedFar', parked['far_variants']))
 
 
 # Enemy ships (docs/research/amiga-ships.md): the level builder 0x2de8 makes
@@ -366,6 +376,9 @@ def strip_layout(tiles, tile_map, stats, table_columns=None):
 
 def artifacts(map_name='a.map', generated=None, ships=False):
     evidence, mission, scene, source_pixels, inventory = mission_artifacts(map_name, ships)
+    # Every view is drawn with the deck's spare planes; fewer are variant
+    # columns (below).
+    source_pixels = reconstruct(mission, evidence, ships=ships, parked=PARKED_MAX)[0]
     generated = generated or ROOT / f'src/generated/map_{map_name[0]}'
     palette_manifest = json.loads((ROOT / 'assets_msx/terrain/manifest.json').read_text())
     mapping = {int(i): value for i, value in palette_manifest['source_to_msx_index'].items()}
@@ -381,7 +394,7 @@ def artifacts(map_name='a.map', generated=None, ships=False):
     # Opaque source hulls can contain black; palette index zero is our sky key.
     mapping[0] = mapping[6]
     pixels = bytes(mapping[v] for v in source_pixels)
-    far_source, far_scene = reconstruct(mission, evidence, reduced=True, ships=ships)
+    far_source, far_scene = reconstruct(mission, evidence, reduced=True, ships=ships, parked=PARKED_MAX)
     far_pixels = bytes(mapping[v] for v in far_source)
     # Original distant-view sea fill uses ocean color 10. The reduced beach
     # artwork supplies a one-pixel foreground strip in sand color 17; preserve
@@ -411,14 +424,26 @@ def artifacts(map_name='a.map', generated=None, ships=False):
         cells = [dict(c, shape_id=5, raw_word=(c['raw_word'] & ~0x7fc) | (5 << 2)) if c['x'] == hut['x'] else c
                  for c in mission['cells']]
         wrecked = dict(mission, cells=cells)
-        near = bytes(mapping[v] for v in reconstruct(wrecked, evidence, ships=ships)[0])
-        far_src, far_wrecked = reconstruct(wrecked, evidence, reduced=True, ships=ships)
+        near = bytes(mapping[v] for v in reconstruct(wrecked, evidence, ships=ships, parked=PARKED_MAX)[0])
+        far_src, far_wrecked = reconstruct(wrecked, evidence, reduced=True, ships=ships, parked=PARKED_MAX)
         far = far_finish(far_src, far_wrecked)
         nf, nc = columns_differ(pixels, near, scene['width'])
         ff, fc = columns_differ(far_pixels, far, far_scene['width'])
         variants.append(dict(x=hut['x'], near_first=nf, near_count=nc, far_first=ff, far_count=fc))
         stripes_near.append(stripe(near, scene['width'], nf, nc))
         stripes_far.append(stripe(far, far_scene['width'], ff, fc))
+    # The deck's spare planes (0x3abc): the views show PARKED_MAX; with
+    # fewer planes left the deck's columns are variant columns, per count
+    # PARKED_MAX - 1 .. 0 (near, then far).
+    near_parked = [bytes(mapping[v] for v in reconstruct(mission, evidence, ships=ships, parked=k)[0])
+                   for k in range(PARKED_MAX - 1, -1, -1)]
+    far_parked = [far_finish(*reconstruct(mission, evidence, reduced=True, ships=ships, parked=k))
+                  for k in range(PARKED_MAX - 1, -1, -1)]
+    nf, nc = columns_differ(pixels, near_parked[-1], scene['width'])
+    ff, fc = columns_differ(far_pixels, far_parked[-1], far_scene['width'])
+    parked = dict(near_first=nf, near_count=nc, far_first=ff, far_count=fc, max=PARKED_MAX)
+    stripes_parked = ([stripe(near, scene['width'], nf, nc) for near in near_parked] +
+                      [stripe(far, far_scene['width'], ff, fc) for far in far_parked])
     # Sinking ships (0x1cd8, docs/ship-sinking.md): a hull goes down 1 px a
     # step for 120 steps, then the sea takes its columns. The close view
     # lowers a hull column's tiles a whole row (8 steps) at a time at run
@@ -430,9 +455,9 @@ def artifacts(map_name='a.map', generated=None, ships=False):
         for ship in ship_layout(mission)['ships']:
             archive = SHIP_ARCHIVE[ship['kind']]
             def near_at(depth):
-                return bytes(mapping[v] for v in reconstruct(mission, evidence, ships=ships, sink={archive: depth})[0])
+                return bytes(mapping[v] for v in reconstruct(mission, evidence, ships=ships, sink={archive: depth}, parked=PARKED_MAX)[0])
             def far_at(depth):
-                return far_finish(*reconstruct(mission, evidence, reduced=True, ships=ships, sink={archive: depth}))
+                return far_finish(*reconstruct(mission, evidence, reduced=True, ships=ships, sink={archive: depth}, parked=PARKED_MAX))
             width = scene['width']
             nf, nc = columns_differ(pixels, near_at(SINK_GONE), width)
             for stage in range(1, SINK_STAGES + 1):
@@ -457,20 +482,25 @@ def artifacts(map_name='a.map', generated=None, ships=False):
             sinking.append(dict(name=ship['name'], near_left=nf * 8, near_right=(nf + nc) * 8 - 1,
                                 far_first=ff, far_count=fc))
             stripes_sink += [stripe(far, fwidth, ff, fc) for far in fars]
-    variant_columns = sum(v['near_count'] + v['far_count'] for v in variants)
+    variant_columns = sum(v['near_count'] + v['far_count'] for v in variants) + PARKED_MAX * (parked['near_count'] + parked['far_count'])
     sink_columns = len(stripes_sink) and sum(s['far_count'] for s in sinking) * SINK_STAGES
     table_columns = (scene['width'] + far_scene['width']) // 8 + variant_columns
     combined_width = (table_columns + sink_columns) * 8
     combined = b''.join(pixels[y * scene['width']:(y + 1) * scene['width']] +
                         far_pixels[y * far_scene['width']:(y + 1) * far_scene['width']] +
                         b''.join(st[y] for st in stripes_near) + b''.join(st[y] for st in stripes_far) +
-                        b''.join(st[y] for st in stripes_sink)
+                        b''.join(st[y] for st in stripes_parked) + b''.join(st[y] for st in stripes_sink)
                         for y in range(212))
     column = (scene['width'] + far_scene['width']) // 8
     for v in variants:
         v['near_variant'] = column; column += v['near_count']
     for v in variants:
         v['far_variant'] = column; column += v['far_count']
+    # Per count PARKED_MAX - 1 .. 0: near columns, then far.
+    parked['near_variants'] = [column + i * parked['near_count'] for i in range(PARKED_MAX)]
+    column += PARKED_MAX * parked['near_count']
+    parked['far_variants'] = [column + i * parked['far_count'] for i in range(PARKED_MAX)]
+    column += PARKED_MAX * parked['far_count']
     comparisons = []
     for size in (8, 16):
         _, _, stats = compile_scene(pixels, scene['width'], size)
@@ -543,9 +573,10 @@ def artifacts(map_name='a.map', generated=None, ships=False):
                         worst_view_strips=worst, first_page=2, first_row=180,
                         ordering='uniform tiles first, then first-seen; strips of 8 ids, 8 x 64 px'),
         map_format='u16le column offsets, deduplicated count:u8/tile:u16le runs, no run crossing an 8 KiB bank; exactly 19 tile rows',
-        map_and_cache_ram_bytes=ram_budget, island=island, hut_variants=variants, sinking=sinking)
+        map_and_cache_ram_bytes=ram_budget, island=island, hut_variants=variants, parked=parked, sinking=sinking)
     files = {output / 'tiles.sc5': tiles, output / 'map.bin': tile_map,
              output / 'hut-variants.indices': b''.join(row for st in stripes_near + stripes_far for row in st),
+             output / 'parked-variants.indices': b''.join(row for st in stripes_parked for row in st),
              output / 'scene.indices': pixels, output / 'far.indices': far_pixels, output / 'palette.bin': palette,
              output / 'manifest.json': (json.dumps(metadata, indent=2) + '\n').encode()}
     for bank, offset in enumerate(range(0, len(tiles), 8192), TILE_BANK):
@@ -663,7 +694,7 @@ extern const MissionSurfaceRun g_MissionSurfaceRuns[MISSION_SURFACE_RUNS];
         surface_header += '/* Bit i: enemy ship i has gone under (core/ships.c). */\nextern uint8_t g_ShipsGone;\n'
     surface_data += 'uint8_t Mission_Surface(uint16_t x) {\n' + ''.join(f"    if (x < {run['end']}) return {surface_value(run)};\n" for run in mission['surface_runs']) + '    return 0;\n}\n'
     files[generated / 'mission_surfaces.h'] = surface_header.encode()
-    files[generated / 'mission_island.h'] = island_header(island, variants).encode()
+    files[generated / 'mission_island.h'] = island_header(island, variants, parked).encode()
     files[generated / 'mission_ships.h'] = ships_header(ship_layout(mission), sinking).encode()
     files[generated / 'mission_planes.h'] = planes_header(ship_layout(mission), Path(map_name).stem).encode()
     files[generated / 'mission_surfaces.c'] = surface_data.encode()

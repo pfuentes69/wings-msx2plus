@@ -39,8 +39,8 @@ class VramLayoutTests(unittest.TestCase):
             if not f.get('streamed') and not f.get('unused'):
                 taken |= {(xx, yy) for yy in range(f['atlas_y'], f['atlas_y'] + f['height'])
                           for xx in range(f['atlas_x'], f['atlas_x'] + f['width'])}
-        tiles = json.loads((ROOT / 'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']
-        for t in range(tiles):   # terrain tile atlas below the clean strips
+        from convert_dashboard import STATIC_TILE_FOOTPRINT
+        for t in range(STATIC_TILE_FOOTPRINT):   # the old static tile cells (the cache's slots lie there)
             x, y = t % 288 // 9 * 8, 512 + t // 288 * 256 + 180 + t % 9 * 8
             taken |= {(xx, yy) for yy in range(y, y + 8) for xx in range(x, x + 8)}
         pieces = {}

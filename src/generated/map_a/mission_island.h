@@ -23,3 +23,12 @@ static const uint16_t s_HutNearVariant[2] = {1072, 1077};
 static const uint16_t s_HutFarFirst[2] = {37, 42};
 static const uint8_t s_HutFarCount[2] = {1, 1};
 static const uint16_t s_HutFarVariant[2] = {1082, 1083};
+/* The deck's spare planes (0x3abc): the map shows PARKED_MAX; with
+ * fewer, its columns show variants (index PARKED_MAX - 1 - count). */
+#define PARKED_MAX 2
+#define PARKED_NEAR_FIRST 848
+#define PARKED_NEAR_COUNT 8
+#define PARKED_FAR_FIRST 106
+#define PARKED_FAR_COUNT 1
+static const uint16_t s_ParkedNear[2] = {1084, 1092};
+static const uint16_t s_ParkedFar[2] = {1100, 1101};

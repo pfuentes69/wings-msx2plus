@@ -31,7 +31,8 @@ class ShipTests(unittest.TestCase):
             self.assertTrue(occupied.isdisjoint(area));occupied.update(area)
         for f in json.loads((ROOT/'assets_msx/hellcat/manifest.json').read_text())['animation']['frames']:
             if not f.get('streamed') and not f.get('unused'):add(f['atlas_x'],f['atlas_y'],f['width'],f['height'])
-        count=json.loads((ROOT/'assets_msx/mission_a/manifest.json').read_text())['selected']['tile_count']
+        from convert_dashboard import STATIC_TILE_FOOTPRINT
+        count=STATIC_TILE_FOOTPRINT   # the old static tile cells (the cache's slots lie there)
         for t in range(count):add(t%288//9*8,692+t%9*8+t//288*256,8,8)
         cockpit=json.loads((ROOT/'assets_src/dashboard/manifest.json').read_text())
         for x,y in cockpit['pilot_slots']:add(x,y,48,24)

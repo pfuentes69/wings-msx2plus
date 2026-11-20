@@ -76,9 +76,10 @@ def crash_shape(scene, index):
     return record, data[offset:offset + record['bytes']]
 
 
-def island_background(background, scale, island):
+def island_background(background, scale, island, lives=3):
     """The scene with wrecked huts (g_Island dump: 8-byte hut records,
-    wrecked at +3) showing the converter's variant columns."""
+    wrecked at +3) and the deck's spare planes (lives - 1, at most 2)
+    showing the converter's variant columns."""
     meta = json.loads((ROOT / 'assets_msx/mission_a/manifest.json').read_text())
     variants, height = meta['hut_variants'], meta['height']
     width = meta['width'] if scale == 1 else meta['far_width']
@@ -92,6 +93,19 @@ def island_background(background, scale, island):
         if not island[8 * i + 3]: continue
         first, count = (v['near_first'], v['near_count']) if scale == 1 else (v['far_first'], v['far_count'])
         stripe, w = stripes[i if scale == 1 else len(variants) + i], 8 * count
+        for y in range(height):
+            pixels[y * width + first * 8:y * width + first * 8 + w] = stripe[y * w:(y + 1) * w]
+    parked = meta['parked']
+    shown = min(max(lives - 1, 0), parked['max'])
+    if shown < parked['max']:
+        data = (ROOT / 'assets_msx/mission_a/parked-variants.indices').read_bytes()
+        near, far = 8 * parked['near_count'] * height, 8 * parked['far_count'] * height
+        index = parked['max'] - 1 - shown
+        if scale == 1:
+            first, w, stripe = parked['near_first'], 8 * parked['near_count'], data[index * near:(index + 1) * near]
+        else:
+            base = parked['max'] * near
+            first, w, stripe = parked['far_first'], 8 * parked['far_count'], data[base + index * far:base + (index + 1) * far]
         for y in range(height):
             pixels[y * width + first * 8:y * width + first * 8 + w] = stripe[y * w:(y + 1) * w]
     return bytes(pixels)

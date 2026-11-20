@@ -136,7 +136,7 @@ def main():
             smoke=[struct.unpack_from('<HhB',raw,1+5*i) for i in range(raw[0])]
             expected=expected_pixels(scene,int(pose),int(world),int(y),int(camera),
                 island_background((ROOT/'assets_msx/mission_a'/('far.indices' if scale==8 else 'scene.indices')).read_bytes(),
-                                  scale,(out/f'{name}.island').read_bytes()),
+                                  scale,(out/f'{name}.island').read_bytes(),game[2]),
                 terrain['far_width'] if scale==8 else terrain['width'],scale,int(wave),pilot,int(heave),int(ship),
                 projectiles,game[4],game[3],game[2],crew,ground,depth,stage!=1,flash=combat[158],
                 gauges=tuple((out/f'{name}.gauges').read_bytes()),crash=(out/f'{name}.crash').read_bytes()[0],

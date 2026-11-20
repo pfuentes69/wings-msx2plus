@@ -39,7 +39,13 @@ proc sea_sinking {} {
     wait_for {[crash_byte 4]>=10} {snap sea_sink_1 {wait_for {[crash_byte 4]>=40} {snap sea_sink_2 {wait_for {[crash_byte 4]>=100} {snap sea_sunk sea_next}  "sinking 100" 10}} "sinking 40" 5}} "sinking 10" 3
 }
 proc sea_next {} {
-    wait_for {[view 2]==2 && [view 0]==7} {mark sea_next_plane;pulse 7 128 {phase 3 {wait_lift_up {engine_takeoff island_west}}}} "the next plane after the sea" 8
+    wait_for {[view 2]==2 && [view 0]==7} {mark sea_next_plane;pulse 7 128 {phase 3 {wait_lift_up {roll_past parked_one {engine_takeoff island_west}}}}} "the next plane after the sea" 8
+}
+# The deck's spare planes (0x3abc: planes left - 1) as the next plane rolls
+# past them toward the bow: one after the first loss, none after the second.
+proc roll_past {name then} {
+    fly 16
+    wait_for {[world_x]<6790} [list snap $name $then] "rolling past the parked planes" 15
 }
 # 2. West at altitude 60, then down into the island: bursts, booms, white
 # flashes and wrecked targets along the slide, then the wreck burns. Fire
@@ -59,7 +65,7 @@ proc island_wreck {} {
 }
 proc island_skip {} {
     mark fire_held;fly 1
-    wait_for {[view 2]==1 && [view 0]==7} {fly 0;mark island_next_plane;pulse 7 128 {phase 3 {wait_lift_up {engine_takeoff last_plane}}}} "fire ends the wreck" 4
+    wait_for {[view 2]==1 && [view 0]==7} {fly 0;mark island_next_plane;pulse 7 128 {phase 3 {wait_lift_up {roll_past parked_none {engine_takeoff last_plane}}}}} "fire ends the wreck" 4
 }
 # 3. The last plane: the engine dies over the deck; it falls onto it, burns
 # there, and the game is over at the end.
