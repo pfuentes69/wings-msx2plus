@@ -1,8 +1,8 @@
 # Diagnostic ROM
 
 `python3 tools/build_diag.py` builds `out/diag/WOFDIAG.ROM` (512 KiB, the
-game's size) and `out/diag/WOFD256.ROM` (256 KiB) from
-`tools/diag/wofdiag.asm`. Both are ASCII8 ROMs laid out like the game: code
+game's size) from `tools/diag/wofdiag.asm`: an ASCII8 ROM laid out like the
+game: code
 in bank 0 at 4000h, and every 8 KiB bank ends with the tag `'W', n, ~n, '8'`,
 which the ROM reads to see which bank sits in each window. It prints in
 text mode through the BIOS, and names each step before doing it, so the last
@@ -16,11 +16,10 @@ mapper"), where it has to emulate ASCII8's 8 KiB banks.
 
 | Line | Meaning |
 |---|---|
-| `WOF DIAG 1 BANKS 064 MSXVER 02 VDP 02` | banks in this ROM; MSX version (02 = MSX2+); VDP id (00 V9938, 02 V9958) |
+| `WOF DIAG 2 BANKS 064 MSXVER 02 VDP 02` | banks in this ROM; MSX version (02 = MSX2+); VDP id (00 V9938, 02 V9958) |
 | `ROM SLOT / P3 SLOT / A8` | slot of this ROM (page 1) and of page-3 RAM, as the game's startup computes them; primary slot register |
 | `HIMEM BOTTOM SP` | the game's startup puts its stack at `HIMEM`; `SP` is the stack at INIT |
-| `MAPPER FC-FF` | memory-mapper segment registers |
-| `TIMI / KEYI` | first bytes of the interrupt hooks (C9 = unused, F7 = a call into another slot) |
+| `MAPPER .. TIMI .. KEYI ..` | memory-mapper segment registers FC-FF; first byte of the interrupt hooks (C9 = unused, F7 = a call into another slot) |
 | `BOOT BANKS` | banks seen in windows 4000h/6000h/8000h/A000h before any switch (`--`: no tag, not ROM data) |
 | `BASE 1 2 3` | windows 1..3 set to banks 1, 2, 3 |
 | `A W1..W3` | a switch with `LD (6800h/7000h/7800h),A`, the form loaders patch |
@@ -32,6 +31,16 @@ mapper"), where it has to emulate ASCII8's 8 KiB banks.
 | `IM2 AT C000` | the game's interrupt setup (vector table C000h, routine C1C1h): interrupts in ~1 s (about 50-67) |
 | `RAM C000-xxxx` | that RAM (the game's variables) filled with HALT, BIOS interrupts left on for a second: a freeze here, or `CHG` above 0, means something lives there |
 | `IM2 / RAM A W3` | a switch after those two steps: fails if the loader's helper lived in that RAM |
+| `P68 P70 P78` | the bytes now at this ROM's own `LD (6800h/7000h/7800h),A`: `32 00 68` etc. if untouched, else the loader's patch |
+| `xxxx: ...` | where the first patched CALL/JP goes, and 10 bytes there (the loader's helper), or `NO CALL/JP` |
 
 Each test line shows the four windows' banks after the write, then `ok` or
 `BAD` against what an ASCII8 mapper does.
+
+## First report (diag 1, SofaRun, memory-mapper cartridge, 512 KiB)
+
+HIMEM E6B0 (SofaRun and the cartridge's Nextor hold E6B0h-F37Fh); A W1 and
+A W3 ok, A W2 BAD (scan W2 001: 8000h is never switched); every B BAD
+(only LD (nn),A is patched); speed 0 frames; IM2 and RAM C000h-E5A1h fine.
+The game breaks there because its variables reach EFB4h, its stack starts
+at HIMEM inside them, and five of its switches go through LD (HL),A.

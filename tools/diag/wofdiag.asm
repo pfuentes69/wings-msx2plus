@@ -139,7 +139,7 @@ init:
 step1:
 	; --- line 1: version, VDP
 	call	prt
-	.asciz	"WOF DIAG 1 BANKS "
+	.asciz	"WOF DIAG 2 BANKS "
 	ld	a, (nbanks)
 	call	pdec
 	call	prt
@@ -201,25 +201,21 @@ step3:
 step4:
 	; --- line 4: memory mapper ports
 	call	prt
-	.asciz	"MAPPER FC-FF"
+	.asciz	"MAPPER"
 	ld	c, #0xFC
 1$:	call	sp1
 	in	a, (c)
 	call	phex
 	inc	c
 	jr	nz, 1$
-	call	nl
-
-step5:
-	; --- line 5: hooks
 	call	prt
-	.asciz	"TIMI"
-	ld	hl, #HTIMI
-	call	p3bytes
+	.asciz	" TIMI "
+	ld	a, (HTIMI)
+	call	phex
 	call	prt
-	.asciz	"  KEYI"
-	ld	hl, #HKEYI
-	call	p3bytes
+	.asciz	" KEYI "
+	ld	a, (HKEYI)
+	call	phex
 	call	nl
 
 step6:
@@ -531,6 +527,43 @@ ram_done:
 	ld	a, #0x3F
 	call	dotest
 
+patchdump:
+	call	prt
+	.asciz	"P68"
+	ld	hl, #pA1
+	call	p3bytes
+	call	prt
+	.asciz	" P70"
+	ld	hl, #pA2
+	call	p3bytes
+	call	prt
+	.asciz	" P78"
+	ld	hl, #pA3
+	call	p3bytes
+	call	nl
+	; the first call/jump target among them, 10 bytes from there
+	ld	hl, #pA3
+	call	target
+	jr	z, 1$
+	ld	hl, #pA1
+	call	target
+	jr	z, 1$
+	call	prt
+	.asciz	"NO CALL/JP"
+	jr	3$
+1$:	push	de
+	ex	de, hl
+	call	phex16
+	ld	a, #':'
+	call	CHPUT
+	pop	hl
+	ld	b, #10
+2$:	call	sp1
+	ld	a, (hl)
+	call	phex
+	inc	hl
+	djnz	2$
+3$:	call	nl
 	call	prt
 	.asciz	"DONE - PLEASE SEND A PHOTO"
 	di
@@ -617,16 +650,18 @@ base:
 	ret
 
 ; selA: bank A into window C with LD (nnnn),A (the form loaders patch).
+; pA1..pA3 are read back by the PATCH line: what the loader put there.
 selA:
 	dec	c
-	jr	nz, 1$
-	ld	(0x6800), a
+	jr	nz, selA_2
+pA1:	ld	(0x6800), a
 	ret
-1$:	dec	c
-	jr	nz, 2$
-	ld	(0x7000), a
+selA_2:	dec	c
+	jr	nz, selA_3
+pA2:	ld	(0x7000), a
 	ret
-2$:	ld	(0x7800), a
+selA_3:
+pA3:	ld	(0x7800), a
 	ret
 
 ; selB: the same through LD (HL),A (the game's Scenery_Read/Terrain_InitPage).
@@ -760,6 +795,23 @@ isr2:	push	af
 	ei
 	reti
 isr2_end:
+
+; target: Z and DE = HL = address if HL points at CALL nn / JP nn.
+target:
+	ld	a, (hl)
+	cp	#0xCD
+	jr	z, 1$
+	cp	#0xC3
+	ret	nz
+1$:	inc	hl
+	ld	e, (hl)
+	inc	hl
+	ld	d, (hl)
+	ex	de, hl
+	ld	d, h
+	ld	e, l
+	xor	a
+	ret
 
 ; p3bytes: " xx xx xx" from HL
 p3bytes:

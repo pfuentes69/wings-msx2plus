@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build the hardware/loader diagnostic ROMs (docs/diag-rom.md).
 
-tools/diag/wofdiag.asm -> out/diag/WOFDIAG.ROM (512 KiB ASCII8, like the
-game) and out/diag/WOFD256.ROM (256 KiB). Every 8 KiB bank ends with the
+tools/diag/wofdiag.asm -> out/diag/WOFDIAG.ROM, a 512 KiB ASCII8 ROM
+like the game. Every 8 KiB bank ends with the
 tag 'W', n, ~n, '8' that the ROM reads to tell which bank is in a window.
 """
 import shutil
@@ -51,7 +51,7 @@ def main():
     code = assemble()
     OUT.mkdir(parents=True, exist_ok=True)
     print(f'code 4000h-{max(code):04X}h')
-    for name, banks in (('WOFDIAG.ROM', 64), ('WOFD256.ROM', 32)):
+    for name, banks in (('WOFDIAG.ROM', 64),):
         (OUT / name).write_bytes(image(code, banks))
         print(OUT / name)
 
