@@ -14,6 +14,7 @@ from verify_world_flight import vram_image, expected_pixels, gun_flash_shape, is
 from convert_dashboard import compose, layout, PILOT_WIDTH, arrow_frames
 import convert_cockpit
 from aircraft_scene import AircraftScene
+from convert_mission import TILE_BANK  # the tile strips' first bank
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -126,7 +127,7 @@ def main():
         # of VRAM page 2 or 3.
         for slot,strip in enumerate((out/f'{name}.slots').read_bytes()):
             if strip==255: continue
-            want=data[(32*8192)+strip*256:(32*8192)+strip*256+256]
+            want=data[(TILE_BANK*8192)+strip*256:(TILE_BANK*8192)+strip*256+256]
             got=b''.join(vram[0x10000+((slot>>5)*256+180+row)*128+(slot&31)*4:][:4] for row in range(64))
             assert got==want,(name,'tile slot',slot,'strip',strip,[r for r in range(64) if got[r*4:r*4+4]!=want[r*4:r*4+4]][:8])
         fine=struct.unpack('b',(out/f'{name}.fine').read_bytes())[0]   # -1..7

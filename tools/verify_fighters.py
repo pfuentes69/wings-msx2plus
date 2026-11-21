@@ -15,6 +15,7 @@ from pathlib import Path
 import struct
 
 from verify_ships import run
+from convert_mission import TILE_BANK  # the tile strips' first bank
 
 ROOT = Path(__file__).resolve().parents[1]
 PLANE = 40
@@ -54,7 +55,7 @@ def main():
         score, kills = struct.unpack_from('<IH', state, 0)
         for slot, strip in enumerate(read('slots')):
             if strip == 255: continue
-            want = data[32 * 8192 + strip * 256:32 * 8192 + strip * 256 + 256]
+            want = data[TILE_BANK * 8192 + strip * 256:TILE_BANK * 8192 + strip * 256 + 256]
             got = b''.join(vram[0x10000 + ((slot >> 5) * 256 + 180 + row) * 128 + (slot & 31) * 4:][:4] for row in range(64))
             assert got == want, (name, 'tile slot', slot)
         gauges = tuple(read('gauges'))

@@ -19,6 +19,7 @@ import shutil
 import struct
 import subprocess
 import time
+from convert_mission import TILE_BANK  # the tile strips' first bank
 
 ROOT = Path(__file__).resolve().parents[1]
 SHIP_BONUS = (2500, 4500)        # destroyer, battleship (mission_ships.h)
@@ -116,7 +117,7 @@ def main():
         # 180.. of VRAM page 2 or 3.
         for slot, strip in enumerate(read('slots')):
             if strip == 255: continue
-            want = data[32 * 8192 + strip * 256:32 * 8192 + strip * 256 + 256]
+            want = data[TILE_BANK * 8192 + strip * 256:TILE_BANK * 8192 + strip * 256 + 256]
             got = b''.join(vram[0x10000 + ((slot >> 5) * 256 + 180 + row) * 128 + (slot & 31) * 4:][:4] for row in range(64))
             assert got == want, (name, 'tile slot', slot, 'strip', strip)
         # The dashboard: ammo, weapon, lives, gauges and score (the pilot

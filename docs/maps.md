@@ -34,8 +34,8 @@ ship could not be seen from high up.
 
 ## What fits the terrain engine
 
-Updated 2026-11-17 with the tile cache. Tiles live in ROM from bank 32 and
-the column map from bank 40, across as many banks as needed. Measured with
+Updated 2026-11-17 with the tile cache. Tiles live in ROM from bank 64 and
+the column map from bank 72 (banks 32 and 40 until the 1 MiB ROM, 2026-11-21), across as many banks as needed. Measured with
 the converter:
 
 | Map | Tiles | Strips (worst view ≤ 44) | Map width | Result |

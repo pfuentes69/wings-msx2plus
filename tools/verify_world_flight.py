@@ -375,10 +375,10 @@ def main():
     folder = ROOT / 'assets_msx/mission_a'
     terrain = json.loads((folder / 'manifest.json').read_text())
     background = (folder / 'scene.indices').read_bytes()
-    # The terrain (tools/convert_mission.py): tile strips from bank 32, the
-    # column map from bank 40.
+    # The terrain (tools/convert_mission.py): tile strips from bank 64, the
+    # column map from bank 72.
     tiles = (folder / 'tiles.sc5').read_bytes()
-    assert len(rom_bytes) == 524288
+    assert len(rom_bytes) == 1024 * 1024
     assert rom_bytes[terrain['tile_banks'][0] * 8192:][:len(tiles)] == tiles, 'incorrect tile bank placement'
     tile_map = (folder / 'map.bin').read_bytes()
     assert rom_bytes[terrain['map_banks'][0] * 8192:][:len(tile_map)] == tile_map, 'incorrect map bank placement'

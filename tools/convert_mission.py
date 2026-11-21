@@ -329,8 +329,8 @@ def decode_column(data, column, columns, rows, tile_count):
 STRIP = 8
 TERRAIN_SLOTS = 40   # of the 56 cells: 4 to the shape atlas (rockets, splashes), 12 to the enemy planes' frame slots
 TERRAIN_CHURN = 8    # slots beyond a view's strips, for prefetch and churn
-TILE_BANK = 32   # tile pixels: 32 strips (8 KiB) per bank, from bank 32
-MAP_BANK = 40    # the column map, from bank 40; no record crosses a bank
+TILE_BANK = 64   # tile pixels: 32 strips (8 KiB) per bank, from bank 64 (the 1 MiB ROM's upper half)
+MAP_BANK = 72    # the column map, from bank 72; no record crosses a bank
 
 
 def is_uniform(tile):

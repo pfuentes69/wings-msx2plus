@@ -6,8 +6,9 @@ so part-filled segments waste space; the projection allows about 15% for that.
 
 ## Today: 21 of 32 segments, ~130 KB of data
 
-The ROM is 512 KiB since 2026-11-17: the terrain tile cache keeps tiles in
-banks 32+ and the column map in banks 40+. Banks 4–6 and 24 are free.
+The ROM is 1 MiB since 2026-11-21 (512 KiB from 2026-11-17): the terrain
+tile cache keeps tiles in banks 64+ and the column map in banks 72+. Banks
+4–6, 24 and 32–46 are free (some of the table below predates that).
 
 | Content | Segments | Bytes |
 | --- | --- | --- |
@@ -47,6 +48,12 @@ follows). The real constraint is the cartridge: commercial-style ASCII8
 megaROM boards or flash carts in 512 KiB or 1 MiB sizes.
 
 **Decision (2026-11-14):** plan for 512 KiB; 1 MiB is acceptable if the game finally needs it.
+**Decision (2026-11-21):** 1 MiB for the complete campaign ([release-plan.md](release-plan.md)).
+Measured that day with the converter (13 of the 15 maps; h and m do not
+convert yet): one map's tiles and column map take 4–10 banks, about 85 in
+all, more than the 64 of the upper half. The maps share most tiles (12,257
+tiles, 2,462 different: 79 KB): a shared tile pool brings all maps to about
+40 banks. Phase 3 of the release plan needs it.
 
 **Recommendation:** plan for 512 KiB. Before adding missions, design a denser
 map format (for example the original map words decoded at runtime, or

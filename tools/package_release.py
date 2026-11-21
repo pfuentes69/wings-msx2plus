@@ -23,8 +23,8 @@ def main():
     parser.add_argument('version')
     args = parser.parse_args()
     rom = ROM.read_bytes()
-    if len(rom) != 512 * 1024:
-        raise SystemExit(f'{ROM}: {len(rom)} bytes, expected 512 KB')
+    if len(rom) != 1024 * 1024:
+        raise SystemExit(f'{ROM}: {len(rom)} bytes, expected 1 MiB')
     if rom[:2] != b'AB':
         raise SystemExit(f'{ROM}: no ROM header')
     sha = hashlib.sha256(rom).hexdigest()

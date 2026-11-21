@@ -24,8 +24,8 @@ The converter (`tools/convert_mission.py`) orders the tiles:
 
 Ids are grouped in **strips** of 8 consecutive tiles (id >> 3). A strip is
 8 × 64 pixels, 256 bytes: its 8 tiles stacked. Strip pixels are stored in
-ROM from bank 32 (`TERRAIN_TILE_BANK`), 32 strips per 8 KiB bank. The
-column map follows from bank 40 (`TERRAIN_MAP_BANK`), padded so that no
+ROM from bank 64 (`TERRAIN_TILE_BANK`), 32 strips per 8 KiB bank. The
+column map follows from bank 72 (`TERRAIN_MAP_BANK`), padded so that no
 column record crosses a bank.
 
 VRAM has **40 slots** (`TERRAIN_SLOTS`; 52 until 2026-11-18, when 12 went to the enemy planes' frame slots, [enemy-planes.md](enemy-planes.md)). Slot s is at

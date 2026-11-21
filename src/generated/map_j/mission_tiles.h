@@ -7,9 +7,9 @@
 #define TERRAIN_UNIFORM_COUNT 2
 #define TERRAIN_STRIPS 130
 #define TERRAIN_SLOTS 40
-#define TERRAIN_TILE_BANK 32           /* strip k: bank + k / 32, offset (k % 32) * 256 */
+#define TERRAIN_TILE_BANK 64           /* strip k: bank + k / 32, offset (k % 32) * 256 */
 #define TERRAIN_MAP_BYTES 11042
-#define TERRAIN_MAP_BANK 40             /* offset o: bank + o / 8192, A000h + o % 8192 in window 3 */
+#define TERRAIN_MAP_BANK 72             /* offset o: bank + o / 8192, A000h + o % 8192 in window 3 */
 #define TERRAIN_MAP_TABLE_BYTES 2276   /* the column table (RAM), at offset 0 */
 #define TERRAIN_MAP_ROWS 19
 #define TERRAIN_MAP_COLUMNS 1138

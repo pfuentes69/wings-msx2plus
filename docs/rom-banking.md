@@ -5,7 +5,8 @@ Updated 2026-11-17. Applies to `mission-flight` and `mission-flight-debug`.
 The P1/elevator release had filled the four resident ASCII8 segments
 (32,472 of 32,768 bytes). Later phases need far more code, so the mission ROM
 now banks code. It was 256 KiB; the terrain tile cache
-([tile-cache.md](tile-cache.md)) grew it to 512 KiB.
+([tile-cache.md](tile-cache.md)) grew it to 512 KiB, and the campaign to
+1 MiB (2026-11-21).
 
 ## Memory map
 
@@ -26,7 +27,7 @@ now banks code. It was 256 KiB; the terrain tile cache
 | 21 | Banked code: `WINGS_SEGMENT_FLIGHT` (flight model, the wave strip) |
 | 22 | Banked code: `WINGS_SEGMENT_EFFECTS` (engine and hut smoke; the smoke path: its drawing and frame tables, rockets included) |
 | 23 | Banked code: `WINGS_SEGMENT_COMBAT` (weapons, island targets) |
-| 24 | Free (was the mission map; now in banks 40+) |
+| 24 | Free (was the mission map; now in banks 72+) |
 | 25 | Banked code: `WINGS_SEGMENT_MISSION` (island soldiers, island cleared, the message ticker and its font) |
 | 26 | Banked code: `WINGS_SEGMENT_SOUND` (MSX-MUSIC detection, its driver and effect scripts, copied into RAM at boot; the engine's pitch table; the sound effects' game side and steps, `sound_update.c`) |
 | 27 | Banked code: `WINGS_SEGMENT_GAME` (the game state: phases, rank, missions and lives, `core/game.c`; the player's crash, `core/crash.c`) |
@@ -34,9 +35,11 @@ now banks code. It was 256 KiB; the terrain tile cache
 | 29 | Banked code: `WINGS_SEGMENT_ROCKETS` (rockets and their tables, `core/rockets.c`, `core/rocket_move.c`) |
 | 30 | Banked code: `WINGS_SEGMENT_PATCH` (terrain column remap and band repaint, `msx/terrain_patch.c`) |
 | 31 | Free for code or data |
-| 32–39 | Raw data: terrain tile strips, 32 per bank, mapped into window 3 by `UploadStrip` (map a: 32–33; map j: 32–35) |
-| 40–47 | Raw data: the column map (column table and runs), read in window 3; no column record crosses a bank (maps a, j: 40–41 at most) |
-| 48–63 | Free |
+| 32–46 | Free (the map data's until 2026-11-21) |
+| 48–63 | Banked code and raw data (see banking.h, mission-flight.js) |
+| 64–71 | Raw data: terrain tile strips, 32 per bank, mapped into window 3 by `UploadStrip` (map a: 64–66; map j: 64–68) |
+| 72–75 | Raw data: the column map (column table and runs), read in window 3; no column record crosses a bank (maps a, j: 72–73 at most) |
+| 76–127 | Free |
 
 Measured release layout (close-view pan, 2026-11-14):
 
