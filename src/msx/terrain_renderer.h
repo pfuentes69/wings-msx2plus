@@ -1,5 +1,6 @@
 #pragma once
 #include "core.h"
+#include "banking.h"
 #include "mission_tiles.h"
 #include "column_ops.h"
 void Terrain_Load(void);
@@ -15,7 +16,13 @@ u16 Terrain_TileY(u16 tile);
 /* Load one strip the columns ahead of the camera will need (direction:
  * the sign of the flight); for the frame loop's spare time. 1 when it
  * loaded one. */
-u8 Terrain_Prefetch(u16 camera, i8 direction);
+u8 Terrain_Prefetch(u16 camera, i8 direction) WINGS_BANKED;   /* segment 30 (terrain_patch.c) */
+extern u16 g_PrefetchCamera;
+/* The tile cache's tables (mission_streamer.c): each strip's VRAM slot
+ * (255: none) and each slot's mark; Terrain_LoadStrip loads a strip into a
+ * slot and returns it (resident). */
+extern u8 g_StripSlot[], g_SlotMark[];
+u8 Terrain_LoadStrip(u8 strip);
 void Terrain_LoadEnd(void);
 void Terrain_InitPage(u8 page);
 void Terrain_DrawColumn(u16 world, u8 page);
@@ -29,9 +36,17 @@ extern u8 g_PanRows;
  * show VRAM rows -heave .. fine - 1 at the heave-only scroll, so those rows
  * must stay sky: g_TopClip = fine there, else 0. */
 extern u8 g_TopClip;
-/* The map's column table: u16 offsets into the map in ROM bank
- * TERRAIN_MAP_BANK (the runs stay in ROM). */
-extern u8 g_TerrainMap[TERRAIN_MAP_TABLE_BYTES];
+/* The map's columns shown with other runs than the column table's (in
+ * ROM): column and run offset, sorted by column (mission_streamer.c). The
+ * most at once: every hut wrecked, the deck's planes gone, ships sinking. */
+#define TERRAIN_CHANGES 112
+extern u16 g_ChangeColumn[TERRAIN_CHANGES], g_ChangeOffset[TERRAIN_CHANGES];
+extern u8 g_Changes;
+/* The u16 at an even byte offset of the map in ROM (resident: maps window 3
+ * for the moment, callable from banked code). */
+u16 Terrain_MapWord(u16 offset);
+/* The change list's position for column (the first entry not below it). */
+u8 Terrain_ChangeAt(u16 column);
 
 /* Overlay repaint marks: Terrain_DirtyOverlay (column_ops.h). */
 /* Per page and ring column: the tile ids shown and the map column drawn

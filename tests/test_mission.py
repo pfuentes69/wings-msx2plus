@@ -179,6 +179,22 @@ class MissionTests(unittest.TestCase):
         self.assertEqual(window(none, w, *far_plane, origin=first), window(one, w, *far_plane, origin=first))
         self.assertNotEqual(window(none, w, *near_plane, origin=first), window(scene, width, *near_plane))
 
+    def test_the_column_change_list_holds_every_change_at_once(self):
+        """mission_streamer.c keeps the columns shown with other runs: every
+        hut wrecked, the deck's planes gone and every ship sinking at once
+        must fit TERRAIN_CHANGES."""
+        import re
+        capacity = int(re.search(r'#define TERRAIN_CHANGES (\d+)', (ROOT / 'src/msx/terrain_renderer.h').read_text()).group(1))
+        for folder in sorted((ROOT / 'src/generated').glob('map_[a-o]')):
+            text = ''.join(p.read_text() for p in folder.glob('mission_*.h'))
+            define = lambda name: int(re.search(rf'#define {name} (\d+)', text).group(1))
+            def table(name, count):
+                return [int(v) for v in re.search(rf'{name}\[\d+\] = \{{([^}}]*)\}}', text).group(1).split(',')][:count]
+            huts, ships = define('ISLAND_HUTS'), define('SHIP_COUNT') if define('SHIP_SINKING') else 0
+            need = (sum(table('s_HutNearCount', huts)) + sum(table('s_HutFarCount', huts))
+                    + define('PARKED_NEAR_COUNT') + define('PARKED_FAR_COUNT') + sum(table('s_ShipFarCount', ships)))
+            self.assertLessEqual(need, capacity, folder.name)
+
     def test_malformed_column_rle_is_rejected(self):
         for data in (b'', b'\x00\x00', b'\x02\x00\x00\x00\x00',
                      b'\x02\x00\x14\x00\x00', b'\x02\x00\x13\xff\xff'):

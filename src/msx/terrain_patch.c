@@ -8,30 +8,67 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_PATCH)
 
 uint8_t g_TerrainDirty;
 
-/* The map's column table (u16 offsets into the run data) is in RAM:
- * pointing a column at another column's runs swaps its terrain, and the
- * renderer's per-slot offset check redraws it. */
+/* Show column with the runs at offset (the change list, sorted by
+ * column), or as the map has it (restore). Pointing a column at other runs
+ * swaps its terrain, and the renderer's per-slot offset check redraws it. */
+static void Change(uint16_t column, uint16_t offset, uint8_t restore)
+{
+    uint8_t at = Terrain_ChangeAt(column), i;
+    if (at < g_Changes && g_ChangeColumn[at] == column)
+    {
+        if (!restore) { g_ChangeOffset[at] = offset; return; }
+        for (i = at + 1; i < g_Changes; ++i)
+            g_ChangeColumn[i - 1] = g_ChangeColumn[i], g_ChangeOffset[i - 1] = g_ChangeOffset[i];
+        --g_Changes;
+        return;
+    }
+    if (restore || g_Changes == TERRAIN_CHANGES) return;   /* tests/test_mission.py: never full */
+    for (i = g_Changes; i > at; --i)
+        g_ChangeColumn[i] = g_ChangeColumn[i - 1], g_ChangeOffset[i] = g_ChangeOffset[i - 1];
+    g_ChangeColumn[at] = column; g_ChangeOffset[at] = offset;
+    ++g_Changes;
+}
+
+/* Source columns (variants) are never changed: their runs are the table's. */
 void Terrain_Remap(uint16_t column, uint16_t source) WINGS_BANKED
 {
-    uint16_t offset;
-    if (source == column)
-    {
-        offset = column * 2;   /* the table starts the map's first bank */
-        Scenery_Read(TERRAIN_MAP_BANK + (offset >> 13), offset & 8191, g_TerrainMap + column * 2, 2);
-    }
-    else
-    {
-        g_TerrainMap[column * 2] = g_TerrainMap[source * 2];
-        g_TerrainMap[column * 2 + 1] = g_TerrainMap[source * 2 + 1];
-    }
+    Change(column, source == column ? 0 : Terrain_MapWord(source * 2), source == column);
     g_TerrainDirty = 3;
 }
 
 void Terrain_RemapEntry(uint16_t column, uint16_t entry) WINGS_BANKED
 {
-    /* Even offsets: an entry never crosses a bank. */
-    Scenery_Read(TERRAIN_MAP_BANK + (entry >> 13), entry & 8191, g_TerrainMap + column * 2, 2);
+    Change(column, Terrain_MapWord(entry), 0);   /* even: never crosses a bank */
     g_TerrainDirty = 3;
+}
+
+/* Spare time before a VBlank: load one strip that the next columns ahead
+ * of the camera (in the direction of flight) will need, so new terrain
+ * mostly finds its strips in VRAM. 1 when a strip was loaded. Banked since
+ * 2026-11-21 (resident space); the strip upload stays resident. */
+static u16 s_Ahead[TERRAIN_MAP_ROWS + 1];
+u16 g_PrefetchCamera;   /* Terrain_Load: 65535 */
+u8 Terrain_Prefetch(u16 camera, i8 direction) WINGS_BANKED
+{
+    u8 column, row, strip;
+    u16 x, tile;
+    if (camera == g_PrefetchCamera) return 0;   /* nothing left ahead of it */
+    for (column = 1; column <= 4; ++column)
+    {
+        x = direction > 0 ? camera + 255 + ((u16)column << 3) : camera + 8 - ((u16)column << 3);
+        Terrain_DecodeColumn(x, s_Ahead);
+        for (row = 0; row < TERRAIN_MAP_ROWS; ++row)
+        {
+            tile = s_Ahead[row];
+            if (tile < TERRAIN_UNIFORM_COUNT) continue;
+            strip = (u8)(tile >> 3);
+            if (g_StripSlot[strip] != 255) { g_SlotMark[g_StripSlot[strip]] = 1; continue; }
+            g_SlotMark[Terrain_LoadStrip(strip)] = 1;
+            return 1;
+        }
+    }
+    g_PrefetchCamera = camera;
+    return 0;
 }
 
 /* Repaint map rows first..last of the 33 columns a page shows, from its

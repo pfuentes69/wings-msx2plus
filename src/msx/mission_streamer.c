@@ -11,9 +11,13 @@ u8 g_TerrainFar;
 /* Close-view pan in whole tile rows x 8 (0..48) for the page being drawn:
  * the scenery is drawn this many rows lower (docs/altitude-view.md). */
 u8 g_PanRows;
-/* The column table (u16 offsets into the map); terrain_patch.c rewrites it.
- * The runs stay in ROM bank TERRAIN_MAP_BANK: 4.3 KB of RAM saved. */
-u8 g_TerrainMap[TERRAIN_MAP_TABLE_BYTES];
+/* The column table (u16 offsets into the runs) stays in ROM, at the start
+ * of the map's first bank. The columns shown with other runs (wrecked huts,
+ * the deck's spare planes, sinking ships) are in this list, sorted by
+ * column; terrain_patch.c keeps it. Until 2026-11-21 the whole table was
+ * in RAM (2.2 KB on map a, 8 KB on map o). */
+u16 g_ChangeColumn[TERRAIN_CHANGES], g_ChangeOffset[TERRAIN_CHANGES];
+u8 g_Changes;
 extern u8 g_Bank3Segment;   /* crt0's shadow of the window-3 register */
 /* The tile ids each page shows per ring column, and the map column drawn
  * there (65535: invalid). Shared with the smoke eraser (smoke_draw.c). */
@@ -34,17 +38,17 @@ static u16 s_Decoded[TERRAIN_MAP_ROWS + 1];
  * pages still show of an evicted strip stays there; copying a tile again
  * loads its strip again. */
 u8 g_TileSourceX;
-static u8 s_StripSlot[TERRAIN_STRIPS];   /* 255: not in VRAM */
+u8 g_StripSlot[TERRAIN_STRIPS];   /* 255: not in VRAM */
 u8 g_TerrainSlotStrip[TERRAIN_SLOTS];    /* 255: free; read by tools/verify_p0.py */
-static u8 s_SlotMark[TERRAIN_SLOTS];
+u8 g_SlotMark[TERRAIN_SLOTS];
 static u8 s_Hand;
 typedef char TerrainStripTables[(TERRAIN_STRIPS <= 255 && TERRAIN_SLOTS <= 64) ? 1 : -1];
 
 static void ResetTiles(void)
 {
     u8 i;
-    for (i = 0; i < TERRAIN_STRIPS; ++i) s_StripSlot[i] = 255;
-    for (i = 0; i < TERRAIN_SLOTS; ++i) g_TerrainSlotStrip[i] = 255, s_SlotMark[i] = 0;
+    for (i = 0; i < TERRAIN_STRIPS; ++i) g_StripSlot[i] = 255;
+    for (i = 0; i < TERRAIN_SLOTS; ++i) g_TerrainSlotStrip[i] = 255, g_SlotMark[i] = 0;
     s_Hand = 0;
 }
 
@@ -120,18 +124,18 @@ static void UploadStrip(void) __naked
     __endasm;
 }
 
-static u8 LoadStrip(u8 strip)
+u8 Terrain_LoadStrip(u8 strip)
 {
     u8 slot;
     for (;;)
     {
         slot = s_Hand;
         if (++s_Hand == TERRAIN_SLOTS) s_Hand = 0;
-        if (!s_SlotMark[slot]) break;
-        s_SlotMark[slot] = 0;
+        if (!g_SlotMark[slot]) break;
+        g_SlotMark[slot] = 0;
     }
-    if (g_TerrainSlotStrip[slot] != 255) s_StripSlot[g_TerrainSlotStrip[slot]] = 255;
-    g_TerrainSlotStrip[slot] = strip; s_StripSlot[strip] = slot;
+    if (g_TerrainSlotStrip[slot] != 255) g_StripSlot[g_TerrainSlotStrip[slot]] = 255;
+    g_TerrainSlotStrip[slot] = strip; g_StripSlot[strip] = slot;
     /* A copy still running may read the slot. */
     VDP_CommandWait();
     s_UploadStrip = strip;
@@ -142,9 +146,9 @@ static u8 LoadStrip(u8 strip)
 
 /* In Z80: every terrain repaint and copy calls it (the C was ~1,100
  * T-states). The C it implements:
- *     u8 strip = (u8)(tile >> 3), slot = s_StripSlot[strip];
+ *     u8 strip = (u8)(tile >> 3), slot = g_StripSlot[strip];
  *     if (slot == 255) slot = LoadStrip(strip);
- *     s_SlotMark[slot] = 1;
+ *     g_SlotMark[slot] = 1;
  *     g_TileSourceX = (slot & 31) << 3;
  *     return 512 + 180 + ((u16)(slot >> 5) << 8) + ((tile & 7) << 3);
  * HL = tile (below 2048: strips fit a byte); returns DE. */
@@ -167,19 +171,19 @@ u16 Terrain_TileY(u16 tile) __naked
         rr      l                   ; L = strip
         ld      e, l
         ld      d, #0
-        ld      hl, #_s_StripSlot
+        ld      hl, #_g_StripSlot
         add     hl, de
         ld      a, (hl)
         inc     a
         jr      nz, cached$
         ld      a, e
-        call    _LoadStrip          ; A = strip -> A = slot
+        call    _Terrain_LoadStrip          ; A = strip -> A = slot
         inc     a
 cached$:
         dec     a                   ; A = slot
         ld      e, a
         ld      d, #0
-        ld      hl, #_s_SlotMark
+        ld      hl, #_g_SlotMark
         add     hl, de
         ld      (hl), #1
         ld      d, a
@@ -201,19 +205,14 @@ cached$:
     __endasm;
 }
 
-/* The column table into RAM; the strips load as columns need them. */
+/* Every column as the map has it; the strips load as columns need them. */
 void Terrain_Load(void)
 {
-    u16 i;
-    u8 count;
     s_Decoded[TERRAIN_MAP_ROWS] = TERRAIN_SENTINEL;
     g_SinkActive = 0;   /* RAM is not cleared at boot */
+    g_Changes = 0;
+    g_PrefetchCamera = 65535u;
     ResetTiles();
-    for (i = 0; i < TERRAIN_MAP_TABLE_BYTES; i += count)
-    {
-        count = TERRAIN_MAP_TABLE_BYTES - i > 64 ? 64 : TERRAIN_MAP_TABLE_BYTES - i;
-        Scenery_Read(TERRAIN_MAP_BANK + (i >> 13), i & 8191, g_TerrainMap + i, count);
-    }
 }
 
 void Terrain_LoadEnd(void) {}
@@ -235,17 +234,6 @@ void Terrain_InitPage(u8 page)
 #define TERRAIN_SEA_COLUMN 625u
 #define TERRAIN_FAR_SEA_COLUMN 78u
 
-/* The map column's run offset for a world x in the current view. */
-static u16 ColumnOffset(u16 world)
-{
-    u16 column = world >> 3;
-    if (g_TerrainFar)
-        column = (column < TERRAIN_FAR_COLUMNS ? column : TERRAIN_FAR_SEA_COLUMN) + TERRAIN_FAR_COLUMN;
-    else if (column >= TERRAIN_FAR_COLUMN) column = TERRAIN_SEA_COLUMN;
-    column *= 2;
-    return g_TerrainMap[column] | ((u16)g_TerrainMap[column + 1] << 8);
-}
-
 /* Window 3 (A000h-BFFFh) = segment, sdcccall(1): A. LD (nn),A, the form
  * loaders patch (docs/diag-rom.md); a pointer write compiled to LD (HL),A. */
 static void SetBank3(u8 segment) __naked
@@ -255,6 +243,81 @@ static void SetBank3(u8 segment) __naked
         ld      (0x7800), a
         ret
     __endasm;
+}
+
+/* The u16 at byte offset of the map in ROM (even: it never crosses a
+ * bank), window 3 mapped for the moment; the caller's segment comes back
+ * (the shadow first, as in Decode). */
+u16 Terrain_MapWord(u16 offset)
+{
+    u8 segment = g_Bank3Segment;
+    u16 word;
+    g_Bank3Segment = TERRAIN_MAP_BANK + (offset >> 13);
+    SetBank3(g_Bank3Segment);
+    word = *(const u16*)(0xA000 + (offset & 8191));
+    g_Bank3Segment = segment;
+    SetBank3(segment);
+    return word;
+}
+
+/* The list position of column, or where it would go: the first entry not
+ * below it. */
+u8 Terrain_ChangeAt(u16 column)
+{
+    u8 low = 0, high = g_Changes, middle;
+    while (low < high)
+    {
+        middle = (low + high) >> 1;
+        if (g_ChangeColumn[middle] < column) low = middle + 1;
+        else high = middle;
+    }
+    return low;
+}
+
+/* The column table's entry for column (HL; returns DE): the table starts
+ * the map's first bank and is under 8 KiB. Z80: every drawn column needs
+ * it (Terrain_MapWord's C cost ~250 T-states more, and P0's carrier frames
+ * are a knife-edge on NTSC). */
+static u16 TableWord(u16 column) __naked
+{
+    (void)column;
+    __asm
+        ld      a, (_g_Bank3Segment)
+        ld      c, a
+#ifdef WINGS_MAP_RECORD
+        ld      a, (_g_Map + 1)         ; map_bank (map_record.h)
+#else
+        ld      a, #TERRAIN_MAP_BANK
+#endif
+        ld      (_g_Bank3Segment), a    ; the shadow first
+        ld      (0x7800), a
+        add     hl, hl
+        ld      a, h
+        or      a, #0xA0
+        ld      h, a
+        ld      e, (hl)
+        inc     hl
+        ld      d, (hl)
+        ld      a, c
+        ld      (_g_Bank3Segment), a
+        ld      (0x7800), a
+        ret
+    __endasm;
+}
+
+/* The map column's run offset for a world x in the current view. */
+static u16 ColumnOffset(u16 world)
+{
+    u16 column = world >> 3;
+    u8 at;
+    if (g_TerrainFar)
+        column = (column < TERRAIN_FAR_COLUMNS ? column : TERRAIN_FAR_SEA_COLUMN) + TERRAIN_FAR_COLUMN;
+    else if (column >= TERRAIN_FAR_COLUMN) column = TERRAIN_SEA_COLUMN;
+    /* The list is sorted: most columns are outside its first..last. */
+    if (g_Changes && column >= g_ChangeColumn[0] && column <= g_ChangeColumn[g_Changes - 1]
+        && (at = Terrain_ChangeAt(column)) < g_Changes && g_ChangeColumn[at] == column)
+        return g_ChangeOffset[at];
+    return TableWord(column);
 }
 
 /* Decode a column's runs from the map bank, mapped into window 3 for the
@@ -270,34 +333,6 @@ static void Decode(u16 offset, u16* out)
     Column_Decode((const u8*)0xA000 + (offset & 8191), out);
     g_Bank3Segment = segment;
     SetBank3(segment);
-}
-
-/* Spare time before a VBlank: load one strip that the next columns ahead
- * of the camera (in the direction of flight) will need, so new terrain
- * mostly finds its strips in VRAM. 1 when a strip was loaded. */
-static u16 s_Ahead[TERRAIN_MAP_ROWS + 1];
-static u16 s_PrefetchCamera = 65535u;
-u8 Terrain_Prefetch(u16 camera, i8 direction)
-{
-    u8 column, row, strip;
-    u16 x, tile;
-    if (camera == s_PrefetchCamera) return 0;   /* nothing left ahead of it */
-    for (column = 1; column <= 4; ++column)
-    {
-        x = direction > 0 ? camera + 255 + ((u16)column << 3) : camera + 8 - ((u16)column << 3);
-        Decode(ColumnOffset(x), s_Ahead);
-        for (row = 0; row < TERRAIN_MAP_ROWS; ++row)
-        {
-            tile = s_Ahead[row];
-            if (tile < TERRAIN_UNIFORM_COUNT) continue;
-            strip = (u8)(tile >> 3);
-            if (s_StripSlot[strip] != 255) { s_SlotMark[s_StripSlot[strip]] = 1; continue; }
-            s_SlotMark[LoadStrip(strip)] = 1;
-            return 1;
-        }
-    }
-    s_PrefetchCamera = camera;
-    return 0;
 }
 
 /* Sinking ships (docs/ship-sinking.md): in the close view a hull column's

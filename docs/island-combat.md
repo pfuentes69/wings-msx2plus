@@ -40,10 +40,11 @@ image as variant columns, after the near and far maps. The tile dictionary
 grows from 493 to 503 tiles; `hut-variants.indices` holds the variant pixels
 for the tests.
 
-At run time the map's column table (u16 offsets into the run data, in RAM)
-is what changes. `Terrain_Remap` (`src/msx/terrain_patch.c`) points a hut's
-columns at its variants' runs; restoring a column reads its offset back from
-ROM. It also sets `g_TerrainDirty`. `Render` then calls `DrawView` for each
+At run time a column's run offset is what changes. `Terrain_Remap`
+(`src/msx/terrain_patch.c`) points a hut's columns at its variants' runs, in
+the change list (RAM, sorted by column, `TERRAIN_CHANGES` entries); restoring
+a column takes it off the list, back to the column table in ROM. (Until
+2026-11-21 the whole column table was in RAM.) It also sets `g_TerrainDirty`. `Render` then calls `DrawView` for each
 page once. `DrawView` visits the 33 visible columns, and the renderer's
 per-slot offset check redraws only those whose runs changed.
 
@@ -240,7 +241,8 @@ or someone is dying (`g_Island.wait`). `tests/test_island.py` checks over
 **RAM.** The soldiers' state brought the gameplay stack within ~14 bytes of
 the variables. The map's run data (4.3 KB) now stays in ROM, in bank 24, and
 is decoded from window 3 (`Terrain_DecodeColumn`); only the column table,
-which wrecked huts rewrite, is in RAM. Data now ends at E2C5h (with the
+which wrecked huts rewrite, was in RAM (since 2026-11-21 only its changes
+are). Data now ends at E2C5h (with the
 ticker's text buffer), about 4.2 KB below the stack's start (F380h).
 
 ## Island cleared

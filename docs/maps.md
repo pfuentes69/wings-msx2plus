@@ -48,10 +48,9 @@ the converter:
 
 "Converts" means the converter accepts the map. It has not been built or
 run. Before these maps can be played:
-- the column table is in RAM, 2 bytes a column (up to 6.9 KiB for map o).
-  The converter's estimate of RAM for the table and caches stays under its
-  12,000-byte limit, but it should hold only the columns that change
-  (wrecked huts);
+- the column table stays in ROM since 2026-11-21; RAM holds only the
+  columns that change (wrecked huts, spare planes, sinking ships: up to
+  `TERRAIN_CHANGES`, checked by `tests/test_mission.py`);
 - the surface lookup has to grow for h and m;
 - the islands, ships and mission targets of each map need checking.
 
