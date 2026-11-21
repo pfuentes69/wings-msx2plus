@@ -9,7 +9,9 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_FIGHTERS)
  * fire (0xdccc, 0xde52), and the launches from the ships (0x1574). Split
  * from core/planes.c for room; they share its random source. */
 
-#if PLANE_LISTS > PLANES_LISTS_MAX || PLANE_PARKED > PLANES_PARKED_MAX
+#ifdef WINGS_MAP_RECORD
+typedef char PlanesFit[(MAP_LISTS_MAX <= PLANES_LISTS_MAX && MAP_PARKED_PLANES_MAX <= PLANES_PARKED_MAX) ? 1 : -1];
+#elif PLANE_LISTS > PLANES_LISTS_MAX || PLANE_PARKED > PLANES_PARKED_MAX
 #error The map has more plane lists or parked planes than PlanesState holds
 #endif
 

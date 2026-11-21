@@ -375,13 +375,17 @@ def main():
     folder = ROOT / 'assets_msx/mission_a'
     terrain = json.loads((folder / 'manifest.json').read_text())
     background = (folder / 'scene.indices').read_bytes()
-    # The terrain (tools/convert_mission.py): tile strips from bank 64, the
-    # column map from bank 72.
+    # The terrain: map a's tile strips, column map and record where
+    # tools/build_maps.py packed them (assets_msx/maps/maps.json).
+    from build_maps import banks as map_banks
+    packed = map_banks('a')
     tiles = (folder / 'tiles.sc5').read_bytes()
     assert len(rom_bytes) == 1024 * 1024
-    assert rom_bytes[terrain['tile_banks'][0] * 8192:][:len(tiles)] == tiles, 'incorrect tile bank placement'
+    assert rom_bytes[packed['tiles'] * 8192:][:len(tiles)] == tiles, 'incorrect tile bank placement'
     tile_map = (folder / 'map.bin').read_bytes()
-    assert rom_bytes[terrain['map_banks'][0] * 8192:][:len(tile_map)] == tile_map, 'incorrect map bank placement'
+    assert rom_bytes[packed['column_map'] * 8192:][:len(tile_map)] == tile_map, 'incorrect map bank placement'
+    record = (ROOT / 'assets_msx/maps/record_a.bin').read_bytes()
+    assert rom_bytes[packed['record'] * 8192:][:len(record)] == record, 'incorrect map record placement'
     tables=(ROOT/'assets_msx/dashboard/bank_7.bin').read_bytes()
     assert rom_bytes[7*8192:7*8192+len(tables)]==tables
     # Aircraft pixels (convert_hellcat.AIRCRAFT_BANKS, as mission-flight.js).

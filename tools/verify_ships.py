@@ -19,7 +19,8 @@ import shutil
 import struct
 import subprocess
 import time
-from convert_mission import TILE_BANK  # the tile strips' first bank
+from build_maps import banks as map_banks  # noqa: E402
+TILE_BANK = map_banks('j')['tiles']   # map j's tile strips (docs/map-records.md)
 
 ROOT = Path(__file__).resolve().parents[1]
 SHIP_BONUS = (2500, 4500)        # destroyer, battleship (mission_ships.h)

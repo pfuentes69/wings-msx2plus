@@ -12,8 +12,16 @@
 #include "mission_tiles.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_SHIPS)
 
+#ifdef WINGS_MAP_RECORD
+/* The ROM: the record's counts, known at run time (tools/build_maps.py
+ * checks them against the capacities). */
+#define MAP_HAS(count) 1
+typedef char ShipsFit[(MAP_SHIP_GUNS_MAX <= SHIP_MAX_GUNS && MAP_SHIPS_MAX <= SHIP_MAX) ? 1 : -1];
+#else
+#define MAP_HAS(count) (count)
 #if SHIP_GUNS > SHIP_MAX_GUNS || SHIP_COUNT > SHIP_MAX
 #error The map has more ships or ship guns than ShipsState holds
+#endif
 #endif
 
 ShipsState g_Ships;
@@ -24,7 +32,7 @@ uint8_t g_ShipsGone;
  * distant columns switch to the stage's own (docs/ship-sinking.md). */
 static void Show(uint8_t i, uint8_t stage)
 {
-#if SHIP_SINKING
+#if MAP_HAS(SHIP_SINKING)
     uint16_t column = TERRAIN_FAR_COLUMN + s_ShipFarFirst[i];
     uint16_t entry = TERRAIN_SINK_TABLE + 2 * (s_ShipSinkEntry[i] + (uint16_t)(stage - 1) * s_ShipFarCount[i]);
     uint8_t n;
@@ -42,7 +50,7 @@ static void Show(uint8_t i, uint8_t stage)
 #endif
 }
 
-#if SHIP_GUNS
+#if MAP_HAS(SHIP_GUNS)
 static uint16_t s_Random = 0x5a3cu;
 static uint16_t Random(void)
 {
@@ -74,7 +82,7 @@ void Ships_Reset(void) WINGS_BANKED
 
 uint8_t Ships_Find(uint16_t x) WINGS_BANKED
 {
-#if SHIP_COUNT
+#if MAP_HAS(SHIP_COUNT)
     uint8_t i;
     for (i = 0; i < SHIP_COUNT; ++i)
         if (x >= s_ShipLeft[i] && x <= s_ShipRight[i]) return i;
@@ -93,13 +101,13 @@ uint8_t Ships_Deck(uint8_t ship) WINGS_BANKED
 uint8_t Ships_Rocket(uint16_t x, uint32_t* score) WINGS_BANKED
 {
     uint8_t ship = Ships_Find(x);
-#if SHIP_COUNT
+#if MAP_HAS(SHIP_COUNT)
     uint8_t i, end;
     int16_t d;
 #endif
     if (ship == SHIP_NONE) return 0;
     if (ship == SHIP_CARRIER) return COMBAT_SKY_WHITE;   /* no guns */
-#if SHIP_COUNT
+#if MAP_HAS(SHIP_COUNT)
     /* 0x49dc: the first live gun in list order within 16 px. */
     end = s_ShipFirstGun[ship + 1];
     for (i = s_ShipFirstGun[ship]; i < end; ++i)
@@ -140,7 +148,7 @@ uint8_t Ships_Torpedo(uint16_t x) WINGS_BANKED
 
 uint16_t Ships_Aim(int16_t a, int16_t b) WINGS_BANKED
 {
-#if SHIP_GUNS
+#if MAP_HAS(SHIP_GUNS)
     uint8_t i;
     int16_t x;
     if (a > b) { x = a; a = b; b = x; }
@@ -157,7 +165,7 @@ uint16_t Ships_Aim(int16_t a, int16_t b) WINGS_BANKED
     return 0;
 }
 
-#if SHIP_COUNT
+#if MAP_HAS(SHIP_COUNT)
 /* One step of ship i's sinking clock (0x1cd8): a pixel lower; the bonus
  * and the "sunk" message at step 10; the sea takes its columns at 120. */
 static void Step(uint8_t i, uint32_t* score)
@@ -196,7 +204,7 @@ static void Step(uint8_t i, uint32_t* score)
 
 void Ships_Tick(uint8_t flying, uint32_t* score) WINGS_BANKED
 {
-#if SHIP_COUNT
+#if MAP_HAS(SHIP_COUNT)
     uint8_t i;
     /* 0x1cae, every tick: each sinking ship's clock. */
     if (g_Ships.sinking)
@@ -209,7 +217,7 @@ void Ships_Tick(uint8_t flying, uint32_t* score) WINGS_BANKED
 #else
     (void)score;
 #endif
-#if SHIP_GUNS
+#if MAP_HAS(SHIP_GUNS)
     {
     uint8_t i, ship = 0;
     if (!g_Ships.smoking || !flying) return;
@@ -252,7 +260,7 @@ void Ships_AddSplash(int16_t x) WINGS_BANKED
     Splash(x, SHIP_SPLASH_LIFE);
 }
 
-#if SHIP_GUNS
+#if MAP_HAS(SHIP_GUNS)
 /* The update's inputs as statics: SDCC reaches them directly. */
 static const FlightState* s_Flight;
 static EngineState* s_Engine;
@@ -333,7 +341,7 @@ uint8_t Ships_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
 {
     ShipSplash* splash = g_Ships.splash;
     uint8_t i;
-#if SHIP_GUNS
+#if MAP_HAS(SHIP_GUNS)
     uint8_t ship, end;
     int16_t reach;
 #endif
@@ -347,7 +355,7 @@ uint8_t Ships_Guns(const FlightState* flight, uint16_t world, uint8_t flying,
     if (combat->enemy.live == TORPEDO_RUNNING) Splash(combat->enemy.x.w.whole, SHIP_WAKE_LIFE);
     g_Ships.shown_count = 0;
     g_Ships.nearest = 65535u;
-#if SHIP_GUNS
+#if MAP_HAS(SHIP_GUNS)
     if (!flying) return g_Ships.splashes;   /* 0x4c3e: only while the plane flies */
     s_Altitude = (int16_t)WINGS_FLIGHT_MAX_Y - (int16_t)(flight->y >> 8);
     s_Flight = flight; s_World = world; s_Engine = engine; s_Sortie = sortie; s_Combat = combat;

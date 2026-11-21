@@ -2,14 +2,18 @@
 
 Added 2026-11-17. The original has 15 maps, `a.map` .. `o.map`. Their map
 numbers 0..14 come from rank × 4 + mission ([mission-flow.md](mission-flow.md)).
-The mission ROM is built for one map at a time.
+Since 2026-11-21 every converted map is in the one ROM, loaded at run time
+from its record ([map-records.md](map-records.md)).
 
 ```sh
-python tools/convert_mission.py --map j    # assets_msx/mission_j, src/generated/map_j
-WINGS_MAP=j ./build.sh projname=mission-flight   # out/mission-flight-j/mission-flight.rom
+python tools/convert_mission.py --map j --ships   # assets_msx/mission_j, src/generated/map_j
+python tools/convert_cockpit.py --map j           # src/generated/map_j/cockpit_map.h
+python tools/build_maps.py                        # the records and their banks
+WINGS_MAP=j ./build.sh projname=mission-flight    # starts on map j: out/mission-flight-j/
 ```
 
-Without `WINGS_MAP` the build is map a, in `out/mission-flight/` as before.
+`WINGS_MAP` only picks the map a game starts on (map a by default, in
+`out/mission-flight/`); the ROMs hold the same maps.
 
 - **The carrier** stands at a different x on every map: the map's
   reset_x, given to the build as `WINGS_CARRIER_X`. The deck, cables,

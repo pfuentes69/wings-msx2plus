@@ -21,7 +21,7 @@ typedef char SoldierOffset[offsetof(IslandState, soldier) == ISLAND_SOLDIER_OFFS
 /* Each island's land: the surface around its beach anchors (Island_Reset).
  * A soldier stays on it; the next step's water check can only fail at its
  * ends. */
-static int16_t s_LandLeft[ISLAND_COUNT ? ISLAND_COUNT : 1], s_LandRight[ISLAND_COUNT ? ISLAND_COUNT : 1];   /* a map may have none (j) */
+static int16_t s_LandLeft[ISLAND_MAX], s_LandRight[ISLAND_MAX];
 int16_t g_SoldierLandLow, g_SoldierLandHigh;   /* all islands' land */
 
 void Soldiers_Reset(void) WINGS_BANKED

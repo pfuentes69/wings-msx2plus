@@ -13,9 +13,14 @@ WINGS_CODE_SEGMENT(WINGS_SEGMENT_COMBAT)
 #ifdef WINGS_P1_FLIGHT  /* smoke.h: the debug ROM keeps the P0 flight */
 
 #define ISLAND_SOLDIERS (ISLAND_GARRISON * (ISLAND_HUTS + ISLAND_DUGOUTS))
+#ifdef WINGS_MAP_RECORD   /* the packer checks each map (tools/build_maps.py) */
+typedef char IslandFits[(MAP_ISLANDS_MAX <= ISLAND_MAX && MAP_HUTS_MAX <= ISLAND_MAX_HUTS &&
+                         MAP_DUGOUTS_MAX <= ISLAND_MAX_DUGOUTS) ? 1 : -1];
+#else
 typedef char IslandFits[(ISLAND_COUNT <= ISLAND_MAX && ISLAND_HUTS <= ISLAND_MAX_HUTS &&
                          ISLAND_DUGOUTS <= ISLAND_MAX_DUGOUTS && ISLAND_SOLDIERS <= ISLAND_MAX_SOLDIERS &&
                          ISLAND_COUNT <= 16) ? 1 : -1];
+#endif
 #define STATE(s) ((s)->state & 7)   /* bit 3: PENDING, bits 4..7: island */
 
 IslandState g_Island;

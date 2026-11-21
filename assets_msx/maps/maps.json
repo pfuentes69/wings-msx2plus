@@ -1,0 +1,78 @@
+{
+ "maps": [
+  {
+   "map": "a",
+   "number": 0,
+   "tiles": [
+    [
+     64,
+     "assets_msx/mission_a/bank_64.bin"
+    ],
+    [
+     65,
+     "assets_msx/mission_a/bank_65.bin"
+    ],
+    [
+     66,
+     "assets_msx/mission_a/bank_66.bin"
+    ]
+   ],
+   "column_map": [
+    [
+     67,
+     "assets_msx/mission_a/bank_72.bin"
+    ]
+   ],
+   "record": [
+    68,
+    "assets_msx/maps/record_a.bin"
+   ],
+   "ram_bytes": 1424,
+   "record_bytes": 2010
+  },
+  {
+   "map": "j",
+   "number": 9,
+   "tiles": [
+    [
+     69,
+     "assets_msx/mission_j/bank_64.bin"
+    ],
+    [
+     70,
+     "assets_msx/mission_j/bank_65.bin"
+    ],
+    [
+     71,
+     "assets_msx/mission_j/bank_66.bin"
+    ],
+    [
+     72,
+     "assets_msx/mission_j/bank_67.bin"
+    ],
+    [
+     73,
+     "assets_msx/mission_j/bank_68.bin"
+    ]
+   ],
+   "column_map": [
+    [
+     74,
+     "assets_msx/mission_j/bank_72.bin"
+    ],
+    [
+     75,
+     "assets_msx/mission_j/bank_73.bin"
+    ]
+   ],
+   "record": [
+    76,
+    "assets_msx/maps/record_j.bin"
+   ],
+   "ram_bytes": 1424,
+   "record_bytes": 1595
+  }
+ ],
+ "first_bank": 64,
+ "last_bank": 76
+}

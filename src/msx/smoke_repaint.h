@@ -1,3 +1,6 @@
+#ifndef TERRAIN_UNIFORM_COLOR_ASM   /* the ROM: a field of g_Map (map_rom/mission_tiles.h) */
+#define TERRAIN_UNIFORM_COLOR_ASM _g_TerrainUniformColor
+#endif
 #ifndef WINGS_SMOKE_REPAINT_H
 #define WINGS_SMOKE_REPAINT_H
 /* One column of a smoke-path shape's repaint from the page's tile cache
@@ -86,7 +89,7 @@ static void RepaintColumn(void) __naked
         ld      a, e
         cp      a, #TERRAIN_UNIFORM_COUNT
         jr      nc, rc_copy$
-        ld      hl, #_g_TerrainUniformColor
+        ld      hl, #TERRAIN_UNIFORM_COLOR_ASM
         add     hl, de
         ld      a, (hl)
         ld      b, a

@@ -18,7 +18,8 @@ from pathlib import Path
 import struct
 
 from verify_ships import run
-from convert_mission import TILE_BANK  # the tile strips' first bank
+from build_maps import banks as map_banks  # noqa: E402
+TILE_BANK = map_banks('a')['tiles']   # map a's tile strips (docs/map-records.md)
 
 ROOT = Path(__file__).resolve().parents[1]
 PLANE = 40          # bytes per Plane (SDCC packs)

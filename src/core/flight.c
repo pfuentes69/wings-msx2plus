@@ -243,9 +243,11 @@ void Flight_StepWorldSample(FlightState* state, uint32_t* x, uint8_t input, uint
     StepControls(state, input);
     next = (int32_t)*x + state->vx;
     if (next < 0) { next = 0; state->vx = 0; }
-    if (next > (int32_t)(WINGS_WORLD_WIDTH - 1) * 256)
+    /* A shift, not "* 256": with the map's width read from its record
+     * (the ROM) SDCC called the 32-bit multiply every step. */
+    if (next > (int32_t)((uint32_t)(uint16_t)(WINGS_WORLD_WIDTH - 1) << 8))
     {
-        next = (int32_t)(WINGS_WORLD_WIDTH - 1) * 256;
+        next = (int32_t)((uint32_t)(uint16_t)(WINGS_WORLD_WIDTH - 1) << 8);
         state->vx = 0;
     }
     *x = next;

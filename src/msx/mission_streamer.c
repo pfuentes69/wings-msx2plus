@@ -38,11 +38,17 @@ static u16 s_Decoded[TERRAIN_MAP_ROWS + 1];
  * pages still show of an evicted strip stays there; copying a tile again
  * loads its strip again. */
 u8 g_TileSourceX;
-u8 g_StripSlot[TERRAIN_STRIPS];   /* 255: not in VRAM */
+#ifdef TERRAIN_STRIPS_MAX
+u8 g_StripSlot[TERRAIN_STRIPS_MAX];   /* 255: not in VRAM */
+#else
+u8 g_StripSlot[TERRAIN_STRIPS];
+#endif
 u8 g_TerrainSlotStrip[TERRAIN_SLOTS];    /* 255: free; read by tools/verify_p0.py */
 u8 g_SlotMark[TERRAIN_SLOTS];
 static u8 s_Hand;
+#ifndef WINGS_MAP_RECORD
 typedef char TerrainStripTables[(TERRAIN_STRIPS <= 255 && TERRAIN_SLOTS <= 64) ? 1 : -1];
+#endif
 
 static void ResetTiles(void)
 {
@@ -70,7 +76,12 @@ static void UploadStrip(void) __naked
         rlca
         rlca
         and     a, #7
+#ifdef WINGS_MAP_RECORD
+        ld      hl, #_g_Map             ; tile_bank (map_record.h)
+        add     a, (hl)
+#else
         add     a, #TERRAIN_TILE_BANK
+#endif
         ld      (_g_Bank3Segment), a
         ld      (0x7800), a
         ld      a, c                    ; source = A000h + (strip % 32) * 256
@@ -231,8 +242,10 @@ void Terrain_InitPage(u8 page)
 /* Map columns of open sea (x 5000, between the islands and the carrier),
  * drawn for every column beyond the map's ends: the ocean goes on, as in the
  * original. tests/test_mission.py checks that both are plain sea. */
+#ifndef TERRAIN_SEA_COLUMN   /* the ROM: the record's (tools/build_maps.py) */
 #define TERRAIN_SEA_COLUMN 625u
 #define TERRAIN_FAR_SEA_COLUMN 78u
+#endif
 
 /* Window 3 (A000h-BFFFh) = segment, sdcccall(1): A. LD (nn),A, the form
  * loaders patch (docs/diag-rom.md); a pointer write compiled to LD (HL),A. */

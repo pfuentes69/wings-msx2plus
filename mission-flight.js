@@ -1,12 +1,14 @@
 // Mission ROM: 1 MiB ASCII8 with banked code; see docs/rom-banking.md.
-// WINGS_MAP picks the map (a..o, default a): its converted assets in
-// assets_msx/mission_<map>, its C tables in src/generated/map_<map>
-// (tools/convert_mission.py --map). Maps other than a build to
+// Every converted map is in the ROM (docs/map-records.md: tools/build_maps.py
+// packs them, assets_msx/maps/maps.json gives their banks). WINGS_MAP picks
+// the map a game starts on (a..o, default a); maps other than a build to
 // out/mission-flight-<map>/.
 const map = process.env.WINGS_MAP || "a";
-const mission = JSON.parse(require("fs").readFileSync(`${ProjDir}assets_msx/mission_${map}/manifest.json`, "utf8"));
+const maps = JSON.parse(require("fs").readFileSync(`${ProjDir}assets_msx/maps/maps.json`, "utf8")).maps;
+const mapNumber = "abcdefghijklmno".indexOf(map);
+if (!maps.some(m => m.map === map)) throw new Error(`map ${map} is not packed: python3 tools/build_maps.py`);
 ProjModules = ["src/msx/scenery_load", "src/msx/banking", "src/msx/vdp_ring", "src/msx/input_sampler", "src/core/controls", "src/core/carrier", "src/world_flight", "src/msx/mission_streamer", "src/msx/column_ops", "src/core/world", "src/core/flight", "src/core/aircraft",
-    "src/msx/elevator", "src/msx/dashboard", "src/msx/cockpit", "src/generated/cockpit_art", "src/msx/waves", "src/msx/wave_band", "src/core/combat", "src/core/engine", "src/core/landing", "src/core/flight_model", "src/core/crash", "src/core/flight_steps", "src/msx/step_batch", "src/msx/rope", "src/core/smoke", "src/msx/smoke_draw", "src/msx/smoke_erase", "src/core/island", "src/core/soldiers", "src/core/ships", "src/core/planes", "src/core/fighters", "src/msx/screens", "src/generated/screens_art", "src/msx/screen_end", "src/generated/screen_end_art", "src/core/rockets", "src/core/rocket_move", "src/msx/message", "src/msx/sound", "src/msx/sound_update", "src/msx/sound_fm", "src/msx/music", "src/generated/music_data", "src/msx/terrain_patch", "src/core/game", "src/msx/menu", "src/msx/weapons", "src/msx/ship", "src/core/mission", `src/generated/map_${map}/mission_surfaces`, "src/generated/hellcat_frames", "src/generated/smoke_frames", "src/generated/smoke_erase_box", "src/generated/font", `src/generated/map_${map}/mission_tiles`];
+    "src/msx/elevator", "src/msx/dashboard", "src/msx/cockpit", "src/generated/cockpit_art", "src/msx/waves", "src/msx/wave_band", "src/core/combat", "src/core/engine", "src/core/landing", "src/core/flight_model", "src/core/crash", "src/core/flight_steps", "src/msx/step_batch", "src/msx/rope", "src/core/smoke", "src/msx/smoke_draw", "src/msx/smoke_erase", "src/core/island", "src/core/soldiers", "src/core/ships", "src/core/planes", "src/core/fighters", "src/msx/screens", "src/generated/screens_art", "src/msx/screen_end", "src/generated/screen_end_art", "src/core/rockets", "src/core/rocket_move", "src/msx/message", "src/msx/sound", "src/msx/sound_update", "src/msx/sound_fm", "src/msx/music", "src/generated/music_data", "src/msx/terrain_patch", "src/core/game", "src/msx/menu", "src/msx/weapons", "src/msx/ship", "src/core/mission", "src/msx/map_record", "src/generated/map_rom/map_table", "src/generated/hellcat_frames", "src/generated/smoke_frames", "src/generated/smoke_erase_box", "src/generated/font"];
 Target = "ROM_ASCII8";
 CustomISR = "VHBLANK";
 ROMSize = 1024;
@@ -14,11 +16,11 @@ ROMSize = 1024;
 ROMMainSegments = 3;
 AddROMSignature = true;
 LibModules = ["bios", "vdp", "input"];
-CompileOpt += ` -DWINGS_BANKED_CODE -DTILE_TERRAIN -DMISSION_TERRAIN -DWINGS_PRESENT_TICKS=8 -DWINGS_FLIGHT_MAX_Y=1200u -DWINGS_FLIGHT_START_Y=1108u -DWINGS_WORLD_WIDTH=${mission.source_width}u -DWINGS_WORLD_START=${mission.reset_x}u -DWINGS_CARRIER_X=${mission.reset_x}u -I${ProjDir}src/generated/map_${map}`;
+CompileOpt += ` -DWINGS_BANKED_CODE -DTILE_TERRAIN -DMISSION_TERRAIN -DWINGS_PRESENT_TICKS=8 -DWINGS_FLIGHT_MAX_Y=1200u -DWINGS_FLIGHT_START_Y=1108u -DWINGS_MAP_RECORD -DWINGS_MAP_NUMBER=${mapNumber} -I${ProjDir}src/generated/map_rom`;
 OutDir = map === "a" ? `${ProjDir}out/mission-flight/` : `${ProjDir}out/mission-flight-${map}/`;
 require("fs").mkdirSync(OutDir, { recursive: true });
-// The terrain: tile strips from bank 64, the column map from bank 72 (tools/convert_mission.py).
-RawFiles = mission.tile_banks.concat(mission.map_banks).map(bank => ({ offset: bank * 8192, file: `assets_msx/mission_${map}/bank_${bank}.bin` }));
+// Every map's tile strips, column map and record, from bank 64.
+RawFiles = maps.flatMap(m => m.tiles.concat(m.column_map, [m.record])).map(([bank, file]) => ({ offset: bank * 8192, file }));
 
 const aircraftBytes = JSON.parse(require("fs").readFileSync(`${ProjDir}assets_msx/hellcat/manifest.json`, "utf8")).animation.pixel_bytes;
 for (let segment = 0; segment < Math.ceil(aircraftBytes / 8192); ++segment) {

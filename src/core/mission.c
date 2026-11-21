@@ -1,5 +1,6 @@
 #include "mission.h"
 #include "mission_surfaces.h"
+#ifndef WINGS_MAP_RECORD   /* the ROM: msx/map_record.c, the runs in the map's bank */
 
 /* The last run found: the plane (or camera) stays in one most frames. */
 static uint16_t s_Start = 0, s_End = 0, s_Word = 0;   /* RAM is not cleared at boot */
@@ -20,3 +21,4 @@ uint16_t Mission_Query(int16_t x)
     return s_Word = g_MissionSurfaceRuns[low].word;
 }
 
+#endif

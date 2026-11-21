@@ -3,6 +3,7 @@
 #include "vdp_inl.h"
 #include "../generated/screens_art.h"
 #include "../generated/terrain.h"
+#include "mission_tiles.h"   /* the ROM: the loaded map's palette */
 #include "scenery_load.h"
 #include "dashboard.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_SCREEN_END)

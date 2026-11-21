@@ -14,7 +14,8 @@ from verify_world_flight import vram_image, expected_pixels, gun_flash_shape, is
 from convert_dashboard import compose, layout, PILOT_WIDTH, arrow_frames
 import convert_cockpit
 from aircraft_scene import AircraftScene
-from convert_mission import TILE_BANK  # the tile strips' first bank
+from build_maps import banks as map_banks  # noqa: E402
+TILE_BANK = map_banks('a')['tiles']   # map a's tile strips (docs/map-records.md)
 
 ROOT=Path(__file__).resolve().parents[1]
 

@@ -6,6 +6,9 @@
 void Terrain_Load(void);
 /* The tile cache (docs/tile-cache.md). A tile's colour: 0..15 for the
  * uniform tiles (filled with HMMV), 255 for one copied from VRAM. */
+#ifndef TERRAIN_UNIFORM_COLOR_ASM   /* the ROM: a field of g_Map (map_rom/mission_tiles.h) */
+#define TERRAIN_UNIFORM_COLOR_ASM _g_TerrainUniformColor
+#endif
 #define TERRAIN_TILE_COLOR(t) ((t) < TERRAIN_UNIFORM_COUNT ? g_TerrainUniformColor[t] : 255)
 /* A copied tile's VRAM position: Terrain_TileY loads its strip if needed
  * and returns the source y (512..1023); the source x is in g_TileSourceX.

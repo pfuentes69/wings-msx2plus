@@ -419,6 +419,14 @@ static void WaitVBlank(void)
     do { __asm halt __endasm; } while (g_VBlankTicks == tick);
 }
 
+/* The close view shows part of the carrier (its hull CARRIER_X - 440 ..
+ * + 335). Out of Game_Main: with the map's values read from the record,
+ * SDCC took 10 minutes over it (docs/sdcc-pitfalls.md). */
+static u8 CarrierInView(u16 camera)
+{
+    return !g_TerrainFar && (u16)(camera + 256) > CARRIER_X - 440u && camera < CARRIER_X + 336u;
+}
+
 static void DrawColumn(u16 world, u8 page)
 {
     Terrain_DrawColumn(world, page);
@@ -1084,6 +1092,10 @@ static void Game_Main(void)
     u8 page, frame, steps, step, input, tick, turn, held = 0;
     u8 base_steps, present_ticks, core_phase = 0;
     u8 intro;
+#ifdef WINGS_MAP_RECORD
+    /* The map a game starts on (docs/map-records.md); everything reads it. */
+    Map_Load(WINGS_MAP_NUMBER);
+#endif
 #ifdef WINGS_P1_FLIGHT
     /* RAM is not cleared at boot: before any line interrupt runs the driver. */
     Sound_Reset();
@@ -1457,7 +1469,7 @@ static void Game_Main(void)
           camera = camera < 128 ? 0 : camera - 128; if (camera > maximum) camera = maximum; }
 #endif
         g_ViewChange = 0;
-        s_RenderHeave = !g_TerrainFar && (u16)(camera + 256) > CARRIER_X - 440u && camera < CARRIER_X + 336u ? g_ShipHeave : 0;
+        s_RenderHeave = CarrierInView(camera) ? g_ShipHeave : 0;
         { int16_t altitude = (int16_t)(WINGS_FLIGHT_MAX_Y - y);
           u8 pan = !g_TerrainFar && altitude > 131 ? (u8)(altitude - 131) : 0;  /* original 0x26e */
           /* Tile rows (software) plus a fine scroll of -1..7 px (hardware):
@@ -1468,7 +1480,7 @@ static void Game_Main(void)
               s_ViewKey = pan >> 3;
           s_RenderFine = g_TerrainFar ? 0 : (u8)(pan - (s_ViewKey << 3)); }
 #ifdef WINGS_P1_FLIGHT
-        s_CarrierView = !g_TerrainFar && (u16)(camera + 256) > CARRIER_X - 440u && camera < CARRIER_X + 336u;
+        s_CarrierView = CarrierInView(camera);
 #endif
         frame = s_Aircraft.shape;
 #ifdef WINGS_P1_FLIGHT

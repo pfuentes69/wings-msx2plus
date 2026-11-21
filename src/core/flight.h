@@ -1,6 +1,19 @@
 #ifndef WINGS_FLIGHT_H
 #define WINGS_FLIGHT_H
 #include <stdint.h>
+#ifdef WINGS_MAP_RECORD
+/* The ROM: the loaded map's (docs/map-records.md). */
+#include "map_record.h"
+#ifndef WINGS_WORLD_WIDTH
+#define WINGS_WORLD_WIDTH (g_Map.width)
+#endif
+#ifndef WINGS_WORLD_START
+#define WINGS_WORLD_START (g_Map.start)
+#endif
+#ifndef WINGS_CARRIER_X
+#define WINGS_CARRIER_X (g_Map.carrier_x)
+#endif
+#endif
 #ifndef WINGS_WORLD_WIDTH
 #define WINGS_WORLD_WIDTH 4096u
 #endif

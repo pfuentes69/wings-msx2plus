@@ -37,9 +37,7 @@ now banks code. It was 256 KiB; the terrain tile cache
 | 31 | Free for code or data |
 | 32–46 | Free (the map data's until 2026-11-21) |
 | 48–63 | Banked code and raw data (see banking.h, mission-flight.js) |
-| 64–71 | Raw data: terrain tile strips, 32 per bank, mapped into window 3 by `UploadStrip` (map a: 64–66; map j: 64–68) |
-| 72–75 | Raw data: the column map (column table and runs), read in window 3; no column record crosses a bank (maps a, j: 72–73 at most) |
-| 76–127 | Free |
+| 64–127 | The maps, packed by `tools/build_maps.py` (`assets_msx/maps/maps.json`): per map its tile strips (32 per bank, mapped into window 3 by `UploadStrip`), its column map (read in window 3; no column record crosses a bank) and its record ([map-records.md](map-records.md)). Map a: 64–66, 67, 68; map j: 69–73, 74–75, 76 |
 
 Measured release layout (close-view pan, 2026-11-14):
 

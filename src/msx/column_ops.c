@@ -8,6 +8,9 @@
 #ifndef TERRAIN_MAP_ROWS
 #include "mission_tiles.h"
 #endif
+#ifndef TERRAIN_UNIFORM_COLOR_ASM   /* the ROM: a field of g_Map (map_rom/mission_tiles.h) */
+#define TERRAIN_UNIFORM_COLOR_ASM _g_TerrainUniformColor
+#endif
 typedef char ColumnOpsRows[(TERRAIN_MAP_ROWS > 0 && TERRAIN_MAP_ROWS < 128) ? 1 : -1];
 
 /* Expand (count, tile low, tile high) runs until TERRAIN_MAP_ROWS entries
@@ -157,7 +160,7 @@ void Column_Runs(unsigned short* cache, const unsigned short* decoded) __naked
         ld      a, e
         cp      a, #TERRAIN_UNIFORM_COUNT
         jr      nc, column_runs_detail$
-        ld      hl, #_g_TerrainUniformColor
+        ld      hl, #TERRAIN_UNIFORM_COLOR_ASM
         add     hl, de
         ld      a, (hl)
         jr      column_runs_color$

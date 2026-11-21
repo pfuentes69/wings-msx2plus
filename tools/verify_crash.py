@@ -125,7 +125,10 @@ def main():
     assert 12.0 <= t('sea_next_plane') - t('sea_sinking') < 13.4, t('sea_next_plane') - t('sea_sinking')
     assert m['sea_next_plane']['lives'] == 2
     sinking = [r for r in rows if r['mode'] == SINKING and t('sea_sinking') <= r['t'] < t('sea_next_plane')]
-    assert all(r['y'] == 1198 and r['depth'] == r['clock'] // 3 for r in sinking), 'altitude 2, a pixel every 3 ticks'
+    # A sample can land inside a tick, between core/crash.c's depth step and
+    # its clock step (depth first): the depth may be the next tick's.
+    assert all(r['y'] == 1198 and r['depth'] in (r['clock'] // 3, (r['clock'] + 1) // 3) for r in sinking), \
+        'altitude 2, a pixel every 3 ticks'
     assert max(r['depth'] for r in sinking) >= 48
     assert all(r['oil'] == 0 and r['crash'] == 255 for r in sinking)
     assert snaps['sea_slide']['mode'] == DEAD and snaps['sea_sunk']['sink'] >= 30

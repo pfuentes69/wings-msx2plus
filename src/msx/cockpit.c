@@ -7,6 +7,11 @@
 #include "../core/ships.h"
 #include "scenery_load.h"
 #include "cockpit_map.h"   /* the map's features (src/generated/map_<map>) */
+#ifdef WINGS_MAP_RECORD   /* the ROM: the record's counts, known at run time */
+#define MAP_HAS(count) 1
+#else
+#define MAP_HAS(count) (count)
+#endif
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_COCKPIT)
 
 /* The original's (docs/research/amiga-cockpit-view.md), the port's model in
@@ -193,11 +198,11 @@ static void Scene(u16 x, u8 altitude, u8 left, u8 arrow)
         n = left ? COCKPIT_CARRIER_LAST - s_Col + 1 : s_Col - COCKPIT_CARRIER_FIRST + 1;
         s_Next[1] |= 2 | (n < 90 ? (u8)((n * 43) >> 8) : 15) << 4;   /* n / 6 */
     }
-#if COCKPIT_LANDS
+#if MAP_HAS(COCKPIT_LANDS)
     for (mask = 0, i = 0; i < COCKPIT_LANDS; ++i) mask |= Mask(s_LandFirst[i], s_LandLast[i]);
     s_Next[4] = (u8)mask; s_Next[5] = mask >> 8;
 #endif
-#if COCKPIT_TREES
+#if MAP_HAS(COCKPIT_TREES)
     for (mask = 0, i = 0; i < COCKPIT_TREES; ++i) mask |= Mask(s_TreeFirst[i], s_TreeLast[i]);
     s_Next[6] = (u8)mask; s_Next[7] = mask >> 8;
 #endif

@@ -17,6 +17,9 @@ uint8_t Landing_Bottom(uint8_t pitch, uint8_t gear) WINGS_BANKED
 
 uint8_t Landing_Height(uint16_t world) WINGS_BANKED
 {
+#ifdef WINGS_MAP_RECORD   /* the runs stay in the map's bank: resident code reads them */
+    return Mission_Height(world);
+#else
     uint8_t low = 0, high = MISSION_HEIGHT_RUNS, middle;
     while (low < high)
     {
@@ -25,6 +28,7 @@ uint8_t Landing_Height(uint16_t world) WINGS_BANKED
         else low = middle + 1;
     }
     return low < MISSION_HEIGHT_RUNS ? s_MissionHeight[low] : 0;
+#endif
 }
 
 uint8_t Landing_Contact(const FlightState* flight, uint16_t world, uint8_t engine_failed, uint8_t bottom, uint8_t height) WINGS_BANKED

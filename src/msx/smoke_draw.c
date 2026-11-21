@@ -12,6 +12,11 @@ extern CombatState g_Combat;   /* world_flight.c */
 #include "mission_island.h"
 #include "../generated/hellcat_frames.h"
 WINGS_CODE_SEGMENT(WINGS_SEGMENT_EFFECTS)
+#ifdef WINGS_MAP_RECORD   /* the ROM: the record's counts, known at run time */
+#define MAP_HAS(count) 1
+#else
+#define MAP_HAS(count) (count)
+#endif
 
 #ifdef WINGS_P1_FLIGHT
 SmokeDrawn g_SmokeDrawn[2][SMOKE_DRAWN_MAX];
@@ -174,9 +179,10 @@ void Smoke_Draw(u8 page, u16 camera, u8 far, i16 shift, i8 heave, i16 limit) WIN
     }
     /* The island flag's cloth (0x3b52), close view only, waving through
      * flg0..flg2 until the island is cleared; the pole is in the scenery. */
-#if ISLAND_COUNT
-    /* (A map without islands, j, must not compile this loop: SDCC 4.6
-     * dropped the rest of the function after it, docs/sdcc-pitfalls.md.) */
+#if MAP_HAS(ISLAND_COUNT)
+    /* (A map without islands, j, must not compile this loop with a count
+     * of 0 known: SDCC 4.6 dropped the rest of the function after it,
+     * docs/sdcc-pitfalls.md. In the ROM the count is the record's.) */
     if (!far)
         for (i = 0; i < ISLAND_COUNT; ++i)
         {

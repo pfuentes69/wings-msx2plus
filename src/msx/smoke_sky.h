@@ -1,3 +1,6 @@
+#ifndef TERRAIN_UNIFORM_COLOR_ASM   /* the ROM: a field of g_Map (map_rom/mission_tiles.h) */
+#define TERRAIN_UNIFORM_COLOR_ASM _g_TerrainUniformColor
+#endif
 #ifndef WINGS_SMOKE_SKY_H
 #define WINGS_SMOKE_SKY_H
 /* Whether a smoke-path shape's box lies over plain sky on its page, so one
@@ -37,7 +40,7 @@ static u8 AllSky(void) __naked
         jr      nc, sky_no$
         push    hl
         ld      d, #0
-        ld      hl, #_g_TerrainUniformColor
+        ld      hl, #TERRAIN_UNIFORM_COLOR_ASM
         add     hl, de
         ld      a, (hl)
         pop     hl

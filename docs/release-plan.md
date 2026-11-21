@@ -31,35 +31,27 @@ builds (0.1.x).
 
 ## Phase 1: map runtime, 1 MiB, RAM
 
-1. **1 MiB ROM.** `ROMSize = 1024` in `mission-flight.js`. Shared assets
-   (code, aircraft, dashboard, screens, music) stay in banks 0–63; map data
-   moves to banks 64+. Update `tools/check_rom_layout.py` and
-   [rom-budget.md](rom-budget.md).
-2. **Map table.** `tools/convert_mission.py` converts every map into its
-   own banks and writes one table of map records. Each record holds: the
-   banks of the tiles and the column map, the surfaces, island, heights,
-   ships and planes tables, the carrier's x, the world's width, the reset x,
-   and the briefing counts. The compile-time `WINGS_CARRIER_X`,
-   `WINGS_WORLD_WIDTH`, `WINGS_WORLD_START` and the `map_<x>` include path
-   become values read from the record.
-   - Watch the step loop and the render: a constant that turns into a
-     variable can cost time there (see [sdcc-pitfalls.md](sdcc-pitfalls.md)).
-     Profile with `tools/profile_p0.py` before and after.
-3. **Loading a mission.** `Mission_Load(map)` at the briefing (the
-   original's 0x2adc): read the record, rebuild the tile cache, the column
-   state, the island, the ships and the plane lists.
-4. **RAM.** The column table holds only the columns that change (wrecked
-   huts, as a list of changes over the ROM's column map), not 2 bytes for
-   every column. Map o would need 6.9 KB the old way. Variables and stack
-   (now at F380h, about 970 bytes above `s__HEAP`) stay below F380h. The biggest variables today are `g_TerrainCached` (2432 bytes),
-   `g_TerrainMap` (2204), `g_DashboardTables` (801), `g_SmokeDrawn` (800)
-   and `g_FMDriver` (700).
-5. **Bank switches.** Done in phase 0: every switch is `LD (nnnn),A`, and
-   the build fails on a switch through a pointer. Nothing switches the 8000h
-   window after start-up; keep it that way (SofaRun's mapper mode cannot).
-6. **Check.** Maps a and j from the same ROM: P0 and every verifier (the
-   verifiers choose the map). Then SofaRun's memory-mapper mode on the
-   user's cartridge.
+Status 2026-11-21: steps 1, 2, 4 and 5 done; 3 (loading at the briefing)
+and the map choice remain. See [map-records.md](map-records.md).
+
+1. **1 MiB ROM** (done, 0d934f5). Map data from bank 64.
+2. **Map records** (done). `tools/build_maps.py` packs every converted map:
+   its banks, a record with its tables (the surfaces, heights, island,
+   ships, planes, cockpit features, palette, the carrier's x, the world's
+   width), loaded into `g_Map` by `Map_Load`. The ROM build reads the
+   per-map names from `g_Map`; the host tests keep one map's headers.
+3. **Loading a mission.** `Map_Load(map)` runs once at boot today (the map
+   `WINGS_MAP` names). Next: at the briefing (the original's 0x2adc), the
+   map of the rank and mission, then the tile cache, column state, island,
+   ships and plane lists rebuilt. The verifiers choose the map by writing
+   the map number before the briefing.
+4. **RAM** (done, 6df2d7a). The column table stays in ROM; a change list
+   in RAM holds the columns that differ. Variables end at EF48h with
+   records, stack at F380h.
+5. **Bank switches** (done in phase 0).
+6. **Check** (done for maps a and j from the same ROM: P0 NTSC and PAL and
+   every verifier). SofaRun's memory-mapper mode can't hold a 1 MiB ROM on
+   the user's 512 KiB cartridge.
 
 Milestone: one 1 MiB ROM holding maps a and j.
 
