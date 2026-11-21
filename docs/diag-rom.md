@@ -69,3 +69,20 @@ The game needs only windows 1 and 3 at run time (7000h is written once, at
 startup, with the bank already there), so SofaRun's window-2 limit does not
 matter; its five `LD (HL),A` switches (6800h x3, 7800h x2) are never patched
 and write into the ROM image in RAM instead.
+
+## Third report (diag 3, same setup)
+
+Page 2 decodes to:
+- `F6F4h`: interrupts off, their state kept in `F6F2h` (`EI; RET` or `RET`).
+- `F711h`/`F734h`/`F757h`/`F77Ah` (windows 0-3): store the bank at
+  `F804h`-`F807h`; map segment 2 in that page, read the 16 KiB segment for
+  the window pair (0+1 or 2+3) from its table, `OUT (FDh/FEh)` it; segment 0
+  means not built yet: `F7D2h` maps SofaRun's own page 3 (`F6EDh`), takes
+  its stack (`F802h`), calls `C479h` there, and maps ours back (`F6EEh`).
+- A window-2 write only stores `F806h`; the next window-3 write maps the
+  pair (`A W2 2A+W3 3F` ok).
+
+Page 3: `P60` -> `CALL F711h`; EXTBIO mapper table F200h, 32 segments, slot
+85, none free; `EFB4-F380` and `E6B0-EFB4` ok: SofaRun does not need that
+RAM. The game keeps its variables to EFB4h, puts its stack at F380h (not
+HIMEM) and switches banks only with `LD (nnnn),A` (from release 0.1.3).

@@ -1076,7 +1076,7 @@ static u8 ReadActions(void)
     return reset_weapons;
 }
 
-void main(void)
+static void Game_Main(void)
 {
     u16 camera, world, y;
     u16 surface;
@@ -1679,4 +1679,17 @@ void main(void)
 #endif
         g_FramePublished ^= 1;
     }
+}
+
+/* The startup (MSXgl's crt0) puts the stack at HIMEM, which a disk ROM or a
+ * loader lowers into our variables (C1C4h-EFB4h): SofaRun's memory-mapper
+ * mode leaves HIMEM at E6B0h (docs/diag-rom.md). The stack goes to F380h,
+ * the top of user RAM, whatever HIMEM says: nothing returns to the BIOS,
+ * and SofaRun's helpers live at F6EDh-F808h, above it. */
+void main(void) __naked
+{
+    __asm
+        ld      sp, #0xF380
+        jp      _Game_Main
+    __endasm;
 }

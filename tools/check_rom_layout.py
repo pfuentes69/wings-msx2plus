@@ -5,6 +5,10 @@ Resident code (address bits 16-23 == 0) must stay in windows 0..2
 (4000h-9FFFh) because window 3 is switched by banked calls. Each banked
 segment N is linked at (N << 16) | A000h and must fit in A000h-BFFFh.
 Code segments must not overlap raw data banks or lie outside the ROM.
+Bank switches must be LD (nn),A: loaders that run ASCII8 ROMs from a
+memory mapper (SofaRun) patch only that form (docs/diag-rom.md), so code
+that loads 6000h/6800h/7000h/7800h into HL/DE/BC and stores A through it
+soon after is an error.
 Exits non-zero on any violation so MSXgl's post-build step fails.
 """
 import argparse
@@ -16,8 +20,15 @@ RESIDENT = (0x4000, 0xA000)
 BANKED = (0xA000, 0xC000)
 
 
-def read_hex(path):
-    """Return {segment: set(addresses)} from an Intel HEX file."""
+BANK_REGISTERS = (0x60, 0x68, 0x70, 0x78)
+# LD rr,nn -> the stores through rr: LD (HL),r / LD (HL),n; LD (DE),A; LD (BC),A
+POINTER_STORES = {0x21: {0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77, 0x36}, 0x11: {0x12}, 0x01: {0x02}}
+STORE_REACH = 8
+
+
+def read_hex(path, contents=None):
+    """Return {segment: set(addresses)} from an Intel HEX file; with a dict
+    in contents, also {full address: byte}."""
     used, base = {}, 0
     for number, line in enumerate(Path(path).read_text().splitlines(), 1):
         line = line.strip()
@@ -34,6 +45,7 @@ def read_hex(path):
             for offset in range(count):
                 full = base + address + offset
                 used.setdefault(full >> 16, set()).add(full & 0xFFFF)
+                if contents is not None: contents[full] = payload[offset]
         elif kind == 1:
             break
         elif kind == 2:
@@ -73,6 +85,19 @@ def check(used, rom_kib, code_segments, data_banks):
     return errors, report
 
 
+def bank_pointer_writes(contents):
+    """Addresses of LD rr,<bank register> followed by LD (rr),A."""
+    found = []
+    for address, op in contents.items():
+        store = POINTER_STORES.get(op)
+        if (store is None or contents.get(address + 1) != 0
+                or contents.get(address + 2) not in BANK_REGISTERS):
+            continue
+        if any(contents.get(address + 3 + i) in store for i in range(STORE_REACH)):
+            found.append(address)
+    return sorted(found)
+
+
 def parse_list(text):
     return {int(item) for item in text.split(',') if item}
 
@@ -84,7 +109,11 @@ def main(argv=None):
     parser.add_argument('--code-segments', type=parse_list, default=set())
     parser.add_argument('--data-banks', type=parse_list, default=set())
     args = parser.parse_args(argv)
-    errors, report = check(read_hex(args.ihx), args.rom_kib, args.code_segments, args.data_banks)
+    contents = {}
+    errors, report = check(read_hex(args.ihx, contents), args.rom_kib, args.code_segments, args.data_banks)
+    for address in bank_pointer_writes(contents):
+        errors.append(f'bank switch through a pointer near {address >> 16}:{address & 0xFFFF:04X}h: '
+                      'use LD (nn),A (docs/diag-rom.md)')
     for line in report:
         print(f'ROM layout: {line}')
     for line in errors:

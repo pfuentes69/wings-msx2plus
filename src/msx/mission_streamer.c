@@ -246,6 +246,17 @@ static u16 ColumnOffset(u16 world)
     return g_TerrainMap[column] | ((u16)g_TerrainMap[column + 1] << 8);
 }
 
+/* Window 3 (A000h-BFFFh) = segment, sdcccall(1): A. LD (nn),A, the form
+ * loaders patch (docs/diag-rom.md); a pointer write compiled to LD (HL),A. */
+static void SetBank3(u8 segment) __naked
+{
+    (void)segment;
+    __asm
+        ld      (0x7800), a
+        ret
+    __endasm;
+}
+
 /* Decode a column's runs from the map bank, mapped into window 3 for the
  * moment (this code is resident; the caller's banked segment comes back
  * before we return; the music's interrupt maps window 3 for itself and
@@ -255,10 +266,10 @@ static void Decode(u16 offset, u16* out)
     u8 segment = g_Bank3Segment;
     /* No column record crosses a bank (tools/convert_mission.py). */
     g_Bank3Segment = TERRAIN_MAP_BANK + (offset >> 13);   /* the shadow first (banking.c) */
-    *(volatile u8*)0x7800 = g_Bank3Segment;
+    SetBank3(g_Bank3Segment);
     Column_Decode((const u8*)0xA000 + (offset & 8191), out);
     g_Bank3Segment = segment;
-    *(volatile u8*)0x7800 = segment;
+    SetBank3(segment);
 }
 
 /* Spare time before a VBlank: load one strip that the next columns ahead

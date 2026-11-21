@@ -14,17 +14,20 @@ hardware (MegaFlashROM SCC+). Map j is the test bed for ships and fighters.
 | Order | Map runtime and RAM first, then the maps by rank (one new feature per step), then optimisation, then the game flow and tuning |
 | Cheats | A cheat screen opened with F5 during the intro: infinite lives, ammo, fuel and oil; invulnerable; starting map; skip the intro (phase 2). F1 refill is removed then |
 
-## Phase 0: SofaRun's memory-mapper mode (waiting for the user's report)
+## Phase 0: SofaRun's memory-mapper mode (done 2026-11-21)
 
-Diagnostic ROM 2 ([diag-rom.md](diag-rom.md)) shows the bytes SofaRun puts
-in place of `LD (nnnn),A` and where its helper code sits. From diag 1 we
-already know: HIMEM is E6B0h; only `LD (nnnn),A` is patched; the 6000h and
-A000h windows switch at no cost; the 8000h window can't be switched; and
-C000h–E5A1h is free. The report decides phase 1's RAM target:
-- **Helper small and at a known place:** keep the variables clear of it.
-- **Helper uses all of E6B0h upward:** the variables have to end below
-  about E4B0h. That leaves room for a stack below HIMEM, and means freeing
-  about 2.8 KB.
+Diagnostic ROMs 1-3 ([diag-rom.md](diag-rom.md)) on the user's cartridge.
+SofaRun's helpers use only F6EDh-F808h of page 3 (BASIC's work area). The
+RAM it reserves below them (E6B0h-F37Fh) is free once the game runs: the
+diag filled it with HALT around bank switches and they still worked. Two
+fixes, both done before phase 1: the stack at F380h, not HIMEM (E6B0h
+there); the five `LD (HL),A` switches turned into `LD (nnnn),A` (build
+check in `tools/check_rom_layout.py`). The RAM target is then the same as
+on any machine: variables and stack below F380h.
+
+SofaRun copies the ROM into the cartridge's RAM, so a 1 MiB ROM needs a RAM
+cartridge of more than 1 MiB; the user's 512 KiB one runs only the 512 KiB
+builds (0.1.x).
 
 ## Phase 1: map runtime, 1 MiB, RAM
 
@@ -47,14 +50,13 @@ C000h–E5A1h is free. The report decides phase 1's RAM target:
    state, the island, the ships and the plane lists.
 4. **RAM.** The column table holds only the columns that change (wrecked
    huts, as a list of changes over the ROM's column map), not 2 bytes for
-   every column. Map o would need 6.9 KB the old way. Then reach phase 0's
-   target. The biggest variables today are `g_TerrainCached` (2432 bytes),
+   every column. Map o would need 6.9 KB the old way. Variables and stack
+   (now at F380h, about 970 bytes above `s__HEAP`) stay below F380h. The biggest variables today are `g_TerrainCached` (2432 bytes),
    `g_TerrainMap` (2204), `g_DashboardTables` (801), `g_SmokeDrawn` (800)
    and `g_FMDriver` (700).
-5. **Bank switches.** The five `LD (HL),A` switches (three in
-   `Scenery_Read`, two in `Terrain_InitPage`) become `LD (nnnn),A`. Nothing
-   switches the 8000h window after start-up; keep it that way (note it in
-   [rom-banking.md](rom-banking.md)).
+5. **Bank switches.** Done in phase 0: every switch is `LD (nnnn),A`, and
+   the build fails on a switch through a pointer. Nothing switches the 8000h
+   window after start-up; keep it that way (SofaRun's mapper mode cannot).
 6. **Check.** Maps a and j from the same ROM: P0 and every verifier (the
    verifiers choose the map). Then SofaRun's memory-mapper mode on the
    user's cartridge.

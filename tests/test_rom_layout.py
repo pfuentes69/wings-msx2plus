@@ -70,6 +70,18 @@ class RomLayoutTests(unittest.TestCase):
                 if line.rstrip().endswith(');') and '(' in line and not line.startswith(('#', '/', ' ')):
                     self.assertIn('WINGS_BANKED', line, f'{module}.h: {line}')
 
+    def test_bank_switch_through_a_pointer_is_found(self):
+        """Loaders patch only LD (nn),A (docs/diag-rom.md): LD HL,6800h ...
+        LD (HL),A is an error, and so is LD DE,7800h; LD (DE),A; a bank
+        register address used for arithmetic is not."""
+        def found(code):
+            return check_rom_layout.bank_pointer_writes({0x4000 + i: b for i, b in enumerate(code)})
+        self.assertEqual(found(bytes.fromhex('210068dd7efe77')), [0x4000])
+        self.assertEqual(found(bytes.fromhex('2100683601')), [0x4000])
+        self.assertEqual(found(bytes.fromhex('11007812')), [0x4000])
+        self.assertEqual(found(bytes.fromhex('320068')), [])
+        self.assertEqual(found(bytes.fromhex('2a77de11007819110' '0c0b7ed52')), [])
+
 
 if __name__ == '__main__':
     unittest.main()
