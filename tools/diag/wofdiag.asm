@@ -23,6 +23,9 @@ SLTTBL	= 0xFCC5
 HKEYI	= 0xFD9A
 HTIMI	= 0xFD9F
 JIFFY	= 0xFC9E
+CHGET	= 0x009F
+HOKVLD	= 0xFB20
+EXTBIO	= 0xFFCA
 
 ; Locals, on the stack (IX): no fixed RAM is touched before the IM2 step.
 F_IDS	= 0	; 4: the bank seen in windows 0..3 (FF: no tag)
@@ -139,7 +142,7 @@ init:
 step1:
 	; --- line 1: version, VDP
 	call	prt
-	.asciz	"WOF DIAG 2 BANKS "
+	.asciz	"WOF DIAG 3 BANKS "
 	ld	a, (nbanks)
 	call	pdec
 	call	prt
@@ -565,9 +568,205 @@ patchdump:
 	djnz	2$
 3$:	call	nl
 	call	prt
+	.asciz	"PAGE 1 - PHOTO, THEN ANY KEY"
+	call	waitkey
+
+page2:
+	; --- the loader's helpers: F6F0h-F82Fh (SofaRun put them at F734h and
+	; F77Ah, calling F6F4h; window 2 writes go to F806h)
+	call	prt
+	.asciz	"WOF DIAG 3 PAGE 2: HELPER CODE"
+	call	nl
+	ld	hl, #0xF6F0
+	ld	b, #20
+	call	dump
+	call	prt
+	.asciz	"PAGE 2 - PHOTO, THEN ANY KEY"
+	call	waitkey
+
+page3:
+	call	prt
+	.asciz	"WOF DIAG 3 PAGE 3"
+	call	nl
+	; --- DOS2/Nextor mapper support (EXTBIO D=4 E=2): its jump table
+	call	prt
+	.asciz	"EXTBIO "
+	ld	a, (HOKVLD)
+	rrca
+	jr	c, 1$
+	call	prt
+	.asciz	"NONE"
+	jr	2$
+1$:	xor	a
+	ld	de, #0x0402
+	push	ix
+	call	EXTBIO
+	pop	ix
+	push	af
+	push	bc
+	call	prt
+	.asciz	"MAPPER TABLE "
+	call	phex16
+	call	prt
+	.asciz	" SEGS "
+	pop	bc
+	pop	af
+	push	bc
+	call	phex
+	call	prt
+	.asciz	" SLOT "
+	pop	bc
+	push	bc
+	ld	a, b
+	call	phex
+	call	prt
+	.asciz	" FREE "
+	pop	bc
+	ld	a, c
+	call	phex
+2$:	call	nl
+	di
+	call	base
+	ei
+	; --- window 0 switch as patched
+	call	prt
+	.asciz	"P60"
+	ld	hl, #pA0
+	call	p3bytes
+	call	nl
+	; --- window 2, then window 3: does the W3 helper pick up W2's bank?
+	call	prt
+	.asciz	"A W2 2A+W3 3F  "
+	ld	F_EXP+0(ix), #0
+	ld	F_EXP+1(ix), #1
+	ld	F_EXP+2(ix), #0x2A
+	ld	F_EXP+3(ix), #0x3F
+	ld	a, #0x2A
+	ld	c, #2
+	call	selA
+	ld	a, #0x3F
+	ld	c, #3
+	call	selA
+	call	result
+	call	base
+	; --- the RAM above HIMEM the game would use: saved to C000h, filled
+	; with HALT, switches W3=3F and W1=15 done, then put back. A freeze
+	; after the range is printed, or BAD, means the loader needs that RAM.
+	ld	hl, #0xEFB4
+	ld	bc, #0xF380-0xEFB4
+	call	filltest
+	ld	hl, #0xE6B0
+	ld	bc, #0xEFB4-0xE6B0
+	call	filltest
+	call	prt
+	.asciz	"AFTER          "
+	ld	b, #0
+	ld	c, #3
+	ld	a, #0x3F
+	call	dotest
+	call	prt
 	.asciz	"DONE - PLEASE SEND A PHOTO"
 	di
 9$:	jr	9$
+
+; waitkey: wait for a key, then clear the screen.
+waitkey:
+	ei
+	call	CHGET
+	jp	INITXT
+
+; dump: B lines of 16 bytes from HL, "xxxx:" then the bytes.
+dump:	push	bc
+	call	phex16
+	ld	a, #':'
+	call	CHPUT
+	ld	b, #16
+1$:	ld	a, (hl)
+	call	phex
+	inc	hl
+	djnz	1$
+	call	nl
+	pop	bc
+	djnz	dump
+	ret
+
+; filltest: HL = start, BC = length (< 3800h, RAM C000h up is free).
+filltest:
+	push	hl
+	push	bc
+	call	phex16
+	ld	a, #'-'
+	call	CHPUT
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+	add	hl, bc
+	call	phex16
+	call	sp1
+	call	sp1
+	; skip a range that holds this ROM's stack (SP at INIT down to 100h
+	; below it, frame and BIOS calls): start < SP and end > SP - 100h
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+	ld	e, F_SPL(ix)
+	ld	d, F_SPH(ix)
+	or	a
+	sbc	hl, de
+	jr	nc, 1$			; start >= SP
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+	add	hl, bc			; end
+	dec	d
+	or	a
+	sbc	hl, de
+	jr	c, 1$			; end < SP - 100h
+	jr	z, 1$
+	pop	bc
+	pop	hl
+	call	prt
+	.asciz	"SKIP (STACK)"
+	jp	nl
+1$:	pop	bc
+	pop	hl
+	di
+	push	hl
+	push	bc
+	ld	de, #0xC000
+	ldir
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+	ld	(hl), #0x76
+	ld	d, h
+	ld	e, l
+	inc	de
+	dec	bc
+	ldir
+	ld	a, #0x3F
+	ld	c, #3
+	call	selA
+	ld	a, #0x15
+	ld	c, #1
+	call	selA
+	call	read_ids
+	call	base
+	pop	bc
+	pop	de
+	ld	hl, #0xC000
+	ldir
+	call	base
+	ei
+	ld	F_EXP+0(ix), #0
+	ld	F_EXP+1(ix), #0x15
+	ld	F_EXP+2(ix), #2
+	ld	F_EXP+3(ix), #0x3F
+	jp	result_ids
 
 ;------------------------------------------------------------------------------
 ; dotest: B = method, C = window, A = bank. Prints ids and the verdict.
@@ -619,6 +818,7 @@ expect:
 ; result: read the windows, print them and ok/BAD against the expectation.
 result:
 	call	read_ids
+result_ids:
 	call	pids
 	ld	a, F_IDS+0(ix)
 	cp	F_EXP+0(ix)
@@ -662,6 +862,10 @@ pA2:	ld	(0x7000), a
 	ret
 selA_3:
 pA3:	ld	(0x7800), a
+	ret
+; never run: the P60 line shows what the loader made of a window-0 switch
+; (the game's startup has one).
+pA0:	ld	(0x6000), a
 	ret
 
 ; selB: the same through LD (HL),A (the game's Scenery_Read/Terrain_InitPage).

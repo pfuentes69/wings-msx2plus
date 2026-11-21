@@ -34,6 +34,17 @@ mapper"), where it has to emulate ASCII8's 8 KiB banks.
 | `P68 P70 P78` | the bytes now at this ROM's own `LD (6800h/7000h/7800h),A`: `32 00 68` etc. if untouched, else the loader's patch |
 | `xxxx: ...` | where the first patched CALL/JP goes, and 10 bytes there (the loader's helper), or `NO CALL/JP` |
 
+Diag 3 then waits for a key (photo first) and shows two more pages:
+
+| Page | Line | Meaning |
+|---|---|---|
+| 2 | `F6F0: ...` x20 | RAM F6F0h-F82Fh, 16 bytes a line: SofaRun's helpers (F6F4h, F734h, F77Ah) and its bank copies (F806h, F807h) |
+| 3 | `EXTBIO MAPPER TABLE` | DOS2/Nextor mapper support (EXTBIO 0402h): its jump table, segments, slot, free segments; garbage without DOS2 |
+| 3 | `P60` | the bytes now at an `LD (6000h),A` (window 0; the game's startup has one) |
+| 3 | `A W2 2A+W3 3F` | window 2 then window 3: whether the W3 helper applies W2's bank |
+| 3 | `EFB4-F380`, `E6B0-EFB4` | that RAM (above HIMEM on SofaRun) saved, filled with HALT, W3=3F and W1=15 switched, put back: `ok` = the loader does not need it during a switch; a freeze after the range = it does; `SKIP (STACK)` = this ROM's own stack is there (a machine with HIMEM F380h) |
+| 3 | `AFTER` | a switch once that RAM is back |
+
 Each test line shows the four windows' banks after the write, then `ok` or
 `BAD` against what an ASCII8 mapper does.
 
@@ -44,3 +55,17 @@ A W3 ok, A W2 BAD (scan W2 001: 8000h is never switched); every B BAD
 (only LD (nn),A is patched); speed 0 frames; IM2 and RAM C000h-E5A1h fine.
 The game breaks there because its variables reach EFB4h, its stack starts
 at HIMEM inside them, and five of its switches go through LD (HL),A.
+
+## Second report (diag 2, same setup)
+
+SofaRun patches the three `LD (nn),A`: 6800h -> `CALL F734h`, 7000h ->
+`LD (F806h),A` (window 2 is only recorded), 7800h -> `CALL F77Ah`, which
+starts `CALL F6F4h; PUSH HL; PUSH AF; LD (F807h),A; LD A,2`. The helpers
+live in BASIC's work area (F6F4h-F807h), which the game never touches; still
+unknown: whether they reach into E6B0h-F37Fh (Nextor's mapper routines live
+below HIMEM), which the game's variables (to EFB4h) and stack would cover.
+
+The game needs only windows 1 and 3 at run time (7000h is written once, at
+startup, with the bank already there), so SofaRun's window-2 limit does not
+matter; its five `LD (HL),A` switches (6800h x3, 7800h x2) are never patched
+and write into the ROM image in RAM instead.
