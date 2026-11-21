@@ -12,7 +12,7 @@ hardware (MegaFlashROM SCC+). Map j is the test bed for ships and fighters.
 | ROM size | **1 MiB** ASCII8 (128 banks) |
 | Saves and high scores | **Dropped** for 1.0. `WINGS_HIGH_SCORES` stays off, and the load and save menus stay out of the ROM. Keep `MissionProgress` small and self-contained, so a password or a disk save could come back later |
 | Order | Map runtime and RAM first, then the maps by rank (one new feature per step), then optimisation, then the game flow and tuning |
-| Cheats | A cheat screen opened from the intro: infinite lives, infinite ammo, starting map (phase 2) |
+| Cheats | A cheat screen opened with F5 during the intro: infinite lives, ammo, fuel and oil; invulnerable; starting map; skip the intro (phase 2). F1 refill is removed then |
 
 ## Phase 0: SofaRun's memory-mapper mode (waiting for the user's report)
 
@@ -66,25 +66,25 @@ Milestone: one 1 MiB ROM holding maps a and j.
 The user asked for a key pressed during the intro that opens a screen of
 cheats. Phase 3 needs it too: a starting map is the way to test each map.
 
-- **Opening it:** a key during the intro (title, credits or story). The
-  proposal is F5: F1–F5 are already sampled by the interrupt, and F1 is the
-  refill cheat in flight. It goes to a new `GAME_CHEATS` state, and Return
-  or Esc goes back to rank selection.
+- **Opening it:** F5 during the intro (title, credits or story), agreed
+  2026-11-21. F1–F5 are already sampled by the interrupt. It goes to a new
+  `GAME_CHEATS` state, and Return or Esc goes back to rank selection.
 - **The screen:** the menu font (`msx/menu.c`), Up/Down to choose a line,
   Left/Right or fire to change it:
   - infinite lives (a crash keeps the plane count);
   - infinite ammo (guns, bombs, rockets and the torpedo aren't used up);
   - starting map a..o, shown as rank + mission. Maps not built yet are
     skipped;
-  - to offer the user: infinite fuel and oil, invulnerable (no hits from
-    guns or planes), skip the intro next time.
+  - infinite fuel and oil;
+  - invulnerable (no hits from guns or planes);
+  - skip the intro next time (until reset).
 - **State:** a `g_Cheats` byte of flags, kept until the machine is reset.
-  The briefing shows "CHEATS" when any cheat is on. F1 refill stays as it
-  is.
+  The briefing shows "CHEATS" when any cheat is on.
+- **F1 refill goes away** once the screen works (the user, 2026-11-21):
+  remove `ACTION_CHEAT_REFILL` and its key; infinite ammo replaces it.
 - **Code:** banked (segment 27 has about 3.2 KB free, segment 49 about
   2.4 KB). `tests/test_game.py` covers the flags. smoke_lib gets a way to set
   the starting map without the screen.
-- **To confirm with the user:** the key, and the extra cheats.
 
 ## Phase 3: the maps, by rank
 
@@ -131,7 +131,7 @@ parallel, and the rest of the smoke path ([frame-budget.md](frame-budget.md)).
 - real hardware: MegaFlashROM SCC+, SofaRun's memory-mapper mode if
   phase 1 made it work, an FS-A1WX or another MSX2+;
 - `tools/package_release.py` 1.0: README (1 MiB ASCII8, the cartridges
-  known to work, the cheats, MSX-MUSIC optional), and a GitHub release only
+  known to work, the F5 cheat screen, MSX-MUSIC optional), and a GitHub release only
   after asking the user.
 
 Later, not for 1.0: saves and high scores (password or disk), the MSX2
